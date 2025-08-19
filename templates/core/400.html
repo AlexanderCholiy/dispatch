@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Ошибка 400{% endblock %}
+
+{% block content %}
+<div class="container-sm">
+  <div class="card">
+    <div class="card-body">
+      <p class="card-title">Неверный запрос: 400</p>
+      <p class="card-text error-message">
+        Ваш запрос был некорректен или повреждён.
+      </p>
+      <p class="card-text">
+        <a href="{% url 'open5gs:index' %}" class="link-text">Вернуться на главную</a>
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

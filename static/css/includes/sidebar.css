@@ -1,0 +1,139 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.layout {
+  display: flex;
+  flex: 1;
+  min-height: 100vh;
+}
+
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  transition: margin-left var(--transition-value), background-color var(--transition-value);
+  margin-left: var(--sidebar-width);
+  background-color: var(--add-background-color);
+  overflow-x: auto;
+}
+
+.sidebar.collapsed ~ .main-area {
+  margin-left: var(--sidebar-collapsed-width);
+}
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--sidebar-width);
+  height: 100vh;
+  background-color: var(--background-color);
+  overflow-y: auto;
+  z-index: 1;
+  transition: width var(--transition-value);
+  display: flex;
+  flex-direction: column;
+  transition: background-color var(--transition-value), width var(--transition-value);
+}
+
+.sidebar-content {
+  margin-top: 0;
+  margin-bottom: var(--footer-height);
+  transition: margin-top var(--transition-value);
+}
+
+.sidebar.collapsed {
+  width: var(--sidebar-collapsed-width);
+}
+
+.sidebar ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sidebar li {
+  display: flex;
+}
+
+.sidebar a.nav-link {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  text-decoration: none;
+  color: var(--add-color);
+  width: 100%;
+  white-space: nowrap;
+  transition: background-color var(--transition-value), box-shadow var(--transition-value);
+}
+
+.sidebar a.nav-link:hover {
+  background-color: var(--add-background-color);
+  box-shadow: 0 0 6px var(--extra-color);
+}
+
+.sidebar i {
+  font-size: 1.4rem;
+  min-width: 24px;
+  text-align: center;
+}
+
+.sidebar .link-text {
+  margin-left: 20px;
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: max-width var(--transition-value);
+}
+
+.sidebar.collapsed .link-text {
+  max-width: 0;
+}
+
+@media (max-width: 768px) {
+  .main-area {
+    margin-left: 0;
+  }
+
+  .sidebar {
+    top: 0;
+    left: auto;
+    right: 0;
+    width: var(--sidebar-width);
+    height: 100vh;
+    transform: translateX(100%);
+    transition: transform var(--transition-value);
+    z-index: 20;
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(0);
+    box-shadow: -2px 0 10px var(--extra-color);
+  }
+
+  /* Сброс ограничений collapse */
+  .sidebar.collapsed {
+    width: var(--sidebar-width);
+  }
+
+  .sidebar.collapsed .link-text {
+    max-width: 100%;
+    margin-left: 0;
+  }
+
+  .sidebar.collapsed i {
+    text-align: center;
+  }
+
+  .sidebar-content {
+    margin-top: 0;
+  }
+
+  body.sidebar-open {
+    overflow: hidden;
+  }
+}

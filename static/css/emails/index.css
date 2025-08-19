@@ -1,0 +1,32 @@
+main .card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+main .card-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  gap: 1rem;
+}
+
+main .card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  word-break: break-word;
+  margin: 0;
+}
+
+main .add-button-wrapper {
+  display: flex;
+  justify-content: right;
+  margin-top: 2rem;
+}
+
+main .btn-group {
+  display: flex;
+  gap: 0.5rem;
+}

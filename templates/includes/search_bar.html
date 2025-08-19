@@ -1,0 +1,10 @@
+<form method="get" action="{% url 'emails:index' %}" class="header-search">
+  <input
+    type="text"
+    name="q"
+    value="{{ search_query|default:'' }}"
+    placeholder="Поиск по названию задачи"
+    aria-label="Поиск"
+  >
+  <button type="submit" class="tooltip" data-title="Найти"><i class="bx bx-search"></i></button>
+</form>

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %} 
+  Регистрация
+{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/users/profile_form.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-sm">
+  <div class="card">
+    <div class="card-body">
+      <form method="post" class="user-form">
+        {% csrf_token %}
+        {% for field in form %}
+          <div class="form-group">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            
+            {% if field.help_text %}
+              <p class="form-text"><small class="text-muted help-text">{{ field.help_text }}</small></p>
+            {% endif %}
+            
+            {% if field.error %}
+              <div class="error">{{ field.errors }}</div>
+            {% endif %}
+          </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary submit-button">Зарегистрироваться</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

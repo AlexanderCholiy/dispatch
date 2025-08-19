@@ -1,0 +1,18 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: 'Montserrat', sans-serif;
+  color: var(--color);
+  transition: color var(--transition-value);
+  background-color: var(--add-background-color);
+}
+
+.active {
+    font-weight: 600;
+    color: var(--priority-color) !important;
+}
+
+/* * {
+  box-sizing: border-box;
+} */

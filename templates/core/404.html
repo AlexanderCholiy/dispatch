@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Ошибка 404{% endblock %}
+
+{% block content %}
+<div class="container-sm">
+  <div class="card">
+    <div class="card-body">
+      <p class="card-title">Страница не найдена: 404</p>
+      <p class="card-text error-message">
+        {% if path %}
+          Упс! Страницы с адресом <code>{{ path }}</code> не существует.
+        {% else %}
+          Упс! Страницы с текущим адресом не существует.
+        {% endif %}
+      </p>
+      <p class="card-text">
+        <a href="{% url 'open5gs:index' %}" class="link-text">Вернуться на главную</a>
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %} 

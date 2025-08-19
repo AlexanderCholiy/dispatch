@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %} 
+  Авторизация
+{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/users/profile_form.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-sm">
+  <div class="card">
+    <div class="card-body">
+      {% if form.errors %}
+        <div class="form-errors">
+          <ul>
+            {% for field in form %}
+              {% for error in field.errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            {% endfor %}
+            {% for error in form.non_field_errors %}
+              <li>{{ error }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      {% if next %}
+        {% if user.is_authenticated %}
+        <div class="messages-container">
+          <div class="message alert-error">
+            Ваш аккаунт не имеет доступа к этой странице.
+            Войдите под другим аккаунтом.
+          </div>
+        </div>
+        {% else %}
+        <div class="messages-container">
+          <div class="message alert-warning">
+            Пожалуйста, войдите в систему, чтобы просматривать эту страницу.
+          </div>
+        </div>
+        {% endif %}
+      {% endif %}
+
+      <form method="post" action="{% url 'login' %}" class="user-form">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="{{ form.username.id_for_label }}">Имя пользователя или Email:</label>
+          {{ form.username }}
+        </div>
+
+        <div class="form-group">
+          {{ form.password.label_tag }}
+          {{ form.password }}
+          {% if  form.password.errors %}
+            <div class="error">{{ form.password.errors }}</div>
+          {% endif %}
+        </div>
+
+        <input type="hidden" name="next" value="{{ next }}">
+        <button type="submit" class="btn btn-primary submit-button">Войти</button>
+      </form>
+      <a href="{% url 'password_reset' %}" class="password-reset">Забыли пароль?</a>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

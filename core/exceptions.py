@@ -1,0 +1,2 @@
+class LoggerError(ValueError):
+    pass

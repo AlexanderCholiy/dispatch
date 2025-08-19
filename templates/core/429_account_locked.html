@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% load static %}
+{% load tz %}
+
+{% block title %}Ошибка 429{% endblock %}
+
+{% block content %}
+  <div class="container-sm">
+    <div class="card">
+      <div class="card-body">
+        <p class="card-title">Аккаунт временно заблокирован</p>
+
+        <p class="card-text error-message">
+          Пользователь "{{ username }}" временно заблокирован после {{ failure_limit }} неудачных попыток входа.
+        </p>
+
+        {% if cooloff_timedelta %}
+          <p class="card-text text-muted" id="cooloff-block" data-login-url="{% url 'login' %}">
+            Следующую попытку входа можно будет совершить через
+            <strong id="cooloff-time" data-utc="{{ cooloff_timedelta }}"></strong>.
+          </p>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/core/timer.js' %}"></script>
+{% endblock %}

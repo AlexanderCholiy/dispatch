@@ -1,0 +1,80 @@
+.content-wrapper {
+  flex: 1;
+  padding: 0 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.container,
+.container-sm {
+  width: 100%;
+  margin: 1.5rem auto;
+  box-sizing: border-box;
+}
+
+.container {
+  max-width: 1200px;
+}
+
+.container-sm {
+  max-width: 800px;
+}
+
+.card {
+  border-radius: 10px;
+  box-shadow: 0 0 4px var(--extra-color);
+  overflow: hidden;
+  background-color: var(--background-color);
+  transition: background-color var(--transition-value), box-shadow var(--transition-value);
+}
+
+.card-header {
+  padding: 1rem 1.25rem;
+  background-color: var(--add-background-color);
+  border-bottom: 1px solid var(--extra-color);
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.card-body {
+  padding: 1.25rem;
+}
+
+.card-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+main .text-muted {
+  color: var(--gray-color);
+  font-size: 0.9rem;
+}
+
+.card-text {
+  line-height: 1.5;
+}
+
+main .link-text {
+  vertical-align: 0;
+  line-height: 1;
+  margin: 0;
+  color: var(--gray-color);
+  transition: color var(--transition-value);
+}
+
+main .link-text:hover,
+main .link-text:focus {
+  color: var(--blue-color);
+}
+
+code {
+  font-family: monospace;
+  color: var(--blue-color);
+}
+
+@media (max-width: 768px) {
+  .content-wrapper {
+    padding: 1rem;
+  }
+}

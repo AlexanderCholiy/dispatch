@@ -1,0 +1,21 @@
+
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Ошибка 403{% endblock %}
+
+{% block content %}
+<div class="container-sm">
+  <div class="card">
+    <div class="card-body">
+      <p class="card-title">Доступ запрещён: 403</p>
+      <p class="card-text error-message">
+        У вас нет прав для просмотра этой страницы.
+      </p>
+      <p class="card-text">
+        <a href="{% url 'open5gs:index' %}" class="link-text">Вернуться на главную</a>
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
