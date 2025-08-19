@@ -1,0 +1,3 @@
+MAX_POLE_LEN = 32
+UNDEFINED_CASE = 'undefined'
+MAX_PHONE_LEN = 16
