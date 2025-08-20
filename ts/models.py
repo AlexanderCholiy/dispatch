@@ -1,12 +1,83 @@
 from django.db import models
 
-from .constants import MAX_POLE_LEN, MAX_PHONE_LEN
+from .constants import MAX_POLE_LEN, MAX_PHONE_LEN, UNDEFINED_CASE
 from emails.constants import MAX_EMAIL_LEN
 from core.constants import MAX_ST_DESCRIPTION, MAX_LG_DESCRIPTION
 
 
+def get_default_contractor():
+    contractor, _ = AVRContractor.objects.get_or_create(
+        contractor_name=UNDEFINED_CASE,
+        defaults={'is_excluded_from_contract': False}
+    )
+    return contractor.pk
+
+
+class ContractorEmail(models.Model):
+    """Email адрес подрядчика."""
+    email = models.EmailField(
+        'email',
+        max_length=MAX_EMAIL_LEN,
+        unique=True,
+        db_index=True,
+    )
+
+    class Meta:
+        verbose_name = 'Email подрядчика'
+        verbose_name_plural = 'Email подрядчиков'
+
+    def __str__(self):
+        return self.email
+
+
+class ContractorPhone(models.Model):
+    """Телефон подрядчика."""
+    phone = models.CharField(
+        'Телефон',
+        max_length=MAX_PHONE_LEN,
+        unique=True,
+        db_index=True,
+    )
+
+    class Meta:
+        verbose_name = 'Телефон подрядчика'
+        verbose_name_plural = 'Телефоны подрядчиков'
+
+    def __str__(self):
+        return self.phone
+
+
+class AVRContractor(models.Model):
+    """Подрядчики ответственные за выполнение АВР на опорах."""
+    contractor_name = models.CharField(
+        'Подрядчик',
+        max_length=MAX_ST_DESCRIPTION,
+        unique=True,
+    )
+    is_excluded_from_contract = models.BooleanField('Исключен из договора')
+    emails = models.ManyToManyField(
+        ContractorEmail,
+        blank=True,
+        related_name='contractors',
+        verbose_name='Emails',
+    )
+    phones = models.ManyToManyField(
+        ContractorPhone,
+        blank=True,
+        related_name='contractors',
+        verbose_name='Телефоны',
+    )
+
+    class Meta:
+        verbose_name = 'подрядчик по АВР'
+        verbose_name_plural = 'Подрядчики по АВР'
+
+    def __str__(self):
+        return self.contractor_name
+
+
 class Pole(models.Model):
-    """Модель опоры TowerStore"""
+    """Модель опоры TowerStore."""
     site_id = models.IntegerField(
         unique=True,
         null=False,
@@ -71,9 +142,8 @@ class Pole(models.Model):
     )
     avr_contractor = models.ForeignKey(
         'AVRContractor',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        on_delete=models.SET_DEFAULT,
+        default=get_default_contractor,
         related_name='poles',
         verbose_name='Подрядчик по АВР',
     )
@@ -92,83 +162,20 @@ class Pole(models.Model):
         return self.pole
 
 
-class ContractorEmail(models.Model):
-    """Email адрес подрядчика."""
-    email = models.EmailField(
-        'email',
-        max_length=MAX_EMAIL_LEN,
-        unique=True,
-        db_index=True,
-    )
-
-    class Meta:
-        verbose_name = 'Email подрядчика'
-        verbose_name_plural = 'Email подрядчиков'
-
-    def __str__(self):
-        return self.email
-
-
-class ContractorPhone(models.Model):
-    """Телефон подрядчика."""
-    phone = models.CharField(
-        'Телефон',
-        max_length=MAX_PHONE_LEN,
-        unique=True,
-        db_index=True,
-    )
-
-    class Meta:
-        verbose_name = 'Телефон подрядчика'
-        verbose_name_plural = 'Телефоны подрядчиков'
-
-    def __str__(self):
-        return self.phone
-
-
-class AVRContractor(models.Model):
-    """Подрядчики ответственные за выполнение АВР на опорах."""
-    is_excluded_from_contract = models.BooleanField('Исключен из договора')
-    contractor_name = models.CharField(
-        'Подрядчик',
-        max_length=MAX_ST_DESCRIPTION,
-        unique=True,
-    )
-    emails = models.ManyToManyField(
-        ContractorEmail,
-        blank=True,
-        related_name='contractors',
-        verbose_name='Emails',
-    )
-    phones = models.ManyToManyField(
-        ContractorPhone,
-        blank=True,
-        related_name='contractors',
-        verbose_name='Телефоны',
-    )
-
-    class Meta:
-        verbose_name = 'подрядчик по АВР'
-        verbose_name_plural = 'Подрядчики по АВР'
-
-    def __str__(self):
-        return self.contractor_name
-
-
 class BaseStation(models.Model):
     """Базовые станции/оборудование."""
+    bs_name = models.CharField(
+        'Имя БС / оборудования',
+        max_length=MAX_ST_DESCRIPTION,
+        null=False,
+        db_index=True
+    )
     pole = models.ForeignKey(
         Pole,
         on_delete=models.CASCADE,
         related_name='base_stations',
         verbose_name='Связанная опора',
         db_index=True,
-    )
-    bs_name = models.CharField(
-        'Имя БС / оборудования',
-        max_length=MAX_ST_DESCRIPTION,
-        null=False,
-        db_index=True
     )
     operator = models.ManyToManyField(
         'BaseStationOperator',
@@ -191,7 +198,7 @@ class BaseStation(models.Model):
 
 
 class BaseStationOperator(models.Model):
-    """Операторы привязанные к базовым станциям"""
+    """Операторы привязанные к базовым станциям."""
     operator_name = models.CharField(
         'Оператор',
         max_length=MAX_ST_DESCRIPTION,
@@ -201,6 +208,7 @@ class BaseStationOperator(models.Model):
         max_length=MAX_ST_DESCRIPTION,
         null=True,
         blank=True,
+        db_index=True,
     )
 
     class Meta:

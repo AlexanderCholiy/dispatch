@@ -12,12 +12,12 @@ from django.urls import reverse
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
-from core.constants import EMAIL_ROTATING_FILE
+from core.constants import EMAIL_LOG_ROTATING_FILE
 from core.loggers import LoggerFactory
 
 from .models import PendingUser, Roles, User
 
-email_logger = LoggerFactory(__name__, EMAIL_ROTATING_FILE).get_logger
+email_logger = LoggerFactory(__name__, EMAIL_LOG_ROTATING_FILE).get_logger
 
 
 def role_required(

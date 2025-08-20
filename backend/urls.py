@@ -97,7 +97,7 @@ app_urls = [
     path('pages/', include('pages.urls')),
 ]
 
-urlpatterns = swagger_urls + auth_urlpatterns + app_urls
+urlpatterns = auth_urlpatterns + app_urls
 
 if settings.DEBUG:
     urlpatterns += (path('__debug__/', include(debug_toolbar.urls)),)

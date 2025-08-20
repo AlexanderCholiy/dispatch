@@ -16,14 +16,14 @@ from django.utils.http import urlsafe_base64_decode
 from django.utils.timezone import now
 from django_ratelimit.decorators import ratelimit
 
-from core.constants import EMAIL_ROTATING_FILE
+from core.constants import EMAIL_LOG_ROTATING_FILE
 from core.loggers import LoggerFactory
 
 from .forms import ChangeEmailForm, UserForm, UserRegisterForm
 from .models import PendingUser, User
 from .utils import role_required, send_activation_email, send_confirm_email
 
-email_logger = LoggerFactory(__name__, EMAIL_ROTATING_FILE).get_logger
+email_logger = LoggerFactory(__name__, EMAIL_LOG_ROTATING_FILE).get_logger
 
 
 @method_decorator(

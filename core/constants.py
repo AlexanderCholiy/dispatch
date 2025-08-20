@@ -5,13 +5,15 @@ from django.conf import settings
 
 BASE_DIR = settings.BASE_DIR
 LOG_DIR = os.path.join(BASE_DIR, 'logs')
+DEBUG_MODE: bool = settings.DEBUG
 
 DEFAULT_LOG_FILE = os.path.join(LOG_DIR, 'log.log')
 DEFAULT_ROTATING_LOG_FILE = os.path.join(LOG_DIR, 'rotating_log.log')
-DEFAULT_LOG_MODE = 4 if settings.DEBUG else 1
-DEFAULT_LOG_LEVEL = DEBUG if settings.DEBUG else INFO
+DEFAULT_LOG_MODE = 4 if DEBUG_MODE else 1
+DEFAULT_LOG_LEVEL = DEBUG if DEBUG_MODE else INFO
 
-EMAIL_ROTATING_FILE = os.path.join(LOG_DIR, 'emails.log')
+EMAIL_LOG_ROTATING_FILE = os.path.join(LOG_DIR, 'emails.log')
+TS_LOG_ROTATING_FILE = os.path.join(LOG_DIR, 'ts.log')
 
 MAX_FILE_NAME_LEN = 256
 MAX_FILE_URL_LEN = 512
