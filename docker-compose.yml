@@ -1,0 +1,26 @@
+version: '3.8'
+
+volumes:
+  ts_core_db_data:
+
+networks:
+  ts_core_network:
+    driver: bridge
+
+services:
+
+  # PostgreSQL
+  ts_core_db:
+    image: postgres:13.10
+    env_file: .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - ts_core_db_data:/var/lib/postgresql/data
+    networks:
+      - ts_core_network
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: "md5"
+    command: >
+      postgres -c listen_addresses='*'
