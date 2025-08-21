@@ -3,14 +3,16 @@ import hashlib
 import imaplib
 import json
 import re
+import os
 from datetime import datetime, timedelta
 from email import header, message
 from typing import Optional
 
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from django.db import IntegrityError
 
-from core.constants import EMAIL_LOG_ROTATING_FILE
+from core.constants import EMAIL_LOG_ROTATING_FILE, SUBFOLDER_DATE_FORMAT
 from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
 from emails.models import EmailErr, EmailMessage
@@ -23,7 +25,7 @@ email_parser_logger = LoggerFactory(
     __name__, EMAIL_LOG_ROTATING_FILE).get_logger
 
 
-class EmailParser(EmailValidator):
+class EmailParser(EmailValidator, EmailManager):
 
     def __init__(
         self,
@@ -317,8 +319,8 @@ class EmailParser(EmailValidator):
                         ) for reference in references.split('<') if reference
                     ] if references else []
 
-                    email_attachments_names = []
-                    email_attachments_intext_names = []
+                    email_attachments_urls = []
+                    email_attachments_intext_urls = []
                     email_body = None
 
                     save_file_err = False
@@ -362,7 +364,13 @@ class EmailParser(EmailValidator):
                                     self.save_email_attachments(
                                         email_date, filename, part
                                     )
-                                    email_attachments_names.append(filename)
+                                    email_attachments_urls.append(
+                                        os.path.join(
+                                            email_date.strftime(
+                                                SUBFOLDER_DATE_FORMAT
+                                            ), filename
+                                        )
+                                    )
                                 except ValidationError:
                                     email_parser_logger.warning(
                                         f'Недопустимый файл {filename} '
@@ -386,8 +394,13 @@ class EmailParser(EmailValidator):
                                         filename,
                                         part,
                                     )
-                                    email_attachments_intext_names.append(
-                                        filename)
+                                    email_attachments_intext_urls.append(
+                                        os.path.join(
+                                            email_date.strftime(
+                                                SUBFOLDER_DATE_FORMAT
+                                            ), filename
+                                        )
+                                    )
                                 except ValidationError as e:
                                     email_parser_logger.warning(e)
                                 except OSError:
@@ -473,8 +486,35 @@ class EmailParser(EmailValidator):
                         self._is_from_yandex_tracker(msg, email_subject)
                     )
 
-                    # Место для добавления Email в БД:
+                    try:
+                        self.add_email_message(
+                            email_msg_id=email_msg_id,
+                            email_msg_reply_id=email_msg_reply_id,
+                            email_subject=email_subject,
+                            email_from=email_from,
+                            email_date=email_date,
+                            email_body=email_body,
+                            is_first_email=is_first_email,
+                            is_email_from_yandex_tracker=(
+                                is_email_from_yandex_tracker
+                            ),
+                            was_added_2_yandex_tracker=(
+                                is_email_from_yandex_tracker
+                            ),
+                            email_to=email_to,
+                            email_to_cc=email_to_cc,
+                            email_msg_references=email_msg_references,
+                            email_attachments_urls=email_attachments_urls,
+                            email_attachments_intext_urls=(
+                                email_attachments_intext_urls
+                            ),
+                        )
+                    except IntegrityError:
+                        email_err_msg_ids.append(email_msg_id)
+                        email_parser_logger.debug(
+                            f'Ошибка добавления email: {email_msg_id}'
+                        )
             email_parser_logger.debug(
                 f'Было найдено {email_msg_counter} новых сообщений'
             )
-            EmailManager.add_err_msg_bulk(email_err_msg_ids)
+            self.add_err_msg_bulk(email_err_msg_ids)

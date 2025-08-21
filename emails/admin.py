@@ -4,7 +4,9 @@ from django.utils.html import format_html
 from core.constants import EMPTY_VALUE
 
 from .constants import EMAILS_PER_PAGE
-from .models import EmailErr, EmailMessage
+from .models import (
+    EmailErr, EmailMessage, EmailAttachment, EmailInTextAttachment
+)
 
 admin.site.empty_value_display = EMPTY_VALUE
 
@@ -20,10 +22,9 @@ class EmailMessageAdmin(admin.ModelAdmin):
     list_display = (
         'id',
         'email_incident',
+        'email_subject',
         'email_from',
         'email_date',
-        'email_subject',
-        'email_body',
     )
     search_fields = (
         'id',
@@ -32,7 +33,12 @@ class EmailMessageAdmin(admin.ModelAdmin):
     )
     list_editable = ('email_incident',)
     ordering = ('-email_date',)
-    autocomplete_fields = ['email_incident']
+    autocomplete_fields = ('email_incident',)
+    list_filter = (
+        'is_first_email',
+        'is_email_from_yandex_tracker',
+        'was_added_2_yandex_tracker',
+    )
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -69,7 +75,9 @@ class EmailMessageAdmin(admin.ModelAdmin):
         }),
     )
 
-    def _render_attachment_list(self, attachments):
+    def _render_attachment_list(
+        self, attachments: EmailAttachment | EmailInTextAttachment
+    ):
         """Общая функция для генерации списка вложений"""
         file_links = [
             attachment.get_attachment_url
@@ -81,17 +89,18 @@ class EmailMessageAdmin(admin.ModelAdmin):
             return format_html('<br>'.join(file_links))
         return 'Нет вложений'
 
-    def email_attachments_list(self, obj):
+    def email_attachments_list(self, obj: EmailMessage):
         return self._render_attachment_list(obj.email_attachments.all())
 
     email_attachments_list.short_description = 'Вложения'
 
-    def email_intext_attachments_list(self, obj):
+    def email_intext_attachments_list(self, obj: EmailMessage):
+        print(obj.email_intext_attachments)
         return self._render_attachment_list(obj.email_intext_attachments.all())
 
     email_intext_attachments_list.short_description = 'Вложения в тексте'
 
-    def get_email_recipients_to(self, obj):
+    def get_email_recipients_to(self, obj: EmailMessage):
         """Метод для отображения получателей письма"""
         recipients = obj.email_msg_to.all()
         if recipients:
@@ -101,7 +110,7 @@ class EmailMessageAdmin(admin.ModelAdmin):
 
     get_email_recipients_to.short_description = 'Получатели'
 
-    def get_email_recipients_cc(self, obj):
+    def get_email_recipients_cc(self, obj: EmailMessage):
         """Метод для отображения получателей письма"""
         recipients = obj.email_msg_cc.all()
         if recipients:

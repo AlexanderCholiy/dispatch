@@ -77,7 +77,7 @@ class EmailValidator:
 
     def save_email_attachments(
         self,
-        email_data: datetime,
+        email_date: datetime,
         filename: str,
         part: message.Message
     ):
@@ -104,11 +104,11 @@ class EmailValidator:
                 f'{MAX_ATTACHMENT_SIZE / (1024 * 1024):.1f} MB'
             )
 
-        subfolder_dir: str = os.path.join(
+        file_dir: str = os.path.join(
             INCIDENT_DIR,
-            email_data.strftime(SUBFOLDER_DATE_FORMAT)
+            email_date.strftime(SUBFOLDER_DATE_FORMAT)
         )
-        os.makedirs(subfolder_dir, exist_ok=True)
-        filepath = os.path.join(subfolder_dir, filename)
+        os.makedirs(file_dir, exist_ok=True)
+        filepath = os.path.join(file_dir, filename)
         with open(filepath, 'wb') as f:
             f.write(part.get_payload(decode=True))

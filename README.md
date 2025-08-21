@@ -31,3 +31,6 @@ docker --version
 
 # Запуск PostgreSQL
 sudo docker compose up -d
+
+# Запуск managment команд в фоне
+nohup python manage.py my_command > my_command.log 2>&1 &
