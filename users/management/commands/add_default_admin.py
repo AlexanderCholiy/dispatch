@@ -4,8 +4,10 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.db.models import Q
 from dotenv import load_dotenv
+from django.db import transaction
 
 from users.models import PendingUser
+from core.pretty_print import PrettyPrint
 
 load_dotenv(override=True)
 
@@ -17,6 +19,7 @@ class Command(BaseCommand):
     ADMIN_EMAIL = os.getenv('ADMIN_EMAIL')
     ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD')
 
+    @transaction.atomic
     def handle(self, *args, **kwargs):
         User = get_user_model()
 
@@ -29,36 +32,48 @@ class Command(BaseCommand):
             missing_vars.append('ADMIN_PASSWORD')
 
         if missing_vars:
-            self.stderr.write(
-                f'❌ Не заданы переменные окружения: {", ".join(missing_vars)}'
+            missing_vars_part = ', '.join(missing_vars)
+            msg = (
+                ('❌ Не заданы переменные окружения:', False),
+                (missing_vars_part, True),
             )
+            PrettyPrint.error_print(*msg)
+            return
 
         if User.objects.filter(
             username=self.ADMIN_USERNAME, is_superuser=True
         ).exists():
-            self.stdout.write(
-                f'✅ Администратор "{self.ADMIN_USERNAME}" уже существует.'
+            msg = (
+                ('✅ Администратор', False),
+                (self.ADMIN_USERNAME, True),
+                ('уже существует.', False),
             )
+            PrettyPrint.info_print(*msg)
             return
 
         pending_deleted, _ = PendingUser.objects.filter(
             Q(username=self.ADMIN_USERNAME) | Q(email=self.ADMIN_EMAIL)
         ).delete()
         if pending_deleted:
-            self.stdout.write(
-                f'🧹 Удалены PendingUser с username="{self.ADMIN_USERNAME}" '
-                f'или email="{self.ADMIN_EMAIL}"'
+            msg = (
+                ('🧹 Удалены PendingUser с username=', False),
+                (self.ADMIN_USERNAME, True),
+                ('или email=', False),
+                (self.ADMIN_EMAIL, True),
             )
+            PrettyPrint.warning_print(*msg)
 
         user_deleted, _ = User.objects.filter(
             Q(username=self.ADMIN_USERNAME) | Q(email=self.ADMIN_EMAIL),
         ).exclude(is_superuser=True).delete()
         if user_deleted:
-            self.stdout.write(
-                '🧹 Удалены обычные пользователи с '
-                f'username="{self.ADMIN_USERNAME}" или '
-                f'email="{self.ADMIN_EMAIL}"'
+            msg = (
+                ('🧹 Удалены обычные пользователи с username=', False),
+                (self.ADMIN_USERNAME, True),
+                ('или email=', False),
+                (self.ADMIN_EMAIL, True),
             )
+            PrettyPrint.warning_print(*msg)
 
         User.objects.create_user(
             username=self.ADMIN_USERNAME,
@@ -69,6 +84,9 @@ class Command(BaseCommand):
             is_superuser=True,
         )
 
-        self.stdout.write(
-            f'✅ Администратор "{self.ADMIN_USERNAME}" успешно создан.'
+        msg = (
+            ('✅ Администратор', False),
+            (self.ADMIN_USERNAME, True),
+            ('успешно создан.', True)
         )
+        PrettyPrint.success_print(*msg)
