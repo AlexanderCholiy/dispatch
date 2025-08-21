@@ -128,10 +128,10 @@ class PrettyPrint:
         percent_bg: str,
         bar_length: Optional[int],
     ) -> None:
+        total -= 1
         if total == 0 or not DEBUG:
             return
 
-        total -= 1
         iteration = min(iteration, total)
         progress = iteration / total
         percent = progress * 100

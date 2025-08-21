@@ -8,7 +8,7 @@ import chardet
 from bs4 import BeautifulSoup
 from django.core.exceptions import ValidationError
 
-from core.constants import EMAIL_ATTACHMENT_FOLDER_NAME, SUBFOLDER_DATE_FORMAT
+from core.constants import INCIDENT_DIR, SUBFOLDER_DATE_FORMAT
 
 from .constants import (
     ALLOWED_MIME_PREFIXES, MAX_ATTACHMENT_SIZE, ALLOWED_EXTENSIONS
@@ -105,7 +105,7 @@ class EmailValidator:
             )
 
         subfolder_dir: str = os.path.join(
-            EMAIL_ATTACHMENT_FOLDER_NAME,
+            INCIDENT_DIR,
             email_data.strftime(SUBFOLDER_DATE_FORMAT)
         )
         os.makedirs(subfolder_dir, exist_ok=True)

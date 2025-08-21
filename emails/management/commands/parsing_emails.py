@@ -22,4 +22,4 @@ class Command(BaseCommand):
             os.getenv('PARSING_EMAIL_SERVER'),
             os.getenv('PARSING_EMAIL_PORT', 993),
         )
-        email_parser.fetch_unread_emails()
+        email_parser.fetch_unread_emails(2)

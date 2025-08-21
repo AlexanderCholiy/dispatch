@@ -17,7 +17,7 @@ from emails.models import EmailErr, EmailMessage
 from yandex_tracker.constants import YT_QUEUE
 
 from .validators import EmailValidator
-from .utils import add_err_msg_bulk
+from .utils import EmailManager
 
 email_parser_logger = LoggerFactory(
     __name__, EMAIL_LOG_ROTATING_FILE).get_logger
@@ -365,7 +365,7 @@ class EmailParser(EmailValidator):
                                     email_attachments_names.append(filename)
                                 except ValidationError:
                                     email_parser_logger.warning(
-                                        f'Недопустимый тип файла {filename} '
+                                        f'Недопустимый файл {filename} '
                                         f'для email: {email_msg_id}'
                                     )
                                 except OSError:
@@ -389,7 +389,7 @@ class EmailParser(EmailValidator):
                                     email_attachments_intext_names.append(
                                         filename)
                                 except ValidationError as e:
-                                    email_parser_logger.warning(exc_info=e)
+                                    email_parser_logger.warning(e)
                                 except OSError:
                                     save_file_err = True
 
@@ -477,4 +477,4 @@ class EmailParser(EmailValidator):
             email_parser_logger.debug(
                 f'Было найдено {email_msg_counter} новых сообщений'
             )
-            add_err_msg_bulk(email_err_msg_ids)
+            EmailManager.add_err_msg_bulk(email_err_msg_ids)

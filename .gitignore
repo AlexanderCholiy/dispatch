@@ -209,3 +209,4 @@ __marimo__/
 # Bakup and temp_data
 *.bak
 data/*
+media/*
