@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'pages.apps.PagesConfig',
     'emails.apps.EmailsConfig',
     'ts.apps.TsConfig',
+    'incidents.apps.IncidentsConfig',
     'axes',
 ]
 

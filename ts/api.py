@@ -308,7 +308,7 @@ class Api(SocialValidators):
             ts_api_logger.warning(f'Проверьте данные в {TS_AVR_REPORT_URL}')
 
     @staticmethod
-    def update_base_stations(update_json: bool = False):
+    def update_base_stations(update_json: bool = True):
         if update_json or not os.path.exists(BASE_STATIONS_FILE):
             Api.download_json(BASE_STATIONS_FILE, TS_BS_REPORT_URL)
 

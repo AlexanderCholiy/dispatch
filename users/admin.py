@@ -4,8 +4,9 @@ from django.contrib.auth.forms import UserChangeForm, UserCreationForm
 
 from .constants import MAX_USERS_PER_PAGE
 from .models import PendingUser, User
+from core.constants import EMPTY_VALUE
 
-admin.site.empty_value_display = 'Не задано'
+admin.site.empty_value_display = EMPTY_VALUE
 
 
 class CustomUserCreationForm(UserCreationForm):
