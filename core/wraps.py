@@ -1,8 +1,8 @@
 import functools
 import time
 from datetime import datetime
-from typing import Callable
 from logging import Logger
+from typing import Callable
 
 
 def timer(logger: Logger) -> Callable:

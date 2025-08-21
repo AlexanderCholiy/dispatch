@@ -1,11 +1,11 @@
-from django.db import models
 from django.contrib.auth import get_user_model
+from django.db import models
 
-from core.models import SpecialEmail, Attachment, Msg2
 from core.constants import MAX_EMAIL_ID_LEN
+from core.models import Attachment, Msg2, SpecialEmail
 from incidents.models import Incident
-from .constants import MAX_EMAIL_SUBJECT_LEN
 
+from .constants import MAX_EMAIL_SUBJECT_LEN
 
 User = get_user_model()
 

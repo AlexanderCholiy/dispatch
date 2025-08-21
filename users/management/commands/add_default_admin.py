@@ -2,14 +2,11 @@ import os
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
-from django.db.models import Q
-from dotenv import load_dotenv
 from django.db import transaction
+from django.db.models import Q
 
-from users.models import PendingUser
 from core.pretty_print import PrettyPrint
-
-load_dotenv(override=True)
+from users.models import PendingUser
 
 
 class Command(BaseCommand):

@@ -1,18 +1,20 @@
 import os
 from pathlib import Path
 
-from django.db import models
 from django.conf import settings
+from django.db import models
+
+from emails.constants import MAX_EMAIL_LEN
 
 from .constants import (
+    EMAIL_ATTACHMENT_FOLDER_NAME,
+    MAX_EMAIL_ID_LEN,
     MAX_FILE_NAME_LEN,
     MAX_FILE_URL_LEN,
-    EMAIL_ATTACHMENT_FOLDER_NAME,
-    MAX_ST_DESCRIPTION,
     MAX_LG_DESCRIPTION,
-    MAX_EMAIL_ID_LEN,
+    MAX_ST_DESCRIPTION,
+    SUBFOLDER_DATE_FORMAT,
 )
-from emails.constants import MAX_EMAIL_LEN
 
 
 class Attachment(models.Model):
@@ -36,7 +38,7 @@ class Attachment(models.Model):
 
     @property
     def subfolder_name(self):
-        return self.email_msg.email_date.strftime("%Y-%m-%d")
+        return self.email_msg.email_date.strftime(SUBFOLDER_DATE_FORMAT)
 
     def build_file_url(self) -> str | None:
         """Формирует URL до файла (без сохранения)."""

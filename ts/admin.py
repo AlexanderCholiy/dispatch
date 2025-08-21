@@ -1,22 +1,19 @@
-from datetime import timedelta, datetime
-from typing import Optional
-
 from django.contrib import admin
-from django.urls import reverse
-from django.utils.html import format_html
-from django.conf import settings
-import pytz
+
+from core.constants import EMPTY_VALUE
 
 from .constants import (
-    POLES_PER_PAGE,
     AVR_CONTRACTORS_PER_PAGE,
-    BASE_STATIONS_PER_PAGE,
     BASE_STATION_OPERATORS_PER_PAGE,
+    BASE_STATIONS_PER_PAGE,
+    POLES_PER_PAGE,
 )
 from .models import (
-    Pole, AVRContractor, BaseStation, BaseStationOperator,
+    AVRContractor,
+    BaseStation,
+    BaseStationOperator,
+    Pole,
 )
-from core.constants import EMPTY_VALUE
 
 admin.site.empty_value_display = EMPTY_VALUE
 

@@ -2,12 +2,11 @@ import os
 
 from django.core.management.base import BaseCommand
 
-from ts.constants import TS_DATA_DIR
-from core.wraps import timer
 from core.constants import TS_LOG_ROTATING_FILE
 from core.loggers import LoggerFactory
+from core.wraps import timer
 from ts.api import Api
-
+from ts.constants import TS_DATA_DIR
 
 ts_managment_logger = LoggerFactory(__name__, TS_LOG_ROTATING_FILE).get_logger
 

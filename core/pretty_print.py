@@ -3,7 +3,7 @@ import shutil
 from datetime import datetime
 from typing import Optional
 
-from colorama import Fore, Style, Back
+from colorama import Back, Fore, Style
 
 from .constants import DEBUG_MODE as DEBUG
 

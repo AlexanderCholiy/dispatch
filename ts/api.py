@@ -1,43 +1,41 @@
-import os
 import json
-import re
+import os
 from http import HTTPStatus
-from numpy import nan
 from types import NoneType
 
-import requests
 import pandas as pd
-from django.db import IntegrityError
-from django.db import transaction
+import requests
+from django.db import IntegrityError, transaction
+from numpy import nan
 
-from core.loggers import LoggerFactory
 from core.constants import TS_LOG_ROTATING_FILE
-from .constants import (
-    POLES_FILE,
-    BASE_STATIONS_FILE,
-    AVR_FILE,
-    TS_POLES_TL_URL,
-    TS_BS_REPORT_URL,
-    TS_AVR_REPORT_URL,
-    COLUMNS_TO_KEEP_POLES_TL,
-    COLUMNS_TO_KEEP_BS_OPERATORS_REPORT,
-    COLUMNS_TO_KEEP_AVR_REPORT,
-    UNDEFINED_CASE,
-    UNDEFINED_ID,
-    UNDEFINED_EMAILS,
-)
+from core.loggers import LoggerFactory
+from core.pretty_print import PrettyPrint
 from core.wraps import timer
+
+from .constants import (
+    AVR_FILE,
+    BASE_STATIONS_FILE,
+    COLUMNS_TO_KEEP_AVR_REPORT,
+    COLUMNS_TO_KEEP_BS_OPERATORS_REPORT,
+    COLUMNS_TO_KEEP_POLES_TL,
+    POLES_FILE,
+    TS_AVR_REPORT_URL,
+    TS_BS_REPORT_URL,
+    TS_POLES_TL_URL,
+    UNDEFINED_CASE,
+    UNDEFINED_EMAILS,
+    UNDEFINED_ID,
+)
 from .models import (
-    Pole,
+    AVRContractor,
     BaseStation,
     BaseStationOperator,
-    AVRContractor,
     ContractorEmail,
     ContractorPhone,
+    Pole,
 )
-from core.pretty_print import PrettyPrint
 from .validators import SocialValidators
-
 
 ts_api_logger = LoggerFactory(__name__, TS_LOG_ROTATING_FILE).get_logger
 

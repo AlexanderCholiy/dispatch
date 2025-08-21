@@ -1,16 +1,17 @@
-import pytz
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
+import pytz
+from django.conf import settings
 from django.contrib import admin
 from django.urls import reverse
 from django.utils.html import format_html
-from django.conf import settings
 
-from emails.models import EmailMessage
-from .models import IncidentStatusHistory, Incident
-from .constants import INCIDENTS_PER_PAGE
 from core.constants import EMPTY_VALUE
+from emails.models import EmailMessage
+
+from .constants import INCIDENTS_PER_PAGE
+from .models import Incident, IncidentStatusHistory
 
 admin.site.empty_value_display = EMPTY_VALUE
 

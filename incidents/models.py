@@ -1,13 +1,13 @@
 from datetime import datetime, timedelta
 from typing import Optional
 
-from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.db import models
 from django.utils import timezone
 
-from ts.models import Pole, BaseStation
 from core.models import Detail
+from ts.models import BaseStation, Pole
 
 User = get_user_model()
 

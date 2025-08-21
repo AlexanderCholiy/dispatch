@@ -1,10 +1,10 @@
 from django.contrib import admin
 from django.utils.html import format_html
 
-from .models import EmailErr, EmailMessage
-from .constants import EMAILS_PER_PAGE
 from core.constants import EMPTY_VALUE
 
+from .constants import EMAILS_PER_PAGE
+from .models import EmailErr, EmailMessage
 
 admin.site.empty_value_display = EMPTY_VALUE
 

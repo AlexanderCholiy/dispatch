@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'emails.apps.EmailsConfig',
     'ts.apps.TsConfig',
     'incidents.apps.IncidentsConfig',
+    'yandex_tracker.apps.YandexTrackerConfig',
     'axes',
 ]
 
