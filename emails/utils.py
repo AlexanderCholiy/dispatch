@@ -33,6 +33,14 @@ class EmailManager:
 
         EmailErr.objects.bulk_create(objs_to_create, ignore_conflicts=True)
 
+    @staticmethod
+    @transaction.atomic
+    def del_err_msg_bulk(error_ids: list[str]):
+        if not error_ids:
+            return
+
+        EmailErr.objects.filter(email_msg_id__in=error_ids).delete()
+
     def add_email_message(
         self,
         email_msg_id: str,

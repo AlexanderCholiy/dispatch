@@ -3,7 +3,6 @@ import hashlib
 import imaplib
 import json
 import re
-import os
 from datetime import datetime, timedelta
 from email import header, message
 from typing import Optional
@@ -12,9 +11,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.db import IntegrityError
 
-from core.constants import (
-    EMAIL_LOG_ROTATING_FILE, SUBFOLDER_DATE_FORMAT, SUBFOLDER_EMAIL_NAME
-)
+from core.constants import EMAIL_LOG_ROTATING_FILE
 from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
 from emails.models import EmailErr, EmailMessage
@@ -257,6 +254,7 @@ class EmailParser(EmailValidator, EmailManager):
                     parsed_messages.append(msg)
 
             email_err_msg_ids = []
+            email_err_msg_ids_to_del = []
             email_msg_counter = 0
 
             for index, msg in enumerate(parsed_messages):
@@ -503,6 +501,8 @@ class EmailParser(EmailValidator, EmailManager):
                                 email_attachments_intext_urls
                             ),
                         )
+                        EmailErr.objects.filter(email_msg_id=email_msg_id)
+                        email_err_msg_ids_to_del.append(email_msg_id)
                     except IntegrityError:
                         email_err_msg_ids.append(email_msg_id)
                         email_parser_logger.debug(
@@ -512,3 +512,4 @@ class EmailParser(EmailValidator, EmailManager):
                 f'Было найдено {email_msg_counter} новых сообщений'
             )
             self.add_err_msg_bulk(email_err_msg_ids)
+            self.del_err_msg_bulk(email_err_msg_ids_to_del)
