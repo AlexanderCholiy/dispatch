@@ -3,8 +3,11 @@ from typing import Optional
 from datetime import datetime
 
 from django.db import transaction, models
-from core.models import Attachment
+from django.core.files import File
 
+from core.models import Attachment
+from django.utils import timezone
+from core.constants import SUBFOLDER_EMAIL_NAME, SUBFOLDER_DATE_FORMAT
 from .models import (
     EmailErr,
     EmailMessage,
@@ -45,7 +48,7 @@ class EmailManager:
         email_to_cc: list[str],
         email_msg_references: list[str],
         email_attachments_urls: list[str],
-        email_attachments_intext_urls: list[str]
+        email_attachments_intext_urls: list[str],
     ) -> EmailMessage:
         """Добавление (обновление) сообщения электронной почты в БД."""
         with transaction.atomic():
@@ -107,20 +110,34 @@ class EmailManager:
         new_values = set(values) - existing_values
 
         objs = []
+
         for value in new_values:
             if issubclass(model, Attachment):
-                file_name = os.path.basename(value)
-                print(value)
-                objs.append(
-                    model(
-                        email_msg=email_message,
-                        file_name=file_name,
-                        file_url=value
+                # Формируем относительный путь для сохранения в БД:
+                date_str = (
+                    email_message.email_date.strftime(SUBFOLDER_DATE_FORMAT)
+                    if email_message.email_date else timezone.now().strftime(
+                        SUBFOLDER_DATE_FORMAT
                     )
                 )
+                relative_path = os.path.join(
+                    SUBFOLDER_EMAIL_NAME, date_str, os.path.basename(value)
+                ).replace(os.sep, '/')
+
+                obj = model(email_msg=email_message)
+
+                if os.path.isfile(value):
+                    # Если есть физический файл, сохраняем его через FileField:
+                    with open(value, 'rb') as f:
+                        obj.file_url.save(
+                            os.path.basename(value), File(f), save=False)
+                        obj.file_url.name = relative_path
+                else:
+                    obj.file_url.name = relative_path
+
+                objs.append(obj)
             else:
-                objs.append(
-                    model(email_msg=email_message, **{field_name: value})
-                )
+                obj = model(email_msg=email_message, **{field_name: value})
+                objs.append(obj)
 
         model.objects.bulk_create(objs, ignore_conflicts=True)

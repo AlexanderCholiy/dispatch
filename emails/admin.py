@@ -95,7 +95,6 @@ class EmailMessageAdmin(admin.ModelAdmin):
     email_attachments_list.short_description = 'Вложения'
 
     def email_intext_attachments_list(self, obj: EmailMessage):
-        print(obj.email_intext_attachments)
         return self._render_attachment_list(obj.email_intext_attachments.all())
 
     email_intext_attachments_list.short_description = 'Вложения в тексте'

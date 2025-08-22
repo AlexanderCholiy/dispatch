@@ -50,7 +50,8 @@ INSTALLED_APPS = [
     'ts.apps.TsConfig',
     'incidents.apps.IncidentsConfig',
     'yandex_tracker.apps.YandexTrackerConfig',
-    'axes',
+    'axes',  # после всех приложений
+    'django_cleanup.apps.CleanupConfig',  # после всех приложений
 ]
 
 MIDDLEWARE = [

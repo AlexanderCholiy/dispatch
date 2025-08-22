@@ -133,7 +133,7 @@ class EmailAttachment(Attachment):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=['email_msg', 'file_name'],
+                fields=['email_msg', 'file_url'],
                 name='unique_email_attachment'
             )
         ]
@@ -154,7 +154,7 @@ class EmailInTextAttachment(Attachment):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=['email_msg', 'file_name'],
+                fields=['email_msg', 'file_url'],
                 name='unique_email_intext_attachment'
             )
         ]

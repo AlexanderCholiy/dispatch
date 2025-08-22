@@ -12,7 +12,9 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.db import IntegrityError
 
-from core.constants import EMAIL_LOG_ROTATING_FILE, SUBFOLDER_DATE_FORMAT
+from core.constants import (
+    EMAIL_LOG_ROTATING_FILE, SUBFOLDER_DATE_FORMAT, SUBFOLDER_EMAIL_NAME
+)
 from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
 from emails.models import EmailErr, EmailMessage
@@ -365,11 +367,7 @@ class EmailParser(EmailValidator, EmailManager):
                                         email_date, filename, part
                                     )
                                     email_attachments_urls.append(
-                                        os.path.join(
-                                            email_date.strftime(
-                                                SUBFOLDER_DATE_FORMAT
-                                            ), filename
-                                        )
+                                        filename
                                     )
                                 except ValidationError:
                                     email_parser_logger.warning(
@@ -395,11 +393,7 @@ class EmailParser(EmailValidator, EmailManager):
                                         part,
                                     )
                                     email_attachments_intext_urls.append(
-                                        os.path.join(
-                                            email_date.strftime(
-                                                SUBFOLDER_DATE_FORMAT
-                                            ), filename
-                                        )
+                                        filename
                                     )
                                 except ValidationError as e:
                                     email_parser_logger.warning(e)

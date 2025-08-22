@@ -3,76 +3,65 @@ import os
 from django.db import models
 
 from emails.constants import MAX_EMAIL_LEN
-
 from .constants import (
     MAX_EMAIL_ID_LEN,
-    MAX_FILE_NAME_LEN,
     MAX_FILE_URL_LEN,
     MAX_LG_DESCRIPTION,
     MAX_ST_DESCRIPTION,
-    INCIDENT_DIR,
 )
+from .utils import attachment_upload_to
 
 
 class Attachment(models.Model):
-    """
-    Абстрактная модель для вложений из почты. Файл необходимо сначала скачать.
-    """
-    file_name = models.CharField(
-        max_length=MAX_FILE_NAME_LEN,
-        verbose_name='Имя файла'
-    )
-    file_url = models.URLField(
+    """Абстрактная модель для вложений. Файл хранится в папке MEDIA_ROOT."""
+
+    file_url = models.FileField(
+        upload_to=attachment_upload_to,
         max_length=MAX_FILE_URL_LEN,
-        blank=True,
-        null=True,
-        verbose_name='Ссылка на файл'
+        verbose_name='Ссылка на файл',
     )
 
     class Meta:
         abstract = True
 
     def __str__(self):
-        return self.file_name
-
-    def build_file_url(self) -> str | None:
-        """
-        Формирует URL до файла (без сохранения).
-        Ожидается, что ФАЙЛ УЖЕ СКАЧАН в
-        INCIDENT_DIR/<subfolder>/<file_name>.
-        """
-        absolute_path = os.path.join(INCIDENT_DIR, self.file_url)
-
-        if os.path.exists(absolute_path):
-            rel_url = self.file_url.replace(os.sep, '/')
-            return rel_url
-        return None
-
-    def save(self, *args, **kwargs):
-        """Проверяем ссылку при сохранении модели и формируем имя файла."""
-        if os.path.sep in self.file_name:
-            self.file_name = os.path.basename(self.file_name)
-
-        file_url = self.build_file_url()
-
-        if file_url:
-            self.file_url = file_url
-            super().save(*args, **kwargs)
-        else:
-            if self.pk:
-                super().delete()
+        if (
+            self.file_url
+            and hasattr(self.file_url, 'name')
+            and self.file_url.name
+        ):
+            return os.path.basename(self.file_url.name)
+        return 'Нет файла'
 
     def delete(self, *args, **kwargs):
-        """Удаляем не только запись, но и сам файл."""
-        absolute_path = os.path.join(INCIDENT_DIR, self.file_url)
-
-        if os.path.exists(absolute_path):
-            try:
-                os.remove(absolute_path)
-            except OSError:
-                pass
-
+        if self.file_url and self.file_url.name:
+            file_path = self.file_url.path
+            if os.path.isfile(file_path):
+                os.remove(file_path)
         super().delete(*args, **kwargs)
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            old = self.objects.filter(pk=self.pk).first()
+            if (
+                old
+                and old.file_url
+                and old.file_url.name != self.file_url.name
+            ):
+                old_path = old.file_url.path
+                if os.path.isfile(old_path):
+                    os.remove(old_path)
+        super().save(*args, **kwargs)
+
+    @property
+    def get_attachment_url(self):
+        """Данный метод нужен для удобства в админ панели."""
+        if self.file_url and hasattr(self.file_url, 'url'):
+            return (
+                f'<a href="{self.file_url.url}" target="_blank">'
+                f'{os.path.basename(self.file_url.name)}</a>'
+            )
+        return None
 
 
 class Detail(models.Model):
