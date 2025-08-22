@@ -1,3 +1,8 @@
 import os
 
 YT_QUEUE = os.getenv('YT_QUEUE')
+YT_CLIENT_ID = os.getenv('YT_CLIENT_ID')
+YT_CLIENT_SECRET = os.getenv('YT_CLIENT_SECRET')
+YT_ORGANIZATION_ID = os.getenv('YT_ORGANIZATION_ID')
+YT_ACCESS_TOKEN = os.getenv('YT_ACCESS_TOKEN')
+YT_REFRESH_TOKEN = os.getenv('YT_REFRESH_TOKEN')

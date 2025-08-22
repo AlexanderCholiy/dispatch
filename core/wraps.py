@@ -74,3 +74,57 @@ def retry(
                     time.sleep(delay)
         return wrapper
     return decorator
+
+
+def safe_request(max_retries: int = 3, timeout: int = 10):
+    """Декоратор для безопасного выполнения HTTP-запросов."""
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            retries = 0
+            while retries <= max_retries:
+                retries += 1
+                try:
+                    response: requests.Response = func(*args, timeout=timeout, **kwargs)
+
+                    if response.status_code == HTTPStatus.TOO_MANY_REQUESTS:
+                        retry_after = int(response.headers.get("Retry-After", 10))
+                        time.sleep(retry_after)
+                        continue
+
+                    if response.status_code == HTTPStatus.OK:
+                        return response.json()
+
+                    if response.status_code == HTTPStatus.NO_CONTENT:
+                        return {}
+
+                    # другие ошибки
+                    yt_manager_logger.critical(
+                        f"Ошибка {response.status_code}: {response.text}"
+                    )
+                    raise YandexTrackerCriticalErr(response.status_code, response.text)
+
+                except requests.exceptions.Timeout:
+                    yt_manager_logger.warning(
+                        f"Таймаут при запросе {func.__name__}"
+                    )
+                    raise YandexTrackerWarningErr(
+                        HTTPStatus.REQUEST_TIMEOUT,
+                        "Истекло время ожидания ответа от сервера."
+                    )
+
+                except requests.exceptions.RequestException as e:
+                    yt_manager_logger.exception("Ошибка запроса")
+                    raise YandexTrackerCriticalErr(
+                        HTTPStatus.INTERNAL_SERVER_ERROR, str(e)
+                    )
+
+            # если все ретраи закончились
+            raise YandexTrackerCriticalErr(
+                HTTPStatus.TOO_MANY_REQUESTS,
+                "Максимальное количество попыток исчерпано."
+            )
+
+        return wrapper
+    return decorator

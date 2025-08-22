@@ -14,6 +14,7 @@ DEFAULT_LOG_LEVEL = DEBUG if DEBUG_MODE else INFO
 
 EMAIL_LOG_ROTATING_FILE = os.path.join(LOG_DIR, 'emails.log')
 TS_LOG_ROTATING_FILE = os.path.join(LOG_DIR, 'ts.log')
+YANDEX_TRACKER_ROTATING_FILE = os.path.join(LOG_DIR, 'yandex_tracker.log')
 
 MAX_FILE_URL_LEN = 512
 MAX_ST_DESCRIPTION = 256

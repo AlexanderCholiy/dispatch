@@ -16,15 +16,15 @@ from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
 from emails.models import EmailErr, EmailMessage
 from yandex_tracker.constants import YT_QUEUE
-
 from .validators import EmailValidator
 from .utils import EmailManager
+from incidents.utils import IncidentManager
 
 email_parser_logger = LoggerFactory(
     __name__, EMAIL_LOG_ROTATING_FILE).get_logger
 
 
-class EmailParser(EmailValidator, EmailManager):
+class EmailParser(EmailValidator, EmailManager, IncidentManager):
 
     def __init__(
         self,
@@ -479,7 +479,7 @@ class EmailParser(EmailValidator, EmailManager):
                     )
 
                     try:
-                        self.add_email_message(
+                        email_msg = self.add_email_message(
                             email_msg_id=email_msg_id,
                             email_msg_reply_id=email_msg_reply_id,
                             email_subject=email_subject,
@@ -501,7 +501,7 @@ class EmailParser(EmailValidator, EmailManager):
                                 email_attachments_intext_urls
                             ),
                         )
-                        EmailErr.objects.filter(email_msg_id=email_msg_id)
+                        self.add_incident_from_email(email_msg)
                         email_err_msg_ids_to_del.append(email_msg_id)
                     except IntegrityError:
                         email_err_msg_ids.append(email_msg_id)
@@ -512,4 +512,4 @@ class EmailParser(EmailValidator, EmailManager):
                 f'Было найдено {email_msg_counter} новых сообщений'
             )
             self.add_err_msg_bulk(email_err_msg_ids)
-            self.del_err_msg_bulk(email_err_msg_ids_to_del)
+            # self.del_err_msg_bulk(email_err_msg_ids_to_del)
