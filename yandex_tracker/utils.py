@@ -24,6 +24,7 @@ class YandexTrackerManager:
     token_url = 'https://oauth.yandex.ru/token'
     search_issues_url = (
         'https://api.tracker.yandex.net/v2/issues/_search?expand=transitions')
+    all_users_url = 'https://api.tracker.yandex.net/v2/users'
 
     def __init__(
         self,
@@ -112,6 +113,29 @@ class YandexTrackerManager:
             sub_func_name=inspect.currentframe().f_code.co_name,
         )
 
+    @property
+    def real_users_in_yt_tracker(self) -> dict[str, int]:
+        """
+        Список реальных пользователей в Yandex Tracker.
+
+        Особенности:
+            Логины пользователей должны быть такими же, как в Django
+        Users, иначе на этого пользователя невозможно будет назначить задачу.
+        """
+        return {
+            user['login']: user['uid'] for user in self.users_info
+            if not user['disableNotifications']
+        }
+
+    @property
+    def users_info(self) -> list[dict]:
+        """Список всех пользователей в Yandex Tracker."""
+        return self._make_request(
+            HTTPMethod.GET,
+            self.all_users_url,
+            sub_func_name=inspect.currentframe().f_code.co_name
+        )
+
     def select_issue(
         self, database_id: Optional[int] = None, key: Optional[str] = None
     ) -> list[dict]:
@@ -119,12 +143,12 @@ class YandexTrackerManager:
 
         if database_id is None and key is None:
             raise ValueError(
-                'Необходимо указать или database_id или ключ задачи.'
+                'Необходимо указать номер задачи из БД или ключ задачи.'
             )
         filter = {'queue': self.queue}
 
         if database_id is not None:
-            filter[YT_DATABASE_ID_GLOBAL_FIELD_NAME] = database_id
+            filter[self.database_global_field_id] = database_id
 
         if key is not None:
             filter['key'] = key

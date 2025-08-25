@@ -1,12 +1,15 @@
-import os
-
-from django.db import connection, models, transaction
+import random
 from typing import Optional
 
+from django.db import connection, models, transaction
+from django.db.models import Count, Q, Min
+
 from emails.models import EmailMessage
-from .models import Incident
+from .models import Incident, IncidentStatus
 from yandex_tracker.utils import YandexTrackerManager
 from .validators import IncidentValidator
+from .constants import DEFAULT_STATUS_NAME, DEFAULT_STATUS_DESC
+from users.models import User, Roles
 
 
 class IncidentManager(IncidentValidator):
@@ -136,6 +139,63 @@ class IncidentManager(IncidentValidator):
 
         return actual_email_incident
 
+    @staticmethod
+    def choice_dispatch_for_incident(
+        yt_manager: Optional[YandexTrackerManager],
+        max_incident_num_per_user: Optional[int] = None,
+    ) -> Optional[User]:
+        """
+        Пользователь которому можно назначить инцидент.
+
+        Args:
+            yt_manager (YandexTrackerManager, optional) пользователи из
+            YandexTracker, которые должны быть также заведены в БД.
+            max_incident_num_per_user (int, optional)
+            Максимальное количество активных (отслеживаемых по SLA) инцидентов,
+            которые могут быть назначены одному пользователю.
+        """
+        active_users_with_incidents = (
+            User.objects
+            .filter(
+                is_active=True, role=Roles.DISPATCH,
+            )
+            .annotate(
+                incident_count=Count(
+                    'incidents', filter=Q(incidents__track_sla=True))
+            )
+        )
+
+        if max_incident_num_per_user is not None:
+            active_users_with_incidents = active_users_with_incidents.filter(
+                incident_count__lt=max_incident_num_per_user)
+
+        if yt_manager is not None:
+            active_users_with_incidents = active_users_with_incidents.filter(
+                username__in=yt_manager.real_users_in_yt_tracker.keys()
+            )
+
+        if not active_users_with_incidents.exists():
+            return None
+
+        # Необходимо выбрать самого свободного диспетчера:
+        min_count = active_users_with_incidents.aggregate(
+            min_count=Min('incident_count')
+        )['min_count']
+
+        free_users = active_users_with_incidents.filter(
+            incident_count=min_count
+        )
+
+        return random.choice(free_users)
+
+    @staticmethod
+    def add_default_status(incident: Incident) -> None:
+        default_status, _ = IncidentStatus.objects.get_or_create(
+            name=DEFAULT_STATUS_NAME,
+            defaults={'description': DEFAULT_STATUS_DESC}
+        )
+        incident.statuses.add(default_status)
+
     @transaction.atomic()
     def add_incident_from_email(
         self,
@@ -206,15 +266,39 @@ class IncidentManager(IncidentValidator):
         # надо создать новый инцидент, при условии что у нас есть полная
         # переписка:
         elif actual_email_incident is None and is_full_thread:
-            random_user = choice_dispatch_for_incident(
-                self.yt_client,
-                incident_email_config.MAX_INCIDENT_NUM_PER_USER
-            )
-
             new_incident = True
+
+            random_user = IncidentManager.choice_dispatch_for_incident(
+                yt_manager)
+
             actual_email_incident = Incident.objects.create(
                 incident_date=emails_thread[0].email_date,
                 pole=pole,
                 base_station=base_station,
                 responsible_user=random_user,
             )
+            IncidentManager.add_default_status(actual_email_incident)
+
+        # У существующей переписки, обновляем номер инцидента к которой она
+        # относится:
+        if actual_email_incident is not None:
+            (
+                EmailMessage.objects.filter(pk__in=email_ids)
+                .update(email_incident=actual_email_incident)
+            )
+            # У инцидента обновляем поле с шифром опоры и БС, если там пусто:
+            if actual_email_incident.pole is None and pole is not None:
+                actual_email_incident.pole = pole
+                actual_email_incident.save(update_fields=['pole'])
+
+            if actual_email_incident.base_station is None and (
+                base_station is not None
+            ):
+                actual_email_incident.base_station = base_station
+                actual_email_incident.save(update_fields=['base_station'])
+
+            # Выставляем у нового инцидента изначальный статус:
+            if new_incident:
+                IncidentManager.add_default_status(actual_email_incident)
+
+            return actual_email_incident, new_incident

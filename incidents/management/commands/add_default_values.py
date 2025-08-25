@@ -6,8 +6,17 @@ from django.core.management.base import BaseCommand
 from incidents.models import (
     IncidentStatus, IncidentType, IncidentStatusHistory
 )
+from django.db import transaction
+
 from incidents.constants import INCIDENT_TYPES_FILE, INCIDENT_STATUSES_FILE
 from core.pretty_print import PrettyPrint
+from core.loggers import LoggerFactory
+from core.wraps import timer
+from core.constants import INCIDENTS_LOG_ROTATING_FILE
+
+
+incident_managment_logger = LoggerFactory(
+    __name__, INCIDENTS_LOG_ROTATING_FILE).get_logger
 
 
 class Command(BaseCommand):
@@ -17,6 +26,7 @@ class Command(BaseCommand):
         self.update_incident_types()
         self.update_incident_statuses()
 
+    @timer(incident_managment_logger)
     def update_incident_types(self):
         incident_types = pd.read_excel(INCIDENT_TYPES_FILE)
         incident_types.replace('', None, inplace=True)
@@ -48,6 +58,8 @@ class Command(BaseCommand):
                     sla_deadline=sla_deadline,
                 )
 
+    @timer(incident_managment_logger)
+    @transaction.atomic()
     def update_incident_statuses(self):
         incident_statuses = pd.read_excel(INCIDENT_STATUSES_FILE)
         incident_statuses.replace('', None, inplace=True)
@@ -82,7 +94,7 @@ class Command(BaseCommand):
         for index, history in enumerate(IncidentStatusHistory.objects.all()):
             PrettyPrint.progress_bar_error(
                 index, total,
-                'Удаление не актуальных связей IncidentStatusHistory:'
+                'Удаление не актуальных связей в IncidentStatusHistory:'
             )
             if history.status_id not in valid_status_ids:
                 history.delete()

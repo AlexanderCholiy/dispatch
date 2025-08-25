@@ -26,5 +26,5 @@ class Command(BaseCommand):
             os.getenv('YT_QUEUE'),
             os.getenv('YT_DATABASE_ID_GLOBAL_FIELD_NAME'),
 
-        ).current_user_info
+        ).real_users_in_yt_tracker
         print(result)

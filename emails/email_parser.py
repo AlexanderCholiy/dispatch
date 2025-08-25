@@ -515,6 +515,7 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                         email_parser_logger.debug(
                             f'Ошибка добавления email: {email_msg_id}'
                         )
+                    except 
             email_parser_logger.debug(
                 f'Было найдено {email_msg_counter} новых сообщений'
             )
