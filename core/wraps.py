@@ -1,8 +1,20 @@
 import functools
 import time
+import requests
 from datetime import datetime
 from logging import Logger
 from typing import Callable
+from .exceptions import (
+    ApiForbidden,
+    ApiNotFound,
+    ApiTooManyRequests,
+    ApiUnauthorizedErr,
+    ApiServerError,
+    ApiBadRequest,
+)
+from .constants import API_STATUS_EXCEPTIONS
+
+from http import HTTPStatus
 
 
 def timer(logger: Logger) -> Callable:
@@ -43,19 +55,32 @@ def retry(
     logger: Logger,
     retries: int = 3,
     delay: float = 1.0,
-    exceptions: tuple[type[Exception], ...] = (Exception,)
+    exceptions: tuple[type[Exception], ...] = (Exception,),
 ) -> Callable:
     """
     Декоратор для повторного выполнения функции при ошибках.
 
-    :param retries: Количество повторных попыток (по умолчанию 3)
-    :param delay: Задержка между попытками в секундах (по умолчанию 1.0)
-    :param exceptions: Кортеж исключений, при которых повторяем вызов
+    Args:
+        logger (Logger): Логгер для записи ошибок.
+        retries (int): Количество повторных попыток (по умолчанию 3)
+        delay (float): Задержка между попытками в секундах (по умолчанию 1.0)
+        exceptions: Кортеж исключений, при которых повторяем вызов
+        передваваемой функции
+        sub_func_name str: Имя подфункции для логирования.
+
+    Особенности:
+        Если передать в качестве kwarg sub_func_name, это имя будет
+        использовано для логирования метода класса.
     """
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             attempt = 0
+            sub_func_name = kwargs.pop('sub_func_name', None)
+            msg_sub_func_name = (
+                f'(метод {sub_func_name}) '
+            ) if sub_func_name else ''
+
             while True:
                 try:
                     return func(*args, **kwargs)
@@ -67,6 +92,7 @@ def retry(
                         f'Ошибка {e.__class__.__name__}. '
                         f'Попытка {attempt}/{retries}, '
                         f'пробуем запустить {func.__name__} '
+                        f'{msg_sub_func_name}'
                         f'с параметрами args={args} kwargs={kwargs} '
                         f'снова через {delay} секунд(ы)'
                     )
@@ -76,54 +102,71 @@ def retry(
     return decorator
 
 
-def safe_request(max_retries: int = 3, timeout: int = 10):
-    """Декоратор для безопасного выполнения HTTP-запросов."""
+def safe_request(
+    logger: Logger,
+    retries: int = 3,
+    timeout: int = 30,
+) -> dict:
+    """
+    Декоратор для безопасного выполнения HTTP-запросов.
+
+    Args:
+        logger (Logger): Логгер для записи ошибок.
+        retries (int): Количество повторных попыток (по умолчанию 3)
+        timeout (int): Время выполнения на отправку запроса (по умолчанию 30)
+        sub_func_name str: Имя подфункции для логирования.
+
+    Returns:
+        dict: Распарсенный JSON-ответ или {}.
+    """
 
     def decorator(func):
-        @wraps(func)
+        @retry(
+            logger,
+            retries=retries,
+            delay=0,
+            exceptions=(
+                requests.exceptions.RequestException,
+                ApiTooManyRequests,
+                ApiServerError,
+            ),
+        )
+        @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            retries = 0
-            while retries <= max_retries:
-                retries += 1
+            response: requests.Response = func(
+                *args, timeout=timeout, **kwargs
+            )
+
+            if response.status_code == HTTPStatus.TOO_MANY_REQUESTS:
+                retry_after = int(response.headers.get('Retry-After', timeout))
+                time.sleep(retry_after)
+                raise ApiTooManyRequests(
+                    f'HTTP {response.status_code}: {response.text}'
+                )
+
+            if response.status_code == HTTPStatus.OK:
                 try:
-                    response: requests.Response = func(*args, timeout=timeout, **kwargs)
+                    return response.json()
+                except ValueError:
+                    logger.warning('Ответ 200, но не JSON')
+                    return {}
 
-                    if response.status_code == HTTPStatus.TOO_MANY_REQUESTS:
-                        retry_after = int(response.headers.get("Retry-After", 10))
-                        time.sleep(retry_after)
-                        continue
+            if response.status_code == HTTPStatus.NO_CONTENT:
+                return {}
 
-                    if response.status_code == HTTPStatus.OK:
-                        return response.json()
+            exc = API_STATUS_EXCEPTIONS.get(response.status_code)
+            if exc:
+                raise exc(
+                    f'HTTP {response.status_code}: {response.text}'
+                )
 
-                    if response.status_code == HTTPStatus.NO_CONTENT:
-                        return {}
+            if 500 <= response.status_code < 600:
+                raise ApiServerError(
+                    f'HTTP {response.status_code}: {response.text}'
+                )
 
-                    # другие ошибки
-                    yt_manager_logger.critical(
-                        f"Ошибка {response.status_code}: {response.text}"
-                    )
-                    raise YandexTrackerCriticalErr(response.status_code, response.text)
-
-                except requests.exceptions.Timeout:
-                    yt_manager_logger.warning(
-                        f"Таймаут при запросе {func.__name__}"
-                    )
-                    raise YandexTrackerWarningErr(
-                        HTTPStatus.REQUEST_TIMEOUT,
-                        "Истекло время ожидания ответа от сервера."
-                    )
-
-                except requests.exceptions.RequestException as e:
-                    yt_manager_logger.exception("Ошибка запроса")
-                    raise YandexTrackerCriticalErr(
-                        HTTPStatus.INTERNAL_SERVER_ERROR, str(e)
-                    )
-
-            # если все ретраи закончились
-            raise YandexTrackerCriticalErr(
-                HTTPStatus.TOO_MANY_REQUESTS,
-                "Максимальное количество попыток исчерпано."
+            raise requests.exceptions.RequestException(
+                f'HTTP {response.status_code}: {response.text}'
             )
 
         return wrapper

@@ -1,9 +1,12 @@
+import os
+
 from django.core.management.base import BaseCommand
 
 from yandex_tracker.utils import YandexTrackerManager
 from core.constants import YANDEX_TRACKER_ROTATING_FILE
 from core.loggers import LoggerFactory
 from core.wraps import timer
+
 
 email_managment_logger = LoggerFactory(
     __name__, YANDEX_TRACKER_ROTATING_FILE).get_logger
@@ -14,5 +17,12 @@ class Command(BaseCommand):
 
     @timer(email_managment_logger)
     def handle(self, *args, **kwargs):
-        result = YandexTrackerManager().current_user_info
+        result = YandexTrackerManager(
+            os.getenv('YT_CLIENT_ID'),
+            os.getenv('YT_CLIENT_SECRET'),
+            os.getenv('YT_ACCESS_TOKEN'),
+            os.getenv('YT_REFRESH_TOKEN'),
+            os.getenv('YT_ORGANIZATION_ID'),
+            os.getenv('YT_QUEUE'),
+        ).current_user_info
         print(result)

@@ -1,7 +1,16 @@
 import os
 from logging import DEBUG, INFO
+from http import HTTPStatus
 
 from django.conf import settings
+
+from .exceptions import (
+    ApiUnauthorizedErr,
+    ApiForbidden,
+    ApiNotFound,
+    ApiBadRequest,
+    ApiMethodNotAllowed,
+)
 
 BASE_DIR = settings.BASE_DIR
 LOG_DIR = os.path.join(BASE_DIR, 'logs')
@@ -26,3 +35,11 @@ SUBFOLDER_EMAIL_NAME = 'emails_attachments'
 # Модель Attachment настроена на папку settings.MEDIA_ROOT:
 INCIDENT_DIR = os.path.join(settings.MEDIA_ROOT, SUBFOLDER_EMAIL_NAME)
 EMPTY_VALUE = 'Не задано'
+
+API_STATUS_EXCEPTIONS = {
+    HTTPStatus.UNAUTHORIZED: ApiUnauthorizedErr,
+    HTTPStatus.FORBIDDEN: ApiForbidden,
+    HTTPStatus.NOT_FOUND: ApiNotFound,
+    HTTPStatus.BAD_REQUEST: ApiBadRequest,
+    HTTPStatus.METHOD_NOT_ALLOWED: ApiMethodNotAllowed,
+}
