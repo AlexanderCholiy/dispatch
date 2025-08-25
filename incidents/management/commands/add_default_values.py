@@ -1,0 +1,88 @@
+import pandas as pd
+from numpy import nan
+
+from django.core.management.base import BaseCommand
+
+from incidents.models import (
+    IncidentStatus, IncidentType, IncidentStatusHistory
+)
+from incidents.constants import INCIDENT_TYPES_FILE, INCIDENT_STATUSES_FILE
+from core.pretty_print import PrettyPrint
+
+
+class Command(BaseCommand):
+    help = 'Заполнение дефолтными значениями IncidentStatus и IncidentType.'
+
+    def handle(self, *args, **kwargs):
+        self.update_incident_types()
+        self.update_incident_statuses()
+
+    def update_incident_types(self):
+        incident_types = pd.read_excel(INCIDENT_TYPES_FILE)
+        incident_types.replace('', None, inplace=True)
+        incident_types.replace(nan, None, inplace=True)
+
+        incident_types['name'] = incident_types['name'].astype(str)
+        incident_types['description'] = (
+            incident_types['description'].astype(str))
+        incident_types['sla_deadline'] = (
+            incident_types['sla_deadline'].astype(int))
+
+        total = len(incident_types)
+
+        for index, row in incident_types.iterrows():
+            PrettyPrint.progress_bar_debug(
+                index, total, 'Обновление IncidentType:'
+            )
+            name = str(row['name']).strip() or None
+            description = str(row['description']).strip() or None
+            sla_deadline = row['sla_deadline'] or None
+
+            if not isinstance(sla_deadline, int) or not name:
+                continue
+
+            if not IncidentType.objects.filter(name=name).exists():
+                IncidentType.objects.create(
+                    name=name,
+                    description=description,
+                    sla_deadline=sla_deadline,
+                )
+
+    def update_incident_statuses(self):
+        incident_statuses = pd.read_excel(INCIDENT_STATUSES_FILE)
+        incident_statuses.replace('', None, inplace=True)
+        incident_statuses.replace(nan, None, inplace=True)
+
+        incident_statuses['name'] = incident_statuses['name'].astype(str)
+        incident_statuses['description'] = (
+            incident_statuses['description'].astype(str))
+
+        total = len(incident_statuses)
+
+        for index, row in incident_statuses.iterrows():
+            PrettyPrint.progress_bar_info(
+                index, total, 'Обновление IncidentStatus:'
+            )
+            name = str(row['name']).strip() or None
+            description = str(row['description']).strip() or None
+
+            if not name:
+                continue
+
+            if not IncidentStatus.objects.filter(name=name).exists():
+                IncidentStatus.objects.create(
+                    name=name,
+                    description=description,
+                )
+
+        valid_status_ids = set(
+            IncidentStatus.objects.values_list('id', flat=True)
+        )
+        total = len(valid_status_ids)
+        for index, history in enumerate(IncidentStatusHistory.objects.all()):
+            PrettyPrint.progress_bar_error(
+                index, total,
+                'Удаление не актуальных связей IncidentStatusHistory:'
+            )
+            if history.status_id not in valid_status_ids:
+                history.delete()

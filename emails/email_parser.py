@@ -15,10 +15,10 @@ from core.constants import EMAIL_LOG_ROTATING_FILE
 from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
 from emails.models import EmailErr, EmailMessage
-from yandex_tracker.constants import YT_QUEUE
 from .validators import EmailValidator
 from .utils import EmailManager
 from incidents.utils import IncidentManager
+from yandex_tracker.utils import YandexTrackerManager
 
 email_parser_logger = LoggerFactory(
     __name__, EMAIL_LOG_ROTATING_FILE).get_logger
@@ -32,11 +32,13 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
         email_pswd: str,
         email_server: str,
         email_port: str | int,
+        yt_manager: Optional[YandexTrackerManager],
     ):
         self.email_login = email_login
         self.email_pswd = email_pswd
         self.email_server = email_server
         self.email_port = int(email_port)
+        self.yt_manager = yt_manager
 
     def _find_emails_by_date(
         self, today: datetime, check_days: int, mail: imaplib.IMAP4_SSL
@@ -158,13 +160,16 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
 
     def _is_from_yandex_tracker(
         self, msg: message.Message, subject: Optional[str]
-    ) -> bool:
+    ) -> Optional[bool]:
         """
         Проверяем наличие заголовков, специфичных для Yandex
         Tracker.
         Если письмо было отправленно из Yandex Tracker, надо
         убедиться что оно соответствует нашей очереди.
         """
+        if not self.yt_manager:
+            return
+
         result = False
         tracker_headers = [
             'X-Yandex-Tracker-Mail-Type',
@@ -177,7 +182,7 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
 
         if any(header in msg for header in tracker_headers):
             matches = re.findall(
-                rf'{YT_QUEUE}-\d+', subject)
+                rf'{self.yt_manager.queue}-\d+', subject)
             result = True if matches else False
 
         return result
@@ -501,7 +506,9 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                                 email_attachments_intext_urls
                             ),
                         )
-                        self.add_incident_from_email(email_msg)
+                        self.add_incident_from_email(
+                            email_msg, self.yt_manager
+                        )
                         email_err_msg_ids_to_del.append(email_msg_id)
                     except IntegrityError:
                         email_err_msg_ids.append(email_msg_id)

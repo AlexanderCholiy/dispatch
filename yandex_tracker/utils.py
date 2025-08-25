@@ -1,7 +1,6 @@
 
-import os
 import re
-import time
+import inspect
 import requests
 from typing import Optional
 from http import HTTPStatus, HTTPMethod
@@ -11,7 +10,6 @@ from core.constants import YANDEX_TRACKER_ROTATING_FILE
 from core.loggers import LoggerFactory
 from .exceptions import YandexTrackerAuthErr
 from core.wraps import safe_request
-from .constants import YT_QUEUE
 
 
 yt_manager_logger = LoggerFactory(
@@ -19,10 +17,13 @@ yt_manager_logger = LoggerFactory(
 
 
 class YandexTrackerManager:
-    current_user_url = 'https://api.tracker.yandex.net/v2/myself'
-    token_url = 'https://oauth.yandex.ru/token'
     retries = 3
     timeout = 30
+
+    current_user_url = 'https://api.tracker.yandex.net/v2/myself'
+    token_url = 'https://oauth.yandex.ru/token'
+    search_issues_url = (
+        'https://api.tracker.yandex.net/v2/issues/_search?expand=transitions')
 
     def __init__(
         self,
@@ -32,6 +33,7 @@ class YandexTrackerManager:
         refresh_token: str,
         organisation_id: str,
         queue: str,
+        database_global_field_id: str,
     ):
         self.client_id = cliend_id
         self.client_secret = client_secret
@@ -39,10 +41,10 @@ class YandexTrackerManager:
         self.refresh_token = refresh_token
         self.queue = queue
         self.organisation_id = organisation_id
+        self.database_global_field_id = database_global_field_id
 
-    @staticmethod
-    def find_yt_number_in_text(text: str, queue: str = YT_QUEUE) -> list[str]:
-        return re.findall(rf'{queue}-\d+', text)
+    def find_yt_number_in_text(self, text: str) -> list[str]:
+        return re.findall(rf'{self.queue}-\d+', text)
 
     @property
     def headers(self):
@@ -107,5 +109,31 @@ class YandexTrackerManager:
         return self._make_request(
             HTTPMethod.GET,
             self.current_user_url,
-            sub_func_name='current_user_info',
+            sub_func_name=inspect.currentframe().f_code.co_name,
+        )
+
+    def select_issue(
+        self, database_id: Optional[int] = None, key: Optional[str] = None
+    ) -> list[dict]:
+        """Поиск задачи по глобальному полю database_id или по её ключу key."""
+
+        if database_id is None and key is None:
+            raise ValueError(
+                'Необходимо указать или database_id или ключ задачи.'
+            )
+        filter = {'queue': self.queue}
+
+        if database_id is not None:
+            filter[YT_DATABASE_ID_GLOBAL_FIELD_NAME] = database_id
+
+        if key is not None:
+            filter['key'] = key
+
+        payload = {'filter': filter}
+
+        return self._make_request(
+            HTTPMethod.POST,
+            self.search_issues_url,
+            json=payload,
+            sub_func_name=inspect.currentframe().f_code.co_name,
         )

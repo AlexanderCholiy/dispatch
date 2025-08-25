@@ -75,10 +75,6 @@ class Incident(models.Model):
         related_name='incidents',
         verbose_name='Статус инцидента',
     )
-    is_email_incident = models.BooleanField(
-        verbose_name='Инцидент был зарегестрирован из почты',
-        db_index=True
-    )
 
     class Meta:
         verbose_name = 'инцидент'
@@ -108,11 +104,6 @@ class IncidentType(Detail):
         'Срок устранения аварии (мин)',
         null=True,
         blank=True
-    )
-    is_avr_incident = models.BooleanField(
-        'Можно ли этот инцидент назначить подрядчику',
-        null=False,
-        blank=False,
     )
 
     class Meta:

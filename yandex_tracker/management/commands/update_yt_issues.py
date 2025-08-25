@@ -24,5 +24,7 @@ class Command(BaseCommand):
             os.getenv('YT_REFRESH_TOKEN'),
             os.getenv('YT_ORGANIZATION_ID'),
             os.getenv('YT_QUEUE'),
+            os.getenv('YT_DATABASE_ID_GLOBAL_FIELD_NAME'),
+
         ).current_user_info
         print(result)
