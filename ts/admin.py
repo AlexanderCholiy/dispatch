@@ -56,13 +56,9 @@ class BaseStationTSAdmin(admin.ModelAdmin):
     list_per_page = BASE_STATIONS_PER_PAGE
     list_display = ('bs_name', 'pole')
     search_fields = ('pole__pole', 'bs_name',)
-    list_filter = ('operator',)
     ordering = ('pole__pole',)
     filter_horizontal = ('operator',)
-
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        return qs.select_related('pole',).prefetch_related('operator',)
+    autocomplete_fields = ('pole',)
 
 
 @admin.register(BaseStationOperator)

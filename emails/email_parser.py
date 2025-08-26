@@ -536,9 +536,28 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                     except tuple(API_STATUS_EXCEPTIONS.values()) as e:
                         email_err_msg_ids.append(email_msg_id)
                         email_parser_logger.error(e)
-                    except Exception as e:
+                    except Exception:
+                        invalid_data = {
+                            'email_msg_id': email_msg_id,
+                            'email_msg_reply_id': email_msg_reply_id,
+                            'email_subject': email_subject,
+                            'email_from': email_from,
+                            'email_date': email_date,
+                            'email_body': email_body,
+                            'is_first_email': is_first_email,
+                            'is_email_from_yandex_tracker': (
+                                is_email_from_yandex_tracker),
+                            'email_to': email_to,
+                            'email_to_cc': email_to_cc,
+                            'email_msg_references': email_msg_references,
+                            'email_attachments_urls': email_attachments_urls,
+                            'email_attachments_intext_urls': (
+                                email_attachments_intext_urls
+                            ),
+                        }
                         email_err_msg_ids.append(email_msg_id)
-                        email_parser_logger.exception(e)
+                        email_parser_logger.exception(
+                            f'Не валидные данные: {invalid_data}')
             email_parser_logger.debug(
                 f'Было найдено {email_msg_counter} новых сообщений'
             )

@@ -1,8 +1,10 @@
 import email
 import os
+import re
 from datetime import datetime
 from email import header, message
 from typing import Optional
+from email.utils import getaddresses
 
 import chardet
 from bs4 import BeautifulSoup
@@ -53,12 +55,18 @@ class EmailValidator:
         return email_from
 
     def prepare_email_to(self, to_recipients: list[str]) -> list[str]:
-        return [
-            self.prepare_msg_id(
-                (to_recipient.replace('<', '').replace('>', '').strip())
-            )
-            for to_recipient in to_recipients
-        ]
+        """Нормализуем список e-mail адресов из заголовков письма."""
+        parsed = getaddresses(to_recipients)
+        intermediate = [addr.strip() for _, addr in parsed if addr]
+
+        email_regex = re.compile(r'^[^@]+@[^@]+\.[^@]+$')
+
+        emails = []
+        for addr in intermediate:
+            if email_regex.match(addr) and addr not in emails:
+                emails.append(addr)
+
+        return emails
 
     def prepare_text_from_html(self, html_body_text: str) -> str:
         soup = BeautifulSoup(html_body_text, 'lxml')

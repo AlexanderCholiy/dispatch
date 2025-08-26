@@ -1,9 +1,11 @@
 import os
 from typing import Optional
 from datetime import datetime
+from pathlib import Path
 
-from django.db import transaction, models
+from django.db import transaction, models, DatabaseError
 from django.core.files import File
+from django.conf import settings
 
 from core.models import Attachment
 from django.utils import timezone
@@ -149,3 +151,43 @@ class EmailManager:
                 objs.append(obj)
 
         model.objects.bulk_create(objs, ignore_conflicts=True)
+
+    @staticmethod
+    def valid_email_file_path(
+        attachments: EmailAttachment | EmailInTextAttachment
+    ) -> list[str]:
+        files = []
+        for attachment in attachments:
+            relative_file_path = Path(attachment.file_url.name)
+            file_path = os.path.join(
+                settings.MEDIA_ROOT, str(relative_file_path)
+            )
+
+            if os.path.exists(file_path):
+                files.append(file_path)
+            else:
+                try:
+                    attachment.delete()
+                except DatabaseError:
+                    pass
+
+        return files
+
+    @staticmethod
+    def get_email_attachments(email: EmailMessage) -> list[str]:
+        """
+        Возвращает список реальных путей к файлам, если они существуют.
+
+        Записи, для которых файл отсутсвует удаляются.
+        """
+        email_attachments = EmailAttachment.objects.filter(
+            email_msg=email
+        ).order_by('file_url')
+        email_intext_attachments = EmailInTextAttachment.objects.filter(
+            email_msg=email
+        ).order_by('file_url')
+
+        return list(
+            EmailManager.valid_email_file_path(email_attachments)
+            + EmailManager.valid_email_file_path(email_intext_attachments)
+        )

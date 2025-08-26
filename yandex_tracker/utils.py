@@ -5,11 +5,15 @@ import requests
 from typing import Optional
 from http import HTTPStatus, HTTPMethod
 
+from django.db import models
+
 from emails.models import EmailMessage
+from incidents.models import Incident
 from core.constants import YANDEX_TRACKER_ROTATING_FILE
 from core.loggers import LoggerFactory
 from .exceptions import YandexTrackerAuthErr
 from core.wraps import safe_request
+from .constants import INCIDENTS_NOT_FOR_YT
 
 
 yt_manager_logger = LoggerFactory(
@@ -58,6 +62,39 @@ class YandexTrackerManager:
     def check_token(self) -> bool:
         response = requests.get(self.current_user_url, headers=self.headers)
         return response.status_code == HTTPStatus.OK
+
+    @staticmethod
+    def emails_for_yandex_tracker() -> models.QuerySet[EmailMessage]:
+        """
+        Письма, которые должны быть добавлены в YandexTracker.
+
+        Returns:
+            Отсортированные от старых к новым QuerySet[EmailMessage] по
+            email_date, id.
+        """
+        incident_ids_in_yt = EmailMessage.objects.filter(
+            was_added_2_yandex_tracker=True,
+            email_incident__isnull=False,
+        ).values_list('email_incident_id', flat=True)
+
+        emails_with_incidents_in_yt = EmailMessage.objects.filter(
+            email_incident_id__in=incident_ids_in_yt,
+            is_email_from_yandex_tracker=False,
+            was_added_2_yandex_tracker=False
+        )
+
+        emails_not_in_yt = EmailMessage.objects.filter(
+            is_email_from_yandex_tracker=False,
+            was_added_2_yandex_tracker=False,
+            email_incident__isnull=False,
+            email_incident__pole__isnull=False,
+        ).exclude(
+            email_incident__pole__region__in=INCIDENTS_NOT_FOR_YT
+        )
+
+        return (
+            emails_not_in_yt | emails_with_incidents_in_yt
+        ).distinct().order_by('email_date', 'id')
 
     @safe_request(yt_manager_logger, retries=retries, timeout=timeout)
     def _make_request(

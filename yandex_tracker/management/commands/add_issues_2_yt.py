@@ -9,6 +9,8 @@ from core.loggers import LoggerFactory
 from core.wraps import timer
 from incidents.models import Incident
 from emails.models import EmailMessage
+from yandex_tracker.constants import INCIDENTS_NOT_FOR_YT
+from emails.utils import EmailManager
 
 
 yt_managment_logger = LoggerFactory(
@@ -30,15 +32,6 @@ class Command(BaseCommand):
             os.getenv('YT_DATABASE_ID_GLOBAL_FIELD_NAME'),
 
         )
-        emails = self.emails_for_yandex_tracker
-        for email in emails:
-            print(email)
 
-    @property
-    def emails_for_yandex_tracker(self) -> models.QuerySet[EmailMessage]:
-        return EmailMessage.objects.filter(
-            is_email_from_yandex_tracker=False,
-            was_added_2_yandex_tracker=False,
-            email_incident__isnull=False,
-            email_incident__pole__isnull=False,
-        )
+        for email in YandexTrackerManager.emails_for_yandex_tracker():
+            EmailManager.get_email_attachments(email)

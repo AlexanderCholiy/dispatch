@@ -105,7 +105,7 @@ class SpecialEmail(models.Model):
 
 
 class Msg2(models.Model):
-    """Модель для хранения получателей сообщения"""
+    """Модель для хранения получателей сообщения."""
     email_to = models.EmailField(
         max_length=MAX_EMAIL_LEN,
         null=False,

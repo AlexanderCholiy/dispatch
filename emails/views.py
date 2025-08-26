@@ -6,7 +6,7 @@ from django_ratelimit.decorators import ratelimit
 
 from users.utils import role_required
 
-from .constants import MAX_EMAILS_PER_PAGE
+from .constants import EMAILS_PER_PAGE
 
 
 @login_required
@@ -16,7 +16,7 @@ def index(request: HttpRequest) -> HttpResponse:
     template_name = 'emails/index.html'
 
     query = request.GET.get('q', '').strip()
-    paginator = Paginator([], MAX_EMAILS_PER_PAGE)
+    paginator = Paginator([], EMAILS_PER_PAGE)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
