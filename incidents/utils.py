@@ -118,7 +118,7 @@ class IncidentManager(IncidentValidator):
         """
         yt_incidents = yt_manager.find_yt_number_in_text(
             email_msg.email_subject
-        )
+        ) if email_msg.email_subject else []
         actual_email_incident = None
         for key in yt_incidents:
             issues = yt_manager.select_issue(key=key)
@@ -161,7 +161,7 @@ class IncidentManager(IncidentValidator):
             )
             .annotate(
                 incident_count=Count(
-                    'incidents', filter=Q(incidents__track_sla=True))
+                    'incidents', filter=Q(incidents__is_incident_finish=False))
             )
         )
 

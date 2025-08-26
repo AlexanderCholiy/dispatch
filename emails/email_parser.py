@@ -164,25 +164,24 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
 
     def _is_from_yandex_tracker(
         self, msg: message.Message, subject: Optional[str]
-    ) -> Optional[bool]:
+    ) -> bool:
         """
         Проверяем наличие заголовков, специфичных для Yandex
         Tracker.
         Если письмо было отправленно из Yandex Tracker, надо
         убедиться что оно соответствует нашей очереди.
         """
-        if not self.yt_manager:
-            return
-
         result = False
+
+        if not self.yt_manager or not subject:
+            return result
+
         tracker_headers = [
             'X-Yandex-Tracker-Mail-Type',
             'X-Yandex-Tracker-Env',
             'X-Tracker-Issue-Key',
             'X-Tracker-Comment-Id'
         ]
-        if not subject:
-            return result
 
         if any(header in msg for header in tracker_headers):
             matches = re.findall(
@@ -213,7 +212,9 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
         """
 
         today = timezone.now()
-        err_days_ago = today - timedelta(days=check_err_days)
+        err_days_ago = today - timedelta(
+            days=max((check_days + 1), (check_err_days + 1))
+        )
 
         with imaplib.IMAP4_SSL(self.email_server, self.email_port) as mail:
             mail.login(self.email_login, self.email_pswd)

@@ -28,9 +28,9 @@ class Incident(models.Model):
         verbose_name='Дата и время регистрации инцидента',
         db_index=True
     )
-    track_sla = models.BooleanField(
-        default=True,
-        verbose_name='Отслеживать SLA',
+    is_incident_finish = models.BooleanField(
+        default=False,
+        verbose_name='Обработка заявки завершена',
         db_index=True
     )
     pole = models.ForeignKey(

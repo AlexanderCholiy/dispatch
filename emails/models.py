@@ -65,13 +65,11 @@ class EmailMessage(models.Model):
     )
     is_email_from_yandex_tracker = models.BooleanField(
         'Было ли письмо отправлено из YandexTracker',
-        null=True,
-        blank=True
+        db_index=True
     )
     was_added_2_yandex_tracker = models.BooleanField(
         'Было ли письмо добавлено в YandexTracker',
-        null=True,
-        blank=True
+        db_index=True
     )
     email_incident = models.ForeignKey(
         Incident,

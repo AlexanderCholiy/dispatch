@@ -116,4 +116,10 @@ class IncidentAdmin(admin.ModelAdmin):
                 'sla_deadline',
             ),
         }),
+        ('Мета', {
+            'classes': ('collapse',),
+            'fields': (
+                'is_incident_finish',
+            ),
+        }),
     )
