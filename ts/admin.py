@@ -31,6 +31,10 @@ class PoleAdmin(admin.ModelAdmin):
     search_fields = ('pole', 'bs_name', 'address',)
     list_filter = ('infrastructure_company', 'region')
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('avr_contractor',)
+
 
 @admin.register(AVRContractor)
 class AVRContractorAdmin(admin.ModelAdmin):
@@ -50,12 +54,15 @@ class AVRContractorAdmin(admin.ModelAdmin):
 @admin.register(BaseStation)
 class BaseStationTSAdmin(admin.ModelAdmin):
     list_per_page = BASE_STATIONS_PER_PAGE
-    list_display = ('pole', 'bs_name',)
+    list_display = ('bs_name', 'pole')
     search_fields = ('pole__pole', 'bs_name',)
     list_filter = ('operator',)
     ordering = ('pole__pole',)
     filter_horizontal = ('operator',)
-    autocomplete_fields = ['pole']
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('pole',).prefetch_related('operator',)
 
 
 @admin.register(BaseStationOperator)

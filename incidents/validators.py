@@ -55,7 +55,7 @@ class IncidentValidator:
         """Поиск BaseStation в тексте."""
         result = []
         pole = self._find_pole_in_text(text)
-        for word in IncidentValidator._find_num_in_text(text):
+        for word in self._find_num_in_text(text):
             bs_stations = BaseStation.objects.filter(bs_name=word)
 
             if bs_stations:
@@ -70,7 +70,7 @@ class IncidentValidator:
         longest_word_tuple = max(result, key=lambda x: len(x[0]))
         return longest_word_tuple[1]
 
-    def find_pole_and_base_station(self, text: str) -> tuple[
+    def find_pole_and_base_station_in_text(self, text: str) -> tuple[
         Optional[Pole], Optional[BaseStation]
     ]:
         """Поиск Pole и BaseStation в тексте."""
@@ -85,14 +85,14 @@ class IncidentValidator:
 
         return None, None
 
-    def find_pole_in_msg(
+    def find_pole_and_base_station_in_msg(
         self, msg: EmailMessage
     ) -> tuple[Optional[Pole], Optional[BaseStation]]:
         """Поиск Pole и BaseStation в теме или теле письма."""
         subject_text = msg.email_subject
         if subject_text:
             pole, base_station = (
-                self.find_pole_and_base_station(subject_text)
+                self.find_pole_and_base_station_in_text(subject_text)
             )
             if pole is not None:
                 return pole, base_station
@@ -100,7 +100,7 @@ class IncidentValidator:
         body_text = msg.email_body
         if body_text:
             pole, base_station = (
-                self.find_pole_and_base_station(body_text)
+                self.find_pole_and_base_station_in_text(body_text)
             )
             if pole is not None:
                 return pole, base_station

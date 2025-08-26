@@ -4,14 +4,8 @@ import requests
 from datetime import datetime
 from logging import Logger
 from typing import Callable
-from .exceptions import (
-    ApiForbidden,
-    ApiNotFound,
-    ApiTooManyRequests,
-    ApiUnauthorizedErr,
-    ApiServerError,
-    ApiBadRequest,
-)
+from .exceptions import ApiTooManyRequests, ApiServerError
+
 from .constants import API_STATUS_EXCEPTIONS
 
 from http import HTTPStatus

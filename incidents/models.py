@@ -7,7 +7,7 @@ from django.db import models
 from django.utils import timezone
 
 from core.models import Detail
-from ts.models import BaseStation, Pole
+from ts.models import BaseStation, Pole, AVRContractor
 
 User = get_user_model()
 
@@ -80,6 +80,9 @@ class Incident(models.Model):
         verbose_name = 'инцидент'
         verbose_name_plural = 'Инциденты'
 
+    def __str__(self):
+        return f'{self.pk}'
+
     @property
     def is_sla_expired(self) -> Optional[bool]:
         is_expired = None
@@ -88,6 +91,7 @@ class Incident(models.Model):
                 minutes=self.incident_type.sla_deadline)
             is_expired = True if sla_deadline < timezone.now() else False
         return is_expired
+    is_sla_expired.fget.short_description = 'Просрочен ли SLA'
 
     @property
     def sla_deadline(self) -> Optional[datetime]:
@@ -96,6 +100,12 @@ class Incident(models.Model):
             sla_deadline = self.incident_date + timedelta(
                 minutes=self.incident_type.sla_deadline)
         return sla_deadline
+    sla_deadline.fget.short_description = 'Срок устранения'
+
+    @property
+    def avr_contractor(self) -> Optional[AVRContractor]:
+        return self.pole.avr_contractor if self.pole else None
+    avr_contractor.fget.short_description = 'Подрядчик по АВР'
 
 
 class IncidentType(Detail):

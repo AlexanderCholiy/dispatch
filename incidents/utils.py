@@ -250,8 +250,11 @@ class IncidentManager(IncidentValidator):
         ):
             pole, base_station = next(
                 (
-                    self.find_pole_in_msg(msg) for msg in emails_thread
-                    if (pole := self.find_pole_in_msg(msg)[0]) is not None
+                    self.find_pole_and_base_station_in_msg(msg)
+                    for msg in emails_thread
+                    if (
+                        pole := self.find_pole_and_base_station_in_msg(msg)[0]
+                    ) is not None
                 ), (None, None)
             )
         else:
@@ -268,14 +271,10 @@ class IncidentManager(IncidentValidator):
         elif actual_email_incident is None and is_full_thread:
             new_incident = True
 
-            random_user = IncidentManager.choice_dispatch_for_incident(
-                yt_manager)
-
             actual_email_incident = Incident.objects.create(
                 incident_date=emails_thread[0].email_date,
                 pole=pole,
                 base_station=base_station,
-                responsible_user=random_user,
             )
             IncidentManager.add_default_status(actual_email_incident)
 

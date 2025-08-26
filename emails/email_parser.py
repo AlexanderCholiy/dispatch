@@ -10,8 +10,9 @@ from typing import Optional
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.db import IntegrityError
+from requests.exceptions import RequestException
 
-from core.constants import EMAIL_LOG_ROTATING_FILE
+from core.constants import EMAIL_LOG_ROTATING_FILE, API_STATUS_EXCEPTIONS
 from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
 from emails.models import EmailErr, EmailMessage
@@ -19,6 +20,9 @@ from .validators import EmailValidator
 from .utils import EmailManager
 from incidents.utils import IncidentManager
 from yandex_tracker.utils import YandexTrackerManager
+from yandex_tracker.exceptions import YandexTrackerAuthErr
+from core.exceptions import ApiTooManyRequests, ApiServerError
+
 
 email_parser_logger = LoggerFactory(
     __name__, EMAIL_LOG_ROTATING_FILE).get_logger
@@ -512,12 +516,30 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                         email_err_msg_ids_to_del.append(email_msg_id)
                     except IntegrityError:
                         email_err_msg_ids.append(email_msg_id)
-                        email_parser_logger.debug(
-                            f'Ошибка добавления email: {email_msg_id}'
+                        email_parser_logger.error(
+                            f'Ошибка добавления email: {email_msg_id}',
+                            exc_info=True
                         )
-                    except 
+                    except RequestException:
+                        email_err_msg_ids.append(email_msg_id)
+                        email_parser_logger.error(
+                            f'Ошибка добавления email: {email_msg_id}',
+                            exc_info=True
+                        )
+                    except (ApiTooManyRequests, ApiServerError) as e:
+                        email_err_msg_ids.append(email_msg_id)
+                        email_parser_logger.warning(e)
+                    except YandexTrackerAuthErr as e:
+                        email_err_msg_ids.append(email_msg_id)
+                        email_parser_logger.critical(e)
+                    except tuple(API_STATUS_EXCEPTIONS.values()) as e:
+                        email_err_msg_ids.append(email_msg_id)
+                        email_parser_logger.error(e)
+                    except Exception as e:
+                        email_err_msg_ids.append(email_msg_id)
+                        email_parser_logger.exception(e)
             email_parser_logger.debug(
                 f'Было найдено {email_msg_counter} новых сообщений'
             )
             self.add_err_msg_bulk(email_err_msg_ids)
-            # self.del_err_msg_bulk(email_err_msg_ids_to_del)
+            self.del_err_msg_bulk(email_err_msg_ids_to_del)

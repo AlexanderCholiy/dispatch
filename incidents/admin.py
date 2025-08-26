@@ -33,7 +33,7 @@ class EmailMessageInline(admin.StackedInline):
         return qs.order_by('email_date', 'id')
 
     def view_link(self, obj):
-        url = reverse('admin:incidents_emailmessage_change', args=[obj.id])
+        url = reverse('admin:emails_emailmessage_change', args=[obj.id])
         return format_html('<a href="{}">Перейти к письму</a>', url)
 
     view_link.short_description = 'Ссылка на письмо'
@@ -70,56 +70,39 @@ class IncidentAdmin(admin.ModelAdmin):
     list_per_page = INCIDENTS_PER_PAGE
     list_display = (
         'id',
-        'incident_date',
         'pole',
-        'incident_type',
         'responsible_user',
-        'get_sla_deadline',
-        'is_sla_expired',
-        'track_sla',
+        'incident_type',
+        'get_last_status',
+        'incident_date',
+        'sla_deadline',
     )
     search_fields = ('pole__pole', 'id',)
     list_filter = (
         LatestStatusFilter,
         'incident_type',
         'responsible_user',
-        'track_sla',
     )
     autocomplete_fields = ('pole', 'base_station')
     list_editable = ('incident_type', 'responsible_user')
 
     inlines = [IncidentStatusHistoryInline, EmailMessageInline]
 
+    def get_last_status(self, obj):
+        latest = obj.status_history.order_by('-insert_date').first()
+        return latest.status.name if latest else EMPTY_VALUE
+    get_last_status.short_description = 'Статус'
+
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.select_related(
-            'responsible_user',
-            'incident_type',
             'pole',
             'base_station',
-        ).prefetch_related(
-            'responsible_user__incidents',
-            'incident_type__incidents',
-            'pole__incidents',
-            'avr_contractor__incidents',
-            'base_station__incidents',
-        )
+            'responsible_user',
+            'incident_type',
+        ).prefetch_related('statuses',)
 
-    def get_sla_deadline(self, obj: Incident) -> Optional[datetime]:
-        """
-        Возвращает срок устранения аварии из типа инцидента в локальной
-        временной зоне.
-        """
-        if obj.incident_type and obj.incident_type.sla_deadline:
-            sla_deadline = obj.incident_date - timedelta(
-                minutes=obj.incident_type.sla_deadline)
-
-            local_tz = pytz.timezone(settings.TIME_ZONE)
-            return sla_deadline.astimezone(local_tz)
-        return EMPTY_VALUE
-    get_sla_deadline.short_description = 'Срок устранения'
-
-    readonly_fields = ('get_sla_deadline', 'is_sla_expired')
+    readonly_fields = ('sla_deadline', 'avr_contractor',)
 
     fieldsets = (
         (None, {
@@ -130,12 +113,7 @@ class IncidentAdmin(admin.ModelAdmin):
                 'incident_type',
                 'responsible_user',
                 'avr_contractor',
-                'get_sla_deadline',
-                'is_sla_expired',
+                'sla_deadline',
             ),
         }),
     )
-
-    def is_sla_expired(self, obj: Incident) -> Optional[bool]:
-        return obj.is_sla_expired or EMPTY_VALUE
-    is_sla_expired.short_description = 'SLA истек'
