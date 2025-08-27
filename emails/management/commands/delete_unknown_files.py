@@ -106,6 +106,6 @@ class Command(BaseCommand):
         for index, email in enumerate(emails):
             PrettyPrint.progress_bar_error(
                 index, total,
-                'Удаление записей из БД для которых файл отсутствует:'
+                'Удаление записей вложений без файла:'
             )
             EmailManager.get_email_attachments(email)

@@ -138,11 +138,16 @@ def safe_request(
                     f'HTTP {response.status_code}: {response.text}'
                 )
 
-            if response.status_code == HTTPStatus.OK:
+            if response.status_code in (
+                HTTPStatus.OK,
+                HTTPStatus.CREATED,
+                HTTPStatus.ACCEPTED,
+                HTTPStatus.NO_CONTENT,
+            ):
                 try:
                     return response.json()
                 except ValueError:
-                    logger.warning('Ответ 200, но не JSON')
+                    logger.debug(f'Ответ {response.status_code}, но не JSON')
                     return {}
 
             if response.status_code == HTTPStatus.NO_CONTENT:

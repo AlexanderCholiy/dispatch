@@ -171,7 +171,7 @@ class IncidentManager(IncidentValidator):
 
         if yt_manager is not None:
             active_users_with_incidents = active_users_with_incidents.filter(
-                username__in=yt_manager.real_users_in_yt_tracker.keys()
+                username__in=set(yt_manager.real_users_in_yt_tracker.keys())
             )
 
         if not active_users_with_incidents.exists():

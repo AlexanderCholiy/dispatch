@@ -81,7 +81,7 @@ class Incident(models.Model):
         verbose_name_plural = 'Инциденты'
 
     def __str__(self):
-        return f'{self.pk}'
+        return f'№{self.pk}'
 
     @property
     def is_sla_expired(self) -> Optional[bool]:

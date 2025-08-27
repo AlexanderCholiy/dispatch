@@ -34,3 +34,7 @@ sudo docker compose up -d
 
 # Запуск managment команд в фоне
 nohup python manage.py my_command > my_command.log 2>&1 &
+
+
+# Для работы Яндекс трекера необходимо добавить соответсвующие поля и в рабочий процесс
+очереди добавить Инцидент (ключ incident)

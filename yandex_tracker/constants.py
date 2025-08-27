@@ -1,4 +1,4 @@
-INCIDENTS_NOT_FOR_YT: list[str] = [
+INCIDENTS_REGION_NOT_FOR_YT: list[str] = [
     'Moscow',
     'Moscow Region',
     'Leningrad Region',
@@ -11,4 +11,4 @@ INCIDENTS_NOT_FOR_YT: list[str] = [
     'Chechnya Region',
 ]
 
-MAX_ATTACHMENT_SIZE_IN_YT = 50 * 1024 * 1024
+MAX_ATTACHMENT_SIZE_IN_YT = 50 * 1024 * 1024  # (max 50 MB в YandexTracker)

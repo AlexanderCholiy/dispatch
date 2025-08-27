@@ -196,7 +196,7 @@ class Api(SocialValidators):
 
         # Добавляем подрядчика по умолчанию:
         with transaction.atomic():
-            default_contractor, _ = AVRContractor.objects.update_or_create(
+            default_contractor, is_up = AVRContractor.objects.update_or_create(
                 contractor_name=UNDEFINED_CASE,
                 defaults={'is_excluded_from_contract': False}
             )
@@ -206,7 +206,8 @@ class Api(SocialValidators):
                 email_obj, _ = ContractorEmail.objects.get_or_create(
                     email=email)
                 email_objs.append(email_obj)
-            default_contractor.emails.set(email_objs)
+            if is_up:
+                default_contractor.emails.set(email_objs)
 
             pole = Pole.objects.get(pole=UNDEFINED_CASE)
             pole.avr_contractor = default_contractor

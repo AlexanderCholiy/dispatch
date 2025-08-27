@@ -22,6 +22,7 @@ from incidents.utils import IncidentManager
 from yandex_tracker.utils import YandexTrackerManager
 from yandex_tracker.exceptions import YandexTrackerAuthErr
 from core.exceptions import ApiTooManyRequests, ApiServerError
+from yandex_tracker.validators import normalize_text_with_json
 
 
 email_parser_logger = LoggerFactory(
@@ -98,8 +99,11 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
     @staticmethod
     def parse_all_json_from_text(text: str) -> tuple[list[dict], str]:
         """
-        Находит все JSON-блоки в тексте.
-        Возвращает список словарей и остальной текст.
+        Для сообщений отправленных из формы, надо найти json и из него выбрать
+        email отправителя и получателей.
+
+        Функция находит все JSON-блоки в тексте и возвращает список словарей и
+        остальной текст.
         """
         json_blocks = []
         remaining_text = text
@@ -123,28 +127,6 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
 
         human_text = remaining_text.replace('\n\n', '\n').strip()
         return json_blocks, human_text
-
-    @staticmethod
-    def build_human_readable_description(text: str) -> str:
-        """
-        Преобразует письмо в человекочитаемый вид:
-        - JSON превращается в список "ключ: значение"
-        - Остальной текст добавляется внизу
-        """
-        json_blocks, human_text = EmailParser.parse_all_json_from_text(text)
-
-        lines = []
-        for json_dict in json_blocks:
-            for k, v in json_dict.items():
-                lines.append(f'{k}: {v}')
-            lines.append('')
-
-        if human_text:
-            if lines:
-                lines.append('')
-            lines.append(human_text)
-
-        return '\n'.join(lines)
 
     def _is_first_email(
         self, in_reply_to: Optional[str], references: Optional[list[str]]
@@ -377,11 +359,8 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                                     email_attachments_urls.append(
                                         filename
                                     )
-                                except ValidationError:
-                                    email_parser_logger.warning(
-                                        f'Недопустимый файл {filename} '
-                                        f'для email: {email_msg_id}'
-                                    )
+                                except ValidationError as e:
+                                    email_parser_logger.warning(e)
                                 except OSError:
                                     save_file_err = True
 
@@ -442,22 +421,17 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                         )
                         email_err_msg_ids.append(email_msg_id)
                 else:
+                    json_dicts = None
                     if email_body:
                         json_dicts, _ = EmailParser.parse_all_json_from_text(
                             email_body
                         )
-                        email_body = (
-                            EmailParser.build_human_readable_description(
-                                email_body
-                            )
-                        )
+                        email_body = normalize_text_with_json(email_body)
                     else:
                         email_body = None
 
-                    email_subject = (
-                        EmailParser.build_human_readable_description(
-                            email_subject
-                        )
+                    email_subject = normalize_text_with_json(
+                        email_subject
                     ) if email_subject else None
 
                     is_first_email = self._is_first_email(
