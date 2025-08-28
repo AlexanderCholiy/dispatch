@@ -5,8 +5,17 @@ from django.utils.html import format_html
 from core.constants import EMPTY_VALUE
 from emails.models import EmailMessage
 
-from .constants import INCIDENTS_PER_PAGE
-from .models import Incident, IncidentStatusHistory
+from .constants import (
+    INCIDENT_STATUSES_PER_PAGE,
+    INCIDENT_TYPES_PER_PAGE,
+    INCIDENTS_PER_PAGE,
+)
+from .models import (
+    Incident,
+    IncidentStatus,
+    IncidentStatusHistory,
+    IncidentType,
+)
 
 admin.site.empty_value_display = EMPTY_VALUE
 
@@ -118,3 +127,19 @@ class IncidentAdmin(admin.ModelAdmin):
             ),
         }),
     )
+
+
+@admin.register(IncidentType)
+class IncidentTypeAdmin(admin.ModelAdmin):
+    list_per_page = INCIDENT_TYPES_PER_PAGE
+    list_display = ('name', 'sla_deadline')
+    list_editable = ('sla_deadline',)
+    search_fields = ('name',)
+
+
+@admin.register(IncidentStatus)
+class IncidentStatusdmin(admin.ModelAdmin):
+    list_per_page = INCIDENT_STATUSES_PER_PAGE
+    list_display = ('name', 'description',)
+    list_editable = ('description',)
+    search_fields = ('name', 'description',)

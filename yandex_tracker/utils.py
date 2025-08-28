@@ -11,6 +11,7 @@ from django.utils import timezone
 
 from core.constants import YANDEX_TRACKER_ROTATING_FILE
 from core.loggers import LoggerFactory
+from core.utils import Config
 from core.wraps import safe_request
 from emails.models import EmailMessage
 from emails.utils import EmailManager
@@ -22,6 +23,21 @@ from .validators import normalize_text_with_json
 
 yt_manager_logger = LoggerFactory(
     __name__, YANDEX_TRACKER_ROTATING_FILE).get_logger
+
+yt_manager_config = {
+    'YT_CLIENT_ID': os.getenv('YT_CLIENT_ID'),
+    'YT_CLIENT_SECRET': os.getenv('YT_CLIENT_SECRET'),
+    'YT_ACCESS_TOKEN': os.getenv('YT_ACCESS_TOKEN'),
+    'YT_REFRESH_TOKEN': os.getenv('YT_REFRESH_TOKEN'),
+    'YT_ORGANIZATION_ID': os.getenv('YT_ORGANIZATION_ID'),
+    'YT_QUEUE': os.getenv('YT_QUEUE'),
+    'YT_DATABASE_GLOBAL_FIELD_ID': os.getenv('YT_DATABASE_GLOBAL_FIELD_ID'),  # noqa: E501
+    'YT_POLE_NUMBER_GLOBAL_FIELD_ID': os.getenv('YT_POLE_NUMBER_GLOBAL_FIELD_ID'),  # noqa: E501
+    'YT_BASE_STATION_GLOBAL_FIELD_ID': os.getenv('YT_BASE_STATION_GLOBAL_FIELD_ID'),  # noqa: E501
+    'YT_EMAIL_DATETIME_GLOBAL_FIELD_ID': os.getenv('YT_EMAIL_DATETIME_GLOBAL_FIELD_ID'),  # noqa: E501
+    'IS_NEW_MSG_GLOBAL_FIELD_ID': os.getenv('IS_NEW_MSG_GLOBAL_FIELD_ID'),  # noqa: E501
+}
+Config.validate_env_variables(yt_manager_config)
 
 
 class YandexTrackerManager:
@@ -35,6 +51,9 @@ class YandexTrackerManager:
     all_users_url = 'https://api.tracker.yandex.net/v2/users'
     temporary_file_url = 'https://api.tracker.yandex.net/v2/attachments/'
     create_issue_url = 'https://api.tracker.yandex.net/v2/issues/'
+    filter_issues_url = 'https://api.tracker.yandex.net/v2/issues/_search'
+
+    closed_status_keys: list[str] = ['closed', 'done', 'resolved']
 
     def __init__(
         self,
@@ -564,3 +583,56 @@ class YandexTrackerManager:
                 # Необходимо добавить новые сообщения ввиде комментаривев:
                 else:
                     self.add_issue_email_comment(email_incident, key)
+
+    def filter_issues(self, yt_filter: dict, days_ago: int = 7) -> list[dict]:
+        page = 1
+        per_page = 100
+        all_issues = []
+        now: datetime = timezone.now()
+        days_ago: datetime = now - timedelta(days=days_ago)
+        yt_filter['queue'] = self.queue
+        yt_filter['createdAt'] = {
+            'from': days_ago.isoformat(),
+            'to': now.isoformat()
+        }
+        payload = {'filter': yt_filter}
+
+        while True:
+            params = {
+                'page': page,
+                'perPage': per_page
+            }
+            batch = self._make_request(
+                HTTPMethod.POST,
+                self.filter_issues_url,
+                json=payload,
+                params=params,
+                sub_func_name=inspect.currentframe().f_code.co_name,
+            )
+            if not batch:
+                break
+
+            all_issues.extend(batch)
+            page += 1
+
+        return all_issues
+
+    def closed_issues(self, days_ago: int = 7) -> list[dict]:
+        return self.filter_issues(
+            {'status': self.closed_status_keys}, days_ago
+        )
+
+
+yt_manager = YandexTrackerManager(
+    yt_manager_config['YT_CLIENT_ID'],
+    yt_manager_config['YT_CLIENT_SECRET'],
+    yt_manager_config['YT_ACCESS_TOKEN'],
+    yt_manager_config['YT_REFRESH_TOKEN'],
+    yt_manager_config['YT_ORGANIZATION_ID'],
+    yt_manager_config['YT_QUEUE'],
+    yt_manager_config['YT_DATABASE_GLOBAL_FIELD_ID'],
+    yt_manager_config['YT_POLE_NUMBER_GLOBAL_FIELD_ID'],
+    yt_manager_config['YT_BASE_STATION_GLOBAL_FIELD_ID'],
+    yt_manager_config['YT_EMAIL_DATETIME_GLOBAL_FIELD_ID'],
+    yt_manager_config['IS_NEW_MSG_GLOBAL_FIELD_ID'],
+)

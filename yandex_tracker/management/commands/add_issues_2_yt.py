@@ -1,4 +1,3 @@
-import os
 import time
 
 from django.core.management.base import BaseCommand
@@ -12,7 +11,7 @@ from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
 from core.wraps import min_wait_timer, timer
 from incidents.utils import IncidentManager
-from yandex_tracker.utils import YandexTrackerManager
+from yandex_tracker.utils import YandexTrackerManager, yt_manager
 
 yt_managment_logger = LoggerFactory(
     __name__, YANDEX_TRACKER_ROTATING_FILE).get_logger
@@ -21,22 +20,7 @@ yt_managment_logger = LoggerFactory(
 class Command(BaseCommand):
     help = 'Обновление данных в YandexTracker.'
 
-    @timer(yt_managment_logger)
     def handle(self, *args, **kwargs):
-        yt_manager = YandexTrackerManager(
-            os.getenv('YT_CLIENT_ID'),
-            os.getenv('YT_CLIENT_SECRET'),
-            os.getenv('YT_ACCESS_TOKEN'),
-            os.getenv('YT_REFRESH_TOKEN'),
-            os.getenv('YT_ORGANIZATION_ID'),
-            os.getenv('YT_QUEUE'),
-            os.getenv('YT_DATABASE_GLOBAL_FIELD_ID'),
-            os.getenv('YT_POLE_NUMBER_GLOBAL_FIELD_ID'),
-            os.getenv('YT_BASE_STATION_GLOBAL_FIELD_ID'),
-            os.getenv('YT_EMAIL_DATETIME_GLOBAL_FIELD_ID'),
-            os.getenv('IS_NEW_MSG_GLOBAL_FIELD_ID'),
-        )
-
         while True:
             try:
                 self.add_issues_2_yt(yt_manager)
