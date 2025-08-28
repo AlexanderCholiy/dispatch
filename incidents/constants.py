@@ -2,7 +2,6 @@ import os
 
 from django.conf import settings
 
-
 INCIDENTS_PER_PAGE = 32
 
 INCIDENTS_DATA_DIR = os.path.join(settings.BASE_DIR, 'data', 'incidents')

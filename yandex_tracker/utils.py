@@ -1,24 +1,24 @@
+import inspect
 import os
 import re
-import inspect
-import requests
+from datetime import datetime, timedelta
+from http import HTTPMethod, HTTPStatus
 from typing import Optional
-from http import HTTPStatus, HTTPMethod
-from datetime import datetime
 
+import requests
 from django.db import models
 from django.utils import timezone
 
-from emails.models import EmailMessage
-from incidents.models import Incident
 from core.constants import YANDEX_TRACKER_ROTATING_FILE
 from core.loggers import LoggerFactory
-from .exceptions import YandexTrackerAuthErr
 from core.wraps import safe_request
-from .constants import INCIDENTS_REGION_NOT_FOR_YT, MAX_ATTACHMENT_SIZE_IN_YT
-from .validators import normalize_text_with_json
+from emails.models import EmailMessage
 from emails.utils import EmailManager
+from incidents.models import Incident
 
+from .constants import INCIDENTS_REGION_NOT_FOR_YT, MAX_ATTACHMENT_SIZE_IN_YT
+from .exceptions import YandexTrackerAuthErr
+from .validators import normalize_text_with_json
 
 yt_manager_logger = LoggerFactory(
     __name__, YANDEX_TRACKER_ROTATING_FILE).get_logger
@@ -63,6 +63,8 @@ class YandexTrackerManager:
         self.email_datetime_global_field_id = email_datetime_global_field_id
         self.is_new_msg_global_field_id = is_new_msg_global_field_id
 
+        self._current_user_uid: Optional[str] = None
+
     def find_yt_number_in_text(self, text: str) -> list[str]:
         return re.findall(rf'{self.queue}-\d+', text)
 
@@ -79,7 +81,9 @@ class YandexTrackerManager:
         return response.status_code == HTTPStatus.OK
 
     @staticmethod
-    def emails_for_yandex_tracker() -> models.QuerySet[EmailMessage]:
+    def emails_for_yandex_tracker(
+        days: int = 1
+    ) -> models.QuerySet[EmailMessage]:
         """
         Письма, которые должны быть добавлены в YandexTracker.
 
@@ -88,6 +92,13 @@ class YandexTrackerManager:
         определен шифр опоры из темы или тела письма и эти опоры НЕ находятся в
         указанном регионе INCIDENTS_REGION_NOT_FOR_YT.
 
+        Исключаем инциденты без ответственного диспетчера и старше N дней
+        назад, чтобы не добавлять неактуальные инциденты при смене основного
+        фильтра.
+
+        Args:
+            days (days): Количество дней назад, для фильтрации инцидентов не
+            зарегестрированных в YandexTracker. По умолчанию 1.
         Returns:
             Отсортированные от старых к новым QuerySet[EmailMessage] по
             email_incident_id, is_first_email, email_date, id.
@@ -112,11 +123,17 @@ class YandexTrackerManager:
             email_incident__pole__region__in=INCIDENTS_REGION_NOT_FOR_YT
         )
 
-        return (
+        exclusion_date = timezone.now() - timedelta(days=days)
+
+        emails = (
             emails_not_in_yt | emails_with_incidents_in_yt
+        ).exclude(
+            models.Q(email_incident__responsible_user__isnull=True)
+            & models.Q(email_incident__incident_date__lt=exclusion_date)
         ).distinct().order_by(
             'email_incident_id', 'is_first_email', 'email_date', 'id'
         )
+        return emails
 
     @safe_request(yt_manager_logger, retries=retries, timeout=timeout)
     def _make_request(
@@ -162,6 +179,13 @@ class YandexTrackerManager:
             self.refresh_token = tokens['refresh_token']
         except KeyError:
             raise YandexTrackerAuthErr(response.status_code, response.text)
+
+    @property
+    def current_user_uid(self) -> str:
+        """Получаем UID текущего пользователя."""
+        if not self._current_user_uid:
+            self._current_user_uid = str(self.current_user_info['uid'])
+        return self._current_user_uid
 
     @property
     def current_user_info(self) -> dict:
@@ -225,7 +249,7 @@ class YandexTrackerManager:
         self,
         issue_key: str,
         comment: str,
-        temp_files: Optional[list[str]] = None
+        temp_files: Optional[list[str]] = None,
     ) -> dict:
         payload = {'text': comment}
         if temp_files:
@@ -235,6 +259,14 @@ class YandexTrackerManager:
             HTTPMethod.POST,
             url,
             json=payload,
+            sub_func_name=inspect.currentframe().f_code.co_name,
+        )
+
+    def delete_comment(self, issue_key: str, comment_id: int) -> dict:
+        url = f'{self.create_issue_url}{issue_key}/comments/{comment_id}'
+        return self._make_request(
+            HTTPMethod.DELETE,
+            url,
             sub_func_name=inspect.currentframe().f_code.co_name,
         )
 
@@ -378,22 +410,22 @@ class YandexTrackerManager:
 
         return comment_like_email
 
-    def add_issue_email_comment(self, email: EmailMessage, key: str):
+    def add_issue_email_comment(self, email: EmailMessage, issue_key: str):
         """Создаёт комментарий по email, которого ещё нет в YandexTracker."""
-        email_already_exist = False
+        email_is_not_exist = True
 
-        for comment in self.select_issue_comments(key):
-            print(comment)
+        for comment in self.select_issue_comments(issue_key):
+            comment_usr_uid = str(comment['createdBy']['id'])
+            comment_text = comment.get('text', '').strip()
+            if comment_usr_uid == self.current_user_uid:
+                if comment_text == self._comment_like_email(email):
+                    email_is_not_exist = False
+                    break
 
-            if comment['createdBy']['id'] == str(self.uid):
-                print(comment)
-
-            email_already_exist = True
-
-        if not email_already_exist:
+        if email_is_not_exist:
             temp_files = self.download_email_temp_files(email)
             comment = self._comment_like_email(email)
-            self.create_comment(key, comment, temp_files)
+            self.create_comment(issue_key, comment, temp_files)
 
     def _prepare_data_from_email(self, email_incident: EmailMessage) -> dict:
         """Подготовка данных для отправки в YandexTracker."""
@@ -474,7 +506,32 @@ class YandexTrackerManager:
         # Инцидент отсутствует в YandexTracker, но по нему пришло уточнение,
         # поэтому надо восстановить полностью цепочку писем для инцидента:
         elif not issues and not is_first_email:
-            pass
+            all_email_incident = EmailMessage.objects.filter(
+                email_incident=email_incident.email_incident
+            ).order_by('is_first_email', 'email_date', 'id')
+
+            first_email_incident = all_email_incident.first()
+            new_data_for_yt = self._prepare_data_from_email(
+                first_email_incident)
+            temp_files = self.download_email_temp_files(first_email_incident)
+
+            issue = self.create_or_update_issue(
+                key=key,
+                summary=new_data_for_yt['summary'],
+                database_id=new_data_for_yt['database_id'],
+                pole_number=new_data_for_yt['pole_number'],
+                base_station_number=new_data_for_yt['base_station_number'],
+                description=new_data_for_yt['description'],
+                assignee=new_data_for_yt['assignee'],
+                email_datetime=new_data_for_yt['email_datetime'],
+                email_from=new_data_for_yt['email_from'],
+                email_to=new_data_for_yt['email_to'],
+                email_cc=new_data_for_yt['email_cc'],
+                temp_files=temp_files,
+            )
+            key: str = issue['key']
+            for email in all_email_incident[1:]:
+                self.add_issue_email_comment(email, key)
         # Инцидент уже зарегестрирован в YandexTracker:
         else:
             for issue in issues:
@@ -504,7 +561,6 @@ class YandexTrackerManager:
                         email_cc=data_for_yt['email_cc'],
                         temp_files=temp_files,
                     )
-                    return True
                 # Необходимо добавить новые сообщения ввиде комментаривев:
                 else:
                     self.add_issue_email_comment(email_incident, key)

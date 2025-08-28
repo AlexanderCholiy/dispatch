@@ -1,15 +1,15 @@
 import os
-from logging import DEBUG, INFO
 from http import HTTPStatus
+from logging import DEBUG, INFO
 
 from django.conf import settings
 
 from .exceptions import (
-    ApiUnauthorizedErr,
-    ApiForbidden,
-    ApiNotFound,
     ApiBadRequest,
+    ApiForbidden,
     ApiMethodNotAllowed,
+    ApiNotFound,
+    ApiUnauthorizedErr,
 )
 
 BASE_DIR = settings.BASE_DIR
@@ -44,3 +44,5 @@ API_STATUS_EXCEPTIONS = {
     HTTPStatus.BAD_REQUEST: ApiBadRequest,
     HTTPStatus.METHOD_NOT_ALLOWED: ApiMethodNotAllowed,
 }
+
+MIN_WAIT_SEC_WITH_CRITICAL_EXC = 60

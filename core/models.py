@@ -3,6 +3,7 @@ import os
 from django.db import models
 
 from emails.constants import MAX_EMAIL_LEN
+
 from .constants import (
     MAX_EMAIL_ID_LEN,
     MAX_FILE_URL_LEN,

@@ -7,7 +7,7 @@ from django.db import models
 from django.utils import timezone
 
 from core.models import Detail
-from ts.models import BaseStation, Pole, AVRContractor
+from ts.models import AVRContractor, BaseStation, Pole
 
 User = get_user_model()
 

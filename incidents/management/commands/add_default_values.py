@@ -1,19 +1,18 @@
 import pandas as pd
+from django.core.management.base import BaseCommand
+from django.db import transaction
 from numpy import nan
 
-from django.core.management.base import BaseCommand
-
-from incidents.models import (
-    IncidentStatus, IncidentType, IncidentStatusHistory
-)
-from django.db import transaction
-
-from incidents.constants import INCIDENT_TYPES_FILE, INCIDENT_STATUSES_FILE
-from core.pretty_print import PrettyPrint
-from core.loggers import LoggerFactory
-from core.wraps import timer
 from core.constants import INCIDENTS_LOG_ROTATING_FILE
-
+from core.loggers import LoggerFactory
+from core.pretty_print import PrettyPrint
+from core.wraps import timer
+from incidents.constants import INCIDENT_STATUSES_FILE, INCIDENT_TYPES_FILE
+from incidents.models import (
+    IncidentStatus,
+    IncidentStatusHistory,
+    IncidentType,
+)
 
 incident_managment_logger = LoggerFactory(
     __name__, INCIDENTS_LOG_ROTATING_FILE).get_logger

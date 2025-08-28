@@ -8,22 +8,23 @@ from email import header, message
 from typing import Optional
 
 from django.core.exceptions import ValidationError
-from django.utils import timezone
 from django.db import IntegrityError
+from django.utils import timezone
 from requests.exceptions import RequestException
 
-from core.constants import EMAIL_LOG_ROTATING_FILE, API_STATUS_EXCEPTIONS
+from core.constants import API_STATUS_EXCEPTIONS, EMAIL_LOG_ROTATING_FILE
+from core.exceptions import ApiServerError, ApiTooManyRequests
 from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
+from core.wraps import min_wait_timer, timer
 from emails.models import EmailErr, EmailMessage
-from .validators import EmailValidator
-from .utils import EmailManager
 from incidents.utils import IncidentManager
-from yandex_tracker.utils import YandexTrackerManager
 from yandex_tracker.exceptions import YandexTrackerAuthErr
-from core.exceptions import ApiTooManyRequests, ApiServerError
+from yandex_tracker.utils import YandexTrackerManager
 from yandex_tracker.validators import normalize_text_with_json
 
+from .utils import EmailManager
+from .validators import EmailValidator
 
 email_parser_logger = LoggerFactory(
     __name__, EMAIL_LOG_ROTATING_FILE).get_logger
@@ -172,6 +173,8 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
 
         return result
 
+    @min_wait_timer(email_parser_logger)
+    @timer(email_parser_logger)
     def fetch_unread_emails(
         self,
         check_days: int = 0,
@@ -278,6 +281,10 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                     email_subject: str = self.prepare_subject_from_bytes(
                         subject, encoding
                     )
+                    if email_subject and 'undeliverable mail' in (
+                        email_subject.lower()
+                    ):
+                        continue
 
                     email_from: str = self.prepare_email_from(msg['From'])
 

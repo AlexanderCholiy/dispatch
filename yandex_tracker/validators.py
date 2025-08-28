@@ -33,4 +33,4 @@ def normalize_text_with_json(text: str) -> str:
         except Exception:
             return raw
 
-    return json_pattern.sub(pretty_json, text)
+    return json_pattern.sub(pretty_json, text).strip()

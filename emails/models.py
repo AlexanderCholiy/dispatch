@@ -5,7 +5,7 @@ from core.constants import MAX_EMAIL_ID_LEN
 from core.models import Attachment, Msg2, SpecialEmail
 from incidents.models import Incident
 
-from .constants import MAX_EMAIL_SUBJECT_LEN, MAX_EMAIL_LEN
+from .constants import MAX_EMAIL_LEN, MAX_EMAIL_SUBJECT_LEN
 
 User = get_user_model()
 
@@ -28,6 +28,7 @@ class EmailMessage(models.Model):
         unique=True,
         null=False,
         verbose_name='ID сообщения',
+        db_index=True
     )
     email_msg_reply_id = models.CharField(
         max_length=MAX_EMAIL_ID_LEN,

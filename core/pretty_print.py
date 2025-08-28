@@ -128,11 +128,10 @@ class PrettyPrint:
         percent_bg: str,
         bar_length: Optional[int],
     ) -> None:
-        total -= 1
-        if total == 0 or not DEBUG:
+        if not DEBUG or total <= 0:
             return
 
-        iteration = min(iteration, total)
+        iteration = min(iteration + 1, total)
         progress = iteration / total
         percent = progress * 100
         percent_text = f' {percent:5.1f}% '

@@ -3,8 +3,8 @@ import os
 import re
 from datetime import datetime
 from email import header, message
-from typing import Optional
 from email.utils import getaddresses
+from typing import Optional
 
 import chardet
 from bs4 import BeautifulSoup
@@ -13,7 +13,9 @@ from django.core.exceptions import ValidationError
 from core.constants import INCIDENT_DIR, SUBFOLDER_DATE_FORMAT
 
 from .constants import (
-    ALLOWED_MIME_PREFIXES, MAX_ATTACHMENT_SIZE, ALLOWED_EXTENSIONS
+    ALLOWED_EXTENSIONS,
+    ALLOWED_MIME_PREFIXES,
+    MAX_ATTACHMENT_SIZE,
 )
 
 

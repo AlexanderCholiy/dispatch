@@ -1,35 +1,32 @@
 import random
 from typing import Optional
 
-from django.db import connection, models, transaction
-from django.db.models import Count, Q, Min
+from django.db import connection, models
+from django.db.models import Count, Min, Q
 
 from emails.models import EmailMessage
-from .models import Incident, IncidentStatus
+from users.models import Roles, User
 from yandex_tracker.utils import YandexTrackerManager
+
+from .constants import DEFAULT_STATUS_DESC, DEFAULT_STATUS_NAME
+from .models import Incident, IncidentStatus
 from .validators import IncidentValidator
-from .constants import DEFAULT_STATUS_NAME, DEFAULT_STATUS_DESC
-from users.models import User, Roles
 
 
 class IncidentManager(IncidentValidator):
 
     @staticmethod
-    def get_email_thread(
-        email_msg_id: str,
-        email_table_name: str = 'emails_emailmessage',
-        email_reference_table_name: str = 'emails_emailreference',
-    ) -> models.QuerySet[EmailMessage]:
+    def get_email_thread(email_msg_id: str) -> models.QuerySet[EmailMessage]:
         """Возвращает список связанных сообщений."""
-        query = f"""
+        query = """
         WITH RECURSIVE email_chain AS (
             -- Получаем исходное письмо по email_msg_id
             SELECT
                 em.*,
                 -- Защита от зацикивания:
                 ARRAY[em.email_msg_id::varchar] AS path
-            FROM {email_table_name} AS em
-            WHERE email_msg_id = %s
+            FROM emails_emailmessage AS em
+            WHERE email_msg_id = %(email_msg_id)s
 
             UNION ALL
 
@@ -37,7 +34,7 @@ class IncidentManager(IncidentValidator):
             SELECT
                 em.*,
                 ec.path || em.email_msg_id  -- Защита от зацикивания
-            FROM {email_table_name} AS em
+            FROM emails_emailmessage AS em
             JOIN email_chain AS ec ON em.email_msg_reply_id = ec.email_msg_id
             WHERE NOT em.email_msg_id = ANY(ec.path)  -- Защита от зацикивания
         ),
@@ -49,7 +46,7 @@ class IncidentManager(IncidentValidator):
                 er.email_msg_references AS email_msg_id_1,
                 ec.email_msg_id AS email_msg_id_2,
                 ec.email_msg_reply_id AS email_msg_id_3
-            FROM {email_reference_table_name} AS er
+            FROM emails_emailreference AS er
             JOIN email_chain AS ec
             ON er.email_msg_references IN (
                 ec.email_msg_id, ec.email_msg_reply_id
@@ -57,13 +54,13 @@ class IncidentManager(IncidentValidator):
             OR er.email_msg_id = ec.id
         ),
         email_thread_without_email_incident_id AS (
-            SELECT id FROM {email_table_name}
+            SELECT id FROM emails_emailmessage
             WHERE id IN (
                 SELECT id_1 FROM email_full_chain
                 UNION
                 SELECT id_2 FROM email_full_chain
             )
-            OR email_msg_id = %s
+            OR email_msg_id = %(email_msg_id)s
             OR email_msg_id IN (
                 SELECT email_msg_id_1 FROM email_full_chain
                 UNION
@@ -81,9 +78,9 @@ class IncidentManager(IncidentValidator):
         ),
         -- Это нужно если мы "вручную связываем письма в цепочку"
         email_thread_with_email_incident_id AS (
-            SELECT id FROM {email_table_name}
+            SELECT id FROM emails_emailmessage
             WHERE email_incident_id IN (
-                SELECT email_incident_id FROM {email_table_name}
+                SELECT email_incident_id FROM emails_emailmessage
                 WHERE id IN (
                     SELECT id FROM email_thread_without_email_incident_id
                 )
@@ -91,19 +88,18 @@ class IncidentManager(IncidentValidator):
             )
         )
         SELECT id
-        FROM {email_table_name}
+        FROM emails_emailmessage
         WHERE id IN (SELECT id FROM email_thread_without_email_incident_id)
         OR id IN (SELECT id FROM email_thread_with_email_incident_id)
         ORDER BY email_date, id DESC;
         """
-        params = [email_msg_id, email_msg_id]
+        params = {'email_msg_id': email_msg_id}
 
         with connection.cursor() as cursor:
             cursor.execute(query, params)
             rows = cursor.fetchall()
 
         ids = [row[0] for row in rows]
-
         return EmailMessage.objects.filter(id__in=ids)
 
     @staticmethod
@@ -196,7 +192,6 @@ class IncidentManager(IncidentValidator):
         )
         incident.statuses.add(default_status)
 
-    @transaction.atomic()
     def add_incident_from_email(
         self,
         email_msg: EmailMessage,
@@ -281,10 +276,10 @@ class IncidentManager(IncidentValidator):
         # У существующей переписки, обновляем номер инцидента к которой она
         # относится:
         if actual_email_incident is not None:
-            (
-                EmailMessage.objects.filter(pk__in=email_ids)
-                .update(email_incident=actual_email_incident)
+            EmailMessage.objects.filter(id__in=email_ids).update(
+                email_incident=actual_email_incident
             )
+
             # У инцидента обновляем поле с шифром опоры и БС, если там пусто:
             if actual_email_incident.pole is None and pole is not None:
                 actual_email_incident.pole = pole

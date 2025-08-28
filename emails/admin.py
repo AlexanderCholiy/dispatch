@@ -5,7 +5,10 @@ from core.constants import EMPTY_VALUE
 
 from .constants import EMAILS_PER_PAGE
 from .models import (
-    EmailErr, EmailMessage, EmailAttachment, EmailInTextAttachment
+    EmailAttachment,
+    EmailErr,
+    EmailInTextAttachment,
+    EmailMessage,
 )
 
 admin.site.empty_value_display = EMPTY_VALUE

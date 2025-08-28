@@ -1,23 +1,21 @@
-import os
 import datetime as dt
-
 from pathlib import Path
 
-from django.core.management.base import BaseCommand
 from django.conf import settings
+from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from core.constants import EMAIL_LOG_ROTATING_FILE
+from core.constants import (
+    EMAIL_LOG_ROTATING_FILE,
+    INCIDENT_DIR,
+    SUBFOLDER_DATE_FORMAT,
+)
 from core.loggers import LoggerFactory
-from core.wraps import timer
-from emails.email_parser import EmailParser
-from yandex_tracker.utils import YandexTrackerManager
-from emails.utils import EmailManager
-from core.constants import INCIDENT_DIR, SUBFOLDER_DATE_FORMAT
-from emails.models import EmailAttachment, EmailInTextAttachment
-from emails.constants import MAX_EMAILS_ATTACHMENT_DAYS
 from core.pretty_print import PrettyPrint
-from emails.models import EmailMessage
+from core.wraps import timer
+from emails.constants import MAX_EMAILS_ATTACHMENT_DAYS
+from emails.models import EmailAttachment, EmailInTextAttachment, EmailMessage
+from emails.utils import EmailManager
 
 email_managment_logger = LoggerFactory(
     __name__, EMAIL_LOG_ROTATING_FILE).get_logger

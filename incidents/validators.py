@@ -1,9 +1,9 @@
 import re
-
 from typing import Optional
 
 from emails.models import EmailMessage
-from .models import Pole, BaseStation
+
+from .models import BaseStation, Pole
 
 
 class IncidentValidator:

@@ -1,21 +1,18 @@
 import os
+import time
 
 from django.core.management.base import BaseCommand
-from django.db import models, transaction
-from requests.exceptions import RequestException
+from django.db import transaction
 
-from yandex_tracker.utils import YandexTrackerManager
-from core.constants import YANDEX_TRACKER_ROTATING_FILE, API_STATUS_EXCEPTIONS
+from core.constants import (
+    MIN_WAIT_SEC_WITH_CRITICAL_EXC,
+    YANDEX_TRACKER_ROTATING_FILE,
+)
 from core.loggers import LoggerFactory
-from core.wraps import timer
-from incidents.models import Incident
-from incidents.utils import IncidentManager
-from emails.models import EmailMessage
-from emails.utils import EmailManager
 from core.pretty_print import PrettyPrint
-from core.exceptions import ApiServerError, ApiTooManyRequests
-from yandex_tracker.exceptions import YandexTrackerAuthErr
-
+from core.wraps import min_wait_timer, timer
+from incidents.utils import IncidentManager
+from yandex_tracker.utils import YandexTrackerManager
 
 yt_managment_logger = LoggerFactory(
     __name__, YANDEX_TRACKER_ROTATING_FILE).get_logger
@@ -25,7 +22,6 @@ class Command(BaseCommand):
     help = 'Обновление данных в YandexTracker.'
 
     @timer(yt_managment_logger)
-    @transaction.atomic()
     def handle(self, *args, **kwargs):
         yt_manager = YandexTrackerManager(
             os.getenv('YT_CLIENT_ID'),
@@ -41,41 +37,45 @@ class Command(BaseCommand):
             os.getenv('IS_NEW_MSG_GLOBAL_FIELD_ID'),
         )
 
+        while True:
+            try:
+                self.add_issues_2_yt(yt_manager)
+            except KeyboardInterrupt:
+                return
+            except Exception as e:
+                yt_managment_logger.critical(e, exc_info=True)
+                time.sleep(MIN_WAIT_SEC_WITH_CRITICAL_EXC)
+
+    @min_wait_timer(yt_managment_logger)
+    @timer(yt_managment_logger)
+    def add_issues_2_yt(self, yt_manager: YandexTrackerManager):
         emails = YandexTrackerManager.emails_for_yandex_tracker()
         previous_incident = None
         total = len(emails)
 
         for index, email in enumerate(emails):
-            PrettyPrint.progress_bar_info(
+            PrettyPrint().progress_bar_info(
                 index, total, 'Обновление заявок в YandexTracker:'
             )
             incident = email.email_incident
-            if not incident.responsible_user:
-                incident.responsible_user = (
-                    IncidentManager.choice_dispatch_for_incident(yt_manager)
-                )
-                incident.save()
-            r = None
-            try:
-                if incident != previous_incident and email.is_first_email:
-                    previous_incident = email.email_incident
-                    r = yt_manager.add_incident_to_yandex_tracker(email, True)
+            with transaction.atomic():
+                if not incident.responsible_user:
+                    incident.responsible_user = (
+                        IncidentManager
+                        .choice_dispatch_for_incident(yt_manager)
+                    )
+                    incident.save()
+
+                try:
+                    if incident != previous_incident and email.is_first_email:
+                        previous_incident = email.email_incident
+                        yt_manager.add_incident_to_yandex_tracker(email, True)
+                    else:
+                        yt_manager.add_incident_to_yandex_tracker(email, False)
+                except KeyboardInterrupt:
+                    return
+                except Exception as e:
+                    yt_managment_logger.exception(e)
                 else:
-                    r = yt_manager.add_incident_to_yandex_tracker(email, False)
-            except (
-                RequestException,
-                ApiTooManyRequests,
-                ApiServerError,
-                YandexTrackerAuthErr,
-            ):
-                pass
-            except tuple(API_STATUS_EXCEPTIONS.values()):
-                pass
-            except KeyboardInterrupt:
-                raise
-            except Exception as e:
-                yt_managment_logger.exception(e)
-            else:
-                if r:
                     email.was_added_2_yandex_tracker = True
                     email.save()

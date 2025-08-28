@@ -1,14 +1,15 @@
 import functools
 import time
-import requests
 from datetime import datetime
+from http import HTTPStatus
 from logging import Logger
 from typing import Callable
-from .exceptions import ApiTooManyRequests, ApiServerError
+
+import requests
 
 from .constants import API_STATUS_EXCEPTIONS
-
-from http import HTTPStatus
+from .exceptions import ApiServerError, ApiTooManyRequests
+from .utils import format_seconds
 
 
 def timer(logger: Logger) -> Callable:
@@ -147,7 +148,7 @@ def safe_request(
                 try:
                     return response.json()
                 except ValueError:
-                    logger.debug(f'Ответ {response.status_code}, но не JSON')
+                    # logger.debug(f'Ответ {response.status_code}, но не JSON')
                     return {}
 
             if response.status_code == HTTPStatus.NO_CONTENT:
@@ -168,5 +169,35 @@ def safe_request(
                 f'HTTP {response.status_code}: {response.text}'
             )
 
+        return wrapper
+    return decorator
+
+
+def min_wait_timer(logger: Logger, min_seconds: int = 10):
+    """
+    Декоратор с минимальным временем выполнения функции.
+
+    Args:
+        min_seconds: Минимальное время выполнения в секундах.
+            По умолчанию 10.
+    """
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs) -> Callable:
+            start_time = time.perf_counter()
+
+            result = func(*args, **kwargs)
+
+            execution_time = time.perf_counter() - start_time
+
+            if execution_time < min_seconds:
+                sleep_time = min_seconds - execution_time
+                logger.debug(
+                    f'Ждем {format_seconds(sleep_time)} секунд(ы) для '
+                    f'завершения работы функции {func.__name__}'
+                )
+                time.sleep(sleep_time)
+
+            return result
         return wrapper
     return decorator
