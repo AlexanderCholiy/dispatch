@@ -35,7 +35,8 @@ yt_manager_config = {
     'YT_POLE_NUMBER_GLOBAL_FIELD_ID': os.getenv('YT_POLE_NUMBER_GLOBAL_FIELD_ID'),  # noqa: E501
     'YT_BASE_STATION_GLOBAL_FIELD_ID': os.getenv('YT_BASE_STATION_GLOBAL_FIELD_ID'),  # noqa: E501
     'YT_EMAIL_DATETIME_GLOBAL_FIELD_ID': os.getenv('YT_EMAIL_DATETIME_GLOBAL_FIELD_ID'),  # noqa: E501
-    'IS_NEW_MSG_GLOBAL_FIELD_ID': os.getenv('IS_NEW_MSG_GLOBAL_FIELD_ID'),  # noqa: E501
+    'YT_IS_NEW_MSG_GLOBAL_FIELD_ID': os.getenv('YT_IS_NEW_MSG_GLOBAL_FIELD_ID'),  # noqa: E501
+    'YT_TYPE_OF_INCIDENT_LOCAL_FIELD_ID': os.getenv('YT_TYPE_OF_INCIDENT_LOCAL_FIELD_ID'),  # noqa: E501
 }
 Config.validate_env_variables(yt_manager_config)
 
@@ -52,8 +53,9 @@ class YandexTrackerManager:
     temporary_file_url = 'https://api.tracker.yandex.net/v2/attachments/'
     create_issue_url = 'https://api.tracker.yandex.net/v2/issues/'
     filter_issues_url = 'https://api.tracker.yandex.net/v2/issues/_search'
+    statuses_url = 'https://api.tracker.yandex.net/v2/statuses'
 
-    closed_status_keys: list[str] = ['closed', 'done', 'resolved']
+    closed_status_types: set[str] = {'closed', 'done', 'resolved'}
 
     def __init__(
         self,
@@ -68,6 +70,7 @@ class YandexTrackerManager:
         base_station_global_field_id: str,
         email_datetime_global_field_id: str,
         is_new_msg_global_field_id: str,
+        type_of_incident_local_field_id: str,
     ):
         self.client_id = cliend_id
         self.client_secret = client_secret
@@ -82,7 +85,11 @@ class YandexTrackerManager:
         self.email_datetime_global_field_id = email_datetime_global_field_id
         self.is_new_msg_global_field_id = is_new_msg_global_field_id
 
+        self.type_of_incident_local_field_id = type_of_incident_local_field_id
+
         self._current_user_uid: Optional[str] = None
+        self.local_fields_url = (
+            f'https://api.tracker.yandex.net/v3/queues/{queue}/localFields')
 
     def find_yt_number_in_text(self, text: str) -> list[str]:
         return re.findall(rf'{self.queue}-\d+', text)
@@ -236,6 +243,14 @@ class YandexTrackerManager:
             HTTPMethod.GET,
             self.all_users_url,
             sub_func_name=inspect.currentframe().f_code.co_name
+        )
+
+    @property
+    def all_statuses(self) -> list[dict]:
+        return self._make_request(
+            HTTPMethod.GET,
+            self.statuses_url,
+            sub_func_name=inspect.currentframe().f_code.co_name,
         )
 
     def select_issue(
@@ -618,21 +633,49 @@ class YandexTrackerManager:
         return all_issues
 
     def closed_issues(self, days_ago: int = 7) -> list[dict]:
-        return self.filter_issues(
-            {'status': self.closed_status_keys}, days_ago
+        closed_statuses: list[str] = [
+            status['key']
+            for status in self.all_statuses
+            if status['type'] in self.closed_status_types
+        ]
+        return self.filter_issues({'status': closed_statuses}, days_ago)
+
+    def unclosed_issues(self, days_ago: int = 7) -> list[dict]:
+        unclosed_statuses: list[str] = [
+            status['key']
+            for status in self.all_statuses
+            if status['type'] not in self.closed_status_types
+        ]
+        return self.filter_issues({'status': unclosed_statuses}, days_ago)
+
+    @property
+    def all_local_fields(self) -> list[dict]:
+        return self._make_request(
+            HTTPMethod.GET,
+            self.local_fields_url,
+            sub_func_name=inspect.currentframe().f_code.co_name,
         )
+
+    def select_local_field(
+        self, local_field_id: str
+    ) -> Optional[dict]:
+        return next((
+            field for field in self.all_local_fields
+            if field['id'].endswith(local_field_id)
+        ), None)
 
 
 yt_manager = YandexTrackerManager(
-    yt_manager_config['YT_CLIENT_ID'],
-    yt_manager_config['YT_CLIENT_SECRET'],
-    yt_manager_config['YT_ACCESS_TOKEN'],
-    yt_manager_config['YT_REFRESH_TOKEN'],
-    yt_manager_config['YT_ORGANIZATION_ID'],
-    yt_manager_config['YT_QUEUE'],
-    yt_manager_config['YT_DATABASE_GLOBAL_FIELD_ID'],
-    yt_manager_config['YT_POLE_NUMBER_GLOBAL_FIELD_ID'],
-    yt_manager_config['YT_BASE_STATION_GLOBAL_FIELD_ID'],
-    yt_manager_config['YT_EMAIL_DATETIME_GLOBAL_FIELD_ID'],
-    yt_manager_config['IS_NEW_MSG_GLOBAL_FIELD_ID'],
+    cliend_id=yt_manager_config['YT_CLIENT_ID'],
+    client_secret=yt_manager_config['YT_CLIENT_SECRET'],
+    access_token=yt_manager_config['YT_ACCESS_TOKEN'],
+    refresh_token=yt_manager_config['YT_REFRESH_TOKEN'],
+    organisation_id=yt_manager_config['YT_ORGANIZATION_ID'],
+    queue=yt_manager_config['YT_QUEUE'],
+    database_global_field_id=yt_manager_config['YT_DATABASE_GLOBAL_FIELD_ID'],
+    pole_number_global_field_id=yt_manager_config['YT_POLE_NUMBER_GLOBAL_FIELD_ID'],  # noqa: E501
+    base_station_global_field_id=yt_manager_config['YT_BASE_STATION_GLOBAL_FIELD_ID'],  # noqa: E501
+    email_datetime_global_field_id=yt_manager_config['YT_EMAIL_DATETIME_GLOBAL_FIELD_ID'],  # noqa: E501
+    is_new_msg_global_field_id=yt_manager_config['YT_IS_NEW_MSG_GLOBAL_FIELD_ID'],  # noqa: E501
+    type_of_incident_local_field_id=yt_manager_config['YT_TYPE_OF_INCIDENT_LOCAL_FIELD_ID'],  # noqa: E501
 )
