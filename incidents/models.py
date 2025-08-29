@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from core.models import Detail
 from ts.models import AVRContractor, BaseStation, Pole
+from .constants import MAX_STATUS_COMMENT_LEN
 
 User = get_user_model()
 
@@ -151,6 +152,12 @@ class IncidentStatusHistory(models.Model):
         auto_now_add=True,
         verbose_name='Дата и время добавления',
         db_index=True
+    )
+    comments = models.CharField(
+        verbose_name='Комментарий',
+        null=True,
+        blank=True,
+        max_length=MAX_STATUS_COMMENT_LEN,
     )
 
     class Meta:

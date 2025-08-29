@@ -8,8 +8,13 @@ from emails.models import EmailMessage
 from users.models import Roles, User
 from yandex_tracker.utils import YandexTrackerManager
 
-from .constants import DEFAULT_STATUS_DESC, DEFAULT_STATUS_NAME
-from .models import Incident, IncidentStatus
+from .constants import (
+    DEFAULT_STATUS_DESC,
+    DEFAULT_STATUS_NAME,
+    DEFAULT_ERR_STATUS_NAME,
+    DEFAULT_ERR_STATUS_DESC,
+)
+from .models import Incident, IncidentStatus, IncidentStatusHistory
 from .validators import IncidentValidator
 
 
@@ -185,12 +190,34 @@ class IncidentManager(IncidentValidator):
         return random.choice(free_users)
 
     @staticmethod
-    def add_default_status(incident: Incident) -> None:
+    def add_default_status(
+        incident: Incident, comment: Optional[str] = None
+    ) -> None:
         default_status, _ = IncidentStatus.objects.get_or_create(
             name=DEFAULT_STATUS_NAME,
             defaults={'description': DEFAULT_STATUS_DESC}
         )
+        IncidentStatusHistory.objects.create(
+            incident=incident,
+            status=default_status,
+            comments=comment
+        )
         incident.statuses.add(default_status)
+
+    @staticmethod
+    def add_error_status(
+        incident: Incident, comment: Optional[str] = None
+    ) -> None:
+        default_err_status, _ = IncidentStatus.objects.get_or_create(
+            name=DEFAULT_ERR_STATUS_NAME,
+            defaults={'description': DEFAULT_ERR_STATUS_DESC}
+        )
+        IncidentStatusHistory.objects.create(
+            incident=incident,
+            status=default_err_status,
+            comments=comment
+        )
+        incident.statuses.add(default_err_status)
 
     def add_incident_from_email(
         self,

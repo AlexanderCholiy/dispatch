@@ -21,7 +21,6 @@ from emails.models import EmailErr, EmailMessage
 from incidents.utils import IncidentManager
 from yandex_tracker.exceptions import YandexTrackerAuthErr
 from yandex_tracker.utils import YandexTrackerManager
-from yandex_tracker.validators import normalize_text_with_json
 
 from .utils import EmailManager
 from .validators import EmailValidator
@@ -433,11 +432,12 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                         json_dicts, _ = EmailParser.parse_all_json_from_text(
                             email_body
                         )
-                        email_body = normalize_text_with_json(email_body)
+                        email_body = EmailManager.normalize_text_with_json(
+                            email_body)
                     else:
                         email_body = None
 
-                    email_subject = normalize_text_with_json(
+                    email_subject = EmailManager.normalize_text_with_json(
                         email_subject
                     ) if email_subject else None
 

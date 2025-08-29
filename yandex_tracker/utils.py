@@ -19,7 +19,6 @@ from incidents.models import Incident
 
 from .constants import INCIDENTS_REGION_NOT_FOR_YT, MAX_ATTACHMENT_SIZE_IN_YT
 from .exceptions import YandexTrackerAuthErr
-from .validators import normalize_text_with_json
 
 yt_manager_logger = LoggerFactory(
     __name__, YANDEX_TRACKER_ROTATING_FILE).get_logger
@@ -36,6 +35,10 @@ yt_manager_config = {
     'YT_BASE_STATION_GLOBAL_FIELD_ID': os.getenv('YT_BASE_STATION_GLOBAL_FIELD_ID'),  # noqa: E501
     'YT_EMAIL_DATETIME_GLOBAL_FIELD_ID': os.getenv('YT_EMAIL_DATETIME_GLOBAL_FIELD_ID'),  # noqa: E501
     'YT_IS_NEW_MSG_GLOBAL_FIELD_ID': os.getenv('YT_IS_NEW_MSG_GLOBAL_FIELD_ID'),  # noqa: E501
+    'YT_SLA_DEADLINE_GLOBAL_FIELD_ID': os.getenv('YT_SLA_DEADLINE_GLOBAL_FIELD_ID'),  # noqa: E501
+    'YT_IS_SLA_EXPIRED_GLOBAL_FIELD_ID': os.getenv('YT_IS_SLA_EXPIRED_GLOBAL_FIELD_ID'),  # noqa: E501
+    'YT_OPERATOR_NAME_GLOBAL_FIELD_NAME': os.getenv('YT_OPERATOR_NAME_GLOBAL_FIELD_NAME'),  # noqa: E501
+    'YT_AVR_NAME_GLOBAL_FIELD_ID': os.getenv('YT_AVR_NAME_GLOBAL_FIELD_ID'),  # noqa: E501
     'YT_TYPE_OF_INCIDENT_LOCAL_FIELD_ID': os.getenv('YT_TYPE_OF_INCIDENT_LOCAL_FIELD_ID'),  # noqa: E501
 }
 Config.validate_env_variables(yt_manager_config)
@@ -55,7 +58,8 @@ class YandexTrackerManager:
     filter_issues_url = 'https://api.tracker.yandex.net/v2/issues/_search'
     statuses_url = 'https://api.tracker.yandex.net/v2/statuses'
 
-    closed_status_types: set[str] = {'closed', 'done', 'resolved'}
+    closed_status_key = 'closed'
+    error_status_key = 'error'
 
     def __init__(
         self,
@@ -70,6 +74,10 @@ class YandexTrackerManager:
         base_station_global_field_id: str,
         email_datetime_global_field_id: str,
         is_new_msg_global_field_id: str,
+        sla_deadline_global_field_id: str,
+        is_sla_expired_global_field_id: str,
+        operator_name_global_field_name: str,
+        avr_name_global_field_id: str,
         type_of_incident_local_field_id: str,
     ):
         self.client_id = cliend_id
@@ -84,6 +92,10 @@ class YandexTrackerManager:
         self.base_station_global_field_id = base_station_global_field_id
         self.email_datetime_global_field_id = email_datetime_global_field_id
         self.is_new_msg_global_field_id = is_new_msg_global_field_id
+        self.sla_deadline_global_field_id = sla_deadline_global_field_id
+        self.is_sla_expired_global_field_id = is_sla_expired_global_field_id
+        self.operator_name_global_field_name = operator_name_global_field_name
+        self.avr_name_global_field_id = avr_name_global_field_id
 
         self.type_of_incident_local_field_id = type_of_incident_local_field_id
 
@@ -437,10 +449,12 @@ class YandexTrackerManager:
         comment_like_email += f'**Date:** {email_date_moscow}\n'
 
         if email.email_subject:
-            subject = normalize_text_with_json(email.email_subject)
+            subject = EmailManager.normalize_text_with_json(
+                email.email_subject)
             comment_like_email += f'**Subject:** {subject}\n\n'
         if email.email_body:
-            comment_like_email += normalize_text_with_json(email.email_body)
+            comment_like_email += EmailManager.normalize_text_with_json(
+                email.email_body)
 
         return comment_like_email
 
@@ -466,11 +480,11 @@ class YandexTrackerManager:
         incident: Incident = email_incident.email_incident
         database_id: int = incident.pk
 
-        summary = normalize_text_with_json(
+        summary = EmailManager.normalize_text_with_json(
             email_incident.email_subject
         ) if email_incident.email_subject else f'Инцидент №{database_id}'
 
-        description = normalize_text_with_json(
+        description = EmailManager.normalize_text_with_json(
             email_incident.email_body
         ) if email_incident.email_body else None
 
@@ -606,7 +620,7 @@ class YandexTrackerManager:
         now: datetime = timezone.now()
         days_ago: datetime = now - timedelta(days=days_ago)
         yt_filter['queue'] = self.queue
-        yt_filter['createdAt'] = {
+        yt_filter['updatedAt'] = {
             'from': days_ago.isoformat(),
             'to': now.isoformat()
         }
@@ -636,7 +650,7 @@ class YandexTrackerManager:
         closed_statuses: list[str] = [
             status['key']
             for status in self.all_statuses
-            if status['type'] in self.closed_status_types
+            if status['key'] == self.closed_status_key
         ]
         return self.filter_issues({'status': closed_statuses}, days_ago)
 
@@ -644,7 +658,7 @@ class YandexTrackerManager:
         unclosed_statuses: list[str] = [
             status['key']
             for status in self.all_statuses
-            if status['type'] not in self.closed_status_types
+            if status['key'] != self.closed_status_key
         ]
         return self.filter_issues({'status': unclosed_statuses}, days_ago)
 
@@ -656,6 +670,17 @@ class YandexTrackerManager:
             sub_func_name=inspect.currentframe().f_code.co_name,
         )
 
+    def get_available_transitions(self, issue_key: str) -> list[dict]:
+        """Получить все доступные переходы в другие статусы для задачи."""
+        url = (
+            f'https://api.tracker.yandex.net/v3/issues/{issue_key}/transitions'
+        )
+        return self._make_request(
+            HTTPMethod.GET,
+            url,
+            sub_func_name=inspect.currentframe().f_code.co_name,
+        )
+
     def select_local_field(
         self, local_field_id: str
     ) -> Optional[dict]:
@@ -663,6 +688,63 @@ class YandexTrackerManager:
             field for field in self.all_local_fields
             if field['id'].endswith(local_field_id)
         ), None)
+
+    def update_pole_and_base_station_fields(
+        self,
+        key: str,
+        pole_number: Optional[str],
+        base_station_number: Optional[str],
+        avr_name: Optional[str],
+        operator_name: Optional[str],
+    ) -> dict:
+        payload = {
+            self.pole_number_global_field_id: pole_number,
+            self.base_station_global_field_id: base_station_number,
+            self.avr_name_global_field_id: avr_name,
+            self.operator_name_global_field_name: operator_name
+        }
+
+        url = f'{self.create_issue_url}{key}'
+        return self._make_request(
+            HTTPMethod.PATCH,
+            url,
+            json=payload,
+            sub_func_name=inspect.currentframe().f_code.co_name,
+        )
+
+    def update_issue_status(
+        self,
+        issue_key: str,
+        new_status_key: str,
+        comment: str,
+    ) -> Optional[list[dict]]:
+        """Выставление нового статуса задаче, согласно рабочему процессу."""
+        transitions = self.get_available_transitions(issue_key)
+
+        target_transition = None
+        for transition in transitions:
+            if transition['to']['key'] == new_status_key:
+                target_transition = transition
+                break
+
+        if not target_transition:
+            yt_manager_logger.debug(
+                f'Для {issue_key} не возможен переход в статус '
+                f'{new_status_key}'
+            )
+            return
+
+        url = (
+            f'https://api.tracker.yandex.net/v3/issues/{issue_key}/'
+            f'transitions/{target_transition['id']}/_execute'
+        )
+        payload = {'comment': comment}
+        return self._make_request(
+            HTTPMethod.POST,
+            url,
+            json=payload,
+            sub_func_name=inspect.currentframe().f_code.co_name,
+        )
 
 
 yt_manager = YandexTrackerManager(
@@ -677,5 +759,9 @@ yt_manager = YandexTrackerManager(
     base_station_global_field_id=yt_manager_config['YT_BASE_STATION_GLOBAL_FIELD_ID'],  # noqa: E501
     email_datetime_global_field_id=yt_manager_config['YT_EMAIL_DATETIME_GLOBAL_FIELD_ID'],  # noqa: E501
     is_new_msg_global_field_id=yt_manager_config['YT_IS_NEW_MSG_GLOBAL_FIELD_ID'],  # noqa: E501
+    sla_deadline_global_field_id=yt_manager_config['YT_SLA_DEADLINE_GLOBAL_FIELD_ID'],  # noqa: E501
+    is_sla_expired_global_field_id=yt_manager_config['YT_IS_SLA_EXPIRED_GLOBAL_FIELD_ID'],  # noqa: E501
+    operator_name_global_field_name=yt_manager_config['YT_OPERATOR_NAME_GLOBAL_FIELD_NAME'],  # noqa: E501
+    avr_name_global_field_id=yt_manager_config['YT_AVR_NAME_GLOBAL_FIELD_ID'],  # noqa: E501
     type_of_incident_local_field_id=yt_manager_config['YT_TYPE_OF_INCIDENT_LOCAL_FIELD_ID'],  # noqa: E501
 )
