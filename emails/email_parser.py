@@ -129,18 +129,43 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
         return json_blocks, human_text
 
     def _is_first_email(
-        self, in_reply_to: Optional[str], references: Optional[list[str]]
+        self,
+        in_reply_to: Optional[str],
+        references: Optional[list[str]],
+        message_id: Optional[str] = None,
     ) -> bool:
         """
         Определяет, является ли письмо первым в переписке.
         Учитывает наличие заголовков In-Reply-To и References.
         """
+
+        # Если нет цепочки ссылок:
         if not in_reply_to and not references:
+            return True
+
+        # Если In-Reply-To указывает на самого себя
+        if (
+            message_id
+            and in_reply_to
+            and in_reply_to.strip() == message_id.strip()
+        ):
+            return True
+
+        # Если In-Reply-To auto-сгенерированный или пустой мусор
+        if in_reply_to and (
+            in_reply_to.lower().startswith('<auto-')
+            or in_reply_to.lower() in {'<null>', '<0>', '<none>'}
+        ):
             return True
 
         # Иногда встречается auto-сгенерированный In-Reply-To:
         if in_reply_to and in_reply_to.lower().startswith('<auto-'):
             return True
+
+        # References состоит из одного элемента и он совпадает с message_id:
+        if message_id and references and len(references) == 1:
+            if references[0].strip() == message_id.strip():
+                return True
 
         return False
 
@@ -442,7 +467,7 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                     ) if email_subject else None
 
                     is_first_email = self._is_first_email(
-                        email_msg_reply_id, email_msg_references)
+                        email_msg_reply_id, email_msg_references, email_msg_id)
 
                     if json_dicts and is_first_email:
                         email_from_i = json_dicts[0].get(

@@ -44,8 +44,11 @@ class Command(BaseCommand):
         Работа с заявками в YandexTracker с ОТКРЫТЫМ статусом.
 
         Особенности:
-            - Всем открытым заявкам надо выставить is_incident_finish=False.
+            - Валидировать номер базовой станции, шифр опоры, подрядчика по
+            АВР, операторов на базовой станции и синхронизировать данные с
+            базой данных (приоритет у YandexTracker).
             - Обновить ответственного диспетчера по каждой задаче.
+            - Всем открытым заявкам надо выставить is_incident_finish=False.
             - В YandexTracker установить/обновить дедлай SLA, если выставлен
             тип инцидента и добавить его к инциденту.
             - В YandexTracker установить значение просрочен ли SLA.
@@ -56,6 +59,7 @@ class Command(BaseCommand):
         """
 
         unclosed_issues = yt_manager.unclosed_issues()
+        yt_users = yt_manager.real_users_in_yt_tracker
 
         type_of_incident_field: Optional[dict] = (
             yt_manager
@@ -80,7 +84,12 @@ class Command(BaseCommand):
             status_key: str = issue['status']['key']
 
             is_valid_yt_data = check_yt_incident_data(
-                yt_manager, issue, yt_managment_logger)
+                yt_manager,
+                yt_managment_logger,
+                issue,
+                yt_users,
+                type_of_incident_field,
+            )
 
             if not is_valid_yt_data:
                 continue

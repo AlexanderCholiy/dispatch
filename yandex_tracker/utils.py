@@ -689,15 +689,23 @@ class YandexTrackerManager:
             if field['id'].endswith(local_field_id)
         ), None)
 
-    def update_pole_and_base_station_fields(
+    def update_incident_data(
         self,
         key: str,
+        types_of_incident: Optional[str],
+        email_datetime: Optional[datetime],
+        sla_deadline: Optional[datetime],
+        is_sla_expired: Optional[str],
         pole_number: Optional[str],
         base_station_number: Optional[str],
         avr_name: Optional[str],
         operator_name: Optional[str],
     ) -> dict:
         payload = {
+            self.type_of_incident_local_field_id: types_of_incident,
+            self.sla_deadline_global_field_id: sla_deadline,
+            self.is_sla_expired_global_field_id: is_sla_expired,
+            self.email_datetime_global_field_id: email_datetime,
             self.pole_number_global_field_id: pole_number,
             self.base_station_global_field_id: base_station_number,
             self.avr_name_global_field_id: avr_name,
