@@ -91,7 +91,7 @@ def retry(
                         f'с параметрами args={args} kwargs={kwargs} '
                         f'снова через {delay} секунд(ы)'
                     )
-                    logger.warning(msg, exc_info=True)
+                    logger.debug(msg, exc_info=True)
                     time.sleep(delay)
         return wrapper
     return decorator

@@ -12,6 +12,7 @@ from django.utils import timezone
 from core.constants import YANDEX_TRACKER_ROTATING_FILE
 from core.loggers import LoggerFactory
 from core.utils import Config
+from .constants import IsExpiredSLA
 from core.wraps import safe_request
 from emails.models import EmailMessage
 from emails.utils import EmailManager
@@ -172,6 +173,21 @@ class YandexTrackerManager:
             'email_incident_id', 'is_first_email', 'email_date', 'id'
         )
         return emails
+
+    @staticmethod
+    def get_sla_status(deadline: Optional[datetime]) -> str:
+        """Определяет статус SLA на основе дедлайна."""
+        if deadline is None:
+            return IsExpiredSLA.unknown
+
+        now = timezone.now()
+
+        if deadline < now:
+            return IsExpiredSLA.is_expired
+        elif deadline - now <= timedelta(hours=1):
+            return IsExpiredSLA.one_hour
+        else:
+            return IsExpiredSLA.in_work
 
     @safe_request(yt_manager_logger, retries=retries, timeout=timeout)
     def _make_request(
@@ -398,6 +414,7 @@ class YandexTrackerManager:
             'type': issue_type,
             'author': author,
             'assignee': assignee,
+            self.is_sla_expired_global_field_id: self.get_sla_status(None),
         } if not key else {}
 
         payload.update(add_payload)
@@ -691,7 +708,8 @@ class YandexTrackerManager:
 
     def update_incident_data(
         self,
-        key: str,
+        issue: dict,
+        type_of_incident_field: dict,
         types_of_incident: Optional[str],
         email_datetime: Optional[datetime],
         sla_deadline: Optional[datetime],
@@ -701,18 +719,27 @@ class YandexTrackerManager:
         avr_name: Optional[str],
         operator_name: Optional[str],
     ) -> dict:
+        issue_key = issue['key']
+
+        type_of_incident_field_key = type_of_incident_field['id']
+
+        valid_email_datetime = email_datetime.isoformat() if isinstance(
+            email_datetime, datetime) else None
+        valid_sla_deadline = sla_deadline.isoformat() if isinstance(
+            sla_deadline, datetime) else None
+
         payload = {
-            self.type_of_incident_local_field_id: types_of_incident,
-            self.sla_deadline_global_field_id: sla_deadline,
+            type_of_incident_field_key: types_of_incident,
+            self.sla_deadline_global_field_id: valid_sla_deadline,
             self.is_sla_expired_global_field_id: is_sla_expired,
-            self.email_datetime_global_field_id: email_datetime,
+            self.email_datetime_global_field_id: valid_email_datetime,
             self.pole_number_global_field_id: pole_number,
             self.base_station_global_field_id: base_station_number,
             self.avr_name_global_field_id: avr_name,
             self.operator_name_global_field_name: operator_name
         }
 
-        url = f'{self.create_issue_url}{key}'
+        url = f'{self.create_issue_url}{issue_key}'
         return self._make_request(
             HTTPMethod.PATCH,
             url,

@@ -12,3 +12,10 @@ INCIDENTS_REGION_NOT_FOR_YT: list[str] = [
 ]
 
 MAX_ATTACHMENT_SIZE_IN_YT = 50 * 1024 * 1024  # (max 50 MB в YandexTracker)
+
+
+class IsExpiredSLA:
+    unknown = '⬜️ Неизвестно'
+    in_work = '🟩 В работе'
+    one_hour = '🟨 Осталось менее часа'
+    is_expired = '🟥 Просрочено'
