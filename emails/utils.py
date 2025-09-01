@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import html
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -196,35 +197,112 @@ class EmailManager:
         )
 
     @staticmethod
-    def normalize_text_with_json(text: str) -> str:
+    def normalize_text_with_json(
+        text: str, clean_for_code_block: bool = False
+    ) -> str:
         """
-        Ищет JSON в тексте и преобразует его в человеко-читаемый формат.
-        Если JSON невалидный – возвращает как есть.
-        """
-        json_pattern = re.compile(r'(\{.*?\}|\[.*?\])', re.DOTALL)
+        Универсальная функция для обработки текста:
+        - Ищет и красиво форматирует JSON
+        - Очищает HTML и нормализует текст
+        - Опционально подготавливает для code block
 
-        def dict_to_pretty(data, indent: int = 0) -> str:
-            """Рекурсивно преобразует dict/list в читаемый текст"""
-            spaces = '  ' * indent
-            if isinstance(data, dict):
-                return '\n'.join(
-                    f'{spaces}{key}: {dict_to_pretty(value, indent + 1)}'
-                    for key, value in data.items()
-                )
-            elif isinstance(data, list):
-                return '\n'.join(
-                    f'{spaces}- {dict_to_pretty(item, indent + 1)}'
-                    for item in data
-                )
+        :param text: Исходный текст для обработки
+        :param clean_for_code_block: Если True, подготавливает для отображения
+        в code block
+        :return: Обработанный текст
+        """
+
+        # 1. Первичная очистка HTML
+        text = re.sub(r'<br\s*/?>', '\n', text, flags=re.IGNORECASE)
+        text = re.sub(r'<p>', '\n\n', text, flags=re.IGNORECASE)
+        text = re.sub(r'</p>', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'<div>', '\n', text, flags=re.IGNORECASE)
+        text = re.sub(r'</div>', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'<.*?>', '', text)  # Удаляем все остальные HTML теги
+
+        # 2. Обрабатываем HTML entities
+        text = html.unescape(text)
+
+        # 3. Ищем и форматируем JSON (только если не готовим для code block)
+        if not clean_for_code_block:
+            json_pattern = re.compile(
+                (
+                    r'(\{(?:[^{}]|(?:\{(?:[^{}]|)*\}))*\}|\[(?:[^\[\]]|(?:'
+                    r'\[(?:[^\[\]]|)*\]))*\])'
+                ),
+                re.DOTALL
+            )
+
+            def dict_to_pretty(data, indent: int = 0) -> str:
+                """Рекурсивно преобразует dict/list в читаемый текст"""
+                spaces = '  ' * indent
+                if isinstance(data, dict):
+                    items = []
+                    for key, value in data.items():
+                        items.append(f'{spaces}{key}: {dict_to_pretty(value, indent + 1)}')
+                    return '\n'.join(items)
+                elif isinstance(data, list):
+                    items = []
+                    for item in data:
+                        items.append(f'{spaces}- {dict_to_pretty(item, indent + 1)}')
+                    return '\n'.join(items)
+                else:
+                    return str(data)
+
+            def pretty_json(match: re.Match) -> str:
+                raw = match.group(0)
+                try:
+                    parsed = json.loads(raw)
+                    return dict_to_pretty(parsed)
+                except Exception:
+                    return raw
+
+            text = json_pattern.sub(pretty_json, text)
+
+        # 4. Очистка и нормализация текста
+        lines = text.splitlines()
+        cleaned_lines = []
+
+        for line in lines:
+            line = line.rstrip()  # Убираем пробелы справа
+            if clean_for_code_block:
+                # Для code block сохраняем левые отступы
+                line = line
             else:
-                return str(data)
+                # Для обычного текста убираем лишние пробелы слева
+                line = line.lstrip()
 
-        def pretty_json(match: re.Match) -> str:
-            raw = match.group(0)
-            try:
-                parsed = json.loads(raw)
-                return dict_to_pretty(parsed)
-            except Exception:
-                return raw
+            if line or (cleaned_lines and cleaned_lines[-1] != ''):
+                cleaned_lines.append(line)
 
-        return json_pattern.sub(pretty_json, text).strip()
+        # 5. Оптимизация пустых строк
+        final_lines = []
+        empty_line_count = 0
+        max_empty_lines = 1 if clean_for_code_block else 2
+        
+        for line in cleaned_lines:
+            if not line:
+                empty_line_count += 1
+                if empty_line_count <= max_empty_lines:
+                    final_lines.append(line)
+            else:
+                empty_line_count = 0
+                final_lines.append(line)
+
+        result = '\n'.join(final_lines).strip()
+
+        # 6. Дополнительная обработка для code block
+        if clean_for_code_block:
+            # Удаляем слишком длинные последовательности одинаковых символов
+            # (часто бывает в base64)
+            result = re.sub(r'(.)\1{50,}', r'\1\1\1...', result)
+
+            lines = result.splitlines()
+            trimmed_lines = []
+            for line in lines:
+                if len(line) > 1000:
+                    line = line[:1000] + '...'
+                trimmed_lines.append(line)
+            result = '\n'.join(trimmed_lines)
+
+        return result

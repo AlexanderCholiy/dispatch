@@ -11,6 +11,8 @@ from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
 from core.wraps import min_wait_timer, timer
 from incidents.utils import IncidentManager
+from emails.models import EmailMessage
+from incidents.models import Incident
 from yandex_tracker.utils import YandexTrackerManager, yt_manager
 
 yt_managment_logger = LoggerFactory(
@@ -33,7 +35,8 @@ class Command(BaseCommand):
     @min_wait_timer(yt_managment_logger)
     @timer(yt_managment_logger)
     def add_issues_2_yt(self, yt_manager: YandexTrackerManager):
-        emails = YandexTrackerManager.emails_for_yandex_tracker()
+        # emails = YandexTrackerManager.emails_for_yandex_tracker()
+        emails = EmailMessage.objects.filter(email_incident=Incident.objects.get(pk=514)).order_by('email_incident_id', 'is_first_email', 'email_date', 'id')
         previous_incident = None
         total = len(emails)
 

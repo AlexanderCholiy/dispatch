@@ -31,7 +31,8 @@ yt_manager_config = {
     'YT_REFRESH_TOKEN': os.getenv('YT_REFRESH_TOKEN'),
     'YT_ORGANIZATION_ID': os.getenv('YT_ORGANIZATION_ID'),
     'YT_QUEUE': os.getenv('YT_QUEUE'),
-    'YT_DATABASE_GLOBAL_FIELD_ID': os.getenv('YT_DATABASE_GLOBAL_FIELD_ID'),  # noqa: E501
+    'YT_DATABASE_ID_GLOBAL_FIELD_ID': os.getenv('YT_DATABASE_ID_GLOBAL_FIELD_ID'),  # noqa: E501
+    'YT_EMAILS_IDS_GLOBAL_FIELD_ID': os.getenv('YT_EMAILS_IDS_GLOBAL_FIELD_ID'),  # noqa: E501
     'YT_POLE_NUMBER_GLOBAL_FIELD_ID': os.getenv('YT_POLE_NUMBER_GLOBAL_FIELD_ID'),  # noqa: E501
     'YT_BASE_STATION_GLOBAL_FIELD_ID': os.getenv('YT_BASE_STATION_GLOBAL_FIELD_ID'),  # noqa: E501
     'YT_EMAIL_DATETIME_GLOBAL_FIELD_ID': os.getenv('YT_EMAIL_DATETIME_GLOBAL_FIELD_ID'),  # noqa: E501
@@ -71,6 +72,7 @@ class YandexTrackerManager:
         organisation_id: str,
         queue: str,
         database_global_field_id: str,
+        emails_ids_global_field_id: str,
         pole_number_global_field_id: str,
         base_station_global_field_id: str,
         email_datetime_global_field_id: str,
@@ -89,6 +91,7 @@ class YandexTrackerManager:
         self.organisation_id = organisation_id
 
         self.database_global_field_id = database_global_field_id
+        self.emails_ids_global_field_id = emails_ids_global_field_id
         self.pole_number_global_field_id = pole_number_global_field_id
         self.base_station_global_field_id = base_station_global_field_id
         self.email_datetime_global_field_id = email_datetime_global_field_id
@@ -446,51 +449,123 @@ class YandexTrackerManager:
             sub_func_name=inspect.currentframe().f_code.co_name,
         )
 
-    def _comment_like_email(self, email: EmailMessage) -> str:
-        email_to = [
-            eml.email_to for eml in email.email_msg_to.all()
-        ]
-        email_cc = [
-            eml.email_to for eml in email.email_msg_cc.all()
-        ]
-        comment_like_email = (
-            f'**From:** {email.email_from}\n'
-            f'**To:** {', '.join(email_to)}\n'
-        )
-        if email_cc:
-            comment_like_email += f'**Cc:** {', '.join(email_cc)}\n'
+    def _comment_like_email_with_markdown(self, email: EmailMessage) -> str:
+        email_to = [eml.email_to for eml in email.email_msg_to.all()]
+        email_cc = [eml.email_to for eml in email.email_msg_cc.all()]
 
         # Будем использовать временную зону указанную в настройках Django:
         email_date_moscow = email.email_date.astimezone(
             timezone.get_current_timezone())
-        comment_like_email += f'**Date:** {email_date_moscow}\n'
+        formatted_date = email_date_moscow.strftime('%d.%m.%Y %H:%M')
 
+        # Форматируем тему письма:
+        subject = ''
         if email.email_subject:
             subject = EmailManager.normalize_text_with_json(
-                email.email_subject)
-            comment_like_email += f'**Subject:** {subject}\n\n'
+                email.email_subject, True)
+
+        comment_like_email = [
+            f'### 📧 **{subject}**' if subject else '*Без темы*',
+            '',
+            '| | |',
+            '|-|-|',
+            f'| **От:** | `{email.email_from}` |',
+        ]
+
+        if email_to:
+            comment_like_email.append(
+                f'| **Кому:** | `{', '.join(email_to)}` |')
+
+        if email_cc:
+            comment_like_email.append(
+                f'| **Копия:** | `{', '.join(email_cc)}` |')
+
+        comment_like_email.extend([
+            f'| **Дата:** | `{formatted_date}` |',
+            '',
+            '```text',  # Тип контента для подсветки (text, email, markdown)
+        ])
+
+        # Обрабатываем тело письма:
         if email.email_body:
-            comment_like_email += EmailManager.normalize_text_with_json(
-                email.email_body)
+            normalized_body = EmailManager.normalize_text_with_json(
+                email.email_body, True)
 
-        return comment_like_email
+            # Улучшаем форматирование тела письма
+            # Убираем лишние переносы строк и добавляем Markdown-форматирование
+            # Два пробела для переноса строк в Markdown:
+            formatted_body = normalized_body.replace('\n', '  \n')
 
-    def add_issue_email_comment(self, email: EmailMessage, issue_key: str):
+            # Если есть цитаты (обычно начинаются с ">"), форматируем их как
+            # blockquote:
+            if '>' in formatted_body:
+                lines = formatted_body.split('\n')
+                formatted_lines = []
+                in_quote = False
+
+                for line in lines:
+                    if line.strip().startswith('>'):
+                        if not in_quote:
+                            # Пустая строка перед цитатой:
+                            formatted_lines.append('')
+                        formatted_lines.append('> ' + line.lstrip('> '))
+                        in_quote = True
+                    else:
+                        if in_quote:
+                            # Пустая строка после цитаты:
+                            formatted_lines.append('')
+                        formatted_lines.append(line)
+                        in_quote = False
+
+                formatted_body = '\n'.join(formatted_lines)
+
+            comment_like_email.append(formatted_body)
+        else:
+            comment_like_email.append('*Тело письма отсутствует*')
+
+        comment_like_email.extend([
+            '```',
+        ])
+
+        return '\n'.join(comment_like_email)
+
+    def add_issue_email_comment(self, email: EmailMessage, issue: dict):
         """Создаёт комментарий по email, которого ещё нет в YandexTracker."""
-        email_is_not_exist = True
+        issue_key: str = issue['key']
 
-        for comment in self.select_issue_comments(issue_key):
-            comment_usr_uid = str(comment['createdBy']['id'])
-            comment_text = comment.get('text', '').strip()
-            if comment_usr_uid == self.current_user_uid:
-                if comment_text == self._comment_like_email(email):
-                    email_is_not_exist = False
-                    break
+        emails_ids_str: str = issue.get(self.emails_ids_global_field_id, '')
+        existing_email_ids = set()
+        for value in emails_ids_str.split(','):
+            value = value.strip()
+            if value:
+                try:
+                    existing_email_ids.add(int(value))
+                except ValueError:
+                    pass
 
-        if email_is_not_exist:
-            temp_files = self.download_email_temp_files(email)
-            comment = self._comment_like_email(email)
-            self.create_comment(issue_key, comment, temp_files)
+        if email.pk in existing_email_ids:
+            return
+
+        temp_files = self.download_email_temp_files(email)
+        comment_text = self._comment_like_email_with_markdown(email)
+        self.create_comment(issue_key, comment_text, temp_files)
+
+        updated_email_ids = list(existing_email_ids)
+        updated_email_ids.append(email.pk)
+        updated_email_ids_str = ', '.join(str(pk) for pk in updated_email_ids)
+
+        payload = {
+            self.emails_ids_global_field_id: updated_email_ids_str
+        }
+
+        url = f'{self.create_issue_url}{issue_key}'
+
+        return self._make_request(
+            HTTPMethod.PATCH,
+            url,
+            json=payload,
+            sub_func_name=inspect.currentframe().f_code.co_name,
+        )
 
     def _prepare_data_from_email(self, email_incident: EmailMessage) -> dict:
         """Подготовка данных для отправки в YandexTracker."""
@@ -498,11 +573,11 @@ class YandexTrackerManager:
         database_id: int = incident.pk
 
         summary = EmailManager.normalize_text_with_json(
-            email_incident.email_subject
+            email_incident.email_subject, True
         ) if email_incident.email_subject else f'Инцидент №{database_id}'
 
         description = EmailManager.normalize_text_with_json(
-            email_incident.email_body
+            email_incident.email_body, True
         ) if email_incident.email_body else None
 
         pole_number = incident.pole.pole if incident.pole else None
@@ -556,6 +631,7 @@ class YandexTrackerManager:
             temp_files = self.download_email_temp_files(email_incident)
             self.create_or_update_issue(
                 key=key,
+                issue={},
                 summary=data_for_yt['summary'],
                 database_id=data_for_yt['database_id'],
                 pole_number=data_for_yt['pole_number'],
@@ -594,9 +670,8 @@ class YandexTrackerManager:
                 email_cc=new_data_for_yt['email_cc'],
                 temp_files=temp_files,
             )
-            key: str = issue['key']
             for email in all_email_incident[1:]:
-                self.add_issue_email_comment(email, key)
+                self.add_issue_email_comment(email, issue)
         # Инцидент уже зарегестрирован в YandexTracker:
         else:
             for issue in issues:
@@ -628,7 +703,7 @@ class YandexTrackerManager:
                     )
                 # Необходимо добавить новые сообщения ввиде комментаривев:
                 else:
-                    self.add_issue_email_comment(email_incident, key)
+                    self.add_issue_email_comment(email_incident, issue)
 
     def filter_issues(self, yt_filter: dict, days_ago: int = 7) -> list[dict]:
         page = 1
@@ -789,7 +864,8 @@ yt_manager = YandexTrackerManager(
     refresh_token=yt_manager_config['YT_REFRESH_TOKEN'],
     organisation_id=yt_manager_config['YT_ORGANIZATION_ID'],
     queue=yt_manager_config['YT_QUEUE'],
-    database_global_field_id=yt_manager_config['YT_DATABASE_GLOBAL_FIELD_ID'],
+    database_global_field_id=yt_manager_config['YT_DATABASE_ID_GLOBAL_FIELD_ID'],  # noqa: E501
+    emails_ids_global_field_id=yt_manager_config['YT_EMAILS_IDS_GLOBAL_FIELD_ID'],  # noqa: E501
     pole_number_global_field_id=yt_manager_config['YT_POLE_NUMBER_GLOBAL_FIELD_ID'],  # noqa: E501
     base_station_global_field_id=yt_manager_config['YT_BASE_STATION_GLOBAL_FIELD_ID'],  # noqa: E501
     email_datetime_global_field_id=yt_manager_config['YT_EMAIL_DATETIME_GLOBAL_FIELD_ID'],  # noqa: E501
