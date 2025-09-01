@@ -79,6 +79,8 @@ def retry(
             while True:
                 try:
                     return func(*args, **kwargs)
+                except KeyboardInterrupt:
+                    raise
                 except exceptions as e:
                     attempt += 1
                     if attempt > retries:
