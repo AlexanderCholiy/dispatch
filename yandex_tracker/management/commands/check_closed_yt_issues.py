@@ -14,6 +14,7 @@ from incidents.constants import (
     DEFAULT_END_STATUS_DESC,
     DEFAULT_END_STATUS_NAME,
 )
+from yandex_tracker.constants import YT_ISSUES_DAYS_AGO_FILTER
 from incidents.models import Incident, IncidentStatus
 from yandex_tracker.utils import YandexTrackerManager, yt_manager
 
@@ -45,7 +46,7 @@ class Command(BaseCommand):
             на диспетчеров могли равномерно распределяться заявки.
         """
 
-        closed_issues = yt_manager.closed_issues()
+        closed_issues = yt_manager.closed_issues(YT_ISSUES_DAYS_AGO_FILTER)
         total = len(closed_issues)
 
         if total == 0:
@@ -84,8 +85,16 @@ class Command(BaseCommand):
 
         for database_id, issue in database_ids_with_issues:
             incident = incidents_dict.get(database_id)
+
             if not incident:
                 continue
+
+            is_sla_expired = issue.get(
+                yt_manager.is_sla_expired_global_field_id)
+            valid_is_sla_expired = yt_manager.get_sla_status(incident)
+
+            if is_sla_expired != valid_is_sla_expired:
+                yt_manager.update_issue_sla_status(issue, incident)
 
             if not incident.is_incident_finish:
                 incidents_to_mark_finished.add(database_id)

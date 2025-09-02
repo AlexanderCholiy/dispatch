@@ -15,8 +15,11 @@ from core.wraps import min_wait_timer, timer
 from incidents.constants import (
     DEFAULT_END_STATUS_DESC,
     DEFAULT_END_STATUS_NAME,
+    DEFAULT_GENERATION_STATUS_NAME,
 )
-from incidents.models import Incident, IncidentStatus
+from yandex_tracker.constants import YT_ISSUES_DAYS_AGO_FILTER
+from incidents.utils import IncidentManager
+from incidents.models import Incident, IncidentStatus, IncidentStatusHistory
 from yandex_tracker.utils import YandexTrackerManager, yt_manager
 from yandex_tracker.validators import check_yt_incident_data
 from core.tg_bot import tg_manager
@@ -26,12 +29,11 @@ yt_managment_logger = LoggerFactory(
 
 
 class Command(BaseCommand):
-    help = 'Обновление данных в YandexTracker.'
+    help = 'Обновление данных в YandexTracker, с уведомлениями в Telegram.'
 
     def handle(self, *args, **kwargs):
-        tg_manager.send_startup_notification(__name__)
+        # tg_manager.send_startup_notification(__name__)
 
-        # Переменные для контроля уведомлений:
         first_success_sent = False
         had_errors_last_time = False
         last_error_type = None
@@ -49,22 +51,22 @@ class Command(BaseCommand):
             except Exception as e:
                 yt_managment_logger.critical(e, exc_info=True)
                 err = e
-                time.sleep(MIN_WAIT_SEC_WITH_CRITICAL_EXC)
+                # time.sleep(MIN_WAIT_SEC_WITH_CRITICAL_EXC)
             else:
                 if not first_success_sent and not error_count:
-                    tg_manager.send_first_success_notification(__name__)
+                    # tg_manager.send_first_success_notification(__name__)
                     first_success_sent = True
 
-                if error_count and not had_errors_last_time:
-                    tg_manager.send_warning_counter_notification(
-                        __name__, error_count, total_operations
-                    )
+                # if error_count and not had_errors_last_time:
+                #     tg_manager.send_warning_counter_notification(
+                #         __name__, error_count, total_operations
+                #     )
 
                 had_errors_last_time = error_count > 0
 
             finally:
                 if err is not None and last_error_type != type(err).__name__:
-                    tg_manager.send_error_notification(__name__, err)
+                    # tg_manager.send_error_notification(__name__, err)
                     last_error_type = type(err).__name__
 
     # @min_wait_timer(yt_managment_logger)
@@ -90,7 +92,7 @@ class Command(BaseCommand):
             tuple: общее кол-во операций и кол-во ошибок.
         """
 
-        unclosed_issues = yt_manager.unclosed_issues()
+        unclosed_issues = yt_manager.unclosed_issues(YT_ISSUES_DAYS_AGO_FILTER)
         total = len(unclosed_issues)
         yt_users = yt_manager.real_users_in_yt_tracker
 
@@ -103,8 +105,8 @@ class Command(BaseCommand):
         error_count = 0
 
         for index, issue in enumerate(unclosed_issues):
-            PrettyPrint.progress_bar_info(
-                index, total, 'Обработка открытых заявок:')
+            # PrettyPrint.progress_bar_info(
+            #     index, total, 'Обработка открытых заявок:')
 
             database_id: Optional[int] = issue.get(
                 yt_manager.database_global_field_id)
@@ -125,9 +127,35 @@ class Command(BaseCommand):
                 if not is_valid_yt_data:
                     updated_incidents_counter += 1
                     continue
+
+                incident = Incident.objects.get(pk=database_id)
+                last_status_history = IncidentStatusHistory.objects.filter(
+                    incident=incident
+                ).order_by('-pk').first()
+
+                # Синхронизируем данные в базе:
+                if status_key == yt_manager.in_work_status_key:
+                    IncidentManager.add_in_work_status(
+                        incident, 'Диспетчер принял работы в YandexTracker')
+
+                if (
+                    status_key == yt_manager.on_generation_status_key
+                    and last_status_history.status.name != (
+                        DEFAULT_GENERATION_STATUS_NAME)
+                ):
+                    IncidentManager.add_generation_status(
+                        incident,
+                        (
+                            'Диспетчер указал в YandexTracker, что опора '
+                            'находится на генерации.'
+                        )
+                    )
+
             except Exception as e:
                 yt_managment_logger.exception(e)
                 error_count += 1
+
+            print(status_key)
 
         yt_managment_logger.debug(
             f'Было обновлено {updated_incidents_counter} инцидентов'

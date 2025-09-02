@@ -88,11 +88,25 @@ class Incident(models.Model):
     def is_sla_expired(self) -> Optional[bool]:
         is_expired = None
         if self.incident_type and self.incident_type.sla_deadline:
+            check_date = self.sla_check_date
             sla_deadline = self.incident_date + timedelta(
                 minutes=self.incident_type.sla_deadline)
-            is_expired = True if sla_deadline < timezone.now() else False
+            is_expired = sla_deadline < check_date
         return is_expired
     is_sla_expired.fget.short_description = 'Просрочен ли SLA'
+
+    @property
+    def sla_check_date(self) -> datetime:
+        """
+        Возвращает дату для проверки SLA.
+
+        Returns:
+            datetime: Текущее время или дату последнего статуса.
+        """
+        if self.is_incident_finish:
+            last_status = self.statuses.order_by('-insert_date').first()
+            return last_status.insert_date if last_status else timezone.now()
+        return timezone.now()
 
     @property
     def sla_deadline(self) -> Optional[datetime]:

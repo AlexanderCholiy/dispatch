@@ -13,6 +13,10 @@ from .constants import (
     DEFAULT_STATUS_NAME,
     DEFAULT_ERR_STATUS_NAME,
     DEFAULT_ERR_STATUS_DESC,
+    DEFAULT_GENERATION_STATUS_NAME,
+    DEFAULT_GENERATION_STATUS_DESC,
+    DEFAULT_IN_WORK_STATUS_NAME,
+    DEFAULT_IN_WORK_STATUS_DESC,
 )
 from .models import Incident, IncidentStatus, IncidentStatusHistory
 from .validators import IncidentValidator
@@ -193,31 +197,62 @@ class IncidentManager(IncidentValidator):
     def add_default_status(
         incident: Incident, comment: Optional[str] = None
     ) -> None:
-        default_status, _ = IncidentStatus.objects.get_or_create(
+        status, _ = IncidentStatus.objects.get_or_create(
             name=DEFAULT_STATUS_NAME,
             defaults={'description': DEFAULT_STATUS_DESC}
         )
         IncidentStatusHistory.objects.create(
             incident=incident,
-            status=default_status,
+            status=status,
             comments=comment
         )
-        incident.statuses.add(default_status)
+        incident.statuses.add(status)
 
     @staticmethod
     def add_error_status(
         incident: Incident, comment: Optional[str] = None
     ) -> None:
-        default_err_status, _ = IncidentStatus.objects.get_or_create(
+        status, _ = IncidentStatus.objects.get_or_create(
             name=DEFAULT_ERR_STATUS_NAME,
             defaults={'description': DEFAULT_ERR_STATUS_DESC}
         )
         IncidentStatusHistory.objects.create(
             incident=incident,
-            status=default_err_status,
+            status=status,
             comments=comment
         )
-        incident.statuses.add(default_err_status)
+        incident.statuses.add(status)
+
+    @staticmethod
+    def add_generation_status(
+        incident: Incident, comment: Optional[str] = None
+    ) -> None:
+        status, _ = IncidentStatus.objects.get_or_create(
+            name=DEFAULT_GENERATION_STATUS_NAME,
+            defaults={'description': DEFAULT_GENERATION_STATUS_DESC}
+        )
+        IncidentStatusHistory.objects.create(
+            incident=incident,
+            status=status,
+            comments=comment
+        )
+        incident.statuses.add(status)
+
+    @staticmethod
+    def add_in_work_status(
+        incident: Incident, comment: Optional[str] = None
+    ) -> None:
+        status, _ = IncidentStatus.objects.get_or_create(
+            name=DEFAULT_IN_WORK_STATUS_NAME,
+            defaults={'description': DEFAULT_IN_WORK_STATUS_DESC}
+        )
+        if not incident.statuses.filter(pk=status.pk).exists():
+            IncidentStatusHistory.objects.create(
+                incident=incident,
+                status=status,
+                comments=comment
+            )
+            incident.statuses.add(status)
 
     def add_incident_from_email(
         self,

@@ -71,7 +71,7 @@ def check_yt_pole_incident(
             types_of_incident=type_of_incident,
             email_datetime=incident.incident_date,
             sla_deadline=incident.sla_deadline,
-            is_sla_expired=yt_manager.get_sla_status(incident.sla_deadline),
+            is_sla_expired=yt_manager.get_sla_status(incident),
             pole_number=None,
             base_station_number=None,
             avr_name=None,
@@ -224,7 +224,7 @@ def check_yt_base_station_incident(
             types_of_incident=type_of_incident,
             email_datetime=incident.incident_date,
             sla_deadline=incident.sla_deadline,
-            is_sla_expired=yt_manager.get_sla_status(incident.sla_deadline),
+            is_sla_expired=yt_manager.get_sla_status(incident),
             pole_number=pole_number if not isinstance(
                 error_exception, Pole.DoesNotExist) else None,
             base_station_number=None,
@@ -428,7 +428,7 @@ def check_yt_expired_incident(
     if not sla_is_expired:
         is_valid_expired_incident = False
     else:
-        expected_status = yt_manager.get_sla_status(incident_deadline)
+        expected_status = yt_manager.get_sla_status(incident)
         if sla_is_expired != expected_status:
             is_valid_expired_incident = False
 
@@ -719,7 +719,7 @@ def check_yt_incident_data(
             ) if incident.incident_type else None,
             email_datetime=incident.incident_date,
             sla_deadline=incident.sla_deadline,
-            is_sla_expired=yt_manager.get_sla_status(incident.sla_deadline),
+            is_sla_expired=yt_manager.get_sla_status(incident),
             pole_number=incident.pole.pole if incident.pole else None,
             base_station_number=(
                 incident.base_station.bs_name

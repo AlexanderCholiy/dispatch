@@ -79,7 +79,6 @@ class IncidentAdmin(admin.ModelAdmin):
         'incident_type',
         'get_last_status',
         'incident_date',
-        'sla_deadline',
     )
     search_fields = ('pole__pole', 'id',)
     list_filter = (
@@ -106,7 +105,7 @@ class IncidentAdmin(admin.ModelAdmin):
             'incident_type',
         ).prefetch_related('statuses',)
 
-    readonly_fields = ('sla_deadline', 'avr_contractor',)
+    readonly_fields = ('avr_contractor', 'sla_deadline', 'is_sla_expired')
 
     fieldsets = (
         (None, {
@@ -118,6 +117,7 @@ class IncidentAdmin(admin.ModelAdmin):
                 'responsible_user',
                 'avr_contractor',
                 'sla_deadline',
+                'is_sla_expired',
             ),
         }),
         ('Мета', {

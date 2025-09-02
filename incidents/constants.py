@@ -27,3 +27,9 @@ DEFAULT_ERR_STATUS_NAME = 'Ошибка'
 DEFAULT_ERR_STATUS_DESC = (
     'Обнаружена ошибка при обработке инцидента или некорректные данные.'
 )
+
+DEFAULT_GENERATION_STATUS_NAME = 'На генерации НБ'
+DEFAULT_GENERATION_STATUS_DESC = 'Питание от генератора.'
+
+DEFAULT_IN_WORK_STATUS_NAME = 'В работе'
+DEFAULT_IN_WORK_STATUS_DESC = 'Заявка принята в работу.'

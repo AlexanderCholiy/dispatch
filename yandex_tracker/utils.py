@@ -42,6 +42,7 @@ yt_manager_config = {
     'YT_OPERATOR_NAME_GLOBAL_FIELD_NAME': os.getenv('YT_OPERATOR_NAME_GLOBAL_FIELD_NAME'),  # noqa: E501
     'YT_AVR_NAME_GLOBAL_FIELD_ID': os.getenv('YT_AVR_NAME_GLOBAL_FIELD_ID'),  # noqa: E501
     'YT_TYPE_OF_INCIDENT_LOCAL_FIELD_ID': os.getenv('YT_TYPE_OF_INCIDENT_LOCAL_FIELD_ID'),  # noqa: E501
+    'YT_ON_GENERATION_STATUS_KEY': os.getenv('YT_ON_GENERATION_STATUS_KEY'),  # noqa: E501
 }
 Config.validate_env_variables(yt_manager_config)
 
@@ -62,6 +63,7 @@ class YandexTrackerManager:
 
     closed_status_key = 'closed'
     error_status_key = 'error'
+    in_work_status_key = 'inProgress'
 
     def __init__(
         self,
@@ -82,6 +84,7 @@ class YandexTrackerManager:
         operator_name_global_field_name: str,
         avr_name_global_field_id: str,
         type_of_incident_local_field_id: str,
+        on_generation_status_key: str,
     ):
         self.client_id = cliend_id
         self.client_secret = client_secret
@@ -102,6 +105,8 @@ class YandexTrackerManager:
         self.avr_name_global_field_id = avr_name_global_field_id
 
         self.type_of_incident_local_field_id = type_of_incident_local_field_id
+
+        self.on_generation_status_key = on_generation_status_key
 
         self._current_user_uid: Optional[str] = None
         self.local_fields_url = (
@@ -178,17 +183,20 @@ class YandexTrackerManager:
         return emails
 
     @staticmethod
-    def get_sla_status(deadline: Optional[datetime]) -> str:
-        """Определяет статус SLA на основе дедлайна."""
-        if deadline is None:
+    def get_sla_status(incident: Optional[Incident]) -> str:
+        """Определяет статус SLA на основе дедлайна статуса инцидента."""
+        if not incident or not incident.sla_deadline:
             return IsExpiredSLA.unknown
 
-        now = timezone.now()
+        check_date = incident.sla_check_date
+        deadline = incident.sla_deadline
 
-        if deadline < now:
+        if deadline < check_date:
             return IsExpiredSLA.is_expired
-        elif deadline - now <= timedelta(hours=1):
+        elif deadline - check_date <= timedelta(hours=1):
             return IsExpiredSLA.one_hour
+        elif incident.is_incident_finish:
+            return IsExpiredSLA.not_expired
         else:
             return IsExpiredSLA.in_work
 
@@ -434,6 +442,20 @@ class YandexTrackerManager:
                 json=payload,
                 sub_func_name=inspect.currentframe().f_code.co_name,
             )
+        return self._make_request(
+            HTTPMethod.PATCH,
+            url,
+            json=payload,
+            sub_func_name=inspect.currentframe().f_code.co_name,
+        )
+
+    def update_issue_sla_status(self, issue: dict, incident: Incident) -> dict:
+        """Обновление статуса SLA."""
+        key = issue['key']
+        payload = {
+            self.is_sla_expired_global_field_id: self.get_sla_status(incident)
+        }
+        url = f'{self.create_issue_url}{key}'
         return self._make_request(
             HTTPMethod.PATCH,
             url,
@@ -875,4 +897,5 @@ yt_manager = YandexTrackerManager(
     operator_name_global_field_name=yt_manager_config['YT_OPERATOR_NAME_GLOBAL_FIELD_NAME'],  # noqa: E501
     avr_name_global_field_id=yt_manager_config['YT_AVR_NAME_GLOBAL_FIELD_ID'],  # noqa: E501
     type_of_incident_local_field_id=yt_manager_config['YT_TYPE_OF_INCIDENT_LOCAL_FIELD_ID'],  # noqa: E501
+    on_generation_status_key=yt_manager_config['YT_ON_GENERATION_STATUS_KEY'],
 )
