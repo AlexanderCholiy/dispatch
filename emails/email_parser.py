@@ -1,3 +1,4 @@
+import os
 import email
 import hashlib
 import imaplib
@@ -20,13 +21,24 @@ from core.wraps import min_wait_timer, timer
 from emails.models import EmailErr, EmailMessage
 from incidents.utils import IncidentManager
 from yandex_tracker.exceptions import YandexTrackerAuthErr
-from yandex_tracker.utils import YandexTrackerManager
+from yandex_tracker.utils import YandexTrackerManager, yt_manager
+from core.utils import Config
 
 from .utils import EmailManager
 from .validators import EmailValidator
 
 email_parser_logger = LoggerFactory(
     __name__, EMAIL_LOG_ROTATING_FILE).get_logger
+
+
+email_parser_config = {
+    'PARSING_EMAIL_LOGIN': os.getenv('PARSING_EMAIL_LOGIN'),
+    'PARSING_EMAIL_PSWD': os.getenv('PARSING_EMAIL_PSWD'),
+    'PARSING_EMAIL_SERVER': os.getenv('PARSING_EMAIL_SERVER'),
+    'PARSING_EMAIL_PORT': os.getenv('PARSING_EMAIL_PORT', 993),
+}
+
+Config.validate_env_variables(email_parser_config)
 
 
 class EmailParser(EmailValidator, EmailManager, IncidentManager):
@@ -569,3 +581,12 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
             )
             self.add_err_msg_bulk(email_err_msg_ids)
             self.del_err_msg_bulk(email_err_msg_ids_to_del)
+
+
+email_parser = EmailParser(
+    email_login=email_parser_config['PARSING_EMAIL_LOGIN'],
+    email_pswd=email_parser_config['PARSING_EMAIL_PSWD'],
+    email_server=email_parser_config['PARSING_EMAIL_SERVER'],
+    email_port=email_parser_config['PARSING_EMAIL_PORT'],
+    yt_manager=yt_manager,
+)

@@ -15,6 +15,7 @@ from incidents.constants import (
     DEFAULT_END_STATUS_DESC,
     DEFAULT_END_STATUS_NAME,
 )
+from core.tg_bot import tg_manager
 from yandex_tracker.constants import YT_ISSUES_DAYS_AGO_FILTER
 from incidents.models import Incident, IncidentStatus, IncidentStatusHistory
 from yandex_tracker.utils import YandexTrackerManager, yt_manager
@@ -27,14 +28,41 @@ class Command(BaseCommand):
     help = 'Обновление данных в YandexTracker.'
 
     def handle(self, *args, **kwargs):
+        tg_manager.send_startup_notification(__name__)
+
+        first_success_sent = False
+        had_errors_last_time = False
+        last_error_type = None
+
         while True:
+            err = None
+            error_count = 0
+            total_operations = 0
+
             try:
                 self.check_closed_issues(yt_manager)
             except KeyboardInterrupt:
                 return
             except Exception as e:
                 yt_managment_logger.critical(e, exc_info=True)
+                err = e
                 time.sleep(MIN_WAIT_SEC_WITH_CRITICAL_EXC)
+            else:
+                if not first_success_sent and not error_count:
+                    tg_manager.send_first_success_notification(__name__)
+                    first_success_sent = True
+
+                if error_count and not had_errors_last_time:
+                    tg_manager.send_warning_counter_notification(
+                        __name__, error_count, total_operations
+                    )
+
+                had_errors_last_time = error_count > 0
+
+            finally:
+                if err is not None and last_error_type != type(err).__name__:
+                    tg_manager.send_error_notification(__name__, err)
+                    last_error_type = type(err).__name__
 
     @min_wait_timer(yt_managment_logger)
     @timer(yt_managment_logger)

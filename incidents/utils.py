@@ -17,6 +17,18 @@ from .constants import (
     DEFAULT_GENERATION_STATUS_DESC,
     DEFAULT_IN_WORK_STATUS_NAME,
     DEFAULT_IN_WORK_STATUS_DESC,
+    DEFAULT_NOTIFY_OP_IN_WORK_STATUS_NAME,
+    DEFAULT_NOTIFY_OP_IN_WORK_STATUS_DESC,
+    DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_NAME,
+    DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_DESC,
+    DEFAULT_NOTIFY_OP_END_STATUS_NAME,
+    DEFAULT_NOTIFY_OP_END_STATUS_DESC,
+    DEFAULT_NOTIFIED_OP_END_STATUS_NAME,
+    DEFAULT_NOTIFIED_OP_END_STATUS_DESC,
+    DEFAULT_NOTIFY_AVR_STATUS_NAME,
+    DEFAULT_NOTIFY_AVR_STATUS_DESC,
+    DEFAULT_NOTIFIED_AVR_STATUS_NAME,
+    DEFAULT_NOTIFIED_AVR_STATUS_DESC,
 )
 from .models import Incident, IncidentStatus, IncidentStatusHistory
 from .validators import IncidentValidator
@@ -109,7 +121,9 @@ class IncidentManager(IncidentValidator):
             rows = cursor.fetchall()
 
         ids = [row[0] for row in rows]
-        return EmailMessage.objects.filter(id__in=ids)
+        return EmailMessage.objects.filter(id__in=ids).order_by(
+            'email_incident_id', 'is_first_email', 'email_date', 'id'
+        )
 
     @staticmethod
     def get_incident_by_yandex_tracker(
@@ -253,6 +267,96 @@ class IncidentManager(IncidentValidator):
                 comments=comment
             )
             incident.statuses.add(status)
+
+    @staticmethod
+    def add_notify_op_status(
+        incident: Incident, comment: Optional[str] = None
+    ) -> None:
+        status, _ = IncidentStatus.objects.get_or_create(
+            name=DEFAULT_NOTIFY_OP_IN_WORK_STATUS_NAME,
+            defaults={'description': DEFAULT_NOTIFY_OP_IN_WORK_STATUS_DESC}
+        )
+        IncidentStatusHistory.objects.create(
+            incident=incident,
+            status=status,
+            comments=comment
+        )
+        incident.statuses.add(status)
+
+    @staticmethod
+    def add_notified_op_status(
+        incident: Incident, comment: Optional[str] = None
+    ) -> None:
+        status, _ = IncidentStatus.objects.get_or_create(
+            name=DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_NAME,
+            defaults={'description': DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_DESC}
+        )
+        IncidentStatusHistory.objects.create(
+            incident=incident,
+            status=status,
+            comments=comment
+        )
+        incident.statuses.add(status)
+
+    @staticmethod
+    def add_notify_op_end_status(
+        incident: Incident, comment: Optional[str] = None
+    ) -> None:
+        status, _ = IncidentStatus.objects.get_or_create(
+            name=DEFAULT_NOTIFY_OP_END_STATUS_NAME,
+            defaults={'description': DEFAULT_NOTIFY_OP_END_STATUS_DESC}
+        )
+        IncidentStatusHistory.objects.create(
+            incident=incident,
+            status=status,
+            comments=comment
+        )
+        incident.statuses.add(status)
+
+    @staticmethod
+    def add_notified_op_end_status(
+        incident: Incident, comment: Optional[str] = None
+    ) -> None:
+        status, _ = IncidentStatus.objects.get_or_create(
+            name=DEFAULT_NOTIFIED_OP_END_STATUS_NAME,
+            defaults={'description': DEFAULT_NOTIFIED_OP_END_STATUS_DESC}
+        )
+        IncidentStatusHistory.objects.create(
+            incident=incident,
+            status=status,
+            comments=comment
+        )
+        incident.statuses.add(status)
+
+    @staticmethod
+    def add_notify_avr_status(
+        incident: Incident, comment: Optional[str] = None
+    ) -> None:
+        status, _ = IncidentStatus.objects.get_or_create(
+            name=DEFAULT_NOTIFY_AVR_STATUS_NAME,
+            defaults={'description': DEFAULT_NOTIFY_AVR_STATUS_DESC}
+        )
+        IncidentStatusHistory.objects.create(
+            incident=incident,
+            status=status,
+            comments=comment
+        )
+        incident.statuses.add(status)
+
+    @staticmethod
+    def add_notified_avr_status(
+        incident: Incident, comment: Optional[str] = None
+    ) -> None:
+        status, _ = IncidentStatus.objects.get_or_create(
+            name=DEFAULT_NOTIFIED_AVR_STATUS_NAME,
+            defaults={'description': DEFAULT_NOTIFIED_AVR_STATUS_DESC}
+        )
+        IncidentStatusHistory.objects.create(
+            incident=incident,
+            status=status,
+            comments=comment
+        )
+        incident.statuses.add(status)
 
     def add_incident_from_email(
         self,

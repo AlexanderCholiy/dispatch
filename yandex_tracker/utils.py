@@ -43,6 +43,12 @@ yt_manager_config = {
     'YT_AVR_NAME_GLOBAL_FIELD_ID': os.getenv('YT_AVR_NAME_GLOBAL_FIELD_ID'),  # noqa: E501
     'YT_TYPE_OF_INCIDENT_LOCAL_FIELD_ID': os.getenv('YT_TYPE_OF_INCIDENT_LOCAL_FIELD_ID'),  # noqa: E501
     'YT_ON_GENERATION_STATUS_KEY': os.getenv('YT_ON_GENERATION_STATUS_KEY'),  # noqa: E501
+    'YT_NOTIFY_OPERATOR_ISSUE_IN_WORK_STATUS_KEY': os.getenv('YT_NOTIFY_OPERATOR_ISSUE_IN_WORK_STATUS_KEY'),  # noqa: E501
+    'YT_NOTIFIED_OPERATOR_ISSUE_IN_WORK_STATUS_KEY': os.getenv('YT_NOTIFIED_OPERATOR_ISSUE_IN_WORK_STATUS_KEY'),  # noqa: E501
+    'YT_NOTIFY_OPERATOR_ISSUE_CLOSED_STATUS_KEY': os.getenv('YT_NOTIFY_OPERATOR_ISSUE_CLOSED_STATUS_KEY'),  # noqa: E501
+    'YT_NOTIFIED_OPERATOR_ISSUE_CLOSED_STATUS_KEY': os.getenv('YT_NOTIFIED_OPERATOR_ISSUE_CLOSED_STATUS_KEY'),  # noqa: E501
+    'YT_NOTIFY_AVR_CONTRACTOR_IN_WORK_STATUS_KEY': os.getenv('YT_NOTIFY_AVR_CONTRACTOR_IN_WORK_STATUS_KEY'),  # noqa: E501
+    'YT_NOTIFIED_AVR_CONTRACTOR_IN_WORK_STATUS_KEY': os.getenv('YT_NOTIFIED_AVR_CONTRACTOR_IN_WORK_STATUS_KEY'),  # noqa: E501
 }
 Config.validate_env_variables(yt_manager_config)
 
@@ -85,6 +91,12 @@ class YandexTrackerManager:
         avr_name_global_field_id: str,
         type_of_incident_local_field_id: str,
         on_generation_status_key: str,
+        notify_op_issue_in_work_status_key: str,
+        notified_op_issue_in_work_status_key: str,
+        notify_op_issue_closed_status_key: str,
+        notified_op_issue_closed_status_key: str,
+        notify_avr_in_work_status_key: str,
+        notified_avr_in_work_status_key: str,
     ):
         self.client_id = cliend_id
         self.client_secret = client_secret
@@ -105,6 +117,18 @@ class YandexTrackerManager:
         self.avr_name_global_field_id = avr_name_global_field_id
 
         self.type_of_incident_local_field_id = type_of_incident_local_field_id
+        self.notify_op_issue_in_work_status_key = (
+            notify_op_issue_in_work_status_key)
+        self.notified_op_issue_in_work_status_key = (
+            notified_op_issue_in_work_status_key)
+        self.notify_op_issue_closed_status_key = (
+            notify_op_issue_closed_status_key)
+        self.notified_op_issue_closed_status_key = (
+            notified_op_issue_closed_status_key)
+        self.notify_avr_in_work_status_key = (
+            notify_avr_in_work_status_key)
+        self.notified_avr_in_work_status_key = (
+            notified_avr_in_work_status_key)
 
         self.on_generation_status_key = on_generation_status_key
 
@@ -340,6 +364,39 @@ class YandexTrackerManager:
         return self._make_request(
             HTTPMethod.DELETE,
             url,
+            sub_func_name=inspect.currentframe().f_code.co_name,
+        )
+
+    def create_comment_like_email_and_send(
+        self,
+        email_from: str,
+        issue_key: str,
+        subject: Optional[str],
+        text: Optional[str],
+        to: list[str],
+        cc: Optional[list[str]] = None,
+        temp_files: Optional[list[str]] = None
+    ) -> dict:
+        """Создаем комментарий-email и отправляем его из YandexTracker."""
+        payload = {
+            'email': {
+                'subject': subject,
+                'text': text,
+                'info': {
+                    'from': email_from,
+                    'to': to,
+                    'cc': cc
+                },
+            }
+        }
+
+        if temp_files:
+            payload['attachmentIds'] = temp_files
+        url = f'{self.create_issue_url}{issue_key}/comments'
+        return self._make_request(
+            HTTPMethod.POST,
+            url,
+            json=payload,
             sub_func_name=inspect.currentframe().f_code.co_name,
         )
 
@@ -898,4 +955,10 @@ yt_manager = YandexTrackerManager(
     avr_name_global_field_id=yt_manager_config['YT_AVR_NAME_GLOBAL_FIELD_ID'],  # noqa: E501
     type_of_incident_local_field_id=yt_manager_config['YT_TYPE_OF_INCIDENT_LOCAL_FIELD_ID'],  # noqa: E501
     on_generation_status_key=yt_manager_config['YT_ON_GENERATION_STATUS_KEY'],
+    notify_op_issue_in_work_status_key=yt_manager_config['YT_NOTIFY_OPERATOR_ISSUE_IN_WORK_STATUS_KEY'],  # noqa: E501
+    notified_op_issue_in_work_status_key=yt_manager_config['YT_NOTIFIED_OPERATOR_ISSUE_IN_WORK_STATUS_KEY'],  # noqa: E501
+    notify_op_issue_closed_status_key=yt_manager_config['YT_NOTIFY_OPERATOR_ISSUE_CLOSED_STATUS_KEY'],  # noqa: E501
+    notified_op_issue_closed_status_key=yt_manager_config['YT_NOTIFIED_OPERATOR_ISSUE_CLOSED_STATUS_KEY'],  # noqa: E501
+    notify_avr_in_work_status_key=yt_manager_config['YT_NOTIFY_AVR_CONTRACTOR_IN_WORK_STATUS_KEY'],  # noqa: E501
+    notified_avr_in_work_status_key=yt_manager_config['YT_NOTIFIED_AVR_CONTRACTOR_IN_WORK_STATUS_KEY'],  # noqa: E501
 )

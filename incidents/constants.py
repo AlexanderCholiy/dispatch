@@ -33,3 +33,25 @@ DEFAULT_GENERATION_STATUS_DESC = 'Питание от генератора.'
 
 DEFAULT_IN_WORK_STATUS_NAME = 'В работе'
 DEFAULT_IN_WORK_STATUS_DESC = 'Заявка принята в работу.'
+
+DEFAULT_NOTIFY_OP_IN_WORK_STATUS_NAME = 'Уведомляем оператора'
+DEFAULT_NOTIFY_OP_IN_WORK_STATUS_DESC = (
+    'Отправляем письмо заявителю о принятии инцидента в работу.')
+
+DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_NAME = 'Уведомили оператора'
+DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_DESC = (
+    'Отправили письмо заявителю о принятии инцидента в работу.')
+
+DEFAULT_NOTIFY_OP_END_STATUS_NAME = 'Уведомляем о закрытии'
+DEFAULT_NOTIFY_OP_END_STATUS_DESC = (
+    'Отправляем письмо заявителю о закрытии работ.')
+
+DEFAULT_NOTIFIED_OP_END_STATUS_NAME = 'Уведомили о закрытии'
+DEFAULT_NOTIFIED_OP_END_STATUS_DESC = (
+    'Отправили письмо заявителю о закрытии работ.')
+
+DEFAULT_NOTIFY_AVR_STATUS_NAME = 'Передать подрядчику'
+DEFAULT_NOTIFY_AVR_STATUS_DESC = 'Отправляем письмо с инцидентом.'
+
+DEFAULT_NOTIFIED_AVR_STATUS_NAME = 'Передано подрядчику'
+DEFAULT_NOTIFIED_AVR_STATUS_DESC = 'Отправили письмо с инцидентом.'

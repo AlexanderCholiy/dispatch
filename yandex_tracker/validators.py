@@ -10,7 +10,7 @@ from incidents.models import Incident, IncidentType
 from ts.models import Pole, BaseStation, AVRContractor, BaseStationOperator
 from incidents.utils import IncidentManager
 from ts.constants import UNDEFINED_CASE
-from users.models import User, Roles
+from users.models import User
 
 
 def check_yt_pole_incident(
@@ -18,6 +18,7 @@ def check_yt_pole_incident(
     issue: dict,
     type_of_incident_field: dict,
     incident: Incident,
+    all_poles: dict[str, Pole],
 ) -> bool:
     pole_is_valid = True
     comment = None
@@ -37,28 +38,31 @@ def check_yt_pole_incident(
 
     try:
         # Ищем опоры, которые начинаются с указанного шифра
-        poles = Pole.objects.filter(pole__istartswith=pole_number)
-        poles_count = poles.count()
+        if pole_number in all_poles:
+            # Точное совпадение
+            pass
+        else:
+            # Ищем опоры, которые начинаются с указанного шифра
+            matching_poles = [
+                pole for pole_name, pole in all_poles.items()
+                if pole_name.startswith(pole_number)
+            ]
 
-        if poles_count == 0:
-            raise Pole.DoesNotExist(
-                f'Не найдено опор, начинающихся с "{pole_number}"')
+            if not matching_poles:
+                raise Pole.DoesNotExist(
+                    f'Не найдено опор, начинающихся с "{pole_number}"')
 
-        elif poles_count > 1:
-            # Проверяем, есть ли точное совпадение среди найденных опор
-            exact_match = poles.filter(pole=pole_number)
-            if exact_match.exists():
-                # Если есть точное совпадение - всё ок, используем его
-                pass
-            else:
-                # Если точного совпадения нет, но есть похожие - это ошибка
-                example_poles = list(poles.values_list('pole', flat=True)[:3])
-                raise Pole.MultipleObjectsReturned(
-                    f'Найдено {poles_count} опор, начинающихся с '
-                    f'"{pole_number}". '
-                    f'Примеры: {", ".join(example_poles)}. '
-                    'Уточните шифр опоры.'
-                )
+            elif len(matching_poles) > 1:
+                exact_matches = [
+                    p for p in matching_poles if p.pole == pole_number]
+                if not exact_matches:
+                    example_poles = [p.pole for p in matching_poles[:3]]
+                    raise Pole.MultipleObjectsReturned(
+                        f'Найдено {len(matching_poles)} опор, начинающихся с '
+                        f'"{pole_number}". '
+                        f'Примеры: {", ".join(example_poles)}. '
+                        'Уточните шифр опоры.'
+                    )
 
     except (Pole.DoesNotExist, Pole.MultipleObjectsReturned) as e:
         pole_is_valid = False
@@ -93,7 +97,8 @@ def check_yt_base_station_incident(
     yt_manager: YandexTrackerManager,
     issue: dict,
     type_of_incident_field: dict,
-    incident: Incident
+    incident: Incident,
+    all_base_stations: dict[str, BaseStation]
 ) -> bool:
     base_station_is_valid = True
     comment = None
@@ -116,101 +121,74 @@ def check_yt_base_station_incident(
         return base_station_is_valid
 
     try:
-        # Сначала проверяем точное совпадение, если указаны оба поля:
-        if pole_number and base_station_number:
-            try:
-                exact_match = BaseStation.objects.get(
-                    bs_name=base_station_number,
-                    pole__pole=pole_number
-                )
-                # Если нашли точное совпадение - всё ок
-                return base_station_is_valid
-            except BaseStation.DoesNotExist:
-                # Точного совпадения нет, продолжаем поиск по началу
-                pass
-            except BaseStation.MultipleObjectsReturned:
-                # Несколько точных совпадений - тоже ок, используем первое
-                exact_match = BaseStation.objects.filter(
-                    bs_name=base_station_number,
-                    pole__pole=pole_number
-                ).first()
-                return base_station_is_valid
+        # Сначала проверяем точное совпадение
+        if base_station_number in all_base_stations:
+            bs = all_base_stations[base_station_number]
 
-        # Также проверяем точное совпадение только по БС (без опоры)
-        if base_station_number:
-            try:
-                BaseStation.objects.get(
-                    bs_name=base_station_number
-                )
-                # Если нашли точное совпадение только по БС - всё ок
-                return base_station_is_valid
-            except BaseStation.DoesNotExist:
-                # Точного совпадения нет, продолжаем поиск по началу
-                pass
-            except BaseStation.MultipleObjectsReturned:
-                # Несколько точных совпадений - тоже ок, используем первое
-                BaseStation.objects.filter(
-                    bs_name=base_station_number
-                ).first()
-                return base_station_is_valid
-
-        # Оригинальная логика поиска по началу текста
-        base_stations = BaseStation.objects.filter(
-            bs_name__istartswith=base_station_number)
-        base_stations_count = base_stations.count()
-
-        if base_stations_count == 0:
-            raise BaseStation.DoesNotExist(
-                f'Не найдено БС, начинающихся с "{base_station_number}"')
-
-        elif base_stations_count > 1:
-            if pole_number:
-                filtered_base_stations = base_stations.filter(
-                    pole__pole__istartswith=pole_number)
-                filtered_count = filtered_base_stations.count()
-
-                if filtered_count == 0:
+            # Проверяем соответствие опоры, если она указана
+            if pole_number and bs.pole:
+                if not bs.pole.pole.startswith(pole_number):
                     raise Pole.DoesNotExist(
-                        f'Найдено {base_stations_count} базовых станций, '
-                        f'начинающихся с "{base_station_number}", '
+                        f'Базовая станция "{bs.bs_name}" привязана '
+                        f'к опоре "{bs.pole.pole}", '
+                        f'а указана опора "{pole_number}"'
+                    )
+            # Если всё совпадает - возвращаем успех
+            return base_station_is_valid
+
+        else:
+            # Ищем БС, которые начинаются с указанного номера
+            matching_stations = [
+                bs for bs_name, bs in all_base_stations.items()
+                if bs_name.startswith(base_station_number)
+            ]
+
+            if not matching_stations:
+                raise BaseStation.DoesNotExist(
+                    f'Не найдено БС, начинающихся с "{base_station_number}"')
+
+            # Если указана опора, фильтруем по ней
+            if pole_number:
+                matching_stations = [
+                    bs for bs in matching_stations
+                    if bs.pole and bs.pole.pole.startswith(pole_number)
+                ]
+
+                if not matching_stations:
+                    raise Pole.DoesNotExist(
+                        f'Найдено БС, начинающихся с "{base_station_number}", '
                         'но ни одна не привязана к опоре, начинающейся с '
                         f'"{pole_number}".'
                     )
-                elif filtered_count > 1:
-                    # Проверяем есть ли точное совпадение среди отфильтрованных
-                    exact_match = filtered_base_stations.filter(
-                        bs_name=base_station_number)
-                    if exact_match.count() != 1:
-                        example_stations = list(
-                            filtered_base_stations
-                            .values_list('bs_name', flat=True)[:3]
-                        )
-                        raise Pole.DoesNotExist(
-                            f'Найдено {filtered_count} БС, начинающихся с '
-                            f'"{base_station_number}" и привязанных к опорам, '
-                            f'начинающимся с "{pole_number}". '
-                            f'Примеры: {", ".join(example_stations)}. '
-                            'Уточните название базовой станции.'
-                        )
-            else:
-                example_stations = list(
-                    base_stations.values_list('bs_name', flat=True)[:3])
-                raise ValueError(
-                    f'Найдено {base_stations_count} БС, начинающихся с '
-                    f'"{base_station_number}". '
-                    f'Примеры: {", ".join(example_stations)}. '
-                    'Уточните шифр опоры.'
-                )
 
-        else:
-            base_station = base_stations.first()
-            if pole_number and base_station.pole:
-                if not base_station.pole.pole.startswith(pole_number):
-                    raise Pole.DoesNotExist(
-                        f'Базовая станция "{base_station.bs_name}" привязана '
-                        f'к опоре "{base_station.pole.pole}", '
-                        f'а указана опора "{pole_number}"'
+            # Проверяем количество совпадений
+            if len(matching_stations) > 1:
+                # Ищем точное совпадение среди отфильтрованных
+                exact_matches = [
+                    bs for bs in matching_stations
+                    if bs.bs_name == base_station_number
+                ]
+
+                if not exact_matches:
+                    example_stations = [
+                        bs.bs_name for bs in matching_stations[:3]]
+                    error_msg = (
+                        f'Найдено {len(matching_stations)} БС, начинающихся с '
+                        f'"{base_station_number}"'
                     )
+
+                    if pole_number:
+                        error_msg += (
+                            ' и привязанных к опорам, начинающимся с '
+                            f'"{pole_number}"'
+                        )
+
+                    error_msg += (
+                        f'. Примеры: {", ".join(example_stations)}. '
+                        'Уточните шифр базовой станции.'
+                    )
+
+                    raise ValueError(error_msg)
 
     except (BaseStation.DoesNotExist, Pole.DoesNotExist, ValueError) as e:
         base_station_is_valid = False
@@ -293,10 +271,9 @@ def check_yt_operator_bs_incident(
 
 
 def check_yt_user_incident(
-    yt_manager: YandexTrackerManager,
     issue: dict,
     yt_users: dict,
-    incident: Incident,
+    usernames_in_db: list[str],
 ) -> bool:
     user_is_valid = True
     user: Optional[dict] = issue.get('assignee')
@@ -304,8 +281,6 @@ def check_yt_user_incident(
     user_uid = int(user['id']) if user else None
     username: Optional[str] = next(
         (name for name, uid in yt_users.items() if uid == user_uid), None)
-    users_in_db = User.objects.filter(role=Roles.DISPATCH, is_active=True)
-    usernames_in_db = [usr.username for usr in users_in_db]
 
     if username and username not in usernames_in_db:
         user_is_valid = False
@@ -318,6 +293,7 @@ def check_yt_type_of_incident(
     issue: dict,
     type_of_incident_field: Optional[dict],
     incident: Incident,
+    valid_names_of_types: list[str],
 ) -> bool:
     type_of_incident_is_valid = True
 
@@ -326,8 +302,6 @@ def check_yt_type_of_incident(
     type_of_incident: Optional[str] = issue.get(
         type_of_incident_field_key
     ) if type_of_incident_field_key else None
-    type_of_incident_in_db = IncidentType.objects.all()
-    valid_names_of_types = [tp.name for tp in type_of_incident_in_db]
 
     issue_key = issue['key']
     status_key: str = issue['status']['key']
@@ -381,6 +355,7 @@ def check_yt_deadline_incident(
     issue: dict,
     type_of_incident_field: Optional[dict],
     incident: Incident,
+    valid_names_of_types: list[str],
 ) -> bool:
     is_valid_deadline_incident = True
 
@@ -394,7 +369,11 @@ def check_yt_deadline_incident(
             incident_deadline = None
 
     is_valid_type_of_incident = check_yt_type_of_incident(
-        yt_manager, issue, type_of_incident_field, incident
+        yt_manager,
+        issue,
+        type_of_incident_field,
+        incident,
+        valid_names_of_types,
     )
 
     if not is_valid_type_of_incident:
@@ -437,11 +416,16 @@ def check_yt_expired_incident(
 
 @transaction.atomic
 def check_yt_incident_data(
+    incident: Incident,
     yt_manager: YandexTrackerManager,
     logger: Logger,
     issue: dict,
     yt_users: dict,
     type_of_incident_field: dict,
+    valid_names_of_types: list[str],
+    usernames_in_db: list[str],
+    all_poles: dict[str, Pole],
+    all_base_stations: dict[str, BaseStation],
 ) -> Optional[bool]:
     """
     Проверка данных в YandexTracker.
@@ -463,37 +447,15 @@ def check_yt_incident_data(
         - Если установлен известный тип инцидента, выставим дедлайн SLA.
     """
     issue_key = issue['key']
-    database_id: Optional[int] = issue[yt_manager.database_global_field_id]
-
-    if not database_id:
-        return None
 
     pole_number: Optional[str] = issue.get(
         yt_manager.pole_number_global_field_id)
     base_station_number: Optional[str] = issue.get(
         yt_manager.base_station_global_field_id)
-    status_key: str = issue['status']['key']
     user: Optional[dict] = issue.get('assignee')
 
     type_of_incident_field_key = type_of_incident_field['id']
     type_of_incident: Optional[str] = issue.get(type_of_incident_field_key)
-
-    try:
-        incident = Incident.objects.get(pk=database_id)
-    except Incident.DoesNotExist:
-        if status_key != yt_manager.error_status_key:
-            comment = (
-                f'Неизвестный {yt_manager.database_global_field_id} для '
-                'внутреннего номера инцидента.'
-            )
-            was_status_update = yt_manager.update_issue_status(
-                issue_key,
-                yt_manager.error_status_key,
-                comment
-            )
-            if was_status_update:
-                logger.debug(comment)
-        return False
 
     # Синхронизируем актуальность заявки в базе:
     if incident.is_incident_finish:
@@ -502,7 +464,7 @@ def check_yt_incident_data(
 
     # Проверяем можно ли указанному диспетчеру назначать заявки:
     is_valid_user = check_yt_user_incident(
-        yt_manager, issue, yt_users, incident)
+        issue, yt_users, usernames_in_db)
 
     # Синхронизируем ответственного диспетчера в базе:
     if is_valid_user:
@@ -518,7 +480,11 @@ def check_yt_incident_data(
 
     # Проверяем, что тип инцидента соответствует одному из типов в базе:
     is_valid_type_of_incident = check_yt_type_of_incident(
-        yt_manager, issue, type_of_incident_field, incident,
+        yt_manager,
+        issue,
+        type_of_incident_field,
+        incident,
+        valid_names_of_types,
     )
 
     # Синхронизируем тип инцидента в базе:
@@ -544,7 +510,11 @@ def check_yt_incident_data(
 
     # Проверка дедлайна SLA:
     is_valid_incident_deadline = check_yt_deadline_incident(
-        yt_manager, issue, type_of_incident_field, incident
+        yt_manager,
+        issue,
+        type_of_incident_field,
+        incident,
+        valid_names_of_types
     )
 
     # Проверка статуса SLA:
@@ -554,7 +524,7 @@ def check_yt_incident_data(
 
     # Синхронизируем данные по базовой станции (ДО проверки опоры):
     is_valid_base_station = check_yt_base_station_incident(
-        yt_manager, issue, type_of_incident_field, incident)
+        yt_manager, issue, type_of_incident_field, incident, all_base_stations)
     incident_bs = incident.base_station
     if not is_valid_base_station:
         logger.debug(f'Ошибка {issue_key}: неверный номер базовой станции.')
@@ -624,7 +594,7 @@ def check_yt_incident_data(
 
     # ТЕПЕРЬ проверяем опору (после того как БС могла установить опору)
     is_valid_pole_number = check_yt_pole_incident(
-        yt_manager, issue, type_of_incident_field, incident)
+        yt_manager, issue, type_of_incident_field, incident, all_poles)
     incident_pole = incident.pole
     if not is_valid_pole_number:
         logger.debug(f'Ошибка {issue_key}: неверный шифр опоры.')

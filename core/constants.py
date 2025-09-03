@@ -26,6 +26,8 @@ TS_LOG_ROTATING_FILE = os.path.join(LOG_DIR, 'ts.log')
 YANDEX_TRACKER_ROTATING_FILE = os.path.join(LOG_DIR, 'yandex_tracker.log')
 INCIDENTS_LOG_ROTATING_FILE = os.path.join(LOG_DIR, 'incidents.log')
 TG_NOTIFICATIONS_ROTATING_FILE = os.path.join(LOG_DIR, 'telegram.log')
+YANDEX_TRACKER_AUTO_EMAILS_ROTATING_FILE = os.path.join(
+    LOG_DIR, 'yandex_tracker_auto_emails.log')
 
 MAX_FILE_URL_LEN = 512
 MAX_ST_DESCRIPTION = 256

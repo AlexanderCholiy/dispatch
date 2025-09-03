@@ -12,6 +12,7 @@ from core.pretty_print import PrettyPrint
 from core.wraps import min_wait_timer, timer
 from incidents.utils import IncidentManager
 from emails.models import EmailMessage
+from core.tg_bot import tg_manager
 from incidents.models import Incident
 from yandex_tracker.utils import YandexTrackerManager, yt_manager
 
@@ -23,14 +24,42 @@ class Command(BaseCommand):
     help = 'Обновление данных в YandexTracker.'
 
     def handle(self, *args, **kwargs):
+        tg_manager.send_startup_notification(__name__)
+
+        first_success_sent = False
+        had_errors_last_time = False
+        last_error_type = None
+
         while True:
+            err = None
+            error_count = 0
+            total_operations = 0
+
             try:
-                self.add_issues_2_yt(yt_manager)
+                total_operations, error_count = self.add_issues_2_yt(
+                    yt_manager)
             except KeyboardInterrupt:
                 return
             except Exception as e:
                 yt_managment_logger.critical(e, exc_info=True)
+                err = e
                 time.sleep(MIN_WAIT_SEC_WITH_CRITICAL_EXC)
+            else:
+                if not first_success_sent and not error_count:
+                    tg_manager.send_first_success_notification(__name__)
+                    first_success_sent = True
+
+                if error_count and not had_errors_last_time:
+                    tg_manager.send_warning_counter_notification(
+                        __name__, error_count, total_operations
+                    )
+
+                had_errors_last_time = error_count > 0
+
+            finally:
+                if err is not None and last_error_type != type(err).__name__:
+                    tg_manager.send_error_notification(__name__, err)
+                    last_error_type = type(err).__name__
 
     @min_wait_timer(yt_managment_logger)
     @timer(yt_managment_logger)
@@ -38,6 +67,8 @@ class Command(BaseCommand):
         emails = YandexTrackerManager.emails_for_yandex_tracker()
         previous_incident = None
         total = len(emails)
+
+        error_count = 0
 
         for index, email in enumerate(emails):
             PrettyPrint().progress_bar_info(
@@ -61,7 +92,10 @@ class Command(BaseCommand):
                 except KeyboardInterrupt:
                     return
                 except Exception as e:
+                    error_count += 1
                     yt_managment_logger.exception(e)
                 else:
                     email.was_added_2_yandex_tracker = True
                     email.save()
+
+        return total, error_count

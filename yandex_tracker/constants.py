@@ -1,3 +1,5 @@
+from django.utils import timezone
+
 INCIDENTS_REGION_NOT_FOR_YT: list[str] = [
     'Moscow',
     'Moscow Region',
@@ -14,6 +16,9 @@ INCIDENTS_REGION_NOT_FOR_YT: list[str] = [
 MAX_ATTACHMENT_SIZE_IN_YT = 50 * 1024 * 1024  # (max 50 MB в YandexTracker)
 
 YT_ISSUES_DAYS_AGO_FILTER = 30
+
+CURRENT_TZ = timezone.get_current_timezone()
+MAX_PREVIEW_TEXT_LEN = 256
 
 
 class IsExpiredSLA:

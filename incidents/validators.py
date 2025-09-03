@@ -8,24 +8,31 @@ from .models import BaseStation, Pole
 
 class IncidentValidator:
 
-    def _find_num_in_text(self, text: str) -> list[str]:
+    def _find_num_in_text(self, text: str) -> set[str]:
         """Извлекает слова с минимум 4 цифрами (столько содержит номер БС)."""
         symbols_2_replace: set[str] = {
             '[', ']', '(', ')', '{', '}', ':', '|', ',', '.', ';',
-            "'", '"', '`'
+            "'", '"', '`', '/', '\\'
         }
         new_text = text
         for symbol in symbols_2_replace:
-            new_text = new_text.replace(symbol, '')
+            new_text = new_text.replace(symbol, ' ')
 
         words = new_text.split()
 
         result = []
         for word in words:
             word = word.strip()
-            if sum(1 for char in word if char.isdigit()) >= 4:
+
+            if not word:
+                continue
+
+            # Подсчитываем цифры в слове (включая те, что идут через дефисы):
+            digit_count = sum(1 for char in word if char.isdigit())
+            if digit_count >= 4:
                 result.append(word)
-        return result
+
+        return set(result)
 
     def _find_pole_in_text(self, text: str) -> Optional[Pole]:
         """Поиск шифра опоры в тексте."""
