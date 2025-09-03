@@ -103,7 +103,20 @@ class Incident(models.Model):
         Returns:
             datetime: Текущее время или дату последнего статуса.
         """
+        # Если есть аннотированное поле:
+        if hasattr(
+            self, 'latest_status_date'
+        ) and self.latest_status_date is not None:
+            return self.latest_status_date
+
         if self.is_incident_finish:
+            if hasattr(self, 'statuses') and self.statuses.all():
+                # Берем первый из prefetched статусов (нужно правильно
+                # отсортировать при prefetch):
+                return (
+                    self.statuses.all().order_by('-insert_date').first()
+                    .insert_date
+                )
             last_status = self.statuses.order_by('-insert_date').first()
             return last_status.insert_date if last_status else timezone.now()
         return timezone.now()

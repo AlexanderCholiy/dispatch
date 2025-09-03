@@ -4,6 +4,7 @@ from datetime import datetime
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.db.models import OuterRef, Subquery
 
 from core.constants import (
     MIN_WAIT_SEC_WITH_CRITICAL_EXC,
@@ -104,6 +105,31 @@ class Command(BaseCommand):
 
         error_count = 0
 
+        database_ids = []
+        for issue in unclosed_issues:
+            database_id = issue.get(yt_manager.database_global_field_id)
+            if database_id:
+                database_ids.append(database_id)
+
+        latest_status_subquery = IncidentStatusHistory.objects.filter(
+            incident=OuterRef('pk')
+        ).order_by('-insert_date').values('insert_date')[:1]
+
+        incidents_prefetched = Incident.objects.filter(
+            id__in=database_ids
+        ).select_related(
+            'incident_type',
+            'pole',
+            'pole__avr_contractor',
+            'base_station',
+            'responsible_user'
+        ).prefetch_related(
+            'statuses',
+            'base_station__operator',
+        ).annotate(
+            latest_status_date=Subquery(latest_status_subquery)
+        ).in_bulk()  # Создаем словарь {id: incident}
+
         for index, issue in enumerate(unclosed_issues):
             # PrettyPrint.progress_bar_info(
             #     index, total, 'Обработка открытых заявок:')
@@ -132,6 +158,8 @@ class Command(BaseCommand):
                 last_status_history = IncidentStatusHistory.objects.filter(
                     incident=incident
                 ).order_by('-pk').first()
+
+                incident = incidents_prefetched.get(database_id)
 
                 # Синхронизируем данные в базе:
                 if status_key == yt_manager.in_work_status_key:

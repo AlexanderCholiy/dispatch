@@ -2,6 +2,7 @@ import time
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.db.models import OuterRef, Subquery
 
 from core.constants import (
     MIN_WAIT_SEC_WITH_CRITICAL_EXC,
@@ -15,7 +16,7 @@ from incidents.constants import (
     DEFAULT_END_STATUS_NAME,
 )
 from yandex_tracker.constants import YT_ISSUES_DAYS_AGO_FILTER
-from incidents.models import Incident, IncidentStatus
+from incidents.models import Incident, IncidentStatus, IncidentStatusHistory
 from yandex_tracker.utils import YandexTrackerManager, yt_manager
 
 yt_managment_logger = LoggerFactory(
@@ -63,6 +64,9 @@ class Command(BaseCommand):
             if database_id is not None:
                 incident_ids_to_update.add(database_id)
                 database_ids_with_issues.append((database_id, issue))
+            else:
+                is_sla_expired = issue.get(
+                    yt_manager.is_sla_expired_global_field_id)
 
         if not incident_ids_to_update:
             return
@@ -72,11 +76,23 @@ class Command(BaseCommand):
             defaults={'description': DEFAULT_END_STATUS_DESC}
         )
 
+        # Подзапрос для последней даты статуса каждого инцидента:
+        latest_status_subquery = IncidentStatusHistory.objects.filter(
+            incident=OuterRef('pk')
+        ).order_by('-insert_date').values('insert_date')[:1]
+
+        incidents_queryset = Incident.objects.filter(
+            id__in=incident_ids_to_update
+        ).select_related(  # Используется для ForeignKey
+            'incident_type',
+        ).prefetch_related(  # Используется для ManyToManyField
+            'statuses'
+        ).annotate(
+            latest_status_date=Subquery(latest_status_subquery)
+        )
+
         incidents_dict = {
-            incident.pk: incident
-            for incident in Incident.objects.filter(
-                id__in=incident_ids_to_update
-            )
+            incident.pk: incident for incident in incidents_queryset
         }
 
         incidents_to_mark_finished = set()
