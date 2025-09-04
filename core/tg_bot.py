@@ -266,6 +266,21 @@ class TelegramNotifier:
                 }
         return results
 
+    def check_debug_mode(self, is_debug: bool):
+        """Проверяет режим DEBUG и отправляет уведомление в Telegram"""
+        if is_debug:
+            message = (
+                'Сервер работает в *отладочном* режиме.\n'
+                'Это может представлять угрозу безопасности!'
+            )
+            tg_manager.send_warning_message(message)
+        else:
+            message = (
+                'Сервер работает в *production* режиме.\n'
+                'Безопасность настроена правильно.'
+            )
+            tg_manager.send_success_message(message)
+
 
 tg_manager = TelegramNotifier(
     token=tg_manager_config['TG_TOKEN'],

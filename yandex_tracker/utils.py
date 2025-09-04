@@ -7,6 +7,7 @@ from typing import Optional
 
 import requests
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 
 from core.constants import YANDEX_TRACKER_ROTATING_FILE
@@ -18,7 +19,7 @@ from emails.utils import EmailManager
 from incidents.models import Incident
 
 from .constants import (
-    INCIDENTS_REGION_NOT_FOR_YT,
+    INCIDENT_REGION_NOT_FOR_YT,
     MAX_ATTACHMENT_SIZE_IN_YT,
     IsExpiredSLA
 )
@@ -192,9 +193,8 @@ class YandexTrackerManager:
             is_email_from_yandex_tracker=False,
             was_added_2_yandex_tracker=False,
             email_incident__isnull=False,
-            email_incident__pole__isnull=False,
         ).exclude(
-            email_incident__pole__region__in=INCIDENTS_REGION_NOT_FOR_YT
+            email_incident__pole__region__in=INCIDENT_REGION_NOT_FOR_YT
         )
 
         exclusion_date = timezone.now() - timedelta(days=days)
@@ -713,7 +713,6 @@ class YandexTrackerManager:
             temp_files = self.download_email_temp_files(email_incident)
             self.create_or_update_issue(
                 key=key,
-                issue={},
                 summary=data_for_yt['summary'],
                 database_id=data_for_yt['database_id'],
                 pole_number=data_for_yt['pole_number'],

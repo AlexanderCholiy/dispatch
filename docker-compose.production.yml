@@ -25,10 +25,9 @@ services:
     command: >
       postgres -c listen_addresses='*'
 
-  # Django backend
+  # Django backend (production image from Docker Hub)
   dispatch_backend:
-    build:
-      context: .
+    image: alexandercholiy/ts_dispatch:latest
     env_file: .env
     volumes:
       - dispatch_static:/app/collected_static
@@ -40,10 +39,9 @@ services:
       - dispatch_network
     restart: unless-stopped
 
-  # Nginx
+  # Nginx gateway (production image from Docker Hub)
   dispatch_gateway:
-    build:
-      context: ./gateway/
+    image: alexandercholiy/ts_dispatch_gateway:latest
     ports:
       - "8000:80"
     volumes:

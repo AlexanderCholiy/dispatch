@@ -1,6 +1,6 @@
 from django.utils import timezone
 
-INCIDENTS_REGION_NOT_FOR_YT: list[str] = [
+INCIDENT_REGION_NOT_FOR_YT: list[str] = [
     'Moscow',
     'Moscow Region',
     'Leningrad Region',

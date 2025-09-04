@@ -4,9 +4,11 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import Q
+from django.conf import settings
 
 from core.pretty_print import PrettyPrint
 from users.models import PendingUser
+from core.tg_bot import tg_manager
 
 
 class Command(BaseCommand):
@@ -18,6 +20,9 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **kwargs):
+
+        tg_manager.check_debug_mode(settings.DEBUG)
+
         User = get_user_model()
 
         missing_vars = []

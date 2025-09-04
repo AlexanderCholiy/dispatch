@@ -1,0 +1,2 @@
+0 0 * * * root cd /app && python manage.py delete_unknown_files >> /app/logs/cron.log 2>&1
+0 20 * * * root cd /app && python manage.py update_data_from_ts >> /app/logs/cron.log 2>&1

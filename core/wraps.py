@@ -27,18 +27,18 @@ def timer(logger: Logger) -> Callable:
                 if total_seconds >= 60:
                     minutes = int(total_seconds // 60)
                     seconds = total_seconds % 60
-                    logger.debug(
+                    logger.info(
                         f'Время выполнения {func.__name__}: {minutes} мин '
                         f'{round(seconds, 2)} сек'
                     )
                 elif total_seconds >= 1:
                     seconds = round(total_seconds, 2)
-                    logger.debug(
+                    logger.info(
                         f'Время выполнения {func.__name__}: {seconds} сек'
                     )
                 else:
                     milliseconds = round(execution_time.microseconds / 1000, 2)
-                    logger.debug(
+                    logger.info(
                         f'Время выполнения {func.__name__}: {milliseconds} мс'
                     )
 
