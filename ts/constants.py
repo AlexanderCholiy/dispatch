@@ -13,7 +13,8 @@ BASE_STATION_OPERATORS_PER_PAGE = 32
 UNDEFINED_CASE = 'undefined'
 UNDEFINED_ID = 0
 UNDEFINED_EMAILS = [
-    eml.strip() for eml in os.getenv('DEFAULT_CONTRACTOR_EMAILS').split(',')
+    eml.strip()
+    for eml in os.getenv('DEFAULT_CONTRACTOR_EMAILS', '').split(',')
     if eml.strip()
 ]
 
