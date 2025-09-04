@@ -16,11 +16,11 @@ RUN pip install -r requirements.txt --no-cache-dir
 COPY . .
 
 # Создание директорий для логов:
-RUN mkdir -p /app/logs /var/log/supervisor
+RUN mkdir -p /app/logs /app/logs/supervisor /var/log/supervisor
 
 # Копирование crontab файла:
 COPY crontab /etc/cron.d/django-cron
-RUN chmod 0644 /etc/cron.d/django-cron
+RUN chmod 0644 /etc/cron.d/django-cron && crontab /etc/cron.d/django-cron
 
 # Копирование конфигурации supervisor
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
