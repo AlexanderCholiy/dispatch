@@ -701,16 +701,18 @@ class YandexTrackerManager:
 
     def add_incident_to_yandex_tracker(
         self, email_incident: EmailMessage, is_first_email: bool
-    ):
+    ) -> list[dict]:
         """Создание инцидента в YandexTracker."""
         data_for_yt = self._prepare_data_from_email(email_incident)
         issues: list[dict] = data_for_yt['issues']
         key = issues[0]['key'] if issues else None
 
+        result = []
+
         # Инцидент только пришел и ещё отсутствует в YandexTracker:
         if not issues and is_first_email:
             temp_files = self.download_email_temp_files(email_incident)
-            self.create_or_update_issue(
+            issue = self.create_or_update_issue(
                 key=key,
                 summary=data_for_yt['summary'],
                 database_id=data_for_yt['database_id'],
@@ -724,6 +726,7 @@ class YandexTrackerManager:
                 email_cc=data_for_yt['email_cc'],
                 temp_files=temp_files,
             )
+            result.append(issue)
         # Инцидент отсутствует в YandexTracker, но по нему пришло уточнение,
         # поэтому надо восстановить полностью цепочку писем для инцидента:
         elif not issues and not is_first_email:
@@ -750,6 +753,7 @@ class YandexTrackerManager:
                 email_cc=new_data_for_yt['email_cc'],
                 temp_files=temp_files,
             )
+            result.append(issue)
             for email in all_email_incident[1:]:
                 self.add_issue_email_comment(email, issue)
         # Инцидент уже зарегестрирован в YandexTracker:
@@ -767,7 +771,7 @@ class YandexTrackerManager:
                 # Повторная обработка первого письма:
                 if is_first_email:
                     temp_files = self.download_email_temp_files(email_incident)
-                    self.create_or_update_issue(
+                    issue = self.create_or_update_issue(
                         key=key,
                         summary=data_for_yt['summary'],
                         database_id=data_for_yt['database_id'],
@@ -781,9 +785,12 @@ class YandexTrackerManager:
                         email_cc=data_for_yt['email_cc'],
                         temp_files=temp_files,
                     )
+                    result.append(issue)
                 # Необходимо добавить новые сообщения ввиде комментаривев:
                 else:
                     self.add_issue_email_comment(email_incident, issue)
+
+        return result
 
     def filter_issues(self, yt_filter: dict, days_ago: int = 7) -> list[dict]:
         page = 1

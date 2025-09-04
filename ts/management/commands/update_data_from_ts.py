@@ -20,7 +20,7 @@ class Command(BaseCommand):
         tg_manager.send_startup_notification(__name__)
 
         os.makedirs(TS_DATA_DIR, exist_ok=True)
-        Api.update_poles()
+        # Api.update_poles()
         Api.update_avr()
         Api.update_base_stations()
 

@@ -12,6 +12,7 @@ from core.pretty_print import PrettyPrint
 from core.tg_bot import tg_manager
 from core.wraps import min_wait_timer, timer
 from incidents.utils import IncidentManager
+from emails.models import EmailMessage
 from yandex_tracker.utils import YandexTrackerManager, yt_manager
 
 yt_managment_logger = LoggerFactory(

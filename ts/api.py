@@ -215,6 +215,7 @@ class Api(SocialValidators):
 
         # Обновляем актуальные записи:
         find_unvalid_values = False
+        poles_cache = {p.pole: p for p in Pole.objects.all()}
 
         for index, row in avr.iterrows():
             PrettyPrint.progress_bar_info(
@@ -285,23 +286,19 @@ class Api(SocialValidators):
                             phone_objs.append(phone_obj)
                         contractor.phones.set(phone_objs)
 
-                        try:
-                            pole = Pole.objects.get(pole=pole_number)
+                        pole = poles_cache.get(pole_number)
+                        if pole:
                             pole.avr_contractor = contractor
                             pole.save()
-                        except Pole.DoesNotExist:
-                            pass
 
                 except IntegrityError:
                     find_unvalid_values = True
 
             else:
-                try:
-                    pole = Pole.objects.get(pole=pole_number)
+                pole = poles_cache.get(pole_number)
+                if pole:
                     pole.avr_contractor = default_contractor
                     pole.save()
-                except Pole.DoesNotExist:
-                    pass
 
         if find_unvalid_values:
             ts_api_logger.warning(f'Проверьте данные в {TS_AVR_REPORT_URL}')
@@ -344,7 +341,7 @@ class Api(SocialValidators):
             )
         )
         combinations_operators_to_delete = (
-            new_operators_combinations - existing_operators_combinations)
+            existing_operators_combinations - new_operators_combinations)
         if combinations_operators_to_delete:
             BaseStationOperator.objects.filter(
                 operator_name__in=[
@@ -356,6 +353,8 @@ class Api(SocialValidators):
             ).delete()
 
         # Обновляем актуальные записи:
+        # Кешируем все существующие опоры и операторы для быстрого доступа:
+        poles = {p.pole: p for p in Pole.objects.all()}
         find_unvalid_values = False
 
         for index, row in base_stations.iterrows():
@@ -380,9 +379,8 @@ class Api(SocialValidators):
                 find_unvalid_values = True
                 continue
 
-            try:
-                pole = Pole.objects.get(pole=pole_number)
-            except Pole.DoesNotExist:
+            pole = poles.get(pole_number)
+            if not pole:
                 continue
 
             with transaction.atomic():
