@@ -239,12 +239,16 @@ class EmailManager:
                 if isinstance(data, dict):
                     items = []
                     for key, value in data.items():
-                        items.append(f'{spaces}{key}: {dict_to_pretty(value, indent + 1)}')
+                        text = dict_to_pretty(value, indent + 1)
+                        items.append(
+                            f'{spaces}{key}: {text}'
+                        )
                     return '\n'.join(items)
                 elif isinstance(data, list):
                     items = []
                     for item in data:
-                        items.append(f'{spaces}- {dict_to_pretty(item, indent + 1)}')
+                        text = dict_to_pretty(item, indent + 1)
+                        items.append(f'{spaces}- {text}')
                     return '\n'.join(items)
                 else:
                     return str(data)
@@ -279,7 +283,7 @@ class EmailManager:
         final_lines = []
         empty_line_count = 0
         max_empty_lines = 1 if clean_for_code_block else 2
-        
+
         for line in cleaned_lines:
             if not line:
                 empty_line_count += 1

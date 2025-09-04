@@ -1,4 +1,3 @@
-import os
 import time
 
 from django.core.management.base import BaseCommand
@@ -9,9 +8,7 @@ from core.constants import (
 )
 from core.loggers import LoggerFactory
 from core.tg_bot import tg_manager
-from core.utils import Config
-from emails.email_parser import EmailParser, email_parser
-from yandex_tracker.utils import yt_manager
+from emails.email_parser import email_parser
 
 email_managment_logger = LoggerFactory(
     __name__, EMAIL_LOG_ROTATING_FILE).get_logger

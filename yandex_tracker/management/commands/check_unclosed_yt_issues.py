@@ -1,9 +1,7 @@
 import time
-from datetime import datetime
 from typing import Optional
 
 from django.core.management.base import BaseCommand
-from django.db import transaction
 from django.db.models import OuterRef, Prefetch, Subquery
 
 from core.constants import (
@@ -22,12 +20,7 @@ from incidents.constants import (
     DEFAULT_NOTIFIED_OP_END_STATUS_NAME,
     DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_NAME,
 )
-from incidents.models import (
-    Incident,
-    IncidentStatus,
-    IncidentStatusHistory,
-    IncidentType
-)
+from incidents.models import Incident, IncidentStatusHistory, IncidentType
 from incidents.utils import IncidentManager
 from ts.models import BaseStation, Pole
 from users.models import Roles, User

@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from typing import Optional
 
 from core.constants import YANDEX_TRACKER_AUTO_EMAILS_ROTATING_FILE
 from core.loggers import LoggerFactory

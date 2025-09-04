@@ -181,7 +181,8 @@ class TelegramNotifier:
             Optional[Message]: Объект сообщения если успешно, иначе None
         """
         if level:
-            formatted_message = self._format_message(level, message, emoji or '')
+            formatted_message = self._format_message(
+                level, message, emoji or '')
         else:
             formatted_message = message  # Просто отправляем как есть
 

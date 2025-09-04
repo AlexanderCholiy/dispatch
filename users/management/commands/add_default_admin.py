@@ -1,14 +1,14 @@
 import os
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import Q
-from django.conf import settings
 
 from core.pretty_print import PrettyPrint
-from users.models import PendingUser
 from core.tg_bot import tg_manager
+from users.models import PendingUser
 
 
 class Command(BaseCommand):

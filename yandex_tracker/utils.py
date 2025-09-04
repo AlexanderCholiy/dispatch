@@ -7,7 +7,6 @@ from typing import Optional
 
 import requests
 from django.db import models
-from django.db.models import Q
 from django.utils import timezone
 
 from core.constants import YANDEX_TRACKER_ROTATING_FILE
