@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from core.models import Detail
 from ts.models import AVRContractor, BaseStation, Pole
+
 from .constants import MAX_STATUS_COMMENT_LEN
 
 User = get_user_model()
@@ -32,6 +33,12 @@ class Incident(models.Model):
     is_incident_finish = models.BooleanField(
         default=False,
         verbose_name='Обработка заявки завершена',
+        db_index=True
+    )
+    incident_finish_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Дата и время завершения инцидента',
         db_index=True
     )
     pole = models.ForeignKey(
@@ -84,6 +91,14 @@ class Incident(models.Model):
     def __str__(self):
         return f'№{self.pk}'
 
+    def save(self, *args, **kwargs):
+        if self.is_incident_finish and not self.incident_finish_date:
+            self.incident_finish_date = timezone.now()
+        elif not self.is_incident_finish:
+            # Если вдруг снова открыли:
+            self.incident_finish_date = None
+        super().save(*args, **kwargs)
+
     @property
     def is_sla_expired(self) -> Optional[bool]:
         is_expired = None
@@ -97,28 +112,8 @@ class Incident(models.Model):
 
     @property
     def sla_check_date(self) -> datetime:
-        """
-        Возвращает дату для проверки SLA.
-
-        Returns:
-            datetime: Текущее время или дату последнего статуса.
-        """
-        # Если есть аннотированное поле:
-        if hasattr(
-            self, 'latest_status_date'
-        ) and self.latest_status_date is not None:
-            return self.latest_status_date
-
-        if self.is_incident_finish:
-            if hasattr(self, 'statuses') and self.statuses.all():
-                # Берем первый из prefetched статусов (нужно правильно
-                # отсортировать при prefetch):
-                return (
-                    self.statuses.all().order_by('-insert_date').first()
-                    .insert_date
-                )
-            last_status = self.statuses.order_by('-insert_date').first()
-            return last_status.insert_date if last_status else timezone.now()
+        if self.is_incident_finish and self.incident_finish_date:
+            return self.incident_finish_date
         return timezone.now()
 
     @property

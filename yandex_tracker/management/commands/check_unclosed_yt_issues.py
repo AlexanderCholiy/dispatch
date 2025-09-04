@@ -1,10 +1,10 @@
 import time
-from typing import Optional
 from datetime import datetime
+from typing import Optional
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from django.db.models import OuterRef, Subquery, Prefetch
+from django.db.models import OuterRef, Prefetch, Subquery
 
 from core.constants import (
     MIN_WAIT_SEC_WITH_CRITICAL_EXC,
@@ -12,26 +12,29 @@ from core.constants import (
 )
 from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
+from core.tg_bot import tg_manager
 from core.wraps import min_wait_timer, timer
+from emails.email_parser import email_parser
 from incidents.constants import (
     DEFAULT_ERR_STATUS_NAME,
     DEFAULT_GENERATION_STATUS_NAME,
-    DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_NAME,
     DEFAULT_NOTIFIED_AVR_STATUS_NAME,
     DEFAULT_NOTIFIED_OP_END_STATUS_NAME,
+    DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_NAME,
 )
-from yandex_tracker.constants import YT_ISSUES_DAYS_AGO_FILTER
-from incidents.utils import IncidentManager
 from incidents.models import (
-    Incident, IncidentStatus, IncidentStatusHistory, IncidentType
+    Incident,
+    IncidentStatus,
+    IncidentStatusHistory,
+    IncidentType
 )
+from incidents.utils import IncidentManager
+from ts.models import BaseStation, Pole
+from users.models import Roles, User
+from yandex_tracker.auto_emails import AutoEmailsFromYT
+from yandex_tracker.constants import YT_ISSUES_DAYS_AGO_FILTER
 from yandex_tracker.utils import YandexTrackerManager, yt_manager
 from yandex_tracker.validators import check_yt_incident_data
-from core.tg_bot import tg_manager
-from users.models import Roles, User
-from ts.models import Pole, BaseStation
-from yandex_tracker.auto_emails import AutoEmailsFromYT
-from emails.email_parser import email_parser
 
 yt_managment_logger = LoggerFactory(
     __name__, YANDEX_TRACKER_ROTATING_FILE).get_logger
@@ -214,12 +217,20 @@ class Command(BaseCommand):
                     updated_incidents_counter += 1
                     continue
 
-                # Синхронизируем данные в базе:
-                if status_key == yt_manager.in_work_status_key:
+                # Обработка автоответов (данные автоматически синхронизируются)
+                # добавлена дополнительная ошибка от спама, если нарушат
+                # переходы в рабочем процессе:
+                if (
+                    status_key == yt_manager.error_status_key
+                    and last_status_history.status.name != (
+                        DEFAULT_ERR_STATUS_NAME)
+                ):
+                    IncidentManager.add_error_status(incident)
+                    updated_incidents_counter += 1
+                elif status_key == yt_manager.in_work_status_key:
                     IncidentManager.add_in_work_status(
                         incident, 'Диспетчер принял работы в YandexTracker')
-
-                if (
+                elif (
                     status_key == yt_manager.on_generation_status_key
                     and last_status_history.status.name != (
                         DEFAULT_GENERATION_STATUS_NAME)
@@ -231,17 +242,6 @@ class Command(BaseCommand):
                             'находится на генерации.'
                         )
                     )
-
-                # Обработка автоответов (данные автоматически синхронизируются)
-                # добавлена дополнительная ошибка от спама, если нарушат
-                # переходы в рабочем процессе:
-                if (
-                    status_key == yt_manager.error_status_key
-                    and last_status_history.status.name != (
-                        DEFAULT_ERR_STATUS_NAME)
-                ):
-                    IncidentManager.add_error_status(incident)
-                    updated_incidents_counter += 1
                 elif (
                     status_key == (
                         yt_manager.notified_op_issue_in_work_status_key)

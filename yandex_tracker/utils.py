@@ -12,13 +12,16 @@ from django.utils import timezone
 from core.constants import YANDEX_TRACKER_ROTATING_FILE
 from core.loggers import LoggerFactory
 from core.utils import Config
-from .constants import IsExpiredSLA
 from core.wraps import safe_request
 from emails.models import EmailMessage
 from emails.utils import EmailManager
 from incidents.models import Incident
 
-from .constants import INCIDENTS_REGION_NOT_FOR_YT, MAX_ATTACHMENT_SIZE_IN_YT
+from .constants import (
+    INCIDENTS_REGION_NOT_FOR_YT,
+    MAX_ATTACHMENT_SIZE_IN_YT,
+    IsExpiredSLA
+)
 from .exceptions import YandexTrackerAuthErr
 
 yt_manager_logger = LoggerFactory(

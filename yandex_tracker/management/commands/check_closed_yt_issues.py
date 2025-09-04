@@ -10,14 +10,14 @@ from core.constants import (
 )
 from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
+from core.tg_bot import tg_manager
 from core.wraps import min_wait_timer, timer
 from incidents.constants import (
     DEFAULT_END_STATUS_DESC,
     DEFAULT_END_STATUS_NAME,
 )
-from core.tg_bot import tg_manager
-from yandex_tracker.constants import YT_ISSUES_DAYS_AGO_FILTER
 from incidents.models import Incident, IncidentStatus, IncidentStatusHistory
+from yandex_tracker.constants import YT_ISSUES_DAYS_AGO_FILTER
 from yandex_tracker.utils import YandexTrackerManager, yt_manager
 
 yt_managment_logger = LoggerFactory(

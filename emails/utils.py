@@ -1,7 +1,7 @@
+import html
+import json
 import os
 import re
-import json
-import html
 from datetime import datetime
 from pathlib import Path
 from typing import Optional

@@ -1,13 +1,13 @@
 import os
 from typing import Optional, Union
+
 import telebot
 from telebot.types import Message
 
-from .wraps import retry
+from .constants import TG_NOTIFICATIONS_ROTATING_FILE
 from .loggers import LoggerFactory
 from .utils import Config
-from .constants import TG_NOTIFICATIONS_ROTATING_FILE
-
+from .wraps import retry
 
 tg_manager_config = {
     'TG_TOKEN': os.getenv('TG_TOKEN'),
@@ -210,6 +210,10 @@ class TelegramNotifier:
     def send_startup_notification(self, script_name: str):
         message = f'```{script_name}```\nСкрипт запущен 🚀'
         self.send_debug_message(message)
+
+    def send_success_notification(self, script_name: str):
+        message = f'```{script_name}```\nСкрипт успешно завершил работу 💡'
+        self.send_info_message(message)
 
     def send_first_success_notification(self, script_name: str):
         message = (

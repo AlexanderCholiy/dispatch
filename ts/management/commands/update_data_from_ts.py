@@ -4,6 +4,7 @@ from django.core.management.base import BaseCommand
 
 from core.constants import TS_LOG_ROTATING_FILE
 from core.loggers import LoggerFactory
+from core.tg_bot import tg_manager
 from core.wraps import timer
 from ts.api import Api
 from ts.constants import TS_DATA_DIR
@@ -16,7 +17,11 @@ class Command(BaseCommand):
 
     @timer(ts_managment_logger)
     def handle(self, *args, **kwargs):
+        tg_manager.send_startup_notification(__name__)
+
         os.makedirs(TS_DATA_DIR, exist_ok=True)
         Api.update_poles()
         Api.update_avr()
         Api.update_base_stations()
+
+        tg_manager.send_success_notification(__name__)

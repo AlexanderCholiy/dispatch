@@ -1,8 +1,8 @@
-import os
 import email
 import hashlib
 import imaplib
 import json
+import os
 import re
 from datetime import datetime, timedelta
 from email import header, message
@@ -17,12 +17,12 @@ from core.constants import API_STATUS_EXCEPTIONS, EMAIL_LOG_ROTATING_FILE
 from core.exceptions import ApiServerError, ApiTooManyRequests
 from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
+from core.utils import Config
 from core.wraps import min_wait_timer, timer
 from emails.models import EmailErr, EmailMessage
 from incidents.utils import IncidentManager
 from yandex_tracker.exceptions import YandexTrackerAuthErr
 from yandex_tracker.utils import YandexTrackerManager, yt_manager
-from core.utils import Config
 
 from .utils import EmailManager
 from .validators import EmailValidator

@@ -1,16 +1,17 @@
-from typing import Optional
-from logging import Logger
 from datetime import datetime
+from logging import Logger
+from typing import Optional
 
-from django.db import transaction, models
 from dateutil import parser
+from django.db import models, transaction
 
-from .utils import YandexTrackerManager
 from incidents.models import Incident, IncidentType
-from ts.models import Pole, BaseStation, AVRContractor, BaseStationOperator
 from incidents.utils import IncidentManager
 from ts.constants import UNDEFINED_CASE
+from ts.models import AVRContractor, BaseStation, BaseStationOperator, Pole
 from users.models import User
+
+from .utils import YandexTrackerManager
 
 
 def check_yt_pole_incident(

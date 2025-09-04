@@ -12,6 +12,7 @@ from core.constants import (
 )
 from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
+from core.tg_bot import tg_manager
 from core.wraps import timer
 from emails.constants import MAX_EMAILS_ATTACHMENT_DAYS
 from emails.models import EmailAttachment, EmailInTextAttachment, EmailMessage
@@ -50,6 +51,8 @@ class Command(BaseCommand):
 
     @timer(email_managment_logger)
     def handle(self, *args, **kwargs):
+        tg_manager.send_startup_notification(__name__)
+
         attachment_dir = Path(INCIDENT_DIR)
         if not attachment_dir.exists():
             email_managment_logger.warning(
@@ -107,3 +110,5 @@ class Command(BaseCommand):
                 'Удаление записей вложений без файла:'
             )
             EmailManager.get_email_attachments(email)
+
+        tg_manager.send_success_notification(__name__)

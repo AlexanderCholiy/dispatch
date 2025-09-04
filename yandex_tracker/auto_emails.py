@@ -1,16 +1,15 @@
-from typing import Optional, Callable
+from typing import Callable, Optional
 
-from .utils import YandexTrackerManager
-from emails.email_parser import EmailParser
-
-from incidents.models import Incident
-from emails.models import EmailMessage
-from core.loggers import LoggerFactory
-from incidents.utils import IncidentManager
 from core.constants import YANDEX_TRACKER_AUTO_EMAILS_ROTATING_FILE
-from .constants import CURRENT_TZ, MAX_PREVIEW_TEXT_LEN
+from core.loggers import LoggerFactory
+from emails.email_parser import EmailParser
+from emails.models import EmailMessage
 from incidents.constants import DEFAULT_ERR_STATUS_NAME
+from incidents.models import Incident
+from incidents.utils import IncidentManager
 
+from .constants import CURRENT_TZ, MAX_PREVIEW_TEXT_LEN
+from .utils import YandexTrackerManager
 
 auto_yt_emails_logger = LoggerFactory(
     __name__, YANDEX_TRACKER_AUTO_EMAILS_ROTATING_FILE).get_logger
@@ -225,9 +224,13 @@ class AutoEmailsFromYT:
                 email_to.append(eml.email)
 
         if not email_to:
-            comment = 'Не найден email подрядчика для автоответа'
-            self._handle_error(
-                issue_key, self.yt_manager.error_status_key, incident, comment)
+            comment = 'Не найден email подрядчика для автоответа.' if (
+                incident.pole
+            ) else (
+                'Чтобы передать заявку подрядчику, необходимо указать шифр '
+                'опоры и/или номер базовой станции.'
+            )
+            self._handle_error(issue_key, incident, comment)
             return False
 
         notify_before_message = (
@@ -294,9 +297,10 @@ class AutoEmailsFromYT:
         )
 
         if incident.sla_deadline:
+            sla_deadline_2_repr = incident.sla_deadline.astimezone(CURRENT_TZ)
             text_parts.append(
                 '   • SLA дедлайн: '
-                f'{incident.sla_deadline.astimezone(CURRENT_TZ):%d.%m.%Y %H:%M}'
+                f'{sla_deadline_2_repr:%d.%m.%Y %H:%M}'
             )
 
         if incident.incident_type:
@@ -322,7 +326,7 @@ class AutoEmailsFromYT:
                 if email.email_body:
                     preview = email.email_body.strip()
                     if len(preview) > MAX_PREVIEW_TEXT_LEN:
-                        preview = preview[:MAX_PREVIEW_TEXT_LEN] + '...'
+                        preview = preview[:MAX_PREVIEW_TEXT_LEN] + ' ...'
 
                     eml_datetime = email.email_date.astimezone(CURRENT_TZ)
 
