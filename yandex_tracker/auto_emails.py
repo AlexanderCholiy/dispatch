@@ -322,19 +322,21 @@ class AutoEmailsFromYT:
             text_parts.append('\nИСТОРИЯ ПЕРЕПИСКИ:')
             text_parts.append('-' * 30)
 
-            for i, email in enumerate(emails, 1):
+            counter_email = 0
+
+            for email in emails:
                 if email.email_body:
                     preview = email.email_body.strip()
                     if len(preview) > MAX_PREVIEW_TEXT_LEN:
                         preview = preview[:MAX_PREVIEW_TEXT_LEN] + ' ...'
 
                     eml_datetime = email.email_date.astimezone(CURRENT_TZ)
-
+                    counter_email += 1
                     text_parts.append(
-                        f'\nСообщение #{i} '
+                        f'\nСообщение №{counter_email} '
                         f'({eml_datetime:%d.%m.%Y %H:%M}):'
                     )
-                    text_parts.append(f'{preview}')
+                    text_parts.append(f'```{preview}```')
 
         text_parts.append('\n\nВАЖНО: НЕ МЕНЯЙТЕ ТЕМУ ПИСЬМА ПРИ ОТВЕТЕ')
 
