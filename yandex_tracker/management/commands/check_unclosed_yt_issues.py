@@ -286,7 +286,10 @@ class Command(BaseCommand):
                 ):
                     yt_manager.update_issue_status(
                         issue_key, yt_manager.error_status_key,
-                        'Ошибка рабочего процесса.'
+                        (
+                            'Уведомление о принятии работ уже было отправлено '
+                            'заявителям.'
+                        )
                     )
                     updated_incidents_counter += 1
                 elif (
@@ -307,7 +310,10 @@ class Command(BaseCommand):
                 ):
                     yt_manager.update_issue_status(
                         issue_key, yt_manager.error_status_key,
-                        'Ошибка рабочего процесса.'
+                        (
+                            'Уведомление о закрытии работ уже было отправлено '
+                            'заявителям.'
+                        )
                     )
                     updated_incidents_counter += 1
                 elif (
@@ -328,7 +334,10 @@ class Command(BaseCommand):
                 ):
                     yt_manager.update_issue_status(
                         issue_key, yt_manager.error_status_key,
-                        'Ошибка рабочего процесса.'
+                        (
+                            'Информация о инциденте уже была передана в '
+                            'работу подрядчику.'
+                        )
                     )
                     updated_incidents_counter += 1
 
@@ -336,7 +345,7 @@ class Command(BaseCommand):
                 yt_managment_logger.exception(e)
                 error_count += 1
 
-        yt_managment_logger.debug(
+        yt_managment_logger.info(
             f'Было обновлено {updated_incidents_counter} инцидентов'
         )
 

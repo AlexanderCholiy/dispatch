@@ -96,4 +96,9 @@ class Command(BaseCommand):
                     email.was_added_2_yandex_tracker = True
                     email.save()
 
+        yt_managment_logger.info(
+            'Добавление инцидентов в YandexTracker завершено. '
+            f'Успешно: {total - error_count} из {total}.'
+        )
+
         return total, error_count

@@ -152,7 +152,7 @@ class Command(BaseCommand):
             Incident.objects.filter(id__in=incidents_to_mark_finished).update(
                 is_incident_finish=True
             )
-            yt_managment_logger.debug(
+            yt_managment_logger.info(
                 f'Закрыто {len(incidents_to_mark_finished)} инцидента(ов)'
             )
 

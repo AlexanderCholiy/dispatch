@@ -158,9 +158,6 @@ class YandexTrackerManager:
         self._local_fields_cache = None
         self._local_fields_last_update = 0
 
-        self._transitions_cache = {}
-        self._transitions_last_update = {}
-
         self._custom_fields_cache = {}
         self._custom_fields_last_update = {}
 
@@ -916,27 +913,19 @@ class YandexTrackerManager:
         )
 
     def get_available_transitions(self, issue_key: str) -> list[dict]:
-        """Переходов статусов для задачи с кэшированием."""
-        cache_key = f'transitions_{issue_key}'
+        """
+        Получить все доступные переходы в другие статусы для задачи.
 
-        if (
-            cache_key not in self._transitions_cache
-            or (
-                time.time() - self._transitions_last_update.get(cache_key, 0)
-            ) > self.cache_timer
-        ):
-            url = (
-                'https://api.tracker.yandex.net/v3/issues'
-                f'/{issue_key}/transitions'
-            )
-            self._transitions_cache[cache_key] = self._make_request(
-                HTTPMethod.GET,
-                url,
-                sub_func_name=inspect.currentframe().f_code.co_name,
-            )
-            self._transitions_last_update[cache_key] = time.time()
-
-        return self._transitions_cache[cache_key]
+        Лучше не кэшировать результаты этой функции.
+        """
+        url = (
+            f'https://api.tracker.yandex.net/v3/issues/{issue_key}/transitions'
+        )
+        return self._make_request(
+            HTTPMethod.GET,
+            url,
+            sub_func_name=inspect.currentframe().f_code.co_name,
+        )
 
     def select_local_field(
         self, local_field_id: str
