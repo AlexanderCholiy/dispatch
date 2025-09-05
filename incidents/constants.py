@@ -28,6 +28,11 @@ DEFAULT_ERR_STATUS_DESC = (
     'Обнаружена ошибка при обработке инцидента или некорректные данные.'
 )
 
+DEFAULT_WAIT_ACCEPTANCE_STATUS_NAME = 'Ждем подтверждения'
+DEFAULT_WAIT_ACCEPTANCE_STATUS_DESC = (
+    'Ждем информацию об инциденте для его дальнейшей обработки.'
+)
+
 DEFAULT_GENERATION_STATUS_NAME = 'На генерации НБ'
 DEFAULT_GENERATION_STATUS_DESC = 'Питание от генератора.'
 

@@ -6,7 +6,8 @@ import os
 import re
 from datetime import datetime, timedelta
 from email import header, message
-from typing import Optional
+from imaplib import IMAP4
+from typing import Any, List, Optional, Tuple, Union
 
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
@@ -209,6 +210,53 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
 
         return result
 
+    def fetch_emails_in_chunks(
+        self,
+        mail: IMAP4,
+        email_ids: List[Union[bytes, str]],
+        chunk_size: int = 200
+    ) -> List[Tuple[bytes, Any]]:
+        """
+        Получает письма чанками, чтобы не перегружать IMAP сервер.
+
+        Args:
+            mail (IMAP4): активное IMAP4 соединение
+            email_ids (list): список ID писем (bytes или str)
+            chunk_size (int): размер чанка для FETCH
+
+        Returns:
+            list: список сообщений в сыром виде от imaplib
+        """
+        normalized_ids = [
+            id_.decode() if isinstance(id_, bytes) else str(id_)
+            for id_ in email_ids
+        ]
+
+        total = len(normalized_ids)
+        all_messages = []
+
+        for i in range(0, total, chunk_size):
+            chunk = normalized_ids[i:i + chunk_size]
+            id_range = ','.join(chunk)
+
+            try:
+                status, messages = mail.fetch(id_range, '(RFC822)')
+            except Exception as e:
+                email_parser_logger.error(
+                    'Ошибка при FETCH (ids=%s): %s', id_range, str(e)
+                )
+                continue
+
+            if status != 'OK':
+                email_parser_logger.warning(
+                    f'Ошибка при получении писем (status={status})',
+                )
+                continue
+
+            all_messages.extend(messages)
+
+        return all_messages
+
     @min_wait_timer(email_parser_logger)
     @timer(email_parser_logger)
     def fetch_unread_emails(
@@ -241,39 +289,28 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
             mail.login(self.email_login, self.email_pswd)
             mail.select(mailbox, readonly=True)
 
-            err_msg_ids: list[str] = set(
+            err_msg_ids: set[str] = set(
                 EmailErr.objects
                 .filter(incert_date__gte=err_days_ago, incert_date__lte=today)
                 .values_list('email_msg_id', flat=True)
             )
 
-            archive_msg_ids: list[str] = set(
+            archive_msg_ids: set[str] = set(
                 EmailMessage.objects
                 .filter(email_date__gte=err_days_ago, email_date__lte=today)
                 .values_list('email_msg_id', flat=True)
             )
 
             new_emails_ids = (
-                self._find_emails_by_date(datetime.now(), check_days, mail)
+                self._find_emails_by_date(today, check_days, mail)
             )
 
             found_emails_ids = self._find_email_by_id(
                 err_msg_ids, mail, today, check_err_days
             )
 
-            email_ids = list(
-                set(new_emails_ids + found_emails_ids))
-            total = len(email_ids)
-
-            id_range = b','.join(email_ids)
-            status, messages = mail.fetch(id_range, '(RFC822)')
-
-            if status != 'OK':
-                email_parser_logger.warning(
-                    'Ошибка при получении писем (status=%s, ids=%s)',
-                    status, id_range.decode()
-                )
-                return
+            email_ids = list(set(new_emails_ids + found_emails_ids))
+            messages = self.fetch_emails_in_chunks(mail, email_ids)
 
             parsed_messages = []
             for part in messages:
@@ -287,6 +324,8 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
             email_err_msg_ids = []
             email_err_msg_ids_to_del = []
             email_msg_counter = 0
+
+            total = len(parsed_messages)
 
             for index, msg in enumerate(parsed_messages):
 

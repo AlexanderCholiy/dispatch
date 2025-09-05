@@ -99,3 +99,4 @@ chmod -R 777 ./logs
 
 
 rm -rf ~/.vscode-server
+chmod -R 777 /home/a.choliy/dispatch/logs

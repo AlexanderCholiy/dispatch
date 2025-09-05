@@ -29,6 +29,8 @@ from .constants import (
     DEFAULT_NOTIFY_OP_IN_WORK_STATUS_NAME,
     DEFAULT_STATUS_DESC,
     DEFAULT_STATUS_NAME,
+    DEFAULT_WAIT_ACCEPTANCE_STATUS_DESC,
+    DEFAULT_WAIT_ACCEPTANCE_STATUS_NAME,
 )
 from .models import Incident, IncidentStatus, IncidentStatusHistory
 from .validators import IncidentValidator
@@ -229,6 +231,21 @@ class IncidentManager(IncidentValidator):
         status, _ = IncidentStatus.objects.get_or_create(
             name=DEFAULT_ERR_STATUS_NAME,
             defaults={'description': DEFAULT_ERR_STATUS_DESC}
+        )
+        IncidentStatusHistory.objects.create(
+            incident=incident,
+            status=status,
+            comments=comment
+        )
+        incident.statuses.add(status)
+
+    @staticmethod
+    def add_wait_acceptance_status(
+        incident: Incident, comment: Optional[str] = None
+    ) -> None:
+        status, _ = IncidentStatus.objects.get_or_create(
+            name=DEFAULT_WAIT_ACCEPTANCE_STATUS_NAME,
+            defaults={'description': DEFAULT_WAIT_ACCEPTANCE_STATUS_DESC}
         )
         IncidentStatusHistory.objects.create(
             incident=incident,

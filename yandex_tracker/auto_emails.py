@@ -33,6 +33,7 @@ class AutoEmailsFromYT:
         success_status_key: str,
         success_message: str,
         text_template: str,
+        email_to_cc: Optional[list[str]] = None,
         subject_template: Optional[str] = None,
         error_message: Optional[str] = None,
     ) -> bool:
@@ -42,6 +43,7 @@ class AutoEmailsFromYT:
         Args:
             issue: Данные заявки из Yandex Tracker
             incident: Объект инцидента
+            email_to: список получателей
             success_status_key: Ключ статуса при успешной отправке
             success_message: Сообщение для статуса при успехе
             email_sender_func: Функция отправки email
@@ -51,6 +53,7 @@ class AutoEmailsFromYT:
             notify_before_message: Сообщение для обновления статуса инцидента
             subject_template: Шаблон темы письма
             error_message: Сообщение об ошибке
+            email_to_cc: Получатели в копии
 
         Returns:
             bool: Успешность отправки
@@ -60,7 +63,7 @@ class AutoEmailsFromYT:
             'Не удалось отправить автоматический ответ')
 
         success_sent_email = self._send_email(
-            issue, email_to, text_template, subject_template)
+            issue, email_to, email_to_cc, text_template, subject_template)
 
         if success_sent_email:
             self.yt_manager.update_issue_status(
@@ -89,6 +92,7 @@ class AutoEmailsFromYT:
         self,
         issue: dict,
         email_to: list[str],
+        email_to_cc: Optional[list[str]],
         text_template: str,
         subject_template: Optional[str],
     ) -> bool:
@@ -104,6 +108,7 @@ class AutoEmailsFromYT:
                 subject=subject,
                 text=text_template,
                 to=email_to,
+                cc=email_to_cc,
             )
             return True
         except Exception as e:
@@ -137,12 +142,24 @@ class AutoEmailsFromYT:
         error_message = (
             'Не удалось уведомить оператора о принятии заявки в работу.')
 
+        to_addresses = list(
+            first_email.email_msg_to.values_list('email_to', flat=True)
+        ) if first_email else []
+
+        cc_addresses = list(
+            first_email.email_msg_cc.values_list('email_to', flat=True)
+        ) if first_email else []
+
+        all_recipients = set(to_addresses) | set(cc_addresses)
+        all_recipients -= set(email_to)
+
         IncidentManager.add_notify_op_status(incident, notify_before_message)
 
         result = self.send_auto_reply(
             issue=issue,
             incident=incident,
             email_to=email_to,
+            email_to_cc=list(all_recipients),
             success_status_key=(
                 self.yt_manager.notified_op_issue_in_work_status_key
             ),
@@ -181,6 +198,17 @@ class AutoEmailsFromYT:
         success_message = 'Уведомили оператора о закрытии заявки.'
         error_message = 'Не удалось уведомить оператора о закрытии заявки.'
 
+        to_addresses = list(
+            first_email.email_msg_to.values_list('email_to', flat=True)
+        ) if first_email else []
+
+        cc_addresses = list(
+            first_email.email_msg_cc.values_list('email_to', flat=True)
+        ) if first_email else []
+
+        all_recipients = set(to_addresses) | set(cc_addresses)
+        all_recipients -= set(email_to)
+
         IncidentManager.add_notify_op_end_status(
             incident, notify_before_message)
 
@@ -188,6 +216,7 @@ class AutoEmailsFromYT:
             issue=issue,
             incident=incident,
             email_to=email_to,
+            email_to_cc=list(all_recipients),
             success_status_key=(
                 self.yt_manager.notified_op_issue_closed_status_key
             ),

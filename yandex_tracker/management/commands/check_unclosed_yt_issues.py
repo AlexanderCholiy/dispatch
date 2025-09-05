@@ -19,6 +19,7 @@ from incidents.constants import (
     DEFAULT_NOTIFIED_AVR_STATUS_NAME,
     DEFAULT_NOTIFIED_OP_END_STATUS_NAME,
     DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_NAME,
+    DEFAULT_WAIT_ACCEPTANCE_STATUS_NAME,
 )
 from incidents.models import Incident, IncidentStatusHistory, IncidentType
 from incidents.utils import IncidentManager
@@ -219,6 +220,14 @@ class Command(BaseCommand):
                         DEFAULT_ERR_STATUS_NAME)
                 ):
                     IncidentManager.add_error_status(incident)
+                    updated_incidents_counter += 1
+                elif (
+                    status_key == yt_manager.need_acceptance_status_key
+                    and last_status_history.status.name != (
+                        DEFAULT_WAIT_ACCEPTANCE_STATUS_NAME
+                    )
+                ):
+                    IncidentManager.add_wait_acceptance_status(incident)
                     updated_incidents_counter += 1
                 elif status_key == yt_manager.in_work_status_key:
                     IncidentManager.add_in_work_status(

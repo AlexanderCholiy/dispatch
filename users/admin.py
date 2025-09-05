@@ -29,8 +29,8 @@ class BaseUserAdmin(UserAdmin):
     model = User
 
     list_display = (
-        'email',
         'username',
+        'email',
         'first_name',
         'last_name',
         'role',

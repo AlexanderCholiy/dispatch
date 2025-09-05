@@ -701,8 +701,7 @@ def check_yt_incident_data(
             ) if operator_bs else None,
         )
         error_message = (
-            'неверно указан'
-            + ('ы: ' if len(validation_errors) > 1 else ' ')
+            'необходимо обновить:'
             + ', '.join(validation_errors)
         )
         logger.debug(f'Ошибка {issue_key}: {error_message}')
