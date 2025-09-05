@@ -1,6 +1,7 @@
 import inspect
 import os
 import re
+import time
 from datetime import datetime, timedelta
 from http import HTTPMethod, HTTPStatus
 from typing import Optional
@@ -59,6 +60,7 @@ Config.validate_env_variables(yt_manager_config)
 class YandexTrackerManager:
     retries = 3
     timeout = 30
+    cache_timer = 300
 
     current_user_url = 'https://api.tracker.yandex.net/v2/myself'
     token_url = 'https://oauth.yandex.ru/token'
@@ -143,6 +145,24 @@ class YandexTrackerManager:
         self._current_user_uid: Optional[str] = None
         self.local_fields_url = (
             f'https://api.tracker.yandex.net/v3/queues/{queue}/localFields')
+
+        self._statuses_cache = None
+        self._statuses_last_update = 0
+
+        self._users_cache = None
+        self._users_last_update = 0
+
+        self._real_users_cache = None
+        self._real_users_last_update = 0
+
+        self._local_fields_cache = None
+        self._local_fields_last_update = 0
+
+        self._transitions_cache = {}
+        self._transitions_last_update = {}
+
+        self._custom_fields_cache = {}
+        self._custom_fields_last_update = {}
 
     def find_yt_number_in_text(self, text: str) -> list[str]:
         return re.findall(rf'{self.queue}-\d+', text)
@@ -301,14 +321,30 @@ class YandexTrackerManager:
             Логины пользователей должны быть такими же, как в Django
         Users, иначе на этого пользователя невозможно будет назначить задачу.
         """
-        return {
-            user['login']: user['uid'] for user in self.users_info
-            if not user['disableNotifications']
-        }
+        if (
+            self._real_users_cache is None
+            or time.time() - self._real_users_last_update > self.cache_timer
+        ):
+            users = self.users_info
+            self._real_users_cache = {
+                user['login']: user['uid'] for user in users
+                if not user['disableNotifications']
+            }
+            self._real_users_last_update = time.time()
+        return self._real_users_cache
 
     @property
     def users_info(self) -> list[dict]:
-        """Список всех пользователей в Yandex Tracker."""
+        """Список всех пользователей с кэшированием."""
+        if (
+            self._users_cache is None
+            or time.time() - self._users_last_update > self.cache_timer
+        ):
+            self._users_cache = self._get_users_info()
+            self._users_last_update = time.time()
+        return self._users_cache
+
+    def _get_users_info(self):
         return self._make_request(
             HTTPMethod.GET,
             self.all_users_url,
@@ -317,6 +353,16 @@ class YandexTrackerManager:
 
     @property
     def all_statuses(self) -> list[dict]:
+        """Получение всех статусов с кэшированием."""
+        if (
+            self._statuses_cache is None
+            or time.time() - self._statuses_last_update > self.cache_timer
+        ):
+            self._statuses_cache = self._get_all_statuses()
+            self._statuses_last_update = time.time()
+        return self._statuses_cache
+
+    def _get_all_statuses(self):
         return self._make_request(
             HTTPMethod.GET,
             self.statuses_url,
@@ -799,7 +845,7 @@ class YandexTrackerManager:
 
     def filter_issues(self, yt_filter: dict, days_ago: int = 7) -> list[dict]:
         page = 1
-        per_page = 100
+        per_page = 50
         all_issues = []
         now: datetime = timezone.now()
         days_ago: datetime = now - timedelta(days=days_ago)
@@ -815,6 +861,10 @@ class YandexTrackerManager:
                 'page': page,
                 'perPage': per_page
             }
+
+            if page > 1:
+                time.sleep(1)
+
             batch = self._make_request(
                 HTTPMethod.POST,
                 self.filter_issues_url,
@@ -822,6 +872,7 @@ class YandexTrackerManager:
                 params=params,
                 sub_func_name=inspect.currentframe().f_code.co_name,
             )
+
             if not batch:
                 break
 
@@ -848,6 +899,16 @@ class YandexTrackerManager:
 
     @property
     def all_local_fields(self) -> list[dict]:
+        """Кэширование локальных полей очереди."""
+        if (
+            self._local_fields_cache is None
+            or time.time() - self._local_fields_last_update > self.cache_timer
+        ):
+            self._local_fields_cache = self._get_local_fields()
+            self._local_fields_last_update = time.time()
+        return self._local_fields_cache
+
+    def _get_local_fields(self):
         return self._make_request(
             HTTPMethod.GET,
             self.local_fields_url,
@@ -855,15 +916,27 @@ class YandexTrackerManager:
         )
 
     def get_available_transitions(self, issue_key: str) -> list[dict]:
-        """Получить все доступные переходы в другие статусы для задачи."""
-        url = (
-            f'https://api.tracker.yandex.net/v3/issues/{issue_key}/transitions'
-        )
-        return self._make_request(
-            HTTPMethod.GET,
-            url,
-            sub_func_name=inspect.currentframe().f_code.co_name,
-        )
+        """Переходов статусов для задачи с кэшированием."""
+        cache_key = f'transitions_{issue_key}'
+
+        if (
+            cache_key not in self._transitions_cache
+            or (
+                time.time() - self._transitions_last_update.get(cache_key, 0)
+            ) > self.cache_timer
+        ):
+            url = (
+                'https://api.tracker.yandex.net/v3/issues'
+                f'/{issue_key}/transitions'
+            )
+            self._transitions_cache[cache_key] = self._make_request(
+                HTTPMethod.GET,
+                url,
+                sub_func_name=inspect.currentframe().f_code.co_name,
+            )
+            self._transitions_last_update[cache_key] = time.time()
+
+        return self._transitions_cache[cache_key]
 
     def select_local_field(
         self, local_field_id: str
@@ -949,12 +1022,22 @@ class YandexTrackerManager:
         )
 
     def select_custom_field(self, field_id: str) -> dict:
-        url = f'{self.custom_field_url}/{field_id}'
-        return self._make_request(
-            HTTPMethod.GET,
-            url,
-            sub_func_name=inspect.currentframe().f_code.co_name,
-        )
+        """Информации о кастомных полях с кэшированием."""
+        if (
+            field_id not in self._custom_fields_cache
+            or (
+                time.time() - self._custom_fields_last_update.get(field_id, 0)
+            ) > self.cache_timer
+        ):
+            url = f'{self.custom_field_url}/{field_id}'
+            self._custom_fields_cache[field_id] = self._make_request(
+                HTTPMethod.GET,
+                url,
+                sub_func_name=inspect.currentframe().f_code.co_name,
+            )
+            self._custom_fields_last_update[field_id] = time.time()
+
+        return self._custom_fields_cache[field_id]
 
     def update_custom_field(
         self,

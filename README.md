@@ -44,7 +44,7 @@ nohup python manage.py my_command > my_command.log 2>&1 &
 # вторая команда выполнится, только если первая выполнилась успешно.
 # Ключ --build для docker compose up означает,
 # что перед запуском нужно пересобрать образы
-sudo docker compose stop && sudo docker compose up --build 
+sudo docker compose stop && sudo docker compose up --build -d
 
 <!-- sudo docker container ls -a -->
 

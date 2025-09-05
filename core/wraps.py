@@ -50,6 +50,7 @@ def retry(
     logger: Logger,
     retries: int = 3,
     delay: float = 1.0,
+    backoff_factor: float = 1.5,
     exceptions: tuple[type[Exception], ...] = (Exception,),
 ) -> Callable:
     """
@@ -61,6 +62,7 @@ def retry(
         delay (float): Задержка между попытками в секундах (по умолчанию 1.0)
         exceptions: Кортеж исключений, при которых повторяем вызов
         передваваемой функции
+        backoff_factor (float): Экспоненциальная задержка.
         sub_func_name str: Имя подфункции для логирования.
 
     Особенности:
@@ -85,16 +87,19 @@ def retry(
                     attempt += 1
                     if attempt > retries:
                         raise
+
+                    current_delay = delay * (backoff_factor ** (attempt - 1))
+
                     msg = (
                         f'Ошибка {e.__class__.__name__}. '
                         f'Попытка {attempt}/{retries}, '
                         f'пробуем запустить {func.__name__} '
                         f'{msg_sub_func_name}'
                         f'с параметрами args={args} kwargs={kwargs} '
-                        f'снова через {delay} секунд(ы)'
+                        f'снова через {current_delay:.1f} секунд(ы)'
                     )
                     logger.debug(msg, exc_info=True)
-                    time.sleep(delay)
+                    time.sleep(current_delay)
         return wrapper
     return decorator
 
@@ -103,6 +108,7 @@ def safe_request(
     logger: Logger,
     retries: int = 3,
     timeout: int = 30,
+    backoff_factor: float = 1.5
 ) -> dict:
     """
     Декоратор для безопасного выполнения HTTP-запросов.
@@ -121,7 +127,7 @@ def safe_request(
         @retry(
             logger,
             retries=retries,
-            delay=0,
+            backoff_factor=backoff_factor,
             exceptions=(
                 requests.exceptions.RequestException,
                 ApiTooManyRequests,
