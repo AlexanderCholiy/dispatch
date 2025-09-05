@@ -17,17 +17,20 @@ LOG_DIR = os.path.join(BASE_DIR, 'logs')
 DEBUG_MODE: bool = settings.DEBUG
 
 DEFAULT_LOG_FILE = os.path.join(LOG_DIR, 'log.log')
-DEFAULT_ROTATING_LOG_FILE = os.path.join(LOG_DIR, 'rotating_log.log')
+DEFAULT_ROTATING_LOG_FILE = os.path.join(LOG_DIR, 'default', 'rt_log.log')
 DEFAULT_LOG_MODE = 4 if DEBUG_MODE else 1
 DEFAULT_LOG_LEVEL = DEBUG if DEBUG_MODE else INFO
 
-EMAIL_LOG_ROTATING_FILE = os.path.join(LOG_DIR, 'emails.log')
-TS_LOG_ROTATING_FILE = os.path.join(LOG_DIR, 'ts.log')
-YANDEX_TRACKER_ROTATING_FILE = os.path.join(LOG_DIR, 'yandex_tracker.log')
-INCIDENTS_LOG_ROTATING_FILE = os.path.join(LOG_DIR, 'incidents.log')
-TG_NOTIFICATIONS_ROTATING_FILE = os.path.join(LOG_DIR, 'telegram.log')
+EMAIL_LOG_ROTATING_FILE = os.path.join(LOG_DIR, 'emails', 'emails.log')
+TS_LOG_ROTATING_FILE = os.path.join(LOG_DIR, 'ts', 'ts.log')
+YANDEX_TRACKER_ROTATING_FILE = os.path.join(
+    LOG_DIR, 'yandex_tracker', 'yandex_tracker.log')
+INCIDENTS_LOG_ROTATING_FILE = os.path.join(
+    LOG_DIR, 'incidents', 'incidents.log')
+TG_NOTIFICATIONS_ROTATING_FILE = os.path.join(
+    LOG_DIR, 'telegram', 'telegram.log')
 YANDEX_TRACKER_AUTO_EMAILS_ROTATING_FILE = os.path.join(
-    LOG_DIR, 'yandex_tracker_auto_emails.log')
+    LOG_DIR, 'yandex_tracker', 'yandex_tracker_auto_emails.log')
 
 MAX_FILE_URL_LEN = 512
 MAX_ST_DESCRIPTION = 256

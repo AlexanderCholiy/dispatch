@@ -2,7 +2,6 @@ volumes:
   dispatch_db_data:
   dispatch_static:
   dispatch_media:
-  dispatch_logs:
 
 networks:
   dispatch_network:
@@ -33,7 +32,8 @@ services:
     volumes:
       - dispatch_static:/app/collected_static
       - dispatch_media:/app/media
-      - dispatch_logs:/app/logs
+      - ./logs:/app/logs        # 👈 bind mount для логов
+      - ./data:/app/data        # 👈 bind mount для data
     depends_on:
       - dispatch_db
     networks:
@@ -49,6 +49,7 @@ services:
     volumes:
       - dispatch_static:/staticfiles/
       - dispatch_media:/mediafiles/
+      - ./logs/nginx:/var/log/nginx   # 👈 отдельная папка под nginx-логи
     depends_on:
       - dispatch_backend
     networks:

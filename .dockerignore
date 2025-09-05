@@ -1,20 +1,33 @@
-venv
-env
-.venv
-__pycache__
-.git
-db.sqlite3
-db.sqlite3.bak
-.idea
-.vscode
-.env
-.media
-.logs
-.log
-.data
-.github
-.gitignore
+# Виртуальные окружения
+venv/
+env/
+.venv/
+
+# Кэш и байткод Python
+__pycache__/
 *.pyc
 *.pyo
 *.pyd
-.github
+
+# Git и IDE
+.git/
+.github/
+.gitignore
+.idea/
+.vscode/
+
+# Локальные базы
+db.sqlite3
+db.sqlite3.bak
+
+# Среда окружения
+.env
+
+# Медиа, логи и данные (монтируются как volume/bind)
+media/
+logs/
+*.log
+data/
+
+# Дополнительно (если вдруг появится)
+*.bak
