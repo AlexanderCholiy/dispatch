@@ -18,7 +18,7 @@ MAX_ATTACHMENT_SIZE_IN_YT = 50 * 1024 * 1024  # (max 50 MB в YandexTracker)
 YT_ISSUES_DAYS_AGO_FILTER = 30
 
 CURRENT_TZ = timezone.get_current_timezone()
-MAX_PREVIEW_TEXT_LEN = 256
+MAX_PREVIEW_TEXT_LEN = 1024
 
 
 class IsExpiredSLA:
