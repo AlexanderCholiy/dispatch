@@ -62,6 +62,8 @@ sudo docker compose stop && sudo docker compose up --build
 # | +----------------------- час (0-23)
 # +------------------------- минута (0-59)
 
+Ошибка говорит о том, что ваш crontab файл не заканчивается пустой строкой — cron требует, чтобы последняя строка была завершающей новой строкой.
+
 # Удаление неизвестных файлов - каждый день в 00:00:
 0 0 * * * root cd /app && python manage.py delete_unknown_files >> /app/logs/cron.log 2>&1
 
@@ -92,7 +94,8 @@ sudo docker compose -f docker-compose.production.yml up
 
 
 
-
+mkdir -p ./logs/supervisor
+chmod -R 777 ./logs
 
 
 rm -rf ~/.vscode-server
