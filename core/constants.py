@@ -32,6 +32,16 @@ TG_NOTIFICATIONS_ROTATING_FILE = os.path.join(
 YANDEX_TRACKER_AUTO_EMAILS_ROTATING_FILE = os.path.join(
     LOG_DIR, 'yandex_tracker', 'yandex_tracker_auto_emails.log')
 
+os.makedirs(os.path.dirname(DEFAULT_ROTATING_LOG_FILE), exist_ok=True)
+os.makedirs(os.path.dirname(EMAIL_LOG_ROTATING_FILE), exist_ok=True)
+os.makedirs(os.path.dirname(TS_LOG_ROTATING_FILE), exist_ok=True)
+os.makedirs(os.path.dirname(YANDEX_TRACKER_ROTATING_FILE), exist_ok=True)
+os.makedirs(os.path.dirname(INCIDENTS_LOG_ROTATING_FILE), exist_ok=True)
+os.makedirs(os.path.dirname(TG_NOTIFICATIONS_ROTATING_FILE), exist_ok=True)
+os.makedirs(
+    os.path.dirname(YANDEX_TRACKER_AUTO_EMAILS_ROTATING_FILE), exist_ok=True)
+
+
 MAX_FILE_URL_LEN = 512
 MAX_ST_DESCRIPTION = 256
 MAX_LG_DESCRIPTION = 1024
