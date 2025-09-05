@@ -210,3 +210,8 @@ __marimo__/
 *.bak
 data/ts/*
 media/*
+
+# Logs
+*.log
+log/
+logs/
