@@ -335,7 +335,7 @@ class Command(BaseCommand):
                     yt_manager.update_issue_status(
                         issue_key, yt_manager.error_status_key,
                         (
-                            'Информация о инциденте уже была передана в '
+                            'Информация об инциденте уже была передана в '
                             'работу подрядчику.'
                         )
                     )

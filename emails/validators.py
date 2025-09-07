@@ -16,6 +16,7 @@ from .constants import (
     ALLOWED_EXTENSIONS,
     ALLOWED_MIME_PREFIXES,
     MAX_ATTACHMENT_SIZE,
+    MAX_EMAIL_LEN,
 )
 
 
@@ -65,7 +66,11 @@ class EmailValidator:
 
         emails = []
         for addr in intermediate:
-            if email_regex.match(addr) and addr not in emails:
+            if (
+                len(addr) <= MAX_EMAIL_LEN
+                and email_regex.match(addr)
+                and addr not in emails
+            ):
                 emails.append(addr)
 
         return emails

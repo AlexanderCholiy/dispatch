@@ -594,7 +594,7 @@ class YandexTrackerManager:
                 email.email_subject, True)
 
         comment_like_email = [
-            f'### 📧 **{subject}**' if subject else '*Без темы*',
+            f'### 📧 "**{subject}**"' if subject else '*Без темы*',
             '',
             '| | |',
             '|-|-|',
@@ -860,7 +860,7 @@ class YandexTrackerManager:
             }
 
             if page > 1:
-                time.sleep(1)
+                time.sleep(0.5)
 
             batch = self._make_request(
                 HTTPMethod.POST,

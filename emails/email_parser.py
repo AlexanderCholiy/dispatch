@@ -61,14 +61,13 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
     def _find_emails_by_date(
         self, today: datetime, check_days: int, mail: imaplib.IMAP4_SSL
     ) -> list[bytes]:
-        days_ago: datetime = today - timedelta(days=check_days)
+        start_date = today - timedelta(days=check_days)
+        end_date = today + timedelta(days=1)
 
-        date_before: str = today.strftime("%d-%b-%Y")
-        date_since = days_ago.strftime("%d-%b-%Y")
+        date_since = start_date.strftime('%d-%b-%Y')
+        date_before = end_date.strftime('%d-%b-%Y')
 
-        search_query: str = (
-            f'(SINCE "{date_since}" BEFORE "{date_before}")'
-        ) if check_days > 1 else f'SINCE "{date_before}"'
+        search_query = f'(SINCE {date_since} BEFORE {date_before})'
 
         status, messages = mail.search(None, search_query)
         if status != 'OK' or not messages[0]:
@@ -83,15 +82,19 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
         today: datetime,
         check_days: int
     ) -> list[bytes]:
-        days_ago: datetime = today - timedelta(days=check_days)
-        date_before: str = today.strftime("%d-%b-%Y")
-        date_since = days_ago.strftime("%d-%b-%Y")
+        start_date = today - timedelta(days=check_days)
+        end_date = today + timedelta(days=1)
+
+        date_since = start_date.strftime('%d-%b-%Y')
+        date_before = end_date.strftime('%d-%b-%Y')
 
         found_email_ids = []
         total = len(message_ids)
+
         for index, message_id in enumerate(message_ids):
             PrettyPrint.progress_bar_error(
                 index, total, 'Поиск писем из EmailErr:')
+
             search_query = (
                 f'HEADER Message-ID "{message_id}" '
                 f'SINCE "{date_since}" BEFORE "{date_before}"'
@@ -214,7 +217,7 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
         self,
         mail: IMAP4,
         email_ids: List[Union[bytes, str]],
-        chunk_size: int = 200
+        chunk_size: int = 500
     ) -> List[Tuple[bytes, Any]]:
         """
         Получает письма чанками, чтобы не перегружать IMAP сервер.
