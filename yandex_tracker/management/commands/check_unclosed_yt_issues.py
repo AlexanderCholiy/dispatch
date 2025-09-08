@@ -37,6 +37,8 @@ yt_managment_logger = LoggerFactory(
 class Command(BaseCommand):
     help = 'Обновление данных в YandexTracker, с уведомлениями в Telegram.'
 
+    min_wait = 1
+
     def handle(self, *args, **kwargs):
         tg_manager.send_startup_notification(__name__)
 
@@ -75,7 +77,7 @@ class Command(BaseCommand):
                     tg_manager.send_error_notification(__name__, err)
                     last_error_type = type(err).__name__
 
-    @min_wait_timer(yt_managment_logger)
+    @min_wait_timer(yt_managment_logger, min_wait)
     @timer(yt_managment_logger)
     def check_unclosed_issues(self, yt_manager: YandexTrackerManager) -> tuple:
         """
