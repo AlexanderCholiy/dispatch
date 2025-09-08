@@ -95,8 +95,8 @@ sudo docker compose -f docker-compose.production.yml up
 
 
 mkdir -p ./logs/supervisor
-chmod -R 777 ./logs
+sudo chmod -R 777 ./logs
 
 
 rm -rf ~/.vscode-server
-chmod -R 777 /home/a.choliy/dispatch/logs
+sudo chmod -R 777 /home/a.choliy/dispatch/logs

@@ -10,7 +10,7 @@ from .constants import (
 from .exceptions import ConfigEnvError
 from .loggers import LoggerFactory
 
-app_logger = LoggerFactory().get_logger
+app_logger = LoggerFactory(__name__).get_logger
 
 
 def attachment_upload_to(instance, filename: str):

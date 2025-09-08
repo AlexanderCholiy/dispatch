@@ -1,8 +1,10 @@
 import random
+from datetime import timedelta
 from typing import Optional
 
 from django.db import connection, models
 from django.db.models import Count, Min, Q
+from django.utils import timezone
 
 from emails.models import EmailMessage
 from users.models import Roles, User
@@ -164,25 +166,29 @@ class IncidentManager(IncidentValidator):
     def choice_dispatch_for_incident(
         yt_manager: Optional[YandexTrackerManager],
         max_incident_num_per_user: Optional[int] = None,
+        hour_back: int = 12,
     ) -> Optional[User]:
         """
-        Пользователь которому можно назначить инцидент.
+        Возвращает самого свободного диспетчера.
 
-        Args:
-            yt_manager (YandexTrackerManager, optional) пользователи из
-            YandexTracker, которые должны быть также заведены в БД.
-            max_incident_num_per_user (int, optional)
-            Максимальное количество активных (отслеживаемых по SLA) инцидентов,
-            которые могут быть назначены одному пользователю.
+        - выбирает только активных пользователей с ролью DISPATCH;
+        - может ограничивать максимальное число активных инцидентов;
+        - учитывает нагрузку за последние N часов;
+        - выбирает случайно из группы наименее загруженных.
         """
+        since_date = timezone.now() - timedelta(hours=hour_back)
+
         active_users_with_incidents = (
             User.objects
-            .filter(
-                is_active=True, role=Roles.DISPATCH,
-            )
+            .filter(is_active=True, role=Roles.DISPATCH)
             .annotate(
                 incident_count=Count(
-                    'incidents', filter=Q(incidents__is_incident_finish=False))
+                    'incidents',
+                    filter=Q(
+                        incidents__is_incident_finish=False,
+                        incidents__insert_date__gte=since_date,
+                    )
+                )
             )
         )
 
