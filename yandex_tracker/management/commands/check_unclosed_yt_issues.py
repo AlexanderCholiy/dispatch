@@ -165,11 +165,12 @@ class Command(BaseCommand):
 
             database_id: Optional[int] = issue.get(
                 yt_manager.database_global_field_id)
-            if not database_id:
-                continue
 
             status_key: str = issue['status']['key']
             issue_key: str = issue['key']
+
+            if not database_id:
+                continue
 
             try:
                 incident = incidents_prefetched.get(database_id)

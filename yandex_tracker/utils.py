@@ -72,6 +72,8 @@ class YandexTrackerManager:
     filter_issues_url = 'https://api.tracker.yandex.net/v2/issues/_search'
     statuses_url = 'https://api.tracker.yandex.net/v2/statuses'
     custom_field_url = 'https://api.tracker.yandex.net/v2/fields'
+    all_field_categories_url = (
+        'https://api.tracker.yandex.net/v3/fields/categories')
 
     closed_status_key = 'closed'
     error_status_key = 'error'
@@ -79,7 +81,10 @@ class YandexTrackerManager:
     need_acceptance_status_key = 'needAcceptance'
 
     system_category_field_id = '000000000000000000000001'
+    timestamp_category_field_id = '000000000000000000000002'
+    agile_category_field_id = '000000000000000000000003'
     email_category_field_id = '000000000000000000000004'
+    sla_category_field_id = '000000000000000000000005'
 
     def __init__(
         self,
@@ -1035,8 +1040,8 @@ class YandexTrackerManager:
         name_ru: str,
         description: str,
         readonly: bool,
-        visible: bool,
         hidden: bool,
+        visible: bool,
         category_id: str
     ) -> dict:
         """
@@ -1047,9 +1052,9 @@ class YandexTrackerManager:
             name_en (str): Название поля на английском.
             name_ru (str): Название поля на русском.
             description (str): Описание поля.
-            readonly (bool): Флаг, делает ли поле только для чтения.
-            visible (bool): Флаг, отображается ли поле пользователям.
-            hidden (bool): Флаг, скрыто ли поле в интерфейсе.
+            readonly (bool): Возможность редактировать значение поля.
+            hidden (bool): Признак отображения поля в интерфейсе.
+            visible (bool): Признак видимости поля в интерфейсе.
             category_id (str): Идентификатор категории, к которой относится
             поле.
 
@@ -1064,7 +1069,10 @@ class YandexTrackerManager:
 
         valid_categories = {
             'system': self.system_category_field_id,
+            'timestamp': self.timestamp_category_field_id,
+            'agile': self.agile_category_field_id,
             'email': self.email_category_field_id,
+            'sla': self.sla_category_field_id,
         }
 
         if category_id not in valid_categories.values():
@@ -1079,14 +1087,22 @@ class YandexTrackerManager:
             },
             'description': description,
             'readonly': readonly,
-            'visible': visible,
             'hidden': hidden,
+            'visible': visible,
             'category': category_id
         }
         return self._make_request(
             HTTPMethod.PATCH,
             url,
             json=payload,
+            sub_func_name=inspect.currentframe().f_code.co_name,
+        )
+
+    @property
+    def field_categories(self):
+        return self._make_request(
+            HTTPMethod.GET,
+            self.all_field_categories_url,
             sub_func_name=inspect.currentframe().f_code.co_name,
         )
 

@@ -7,6 +7,7 @@ from .constants import EMAILS_PER_PAGE
 from .models import (
     EmailAttachment,
     EmailErr,
+    EmailFolder,
     EmailInTextAttachment,
     EmailMessage,
 )
@@ -17,6 +18,11 @@ admin.site.empty_value_display = EMPTY_VALUE
 @admin.register(EmailErr)
 class EmailErrAdmin(admin.ModelAdmin):
     list_display = ('email_msg_id', 'incert_date',)
+
+
+@admin.register(EmailFolder)
+class EmailFolderAdmin(admin.ModelAdmin):
+    list_display = ('name', 'description',)
 
 
 @admin.register(EmailMessage)
@@ -82,6 +88,7 @@ class EmailMessageAdmin(admin.ModelAdmin):
                 'is_first_email',
                 'is_email_from_yandex_tracker',
                 'was_added_2_yandex_tracker',
+                'folder',
             )
         })
     )
