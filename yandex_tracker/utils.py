@@ -167,9 +167,6 @@ class YandexTrackerManager:
         self._local_fields_cache = None
         self._local_fields_last_update = 0
 
-        self._custom_fields_cache = {}
-        self._custom_fields_last_update = {}
-
     def find_yt_number_in_text(self, text: str) -> list[str]:
         return re.findall(rf'{self.queue}-\d+', text)
 
@@ -1022,36 +1019,28 @@ class YandexTrackerManager:
         )
 
     def select_custom_field(self, field_id: str) -> dict:
-        """Информации о кастомных полях с кэшированием."""
-        if (
-            field_id not in self._custom_fields_cache
-            or (
-                time.time() - self._custom_fields_last_update.get(field_id, 0)
-            ) > self.cache_timer
-        ):
-            url = f'{self.custom_field_url}/{field_id}'
-            self._custom_fields_cache[field_id] = self._make_request(
-                HTTPMethod.GET,
-                url,
-                sub_func_name=inspect.currentframe().f_code.co_name,
-            )
-            self._custom_fields_last_update[field_id] = time.time()
-
-        return self._custom_fields_cache[field_id]
+        """Информации о кастомных полях кэширование использовать нельзя."""
+        url = f'{self.custom_field_url}/{field_id}'
+        return self._make_request(
+            HTTPMethod.GET,
+            url,
+            sub_func_name=inspect.currentframe().f_code.co_name,
+        )
 
     def update_custom_field(
         self,
         field_id: str,
-        name_en: str,
-        name_ru: str,
-        description: str,
         readonly: bool,
         hidden: bool,
         visible: bool,
-        category_id: str
+        name_en: Optional[str] = None,
+        name_ru: Optional[str] = None,
+        description: Optional[str] = None,
+        category_id: Optional[str] = None,
     ) -> dict:
         """
         Обновляет пользовательское поле в Яндекс.Трекере.
+        Параметры, равные None, в payload не добавляются.
 
         Args:
             field_id (str): Идентификатор пользовательского поля.
@@ -1059,8 +1048,9 @@ class YandexTrackerManager:
             name_ru (str): Название поля на русском.
             description (str): Описание поля.
             readonly (bool): Возможность редактировать значение поля.
-            hidden (bool): Признак отображения поля в интерфейсе.
-            visible (bool): Признак видимости поля в интерфейсе.
+            hidden (bool): Скрывает поле от пользователей в UI и API.
+            visible (bool): Определяет, будет ли поле отображаться в UI
+            (не в API).
             category_id (str): Идентификатор категории, к которой относится
             поле.
 
@@ -1081,22 +1071,28 @@ class YandexTrackerManager:
             'sla': self.sla_category_field_id,
         }
 
-        if category_id not in valid_categories.values():
+        if category_id and category_id not in valid_categories.values():
             raise KeyError(
                 f'Укажите один из доступных вариантов id: {valid_categories}'
             )
 
-        payload = {
-            'name': {
-                'en': name_en,
-                'ru': name_ru
-            },
-            'description': description,
-            'readonly': readonly,
-            'hidden': hidden,
-            'visible': visible,
-            'category': category_id
-        }
+        payload = {}
+
+        name_payload = {}
+        if name_en is not None:
+            name_payload['en'] = name_en
+        if name_ru is not None:
+            name_payload['ru'] = name_ru
+        if name_payload:
+            payload['name'] = name_payload
+
+        if description is not None:
+            payload['description'] = description
+
+        payload['readonly'] = readonly
+        payload['hidden'] = hidden
+        payload['visible'] = visible
+
         return self._make_request(
             HTTPMethod.PATCH,
             url,

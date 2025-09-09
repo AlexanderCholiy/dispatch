@@ -115,7 +115,7 @@ class PrettyPrint:
     ) -> str:
         """Динамический фон для прогрес бара."""
         filled_length = int(bar_length * progress)
-        if filled_length < 2 * bar_length // 3:
+        if filled_length < 3 * bar_length // 5:
             return Back.LIGHTBLACK_EX
         return percent_bg
 
