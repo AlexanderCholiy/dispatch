@@ -860,7 +860,7 @@ class YandexTrackerManager:
             }
 
             if page > 1:
-                time.sleep(0.5)
+                time.sleep(1)
 
             batch = self._make_request(
                 HTTPMethod.POST,

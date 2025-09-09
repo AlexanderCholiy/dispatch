@@ -163,6 +163,7 @@ class Command(BaseCommand):
 
             database_id: Optional[int] = issue.get(
                 yt_manager.database_global_field_id)
+
             if not database_id:
                 continue
 
@@ -346,7 +347,7 @@ class Command(BaseCommand):
                 error_count += 1
 
         yt_managment_logger.info(
-            f'Было обновлено {updated_incidents_counter} инцидентов'
+            f'Было обновлено {updated_incidents_counter} из {total} инцидентов'
         )
 
         return total, error_count
