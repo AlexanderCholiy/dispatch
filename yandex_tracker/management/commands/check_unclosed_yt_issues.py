@@ -175,6 +175,7 @@ class Command(BaseCommand):
             issue_key: str = issue['key']
 
             if not database_id:
+                yt_manager.create_incident_from_issue(issue, False)
                 continue
 
             try:
@@ -288,7 +289,16 @@ class Command(BaseCommand):
                 elif (
                     status_key == yt_manager.notify_op_issue_in_work_status_key
                 ):
-                    if last_status_history.status.name not in (
+                    if not incident.is_auto_incident:
+                        yt_manager.update_issue_status(
+                            issue_key, yt_manager.error_status_key,
+                            (
+                                'Нельзя отправить автоматическое уведомление '
+                                'заявителю для заявки, созданной вручную.'
+                            )
+                        )
+                        updated_incidents_counter += 1
+                    elif last_status_history.status.name not in (
                         DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_NAME,
                     ):
                         yt_emails.notify_operator_issue_in_work(
@@ -307,7 +317,16 @@ class Command(BaseCommand):
                 elif (
                     status_key == yt_manager.notify_op_issue_closed_status_key
                 ):
-                    if last_status_history.status.name not in (
+                    if not incident.is_auto_incident:
+                        yt_manager.update_issue_status(
+                            issue_key, yt_manager.error_status_key,
+                            (
+                                'Нельзя отправить автоматическое уведомление '
+                                'заявителю для заявки, созданной вручную.'
+                            )
+                        )
+                        updated_incidents_counter += 1
+                    elif last_status_history.status.name not in (
                         DEFAULT_NOTIFIED_OP_END_STATUS_NAME,
                     ):
                         yt_emails.notify_operator_issue_close(issue, incident)

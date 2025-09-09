@@ -7,7 +7,7 @@ from http import HTTPMethod, HTTPStatus
 from typing import Optional
 
 import requests
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 from yandex_tracker_client import TrackerClient
 
@@ -15,9 +15,10 @@ from core.constants import YANDEX_TRACKER_ROTATING_FILE
 from core.loggers import LoggerFactory
 from core.utils import Config
 from core.wraps import safe_request
-from emails.models import EmailMessage
+from emails.models import EmailMessage, EmailFolder
 from emails.utils import EmailManager
-from incidents.models import Incident
+from incidents.models import Incident, IncidentStatus, IncidentStatusHistory
+from incidents.constants import DEFAULT_STATUS_NAME, DEFAULT_STATUS_DESC
 
 from .constants import (
     INCIDENT_REGION_NOT_FOR_YT,
@@ -1105,6 +1106,53 @@ class YandexTrackerManager:
         return self._make_request(
             HTTPMethod.GET,
             self.all_field_categories_url,
+            sub_func_name=inspect.currentframe().f_code.co_name,
+        )
+
+    @transaction.atomic
+    def create_incident_from_issue(
+        self, issue: dict, is_incident_finish: bool
+    ) -> Incident:
+        """Создаем инцидент по задаче, созданной вручную в YandexTracker."""
+        incident_date = issue['createdAt']
+        incident = Incident.objects.create(
+            incident_date=incident_date,
+            is_incident_finish=is_incident_finish,
+            is_auto_incident=False
+        )
+
+        status, _ = IncidentStatus.objects.get_or_create(
+            name=DEFAULT_STATUS_NAME,
+            defaults={'description': DEFAULT_STATUS_DESC}
+        )
+        IncidentStatusHistory.objects.create(
+            incident=incident,
+            status=status,
+            comments='Заявка была заведена через YandexTracker'
+        )
+        incident.statuses.add(status)
+
+        issue_key: str = issue['key']
+
+        payload = {
+            self.database_global_field_id: incident.pk,
+        }
+
+        url = f'{self.create_issue_url}{issue_key}'
+
+        # Лучше потом не возвращать, т.к. в этот момент поле где-то может
+        # обновляться:
+        self.update_custom_field(
+            field_id=yt_manager.database_global_field_id,
+            readonly=False,
+            hidden=False,
+            visible=False,
+        )
+
+        return self._make_request(
+            HTTPMethod.PATCH,
+            url,
+            json=payload,
             sub_func_name=inspect.currentframe().f_code.co_name,
         )
 

@@ -67,7 +67,10 @@ class AutoEmailsFromYT:
 
         email_to_cc = email_to_cc if email_to_cc else []
 
-        if self.email_parser.email_login not in email_to_cc:
+        if (
+            self.email_parser.email_login not in email_to_cc
+            and self.email_parser.email_login not in email_to
+        ):
             email_to_cc.append(self.email_parser.email_login)
 
         success_sent_email = self._send_email(
@@ -135,7 +138,9 @@ class AutoEmailsFromYT:
         issue_key: str = issue['key']
 
         first_email = (
-            EmailMessage.objects.filter(email_incident=incident)
+            EmailMessage.objects.filter(
+                email_incident=incident, is_first_email=True
+            )
             .order_by(
                 'email_incident_id', 'is_first_email', 'email_date', 'id'
             )
@@ -194,7 +199,9 @@ class AutoEmailsFromYT:
         issue_key: str = issue['key']
 
         first_email = (
-            EmailMessage.objects.filter(email_incident=incident)
+            EmailMessage.objects.filter(
+                email_incident=incident, is_first_email=True
+            )
             .order_by(
                 'email_incident_id', 'is_first_email', 'email_date', 'id'
             )
