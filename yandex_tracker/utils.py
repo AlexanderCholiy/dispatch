@@ -842,7 +842,7 @@ class YandexTrackerManager:
 
     def filter_issues(self, yt_filter: dict, days_ago: int = 7) -> list[dict]:
         page = 1
-        per_page = 50
+        per_page = 500
         all_issues = []
         now: datetime = timezone.now()
         days_ago: datetime = now - timedelta(days=days_ago)
