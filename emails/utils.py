@@ -17,12 +17,12 @@ from core.models import Attachment
 from .models import (
     EmailAttachment,
     EmailErr,
+    EmailFolder,
     EmailInTextAttachment,
     EmailMessage,
     EmailReference,
     EmailTo,
     EmailToCC,
-    EmailFolder,
 )
 
 

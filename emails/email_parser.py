@@ -19,8 +19,8 @@ from core.exceptions import ApiServerError, ApiTooManyRequests
 from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
 from core.utils import Config
-from core.wraps import timer, min_wait_timer
-from emails.models import EmailErr, EmailMessage, EmailFolder
+from core.wraps import min_wait_timer, timer
+from emails.models import EmailErr, EmailFolder, EmailMessage
 from incidents.utils import IncidentManager
 from yandex_tracker.exceptions import YandexTrackerAuthErr
 from yandex_tracker.utils import YandexTrackerManager, yt_manager

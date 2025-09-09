@@ -15,10 +15,10 @@ from core.constants import YANDEX_TRACKER_ROTATING_FILE
 from core.loggers import LoggerFactory
 from core.utils import Config
 from core.wraps import safe_request
-from emails.models import EmailMessage, EmailFolder
+from emails.models import EmailMessage
 from emails.utils import EmailManager
+from incidents.constants import DEFAULT_STATUS_DESC, DEFAULT_STATUS_NAME
 from incidents.models import Incident, IncidentStatus, IncidentStatusHistory
-from incidents.constants import DEFAULT_STATUS_NAME, DEFAULT_STATUS_DESC
 
 from .constants import (
     INCIDENT_REGION_NOT_FOR_YT,

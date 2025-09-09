@@ -6,7 +6,7 @@ from django.db import connection, models
 from django.db.models import Count, Min, Q
 from django.utils import timezone
 
-from emails.models import EmailMessage, EmailFolder
+from emails.models import EmailFolder, EmailMessage
 from users.models import Roles, User
 from yandex_tracker.utils import YandexTrackerManager
 

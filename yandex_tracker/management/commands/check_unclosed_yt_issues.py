@@ -1,6 +1,6 @@
 import time
+from datetime import datetime, timedelta
 from typing import Optional
-from datetime import timedelta, datetime
 
 from django.core.management.base import BaseCommand
 from django.db.models import OuterRef, Prefetch, Subquery
@@ -18,9 +18,9 @@ from emails.email_parser import email_parser
 from incidents.constants import (
     DEFAULT_ERR_STATUS_NAME,
     DEFAULT_GENERATION_STATUS_NAME,
-    DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_NAME,
     DEFAULT_NOTIFIED_AVR_STATUS_NAME,
     DEFAULT_NOTIFIED_OP_END_STATUS_NAME,
+    DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_NAME,
     DEFAULT_WAIT_ACCEPTANCE_STATUS_NAME,
 )
 from incidents.models import Incident, IncidentStatusHistory, IncidentType
@@ -29,8 +29,8 @@ from ts.models import BaseStation, Pole
 from users.models import Roles, User
 from yandex_tracker.auto_emails import AutoEmailsFromYT
 from yandex_tracker.constants import (
-    YT_ISSUES_DAYS_AGO_FILTER,
     NOTIFY_SPAM_DELAY,
+    YT_ISSUES_DAYS_AGO_FILTER,
 )
 from yandex_tracker.utils import YandexTrackerManager, yt_manager
 from yandex_tracker.validators import check_yt_incident_data

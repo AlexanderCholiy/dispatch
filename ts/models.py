@@ -4,7 +4,10 @@ from core.constants import MAX_LG_DESCRIPTION, MAX_ST_DESCRIPTION
 from emails.constants import MAX_EMAIL_LEN
 
 from .constants import (
-    MAX_PHONE_LEN, MAX_POLE_LEN, UNDEFINED_CASE, UNDEFINED_ID
+    MAX_PHONE_LEN,
+    MAX_POLE_LEN,
+    UNDEFINED_CASE,
+    UNDEFINED_ID,
 )
 
 
