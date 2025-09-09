@@ -30,7 +30,10 @@ class Command(BaseCommand):
             total_operations = 0
 
             try:
-                email_parser.fetch_unread_emails()
+                email_parser.fetch_unread_emails(
+                    mailbox=email_parser.inbox_folder_name)
+                email_parser.fetch_unread_emails(
+                    mailbox=email_parser.sent_foldet_name)
             except KeyboardInterrupt:
                 return
             except Exception as e:

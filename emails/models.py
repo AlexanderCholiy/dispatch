@@ -37,13 +37,14 @@ class EmailFolder(Detail):
             )
         ]
 
-    def __str__(self):
-        return self.name
+    @staticmethod
+    def get_inbox():
+        inbox, _ = EmailFolder.objects.get_or_create(name='INBOX')
+        return inbox
 
     @staticmethod
     def get_inbox_id():
-        inbox, _ = EmailFolder.objects.get_or_create(name='INBOX')
-        return inbox.pk
+        return EmailFolder.get_inbox().id
 
 
 class EmailMessage(models.Model):

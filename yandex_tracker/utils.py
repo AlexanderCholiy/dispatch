@@ -9,6 +9,7 @@ from typing import Optional
 import requests
 from django.db import models
 from django.utils import timezone
+from yandex_tracker_client import TrackerClient
 
 from core.constants import YANDEX_TRACKER_ROTATING_FILE
 from core.loggers import LoggerFactory
@@ -150,6 +151,9 @@ class YandexTrackerManager:
         self._current_user_uid: Optional[str] = None
         self.local_fields_url = (
             f'https://api.tracker.yandex.net/v3/queues/{queue}/localFields')
+
+        self.client = TrackerClient(
+            token=self.access_token, org_id=self.organisation_id)
 
         self._statuses_cache = None
         self._statuses_last_update = 0
@@ -295,6 +299,8 @@ class YandexTrackerManager:
         try:
             self.access_token = tokens['access_token']
             self.refresh_token = tokens['refresh_token']
+            self.client = TrackerClient(
+                token=self.access_token, org_id=self.organisation_id)
         except KeyError:
             raise YandexTrackerAuthErr(response.status_code, response.text)
 
@@ -865,7 +871,7 @@ class YandexTrackerManager:
             }
 
             if page > 1:
-                time.sleep(0.5)
+                time.sleep(1)
 
             batch = self._make_request(
                 HTTPMethod.POST,

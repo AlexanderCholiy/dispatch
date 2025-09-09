@@ -6,7 +6,7 @@ from django.db import connection, models
 from django.db.models import Count, Min, Q
 from django.utils import timezone
 
-from emails.models import EmailMessage
+from emails.models import EmailMessage, EmailFolder
 from users.models import Roles, User
 from yandex_tracker.utils import YandexTrackerManager
 
@@ -407,6 +407,8 @@ class IncidentManager(IncidentValidator):
         """
         # Все письма относящиеся к переписке:
         emails_thread = self.get_email_thread(email_msg.email_msg_id)
+        first_email = emails_thread[0] if emails_thread else None
+        print(emails_thread)
 
         # Есть ли в переписке первое сообщение:
         is_full_thread = any(et.is_first_email for et in emails_thread)
@@ -422,6 +424,7 @@ class IncidentManager(IncidentValidator):
         actual_email_incident: Optional[Incident] = (
             Incident.objects.get(id=actual_email_incident_id)
         ) if actual_email_incident_id is not None else None
+        print(actual_email_incident)
 
         if not actual_email_incident and yt_manager:
             actual_email_incident = self.get_incident_by_yandex_tracker(
@@ -451,8 +454,12 @@ class IncidentManager(IncidentValidator):
             new_incident = False
         # Письмо в переписке не относится ни к одному инциденту, поэтому
         # надо создать новый инцидент, при условии что у нас есть полная
-        # переписка:
-        elif actual_email_incident is None and is_full_thread:
+        # переписка и первое письмо из стандартной папки INBOX:
+        elif (
+            actual_email_incident is None
+            and is_full_thread
+            and first_email.folder == EmailFolder.get_inbox()
+        ):
             new_incident = True
 
             actual_email_incident = Incident.objects.create(

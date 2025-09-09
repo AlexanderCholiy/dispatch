@@ -20,7 +20,7 @@ class Command(BaseCommand):
             name_ru='Local ID',
             description='Идентификатор инцидента в БД',
             readonly=False,
-            hidden=True,
+            hidden=False,
             visible=False,
             category_id=yt_manager.agile_category_field_id
         )
@@ -30,7 +30,7 @@ class Command(BaseCommand):
             name_ru='Local emails IDs',
             description='Идентификаторы писем добавленных по инциденту',
             readonly=False,
-            hidden=True,
+            hidden=False,
             visible=False,
             category_id=yt_manager.agile_category_field_id
         )

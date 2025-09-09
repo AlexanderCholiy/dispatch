@@ -22,6 +22,7 @@ from .models import (
     EmailReference,
     EmailTo,
     EmailToCC,
+    EmailFolder,
 )
 
 
@@ -64,6 +65,7 @@ class EmailManager:
         email_msg_references: list[str],
         email_attachments_urls: list[str],
         email_attachments_intext_urls: list[str],
+        folder: EmailFolder,
     ) -> EmailMessage:
         """Добавление (обновление) сообщения электронной почты в БД."""
         email_message, _ = EmailMessage.objects.update_or_create(
@@ -81,6 +83,7 @@ class EmailManager:
                 'was_added_2_yandex_tracker': (
                     was_added_2_yandex_tracker
                 ),
+                'folder': folder,
             },
         )
 

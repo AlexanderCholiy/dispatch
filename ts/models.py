@@ -3,7 +3,9 @@ from django.db import models
 from core.constants import MAX_LG_DESCRIPTION, MAX_ST_DESCRIPTION
 from emails.constants import MAX_EMAIL_LEN
 
-from .constants import MAX_PHONE_LEN, MAX_POLE_LEN, UNDEFINED_CASE
+from .constants import (
+    MAX_PHONE_LEN, MAX_POLE_LEN, UNDEFINED_CASE, UNDEFINED_ID
+)
 
 
 def get_default_contractor():
@@ -158,6 +160,25 @@ class Pole(models.Model):
         ]
         verbose_name = 'опора TS'
         verbose_name_plural = 'Опоры TowerStore'
+
+    @staticmethod
+    def add_default_value():
+        pole, _ = Pole.objects.get_or_create(
+            site_id=UNDEFINED_ID,
+            defaults={
+                'pole': UNDEFINED_CASE,
+                'bs_name': UNDEFINED_CASE,
+                'pole_status': None,
+                'pole_latitude': None,
+                'pole_longtitude': None,
+                'pole_height': None,
+                'region': None,
+                'address': None,
+                'infrastructure_company': None,
+                'anchor_operator': None,
+            },
+        )
+        return pole
 
     def __str__(self):
         return self.pole

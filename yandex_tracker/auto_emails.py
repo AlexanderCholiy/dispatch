@@ -39,6 +39,9 @@ class AutoEmailsFromYT:
     ) -> bool:
         """
         Универсальная функция для отправки автоответов.
+        Так как YandexTracker не предоставляет данные об отправленных email,
+        в копию добавляем email по которому создаются автоматические заявки
+        в YandexTracker.
 
         Args:
             issue: Данные заявки из Yandex Tracker
@@ -61,6 +64,11 @@ class AutoEmailsFromYT:
         issue_key = issue['key']
         error_message = error_message or (
             'Не удалось отправить автоматический ответ')
+
+        email_to_cc = email_to_cc if email_to_cc else []
+
+        if self.email_parser.email_login not in email_to_cc:
+            email_to_cc.append(self.email_parser.email_login)
 
         success_sent_email = self._send_email(
             issue, email_to, email_to_cc, text_template, subject_template)
@@ -362,10 +370,10 @@ class AutoEmailsFromYT:
                     eml_datetime = email.email_date.astimezone(CURRENT_TZ)
                     counter_email += 1
                     text_parts.append(
-                        f'\nСообщение №{counter_email} '
+                        f'\n*Сообщение №{counter_email} *'
                         f'({eml_datetime:%d.%m.%Y %H:%M}):'
                     )
-                    text_parts.append(f'```{preview}```')
+                    text_parts.append(preview)
 
         text_parts.append('\n\nВАЖНО: НЕ МЕНЯЙТЕ ТЕМУ ПИСЬМА ПРИ ОТВЕТЕ')
 
