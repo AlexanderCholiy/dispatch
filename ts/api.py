@@ -25,7 +25,6 @@ from .constants import (
     TS_POLES_TL_URL,
     UNDEFINED_CASE,
     UNDEFINED_EMAILS,
-    UNDEFINED_ID,
 )
 from .models import (
     AVRContractor,
@@ -101,21 +100,7 @@ class Api(SocialValidators):
             Pole.objects.filter(site_id__in=site_ids_to_delete).delete()
 
         # Добавляем опору по умолчанию:
-        Pole.objects.update_or_create(
-            site_id=UNDEFINED_ID,
-            defaults={
-                'pole': UNDEFINED_CASE,
-                'bs_name': UNDEFINED_CASE,
-                'pole_status': None,
-                'pole_latitude': None,
-                'pole_longtitude': None,
-                'pole_height': None,
-                'region': None,
-                'address': None,
-                'infrastructure_company': None,
-                'anchor_operator': None,
-            },
-        )
+        Pole.add_default_value()
 
         # Обновляем актуальные записи:
         find_unvalid_values = False
@@ -209,7 +194,7 @@ class Api(SocialValidators):
             if is_up:
                 default_contractor.emails.set(email_objs)
 
-            pole = Pole.objects.get(pole=UNDEFINED_CASE)
+            pole = Pole.add_default_value()
             pole.avr_contractor = default_contractor
             pole.save()
 

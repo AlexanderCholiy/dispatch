@@ -133,6 +133,7 @@ class Command(BaseCommand):
             incident = incidents_dict.get(database_id)
 
             if not incident:
+                yt_manager.create_incident_from_issue(issue, True)
                 continue
 
             is_sla_expired = issue.get(

@@ -21,6 +21,8 @@ yt_managment_logger = LoggerFactory(
 class Command(BaseCommand):
     help = 'Обновление данных в YandexTracker.'
 
+    min_seconds = 3
+
     def handle(self, *args, **kwargs):
         tg_manager.send_startup_notification(__name__)
 
@@ -59,7 +61,7 @@ class Command(BaseCommand):
                     tg_manager.send_error_notification(__name__, err)
                     last_error_type = type(err).__name__
 
-    @min_wait_timer(yt_managment_logger)
+    @min_wait_timer(yt_managment_logger, min_seconds)
     @timer(yt_managment_logger)
     def add_issues_2_yt(self, yt_manager: YandexTrackerManager):
         emails = YandexTrackerManager.emails_for_yandex_tracker()
@@ -68,8 +70,27 @@ class Command(BaseCommand):
 
         error_count = 0
 
+        if not emails:
+            return total, error_count
+
+        # Поля database_global_field_id и emails_ids_global_field_id
+        # пользователи могут случайно изменить, поэтому снизим вероятность
+        # этого переключая состояния этих полей:
+        yt_manager.update_custom_field(
+            field_id=yt_manager.database_global_field_id,
+            readonly=False,
+            hidden=False,
+            visible=False,
+        )
+        yt_manager.update_custom_field(
+            field_id=yt_manager.emails_ids_global_field_id,
+            readonly=False,
+            hidden=False,
+            visible=False,
+        )
+
         for index, email in enumerate(emails):
-            PrettyPrint().progress_bar_info(
+            PrettyPrint().progress_bar_error(
                 index, total, 'Обновление заявок в YandexTracker:'
             )
             incident = email.email_incident
@@ -95,6 +116,19 @@ class Command(BaseCommand):
                 else:
                     email.was_added_2_yandex_tracker = True
                     email.save()
+
+        yt_manager.update_custom_field(
+            field_id=yt_manager.database_global_field_id,
+            readonly=True,
+            hidden=False,
+            visible=False,
+        )
+        yt_manager.update_custom_field(
+            field_id=yt_manager.emails_ids_global_field_id,
+            readonly=True,
+            hidden=False,
+            visible=False,
+        )
 
         yt_managment_logger.info(
             'Добавление инцидентов в YandexTracker завершено. '

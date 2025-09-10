@@ -1,6 +1,7 @@
 # dispatch
 Сервер диспетчеризации, завязанный на YandexTracker
 
+python 3.12
 
 Установка Docker
 # Обновляем пакеты
@@ -100,3 +101,18 @@ sudo chmod -R 777 ./logs
 
 rm -rf ~/.vscode-server
 sudo chmod -R 777 /home/a.choliy/dispatch/logs
+
+
+
+
+
+
+
+ALTER SEQUENCE public.emails_emailmessage_id_seq RESTART WITH 10000;
+ALTER SEQUENCE public.incidents_incident_id_seq RESTART WITH 10000;
+
+
+Обрати внимание в рабочем процессе где стоит галочка!
+
+
+sudo docker ps -a

@@ -2,10 +2,13 @@ from django.contrib.auth import get_user_model
 from django.db import models
 
 from core.constants import MAX_EMAIL_ID_LEN
-from core.models import Attachment, Msg2, SpecialEmail
+from core.models import Attachment, Detail, Msg2, SpecialEmail
 from incidents.models import Incident
 
-from .constants import MAX_EMAIL_LEN, MAX_EMAIL_SUBJECT_LEN
+from .constants import (
+    MAX_EMAIL_LEN,
+    MAX_EMAIL_SUBJECT_LEN,
+)
 
 User = get_user_model()
 
@@ -19,6 +22,29 @@ class EmailErr(SpecialEmail):
 
     def __str__(self):
         return self.email_msg_id
+
+
+class EmailFolder(Detail):
+    """Модель для папок писем"""
+
+    class Meta:
+        verbose_name = 'папка писем'
+        verbose_name_plural = 'Папки писем'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['name'],
+                name='unique_email_folder'
+            )
+        ]
+
+    @staticmethod
+    def get_inbox():
+        inbox, _ = EmailFolder.objects.get_or_create(name='INBOX')
+        return inbox
+
+    @staticmethod
+    def get_inbox_id():
+        return EmailFolder.get_inbox().id
 
 
 class EmailMessage(models.Model):
@@ -80,6 +106,13 @@ class EmailMessage(models.Model):
         related_name='email_messages',
         verbose_name='Номер инцидента',
         db_index=True
+    )
+    folder = models.ForeignKey(
+        EmailFolder,
+        on_delete=models.SET_DEFAULT,
+        default=EmailFolder.get_inbox_id,
+        related_name='email_messages',
+        verbose_name='Папка письма',
     )
 
     class Meta:

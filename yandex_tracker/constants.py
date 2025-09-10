@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.utils import timezone
 
 INCIDENT_REGION_NOT_FOR_YT: list[str] = [
@@ -19,6 +21,8 @@ YT_ISSUES_DAYS_AGO_FILTER = 30
 
 CURRENT_TZ = timezone.get_current_timezone()
 MAX_PREVIEW_TEXT_LEN = 1024
+
+NOTIFY_SPAM_DELAY = timedelta(seconds=60)  # Защита от спама автоответов
 
 
 class IsExpiredSLA:

@@ -34,7 +34,7 @@ class EmailMessageInline(admin.StackedInline):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.order_by('email_date', 'id')
+        return qs.order_by('is_first_email', 'email_date', 'id')
 
     def view_link(self, obj):
         url = reverse('admin:emails_emailmessage_change', args=[obj.id])
@@ -50,25 +50,6 @@ class IncidentStatusHistoryInline(admin.TabularInline):
     verbose_name_plural = 'Статусы инцидента'
 
 
-class LatestStatusFilter(admin.SimpleListFilter):
-    title = 'Статус'
-    parameter_name = 'latest_status'
-
-    def lookups(self, request, model_admin):
-        statuses = (
-            IncidentStatusHistory
-            .objects.values_list('status__name', flat=True).distinct()
-        )
-        return [(status, status) for status in statuses]
-
-    def queryset(self, request, queryset):
-        if self.value():
-            return queryset.filter(
-                status_history__status__name=self.value()
-            ).distinct()
-        return queryset
-
-
 @admin.register(Incident)
 class IncidentAdmin(admin.ModelAdmin):
     list_per_page = INCIDENTS_PER_PAGE
@@ -82,9 +63,9 @@ class IncidentAdmin(admin.ModelAdmin):
     )
     search_fields = ('pole__pole', 'id',)
     list_filter = (
-        LatestStatusFilter,
         'incident_type',
         'responsible_user',
+        'is_incident_finish',
     )
     autocomplete_fields = ('pole', 'base_station')
     list_editable = ('incident_type', 'responsible_user')
@@ -124,6 +105,7 @@ class IncidentAdmin(admin.ModelAdmin):
             'classes': ('collapse',),
             'fields': (
                 'is_incident_finish',
+                'is_auto_incident',
             ),
         }),
     )

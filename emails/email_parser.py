@@ -20,7 +20,7 @@ from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
 from core.utils import Config
 from core.wraps import min_wait_timer, timer
-from emails.models import EmailErr, EmailMessage
+from emails.models import EmailErr, EmailFolder, EmailMessage
 from incidents.utils import IncidentManager
 from yandex_tracker.exceptions import YandexTrackerAuthErr
 from yandex_tracker.utils import YandexTrackerManager, yt_manager
@@ -37,12 +37,15 @@ email_parser_config = {
     'PARSING_EMAIL_PSWD': os.getenv('PARSING_EMAIL_PSWD'),
     'PARSING_EMAIL_SERVER': os.getenv('PARSING_EMAIL_SERVER'),
     'PARSING_EMAIL_PORT': os.getenv('PARSING_EMAIL_PORT', 993),
+    'PARSING_EMAIL_SENT_FOLDER_NAME': os.getenv('PARSING_EMAIL_SENT_FOLDER_NAME'),  # noqa: E501
 }
 
 Config.validate_env_variables(email_parser_config)
 
 
 class EmailParser(EmailValidator, EmailManager, IncidentManager):
+
+    inbox_folder_name = 'INBOX'
 
     def __init__(
         self,
@@ -51,12 +54,16 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
         email_server: str,
         email_port: str | int,
         yt_manager: Optional[YandexTrackerManager],
+        sent_folder_name: str,
     ):
         self.email_login = email_login
         self.email_pswd = email_pswd
         self.email_server = email_server
         self.email_port = int(email_port)
+
         self.yt_manager = yt_manager
+
+        self.sent_folder_name = sent_folder_name
 
     def _find_emails_by_date(
         self, today: datetime, check_days: int, mail: imaplib.IMAP4_SSL
@@ -260,13 +267,23 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
 
         return all_messages
 
+    @property
+    def folders_list(self):
+        """Список доступных папок в почте."""
+        with imaplib.IMAP4_SSL(self.email_server, self.email_port) as mail:
+            mail.login(self.email_login, self.email_pswd)
+            _, folders = mail.list()
+            return [
+                imap_folder.decode() for imap_folder in folders
+            ]
+
     @min_wait_timer(email_parser_logger)
     @timer(email_parser_logger)
     def fetch_unread_emails(
         self,
         check_days: int = 0,
         check_err_days: int = 7,
-        mailbox: str = 'INBOX',
+        mailbox: str = inbox_folder_name,
     ):
         """
         Парсинг писем для получения непрочитанных сообщений и запись их в БД.
@@ -282,6 +299,23 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                 Папка для проверки новых писем.
                 По умолчанию стандартная папка входящих писем INBOX.
         """
+        if mailbox == self.inbox_folder_name:
+            folder, _ = EmailFolder.objects.get_or_create(
+                name='INBOX',
+                defaults={
+                    'description': 'Папка входящих email (по умолчанию)'
+                }
+            )
+
+        elif mailbox == self.sent_folder_name:
+            folder, _ = EmailFolder.objects.get_or_create(
+                name='SENT',
+                defaults={
+                    'description': 'Папка исходящих email (по умолчанию)'
+                }
+            )
+        else:
+            folder, _ = EmailFolder.objects.get_or_create(name=mailbox)
 
         today = timezone.now()
         err_days_ago = today - timedelta(
@@ -332,7 +366,8 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
 
             for index, msg in enumerate(parsed_messages):
 
-                PrettyPrint.progress_bar_debug(index, total, 'Парсинг почты:')
+                PrettyPrint.progress_bar_debug(
+                    index, total, f'Парсинг почты (папка {folder.name}):')
                 email_msg_id = None
 
                 try:
@@ -570,6 +605,7 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                             email_attachments_intext_urls=(
                                 email_attachments_intext_urls
                             ),
+                            folder=folder,
                         )
                         self.add_incident_from_email(
                             email_msg, self.yt_manager
@@ -614,13 +650,18 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                             'email_attachments_intext_urls': (
                                 email_attachments_intext_urls
                             ),
+                            'folder': folder,
                         }
                         email_err_msg_ids.append(email_msg_id)
                         email_parser_logger.exception(
                             f'Не валидные данные: {invalid_data}')
-            email_parser_logger.info(
-                f'Было найдено {email_msg_counter} новых сообщений'
-            )
+
+            if email_msg_counter:
+                email_parser_logger.info(
+                    f'Было найдено {email_msg_counter} новых сообщений '
+                    f'в папке {folder.name}'
+                )
+
             self.add_err_msg_bulk(email_err_msg_ids)
             self.del_err_msg_bulk(email_err_msg_ids_to_del)
 
@@ -631,4 +672,5 @@ email_parser = EmailParser(
     email_server=email_parser_config['PARSING_EMAIL_SERVER'],
     email_port=email_parser_config['PARSING_EMAIL_PORT'],
     yt_manager=yt_manager,
+    sent_folder_name=email_parser_config['PARSING_EMAIL_SENT_FOLDER_NAME'],
 )

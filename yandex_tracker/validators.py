@@ -472,6 +472,7 @@ def check_yt_incident_data(
         user_uid = int(user['id']) if user else None
         username: Optional[str] = next(
             (name for name, uid in yt_users.items() if uid == user_uid), None)
+
         if incident.responsible_user and not username:
             incident.responsible_user = None
             incident.save()

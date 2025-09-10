@@ -1,8 +1,10 @@
 import time
+from datetime import datetime, timedelta
 from typing import Optional
 
 from django.core.management.base import BaseCommand
 from django.db.models import OuterRef, Prefetch, Subquery
+from django.utils import timezone
 
 from core.constants import (
     MIN_WAIT_SEC_WITH_CRITICAL_EXC,
@@ -26,7 +28,10 @@ from incidents.utils import IncidentManager
 from ts.models import BaseStation, Pole
 from users.models import Roles, User
 from yandex_tracker.auto_emails import AutoEmailsFromYT
-from yandex_tracker.constants import YT_ISSUES_DAYS_AGO_FILTER
+from yandex_tracker.constants import (
+    NOTIFY_SPAM_DELAY,
+    YT_ISSUES_DAYS_AGO_FILTER,
+)
 from yandex_tracker.utils import YandexTrackerManager, yt_manager
 from yandex_tracker.validators import check_yt_incident_data
 
@@ -36,6 +41,8 @@ yt_managment_logger = LoggerFactory(
 
 class Command(BaseCommand):
     help = 'Обновление данных в YandexTracker, с уведомлениями в Telegram.'
+
+    min_wait = 3
 
     def handle(self, *args, **kwargs):
         tg_manager.send_startup_notification(__name__)
@@ -75,7 +82,7 @@ class Command(BaseCommand):
                     tg_manager.send_error_notification(__name__, err)
                     last_error_type = type(err).__name__
 
-    @min_wait_timer(yt_managment_logger)
+    @min_wait_timer(yt_managment_logger, min_wait)
     @timer(yt_managment_logger)
     def check_unclosed_issues(self, yt_manager: YandexTrackerManager) -> tuple:
         """
@@ -164,11 +171,12 @@ class Command(BaseCommand):
             database_id: Optional[int] = issue.get(
                 yt_manager.database_global_field_id)
 
-            if not database_id:
-                continue
-
             status_key: str = issue['status']['key']
             issue_key: str = issue['key']
+
+            if not database_id:
+                yt_manager.create_incident_from_issue(issue, False)
+                continue
 
             try:
                 incident = incidents_prefetched.get(database_id)
@@ -215,6 +223,15 @@ class Command(BaseCommand):
                 # Обработка автоответов (данные автоматически синхронизируются)
                 # добавлена дополнительная ошибка от спама, если нарушат
                 # переходы в рабочем процессе:
+                now = timezone.now()
+                last_status_dt: datetime = last_status_history.insert_date
+                delta: timedelta = now - last_status_dt
+
+                # True, если можно отправлять:
+                check_status_dt = delta >= NOTIFY_SPAM_DELAY
+                timeout = max(
+                    int((NOTIFY_SPAM_DELAY - delta).total_seconds()), 0)
+
                 if (
                     status_key == yt_manager.error_status_key
                     and last_status_history.status.name != (
@@ -271,83 +288,85 @@ class Command(BaseCommand):
                     updated_incidents_counter += 1
                 elif (
                     status_key == yt_manager.notify_op_issue_in_work_status_key
-                    and last_status_history.status.name not in (
-                        DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_NAME,
-                        DEFAULT_ERR_STATUS_NAME,
-                    )
                 ):
-                    yt_emails.notify_operator_issue_in_work(issue, incident)
-                    updated_incidents_counter += 1
-                elif (
-                    status_key == yt_manager.notify_op_issue_in_work_status_key
-                    and last_status_history.status.name in (
-                        DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_NAME,
-                        DEFAULT_ERR_STATUS_NAME,
-                    )
-                ):
-                    yt_manager.update_issue_status(
-                        issue_key, yt_manager.error_status_key,
-                        (
-                            'Уведомление о принятии работ уже было отправлено '
-                            'заявителям.'
+                    if not incident.is_auto_incident:
+                        yt_manager.update_issue_status(
+                            issue_key, yt_manager.error_status_key,
+                            (
+                                'Нельзя отправить автоматическое уведомление '
+                                'заявителю для заявки, созданной вручную.'
+                            )
                         )
-                    )
-                    updated_incidents_counter += 1
+                        updated_incidents_counter += 1
+                    elif last_status_history.status.name not in (
+                        DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_NAME,
+                    ):
+                        yt_emails.notify_operator_issue_in_work(
+                            issue, incident)
+                        updated_incidents_counter += 1
+                    elif check_status_dt:
+                        yt_manager.update_issue_status(
+                            issue_key, yt_manager.error_status_key,
+                            (
+                                'Уведомление о принятии работ недавно было '
+                                'отправлено заявителю. '
+                                f'Попробуйте снова через {timeout} секунд.'
+                            )
+                        )
+                        updated_incidents_counter += 1
                 elif (
                     status_key == yt_manager.notify_op_issue_closed_status_key
-                    and last_status_history.status.name not in (
-                        DEFAULT_NOTIFIED_OP_END_STATUS_NAME,
-                        DEFAULT_ERR_STATUS_NAME,
-                    )
                 ):
-                    yt_emails.notify_operator_issue_close(issue, incident)
-                    updated_incidents_counter += 1
-                elif (
-                    status_key == yt_manager.notify_op_issue_closed_status_key
-                    and last_status_history.status.name in (
-                        DEFAULT_NOTIFIED_OP_END_STATUS_NAME,
-                        DEFAULT_ERR_STATUS_NAME,
-                    )
-                ):
-                    yt_manager.update_issue_status(
-                        issue_key, yt_manager.error_status_key,
-                        (
-                            'Уведомление о закрытии работ уже было отправлено '
-                            'заявителям.'
+                    if not incident.is_auto_incident:
+                        yt_manager.update_issue_status(
+                            issue_key, yt_manager.error_status_key,
+                            (
+                                'Нельзя отправить автоматическое уведомление '
+                                'заявителю для заявки, созданной вручную.'
+                            )
                         )
-                    )
-                    updated_incidents_counter += 1
+                        updated_incidents_counter += 1
+                    elif last_status_history.status.name not in (
+                        DEFAULT_NOTIFIED_OP_END_STATUS_NAME,
+                    ):
+                        yt_emails.notify_operator_issue_close(issue, incident)
+                        updated_incidents_counter += 1
+                    elif check_status_dt:
+                        yt_manager.update_issue_status(
+                            issue_key, yt_manager.error_status_key,
+                            (
+                                'Уведомление о закрытии работ уже было '
+                                'отправлено заявителю. '
+                                f'Попробуйте снова через {timeout} секунд.'
+                            )
+                        )
+                        updated_incidents_counter += 1
                 elif (
                     status_key == yt_manager.notify_avr_in_work_status_key
-                    and last_status_history.status.name not in (
-                        DEFAULT_NOTIFIED_AVR_STATUS_NAME,
-                        DEFAULT_ERR_STATUS_NAME,
-                    )
                 ):
-                    yt_emails.notify_avr_contractor(issue, incident)
-                    updated_incidents_counter += 1
-                elif (
-                    status_key == yt_manager.notify_avr_in_work_status_key
-                    and last_status_history.status.name in (
+                    if last_status_history.status.name not in (
                         DEFAULT_NOTIFIED_AVR_STATUS_NAME,
-                        DEFAULT_ERR_STATUS_NAME,
-                    )
-                ):
-                    yt_manager.update_issue_status(
-                        issue_key, yt_manager.error_status_key,
-                        (
-                            'Информация об инциденте уже была передана в '
-                            'работу подрядчику.'
+                    ):
+                        yt_emails.notify_avr_contractor(issue, incident)
+                        updated_incidents_counter += 1
+                    elif check_status_dt:
+                        yt_manager.update_issue_status(
+                            issue_key, yt_manager.error_status_key,
+                            (
+                                'Информация об инциденте уже была передана в '
+                                'работу подрядчику.'
+                                f'Попробуйте снова через {timeout} секунд.'
+                            )
                         )
-                    )
-                    updated_incidents_counter += 1
+                        updated_incidents_counter += 1
 
             except Exception as e:
                 yt_managment_logger.exception(e)
                 error_count += 1
 
-        yt_managment_logger.info(
-            f'Было обновлено {updated_incidents_counter} из {total} инцидентов'
-        )
+        if updated_incidents_counter:
+            yt_managment_logger.info(
+                f'Было обновлено {updated_incidents_counter} инцидентов'
+            )
 
         return total, error_count

@@ -83,6 +83,10 @@ class Incident(models.Model):
         related_name='incidents',
         verbose_name='Статус инцидента',
     )
+    is_auto_incident = models.BooleanField(
+        default=True,
+        verbose_name='Сформирован автоматически',
+    )
 
     class Meta:
         verbose_name = 'инцидент'

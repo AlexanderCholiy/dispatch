@@ -34,6 +34,7 @@ services:
       - dispatch_media:/app/media
       - ./logs:/app/logs        # 👈 bind mount для логов
       - ./data:/app/data        # 👈 bind mount для data
+      - ./.env:/app/.env:ro   # 👈 монтируем .env внутрь контейнера (для cron)
     depends_on:
       - dispatch_db
     networks:

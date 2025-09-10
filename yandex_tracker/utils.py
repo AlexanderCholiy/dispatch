@@ -7,8 +7,9 @@ from http import HTTPMethod, HTTPStatus
 from typing import Optional
 
 import requests
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
+from yandex_tracker_client import TrackerClient
 
 from core.constants import YANDEX_TRACKER_ROTATING_FILE
 from core.loggers import LoggerFactory
@@ -16,7 +17,8 @@ from core.utils import Config
 from core.wraps import safe_request
 from emails.models import EmailMessage
 from emails.utils import EmailManager
-from incidents.models import Incident
+from incidents.constants import DEFAULT_STATUS_DESC, DEFAULT_STATUS_NAME
+from incidents.models import Incident, IncidentStatus, IncidentStatusHistory
 
 from .constants import (
     INCIDENT_REGION_NOT_FOR_YT,
@@ -72,6 +74,8 @@ class YandexTrackerManager:
     filter_issues_url = 'https://api.tracker.yandex.net/v2/issues/_search'
     statuses_url = 'https://api.tracker.yandex.net/v2/statuses'
     custom_field_url = 'https://api.tracker.yandex.net/v2/fields'
+    all_field_categories_url = (
+        'https://api.tracker.yandex.net/v3/fields/categories')
 
     closed_status_key = 'closed'
     error_status_key = 'error'
@@ -79,7 +83,10 @@ class YandexTrackerManager:
     need_acceptance_status_key = 'needAcceptance'
 
     system_category_field_id = '000000000000000000000001'
+    timestamp_category_field_id = '000000000000000000000002'
+    agile_category_field_id = '000000000000000000000003'
     email_category_field_id = '000000000000000000000004'
+    sla_category_field_id = '000000000000000000000005'
 
     def __init__(
         self,
@@ -146,6 +153,9 @@ class YandexTrackerManager:
         self.local_fields_url = (
             f'https://api.tracker.yandex.net/v3/queues/{queue}/localFields')
 
+        self.client = TrackerClient(
+            token=self.access_token, org_id=self.organisation_id)
+
         self._statuses_cache = None
         self._statuses_last_update = 0
 
@@ -157,9 +167,6 @@ class YandexTrackerManager:
 
         self._local_fields_cache = None
         self._local_fields_last_update = 0
-
-        self._custom_fields_cache = {}
-        self._custom_fields_last_update = {}
 
     def find_yt_number_in_text(self, text: str) -> list[str]:
         return re.findall(rf'{self.queue}-\d+', text)
@@ -290,6 +297,8 @@ class YandexTrackerManager:
         try:
             self.access_token = tokens['access_token']
             self.refresh_token = tokens['refresh_token']
+            self.client = TrackerClient(
+                token=self.access_token, org_id=self.organisation_id)
         except KeyError:
             raise YandexTrackerAuthErr(response.status_code, response.text)
 
@@ -1011,45 +1020,38 @@ class YandexTrackerManager:
         )
 
     def select_custom_field(self, field_id: str) -> dict:
-        """Информации о кастомных полях с кэшированием."""
-        if (
-            field_id not in self._custom_fields_cache
-            or (
-                time.time() - self._custom_fields_last_update.get(field_id, 0)
-            ) > self.cache_timer
-        ):
-            url = f'{self.custom_field_url}/{field_id}'
-            self._custom_fields_cache[field_id] = self._make_request(
-                HTTPMethod.GET,
-                url,
-                sub_func_name=inspect.currentframe().f_code.co_name,
-            )
-            self._custom_fields_last_update[field_id] = time.time()
-
-        return self._custom_fields_cache[field_id]
+        """Информации о кастомных полях кэширование использовать нельзя."""
+        url = f'{self.custom_field_url}/{field_id}'
+        return self._make_request(
+            HTTPMethod.GET,
+            url,
+            sub_func_name=inspect.currentframe().f_code.co_name,
+        )
 
     def update_custom_field(
         self,
         field_id: str,
-        name_en: str,
-        name_ru: str,
-        description: str,
         readonly: bool,
-        visible: bool,
         hidden: bool,
-        category_id: str
+        visible: bool,
+        name_en: Optional[str] = None,
+        name_ru: Optional[str] = None,
+        description: Optional[str] = None,
+        category_id: Optional[str] = None,
     ) -> dict:
         """
         Обновляет пользовательское поле в Яндекс.Трекере.
+        Параметры, равные None, в payload не добавляются.
 
         Args:
             field_id (str): Идентификатор пользовательского поля.
             name_en (str): Название поля на английском.
             name_ru (str): Название поля на русском.
             description (str): Описание поля.
-            readonly (bool): Флаг, делает ли поле только для чтения.
-            visible (bool): Флаг, отображается ли поле пользователям.
-            hidden (bool): Флаг, скрыто ли поле в интерфейсе.
+            readonly (bool): Возможность редактировать значение поля.
+            hidden (bool): Скрывает поле от пользователей в UI и API.
+            visible (bool): Определяет, будет ли поле отображаться в UI
+            (не в API).
             category_id (str): Идентификатор категории, к которой относится
             поле.
 
@@ -1064,25 +1066,89 @@ class YandexTrackerManager:
 
         valid_categories = {
             'system': self.system_category_field_id,
+            'timestamp': self.timestamp_category_field_id,
+            'agile': self.agile_category_field_id,
             'email': self.email_category_field_id,
+            'sla': self.sla_category_field_id,
         }
 
-        if category_id not in valid_categories.values():
+        if category_id and category_id not in valid_categories.values():
             raise KeyError(
                 f'Укажите один из доступных вариантов id: {valid_categories}'
             )
 
+        payload = {}
+
+        name_payload = {}
+        if name_en is not None:
+            name_payload['en'] = name_en
+        if name_ru is not None:
+            name_payload['ru'] = name_ru
+        if name_payload:
+            payload['name'] = name_payload
+
+        if description is not None:
+            payload['description'] = description
+
+        payload['readonly'] = readonly
+        payload['hidden'] = hidden
+        payload['visible'] = visible
+
+        return self._make_request(
+            HTTPMethod.PATCH,
+            url,
+            json=payload,
+            sub_func_name=inspect.currentframe().f_code.co_name,
+        )
+
+    @property
+    def field_categories(self):
+        return self._make_request(
+            HTTPMethod.GET,
+            self.all_field_categories_url,
+            sub_func_name=inspect.currentframe().f_code.co_name,
+        )
+
+    @transaction.atomic
+    def create_incident_from_issue(
+        self, issue: dict, is_incident_finish: bool
+    ) -> Incident:
+        """Создаем инцидент по задаче, созданной вручную в YandexTracker."""
+        incident_date = issue['createdAt']
+        incident = Incident.objects.create(
+            incident_date=incident_date,
+            is_incident_finish=is_incident_finish,
+            is_auto_incident=False
+        )
+
+        status, _ = IncidentStatus.objects.get_or_create(
+            name=DEFAULT_STATUS_NAME,
+            defaults={'description': DEFAULT_STATUS_DESC}
+        )
+        IncidentStatusHistory.objects.create(
+            incident=incident,
+            status=status,
+            comments='Заявка была заведена через YandexTracker'
+        )
+        incident.statuses.add(status)
+
+        issue_key: str = issue['key']
+
         payload = {
-            'name': {
-                'en': name_en,
-                'ru': name_ru
-            },
-            'description': description,
-            'readonly': readonly,
-            'visible': visible,
-            'hidden': hidden,
-            'category': category_id
+            self.database_global_field_id: incident.pk,
         }
+
+        url = f'{self.create_issue_url}{issue_key}'
+
+        # Лучше потом не возвращать, т.к. в этот момент поле где-то может
+        # обновляться:
+        self.update_custom_field(
+            field_id=yt_manager.database_global_field_id,
+            readonly=False,
+            hidden=False,
+            visible=False,
+        )
+
         return self._make_request(
             HTTPMethod.PATCH,
             url,
