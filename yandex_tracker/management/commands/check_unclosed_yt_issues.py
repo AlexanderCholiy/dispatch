@@ -364,8 +364,9 @@ class Command(BaseCommand):
                 yt_managment_logger.exception(e)
                 error_count += 1
 
-        yt_managment_logger.info(
-            f'Было обновлено {updated_incidents_counter} инцидентов'
-        )
+        if updated_incidents_counter:
+            yt_managment_logger.info(
+                f'Было обновлено {updated_incidents_counter} инцидентов'
+            )
 
         return total, error_count

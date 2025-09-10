@@ -113,3 +113,6 @@ ALTER SEQUENCE public.incidents_incident_id_seq RESTART WITH 10000;
 
 
 Обрати внимание в рабочем процессе где стоит галочка!
+
+
+sudo docker ps -a

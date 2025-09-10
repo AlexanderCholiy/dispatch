@@ -655,10 +655,13 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                         email_err_msg_ids.append(email_msg_id)
                         email_parser_logger.exception(
                             f'Не валидные данные: {invalid_data}')
-            email_parser_logger.info(
-                f'Было найдено {email_msg_counter} новых сообщений '
-                f'в папке {folder.name}'
-            )
+
+            if email_msg_counter:
+                email_parser_logger.info(
+                    f'Было найдено {email_msg_counter} новых сообщений '
+                    f'в папке {folder.name}'
+                )
+
             self.add_err_msg_bulk(email_err_msg_ids)
             self.del_err_msg_bulk(email_err_msg_ids_to_del)
 

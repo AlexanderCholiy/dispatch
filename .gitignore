@@ -213,5 +213,9 @@ media/*
 
 # Logs
 *.log
-log/
-logs/
+log/*
+logs/*
+!logs/supervisor/
+logs/supervisor/*
+!logs/cron/
+logs/cron/*
