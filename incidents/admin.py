@@ -106,6 +106,7 @@ class IncidentAdmin(admin.ModelAdmin):
             'fields': (
                 'is_incident_finish',
                 'is_auto_incident',
+                'code',
             ),
         }),
     )

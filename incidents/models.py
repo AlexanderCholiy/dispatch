@@ -9,7 +9,7 @@ from django.utils import timezone
 from core.models import Detail
 from ts.models import AVRContractor, BaseStation, Pole
 
-from .constants import MAX_STATUS_COMMENT_LEN
+from .constants import MAX_CODE_LEN, MAX_STATUS_COMMENT_LEN
 
 User = get_user_model()
 
@@ -87,6 +87,13 @@ class Incident(models.Model):
         default=True,
         verbose_name='Сформирован автоматически',
     )
+    code = models.CharField(
+        verbose_name='Код',
+        max_length=MAX_CODE_LEN,
+        null=True,
+        blank=True,
+        help_text='Используется в заголовках писем'
+    )
 
     class Meta:
         verbose_name = 'инцидент'
@@ -122,11 +129,10 @@ class Incident(models.Model):
 
     @property
     def sla_deadline(self) -> Optional[datetime]:
-        sla_deadline = None
         if self.incident_type and self.incident_type.sla_deadline:
-            sla_deadline = self.incident_date + timedelta(
+            return self.incident_date + timedelta(
                 minutes=self.incident_type.sla_deadline)
-        return sla_deadline
+        return None
     sla_deadline.fget.short_description = 'Срок устранения'
 
     @property

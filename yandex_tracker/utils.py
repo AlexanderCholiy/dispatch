@@ -784,6 +784,9 @@ class YandexTrackerManager:
                 temp_files=temp_files,
             )
             result.append(issue)
+            incident = email_incident.email_incident
+            incident.code = issue['key']
+            incident.save
         # Инцидент отсутствует в YandexTracker, но по нему пришло уточнение,
         # поэтому надо восстановить полностью цепочку писем для инцидента:
         elif not issues and not is_first_email:
@@ -811,6 +814,9 @@ class YandexTrackerManager:
                 temp_files=temp_files,
             )
             result.append(issue)
+            incident = email_incident.email_incident
+            incident.code = issue['key']
+            incident.save
             for email in all_email_incident[1:]:
                 self.add_issue_email_comment(email, issue)
         # Инцидент уже зарегестрирован в YandexTracker:
@@ -846,6 +852,9 @@ class YandexTrackerManager:
                 # Необходимо добавить новые сообщения ввиде комментаривев:
                 else:
                     self.add_issue_email_comment(email_incident, issue)
+            incident = email_incident.email_incident
+            incident.code = key
+            incident.save
 
         return result
 
@@ -1148,6 +1157,9 @@ class YandexTrackerManager:
             hidden=False,
             visible=False,
         )
+
+        incident.code = issue_key
+        incident.save()
 
         return self._make_request(
             HTTPMethod.PATCH,

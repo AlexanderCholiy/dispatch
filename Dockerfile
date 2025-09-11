@@ -6,6 +6,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     cron \
     supervisor \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Копирование requirements и установка Python пакетов:

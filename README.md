@@ -116,3 +116,8 @@ ALTER SEQUENCE public.incidents_incident_id_seq RESTART WITH 10000;
 
 
 sudo docker ps -a
+
+<!-- Поднять только БД -->
+sudo docker compose up -d dispatch_db
+
+python manage.py generateschema > schema.yaml

@@ -1,6 +1,6 @@
 import os
 
-from django.conf import settings
+from core.constants import DATA_DIR
 
 MAX_POLE_LEN = 32
 MAX_PHONE_LEN = 11
@@ -18,7 +18,7 @@ UNDEFINED_EMAILS = [
     if eml.strip()
 ]
 
-TS_DATA_DIR = os.path.join(settings.BASE_DIR, 'data', 'ts')
+TS_DATA_DIR = os.path.join(DATA_DIR, 'ts')
 POLES_FILE = os.path.join(TS_DATA_DIR, 'poles.json')
 BASE_STATIONS_FILE = os.path.join(TS_DATA_DIR, 'base_stations.json')
 AVR_FILE = os.path.join(TS_DATA_DIR, 'avr.json')

@@ -57,6 +57,7 @@ cover/
 
 # Django stuff:
 *.log
+*.sql
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
@@ -210,6 +211,7 @@ __marimo__/
 *.bak
 data/ts/*
 media/*
+data/backup_db/*
 
 # Logs
 *.log

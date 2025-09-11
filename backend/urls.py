@@ -22,7 +22,7 @@ schema_view = get_schema_view(
         title='NT API',
         default_version='v1',
         description='Документация для проекта NT',
-        contact=openapi.Contact(email='alexander.choliy@gmail.com'),
+        contact=openapi.Contact(email='a.choliy@newtowers.ru'),
         license=openapi.License(name='BSD License'),
     ),
     public=True,
@@ -95,12 +95,12 @@ app_urls = [
     path('users/', include('users.urls')),
     path('admin/', admin.site.urls),
     path('pages/', include('pages.urls')),
+    path('api/v1/', include('api.urls')),
 ]
 
-urlpatterns = auth_urlpatterns + app_urls
+urlpatterns = auth_urlpatterns + app_urls + swagger_urls
 
 if settings.DEBUG:
     urlpatterns += (path('__debug__/', include(debug_toolbar.urls)),)
     urlpatterns += static(
         settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += swagger_urls

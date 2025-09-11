@@ -463,6 +463,11 @@ def check_yt_incident_data(
         incident.is_incident_finish = False
         incident.save()
 
+    # Синхронизируем код заявки:
+    if incident.code != issue_key:
+        incident.code = issue_key
+        incident.save()
+
     # Проверяем можно ли указанному диспетчеру назначать заявки:
     is_valid_user = check_yt_user_incident(
         issue, yt_users, usernames_in_db)

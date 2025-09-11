@@ -131,10 +131,15 @@ class Command(BaseCommand):
 
         for database_id, issue in database_ids_with_issues:
             incident = incidents_dict.get(database_id)
+            issue_key = issue['key']
 
             if not incident:
                 yt_manager.create_incident_from_issue(issue, True)
                 continue
+
+            if incident.code != issue_key:
+                incident.code = issue_key
+                incident.save()
 
             is_sla_expired = issue.get(
                 yt_manager.is_sla_expired_global_field_id)

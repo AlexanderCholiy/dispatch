@@ -50,6 +50,11 @@ INSTALLED_APPS = [
     'ts.apps.TsConfig',
     'incidents.apps.IncidentsConfig',
     'yandex_tracker.apps.YandexTrackerConfig',
+    'api.apps.ApiConfig',
+    'rest_framework',
+    'django_filters',
+    'djoser',
+    'drf_yasg',
     'axes',  # после всех приложений
     'django_cleanup.apps.CleanupConfig',  # после всех приложений
 ]
@@ -153,7 +158,7 @@ AUTH_USER_MODEL = 'users.User'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-REGISTRATION_ACCESS_TOKEN_LIFETIME = timedelta(seconds=86400)
+REGISTRATION_ACCESS_TOKEN_LIFETIME = timedelta(days=1)
 
 AXES_FAILURE_LIMIT = 3
 
@@ -163,7 +168,7 @@ AXES_LOCKOUT_TEMPLATE = 'core/429_account_locked.html'
 
 AXES_USERNAME_FORM_FIELD = 'username'
 
-AXES_LOCKOUT_PARAMETERS = ["ip_address", "username"]
+AXES_LOCKOUT_PARAMETERS = ['ip_address', 'username']
 
 AXES_RESET_ON_SUCCESS = True
 
@@ -174,3 +179,36 @@ EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.AnonRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'user': '10000/day',
+        'anon': '1000/day',
+    }
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header'
+        }
+    }
+}
