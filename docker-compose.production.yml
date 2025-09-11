@@ -31,9 +31,9 @@ services:
     volumes:
       - dispatch_static:/app/collected_static
       - dispatch_media:/app/media
-      - ./logs:/app/logs        # 👈 bind mount для логов
-      - ./data:/app/data        # 👈 bind mount для data
-      - ./.env:/app/.env:ro   # 👈 монтируем .env внутрь контейнера (для cron)
+      - ./logs:/app/logs        # bind mount для логов
+      - ./data:/app/data        # bind mount для data
+      - ./.env:/app/.env:ro   # монтируем .env внутрь контейнера (для cron)
     depends_on:
       - dispatch_db
     networks:
@@ -48,7 +48,7 @@ services:
     volumes:
       - dispatch_static:/staticfiles/
       - dispatch_media:/mediafiles/
-      - ./logs/nginx:/var/log/nginx  # 👈 отдельная папка под nginx-логи
+      - ./logs/nginx:/var/log/nginx  # отдельная папка под nginx-логи
     depends_on:
       - dispatch_backend
     networks:

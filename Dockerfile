@@ -23,7 +23,7 @@ RUN mkdir -p /app/logs /app/logs/supervisor /var/log/supervisor
 COPY crontab /etc/cron.d/django-cron
 RUN chmod 0644 /etc/cron.d/django-cron && crontab /etc/cron.d/django-cron
 
-# Копирование конфигурации supervisor
+# Копирование конфигурации supervisor:
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Установка прав на entrypoint:
