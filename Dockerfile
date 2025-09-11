@@ -4,6 +4,7 @@ WORKDIR /app
 
 # Установка системных зависимостей:
 RUN apt-get update && apt-get install -y \
+    nano \
     cron \
     supervisor \
     postgresql-client \

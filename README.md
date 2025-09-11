@@ -97,6 +97,7 @@ sudo docker compose -f docker-compose.production.yml up
 
 mkdir -p ./logs/supervisor
 sudo chmod -R 777 ./logs
+sudo chmod -R 777 ./data
 
 
 rm -rf ~/.vscode-server

@@ -94,8 +94,11 @@ class Command(BaseCommand):
                 try:
                     if not any(dir_path.iterdir()):
                         folder_name = dir_path.name
-                        folder_date = dt.datetime.strptime(
-                            folder_name, SUBFOLDER_DATE_FORMAT)
+                        folder_date = timezone.make_aware(
+                            dt.datetime.strptime(
+                                folder_name, SUBFOLDER_DATE_FORMAT),
+                            timezone.get_current_timezone()
+                        )
                         if folder_date < threshold:
                             dir_path.rmdir()
                 except OSError:

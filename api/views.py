@@ -33,7 +33,7 @@ class IncidentViewSet(viewsets.ReadOnlyModelViewSet):
             ),
             to_attr='prefetched_statuses'
         ),
-    ).order_by('incident_date', 'id')
+    ).order_by('-incident_date', '-id')
 
     serializer_class = IncidentSerializer
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
