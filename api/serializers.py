@@ -93,15 +93,17 @@ class IncidentSerializer(serializers.ModelSerializer):
 
     def get_vendor_emails(self, obj: Incident):
         if obj.pole and obj.pole.avr_contractor:
-            return [
-                email.email for email in obj.pole.avr_contractor.emails.all()
-            ]
-        return []
+            return ', '.join(
+                [email.email for email in obj.pole.avr_contractor.emails.all()]
+            )
+        return None
 
     def get_operators(self, obj: Incident):
         if obj.base_station:
-            return [op.operator_name for op in obj.base_station.operator.all()]
-        return []
+            return ', '.join(
+                [op.operator_name for op in obj.base_station.operator.all()]
+            )
+        return None
 
     def get_deadline(self, obj: Incident):
         if obj.sla_deadline:
