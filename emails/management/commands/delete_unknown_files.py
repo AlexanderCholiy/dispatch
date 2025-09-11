@@ -34,7 +34,9 @@ class Command(BaseCommand):
             if relative_path not in valid_files:
                 try:
                     mtime = dt.datetime.fromtimestamp(
-                        file_path.stat().st_mtime)
+                        file_path.stat().st_mtime,
+                        tz=timezone.get_current_timezone()
+                    )
                 except OSError:
                     email_managment_logger.warning(
                         'Не удалось получить время модификации '
