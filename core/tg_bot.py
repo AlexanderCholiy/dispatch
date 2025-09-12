@@ -218,7 +218,7 @@ class TelegramNotifier:
 
     def send_first_success_notification(self, script_name: str):
         message = (
-            f'```{script_name}```\nПервый цикл обработки завершен  🎉')
+            f'```{script_name}```\nПервый цикл обработки завершен  🏁')
         self.send_success_message(message)
 
     def send_warning_counter_notification(
