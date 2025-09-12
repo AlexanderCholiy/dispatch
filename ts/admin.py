@@ -26,10 +26,10 @@ class PoleAdmin(admin.ModelAdmin):
         'bs_name',
         'address',
         'infrastructure_company',
-        'region',
+        'region_ru',
     )
     search_fields = ('pole', 'bs_name', 'address',)
-    list_filter = ('infrastructure_company', 'region')
+    list_filter = ('infrastructure_company', 'region_ru')
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)

@@ -86,6 +86,11 @@ class Command(BaseCommand):
         incident_ids_to_update = set()
         database_ids_with_issues = []
 
+        default_end_status, _ = IncidentStatus.objects.get_or_create(
+            name=DEFAULT_END_STATUS_NAME,
+            defaults={'description': DEFAULT_END_STATUS_DESC}
+        )
+
         for index, issue in enumerate(closed_issues):
             PrettyPrint.progress_bar_warning(
                 index, total, 'Обработка закрытых заявок:')
@@ -95,16 +100,10 @@ class Command(BaseCommand):
                 incident_ids_to_update.add(database_id)
                 database_ids_with_issues.append((database_id, issue))
             else:
-                is_sla_expired = issue.get(
-                    yt_manager.is_sla_expired_global_field_id)
+                yt_manager.create_incident_from_issue(issue, True)
 
         if not incident_ids_to_update:
             return
-
-        default_end_status, _ = IncidentStatus.objects.get_or_create(
-            name=DEFAULT_END_STATUS_NAME,
-            defaults={'description': DEFAULT_END_STATUS_DESC}
-        )
 
         # Подзапрос для последней даты статуса каждого инцидента:
         latest_status_subquery = IncidentStatusHistory.objects.filter(
@@ -113,9 +112,9 @@ class Command(BaseCommand):
 
         incidents_queryset = Incident.objects.filter(
             id__in=incident_ids_to_update
-        ).select_related(  # Используется для ForeignKey
+        ).select_related(
             'incident_type',
-        ).prefetch_related(  # Используется для ManyToManyField
+        ).prefetch_related(
             'statuses'
         ).annotate(
             latest_status_date=Subquery(latest_status_subquery)

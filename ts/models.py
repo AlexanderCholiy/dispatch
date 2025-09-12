@@ -128,6 +128,12 @@ class Pole(models.Model):
         blank=True,
         verbose_name='Регион'
     )
+    region_ru = models.CharField(
+        max_length=MAX_ST_DESCRIPTION,
+        null=True,
+        blank=True,
+        verbose_name='Регион (ru)'
+    )
     address = models.CharField(
         max_length=MAX_LG_DESCRIPTION,
         null=True,

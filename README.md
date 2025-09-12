@@ -122,3 +122,13 @@ sudo docker ps -a
 sudo docker compose up -d dispatch_db
 
 python manage.py generateschema > schema.yaml
+
+
+Кол-во ядер (нужно для настройки gunicorn)
+lscpu | grep "^CPU(s):"
+
+Кол-во потоков (нужно для настройки gunicorn)
+lscpu | grep "Thread(s) per core"
+
+Формула для workers:
+workers = 2 * CPU + 1

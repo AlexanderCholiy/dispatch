@@ -156,17 +156,28 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
         in_reply_to: Optional[str],
         references: Optional[list[str]],
         message_id: Optional[str] = None,
+        our_message_ids: Optional[set[str]] = None,
     ) -> bool:
         """
-        Определяет, является ли письмо первым в переписке.
-        Учитывает наличие заголовков In-Reply-To и References.
+        Определяет, является ли письмо первым для нас в цепочке.
+
+        Args:
+            in_reply_to: заголовок In-Reply-To
+            references: список References
+            message_id: текущий message-id письма
+            our_message_ids: set всех message_id, которые уже есть в нашей
+            системе
         """
 
         # Если нет цепочки ссылок:
         if not in_reply_to and not references:
             return True
 
-        # Если In-Reply-To указывает на самого себя
+        # References пустой или None:
+        if not references:
+            return True
+
+        # Если In-Reply-To указывает на самого себя:
         if (
             message_id
             and in_reply_to
@@ -174,21 +185,30 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
         ):
             return True
 
-        # Если In-Reply-To auto-сгенерированный или пустой мусор
+        # Если In-Reply-To auto-сгенерированный или пустой мусор:
         if in_reply_to and (
             in_reply_to.lower().startswith('<auto-')
             or in_reply_to.lower() in {'<null>', '<0>', '<none>'}
         ):
             return True
 
-        # Иногда встречается auto-сгенерированный In-Reply-To:
-        if in_reply_to and in_reply_to.lower().startswith('<auto-'):
+        # References состоит из одного элемента и он совпадает с message_id:
+        if (
+            message_id
+            and references
+            and len(references) == 1
+            and references[0].strip() == message_id.strip()
+        ):
             return True
 
-        # References состоит из одного элемента и он совпадает с message_id:
-        if message_id and references and len(references) == 1:
-            if references[0].strip() == message_id.strip():
-                return True
+        # Проверяем, есть ли References на письма нашей системы:
+        if our_message_ids and references:
+            for ref in references:
+                if ref.strip() in our_message_ids:
+                    return False  # Письмо является ответом на наше предыдущее
+            # Ни одна ссылка не принадлежит нашей системе, значит для нас оно
+            # первое:
+            return True
 
         return False
 
@@ -363,6 +383,11 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
             email_msg_counter = 0
 
             total = len(parsed_messages)
+
+            our_message_ids = set(
+                EmailMessage.objects.all()
+                .values_list('email_msg_id', flat=True)
+            )
 
             for index, msg in enumerate(parsed_messages):
 
@@ -556,7 +581,11 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                     ) if email_subject else None
 
                     is_first_email = self._is_first_email(
-                        email_msg_reply_id, email_msg_references, email_msg_id)
+                        email_msg_reply_id,
+                        email_msg_references,
+                        email_msg_id,
+                        our_message_ids
+                    )
 
                     if json_dicts and is_first_email:
                         email_from_i = json_dicts[0].get(

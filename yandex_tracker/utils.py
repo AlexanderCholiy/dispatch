@@ -23,7 +23,8 @@ from incidents.models import Incident, IncidentStatus, IncidentStatusHistory
 from .constants import (
     INCIDENT_REGION_NOT_FOR_YT,
     MAX_ATTACHMENT_SIZE_IN_YT,
-    IsExpiredSLA
+    IsExpiredSLA,
+    IsNewMsg,
 )
 from .exceptions import YandexTrackerAuthErr
 
@@ -533,7 +534,7 @@ class YandexTrackerManager:
             'emailFrom': email_from,
             'emailTo': email_to,
             'emailCc': email_cc,
-            self.is_new_msg_global_field_id: 'True',
+            self.is_new_msg_global_field_id: IsNewMsg.yes,
         }
 
         add_payload = {

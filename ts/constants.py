@@ -39,6 +39,7 @@ COLUMNS_TO_KEEP_POLES_TL: list[str] = [
     'Адрес',
     'Инфраструктурная компания',
     'Якорный оператор',
+    'RegionRu',
 ]
 COLUMNS_TO_KEEP_AVR_REPORT: list[str] = [
     'Подрядчик',

@@ -119,6 +119,7 @@ class Api(SocialValidators):
             address = row['Адрес'] or None
             infrastructure_company = row['Инфраструктурная компания'] or None
             anchor_operator = row['Якорный оператор'] or None
+            region_ru = row['RegionRu'] or None
 
             if (
                 not isinstance(site_id, int)
@@ -132,6 +133,7 @@ class Api(SocialValidators):
                 or not isinstance(address, (str, NoneType))
                 or not isinstance(infrastructure_company, (str, NoneType))
                 or not isinstance(anchor_operator, (str, NoneType))
+                or not isinstance(region_ru, (str, NoneType))
             ):
                 find_unvalid_values = True
                 continue
@@ -150,6 +152,7 @@ class Api(SocialValidators):
                         'address': address,
                         'infrastructure_company': infrastructure_company,
                         'anchor_operator': anchor_operator,
+                        'region_ru': region_ru,
                     },
                 )
             except IntegrityError:

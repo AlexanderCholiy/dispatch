@@ -1,5 +1,6 @@
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+CRON_TZ=Europe/Moscow
 
 0 2 * * * root /usr/local/bin/python /app/manage.py delete_unknown_files >> /app/logs/cron/cron.log 2>&1
 0 20 * * * root /usr/local/bin/python /app/manage.py update_data_from_ts >> /app/logs/cron/cron.log 2>&1

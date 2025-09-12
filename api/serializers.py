@@ -1,6 +1,15 @@
+from datetime import datetime, timedelta
+from typing import Optional
+
+from django.utils import timezone
 from rest_framework import serializers
 
-from incidents.constants import DEFAULT_NOTIFIED_AVR_STATUS_NAME
+from incidents.constants import (
+    DEFAULT_END_STATUS_NAME,
+    DEFAULT_GENERATION_STATUS_NAME,
+    DEFAULT_NOTIFIED_AVR_STATUS_NAME,
+    DEFAULT_NOTIFIED_OP_END_STATUS_NAME,
+)
 from incidents.models import Incident
 
 from .utils import conversion_utc_datetime
@@ -17,7 +26,7 @@ class IncidentSerializer(serializers.ModelSerializer):
     address = serializers.CharField(source='pole.address', read_only=True)
     incident_type = serializers.CharField(
         source='incident_type.name', read_only=True)
-    region = serializers.CharField(source='pole.region', read_only=True)
+    region_ru = serializers.CharField(source='pole.region_ru', read_only=True)
     vendor = serializers.CharField(
         source='pole.avr_contractor.contractor_name', read_only=True)
 
@@ -25,11 +34,13 @@ class IncidentSerializer(serializers.ModelSerializer):
     last_status = serializers.SerializerMethodField()
     is_transfer_to_avr = serializers.SerializerMethodField()
     transfer_timestamp_to_avr = serializers.SerializerMethodField()
+    is_vendor_sla_expired = serializers.SerializerMethodField()
     vendor_emails = serializers.SerializerMethodField()
     operators = serializers.SerializerMethodField()
-    deadline = serializers.SerializerMethodField()
+    vendor_deadline = serializers.SerializerMethodField()
     incident_datetime = serializers.SerializerMethodField()
     incident_finish_datetime = serializers.SerializerMethodField()
+    operator_group = serializers.SerializerMethodField()
 
     class Meta:
         model = Incident
@@ -38,17 +49,18 @@ class IncidentSerializer(serializers.ModelSerializer):
             'code',
             'incident_datetime',
             'incident_type',
-            'is_sla_expired',
-            'deadline',
+            'is_vendor_sla_expired',
+            'vendor_deadline',
             'is_incident_finish',
             'incident_finish_datetime',
             'last_status',
             'is_transfer_to_avr',
             'transfer_timestamp_to_avr',
             'base_station',
+            'operator_group',
             'operators',
             'pole',
-            'region',
+            'region_ru',
             'address',
             'pole_latitude',
             'pole_longtitude',
@@ -66,7 +78,7 @@ class IncidentSerializer(serializers.ModelSerializer):
             not hasattr(obj, 'prefetched_statuses')
             or not obj.prefetched_statuses
         ):
-            return None
+            return
         return obj.prefetched_statuses[-1].status.name
 
     def get_is_transfer_to_avr(self, obj: Incident):
@@ -74,7 +86,7 @@ class IncidentSerializer(serializers.ModelSerializer):
             not hasattr(obj, 'prefetched_statuses')
             or not obj.prefetched_statuses
         ):
-            return None
+            return
         for status_history in obj.prefetched_statuses:
             if status_history.status.name == DEFAULT_NOTIFIED_AVR_STATUS_NAME:
                 return True
@@ -85,38 +97,109 @@ class IncidentSerializer(serializers.ModelSerializer):
             not hasattr(obj, 'prefetched_statuses')
             or not obj.prefetched_statuses
         ):
-            return None
+            return
         for status_history in obj.prefetched_statuses:
             if status_history.status.name == DEFAULT_NOTIFIED_AVR_STATUS_NAME:
                 return conversion_utc_datetime(status_history.insert_date)
-        return None
+        return
 
     def get_vendor_emails(self, obj: Incident):
         if obj.pole and obj.pole.avr_contractor:
             return ', '.join(
                 [email.email for email in obj.pole.avr_contractor.emails.all()]
             )
-        return None
+        return
+
+    def get_operator_group(self, obj: Incident):
+        if obj.base_station:
+            return ', '.join(set(
+                [op.operator_group for op in obj.base_station.operator.all()]
+            ))
+        return
 
     def get_operators(self, obj: Incident):
         if obj.base_station:
             return ', '.join(
                 [op.operator_name for op in obj.base_station.operator.all()]
             )
-        return None
+        return
 
-    def get_deadline(self, obj: Incident):
-        if obj.sla_deadline:
-            return conversion_utc_datetime(obj.sla_deadline)
-        return None
+    def get_vendor_deadline(self, obj: Incident):
+        """Дедлайн SLA для подрядчика"""
+        if (
+            not hasattr(obj, 'prefetched_statuses')
+            or not obj.prefetched_statuses
+            or not obj.incident_type
+            or not obj.incident_type.sla_deadline
+        ):
+            return
 
-    def get_is_sla_expired(self, obj: Incident):
-        return obj.is_sla_expired
+        start_timestamp: Optional[datetime] = None
+
+        for status_history in obj.prefetched_statuses:
+            if (
+                status_history.status.name == DEFAULT_NOTIFIED_AVR_STATUS_NAME
+                and not start_timestamp
+            ):
+                start_timestamp = status_history.insert_date
+                break
+
+        deadline = conversion_utc_datetime(
+            start_timestamp + timedelta(minutes=obj.incident_type.sla_deadline)
+        ) if start_timestamp else None
+
+        return deadline
+
+    def get_is_vendor_sla_expired(self, obj: Incident):
+        """
+        Просрочен ли SLA в промежутке между статусом "Передано подрядчику" и
+        одним из "Уведомили о закрытии", "На генерации НБ", "Закрыт".
+        """
+        if (
+            not hasattr(obj, 'prefetched_statuses')
+            or not obj.prefetched_statuses
+            or not obj.incident_type
+            or not obj.incident_type.sla_deadline
+        ):
+            return
+
+        start_timestamp: Optional[datetime] = None
+        finish_timestamp: Optional[datetime] = None
+
+        for status_history in obj.prefetched_statuses:
+            if (
+                status_history.status.name == DEFAULT_NOTIFIED_AVR_STATUS_NAME
+                and not start_timestamp
+            ):
+                start_timestamp = status_history.insert_date
+            elif (
+                status_history.status.name in (
+                    DEFAULT_NOTIFIED_OP_END_STATUS_NAME,
+                    DEFAULT_GENERATION_STATUS_NAME,
+                    DEFAULT_END_STATUS_NAME,
+                )
+                and not finish_timestamp
+            ):
+                finish_timestamp = status_history.insert_date
+            elif start_timestamp and finish_timestamp:
+                break
+
+        if not start_timestamp:
+            return
+
+        deadline = (
+            start_timestamp + timedelta(minutes=obj.incident_type.sla_deadline)
+        )
+
+        if finish_timestamp:
+            return finish_timestamp > deadline
+
+        return timezone.now() > deadline
 
     def get_incident_datetime(self, obj: Incident):
         return conversion_utc_datetime(obj.incident_date)
 
     def get_incident_finish_datetime(self, obj: Incident):
         if not obj.incident_finish_date:
-            return None
+            return
         return conversion_utc_datetime(obj.incident_finish_date)
