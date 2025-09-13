@@ -132,3 +132,6 @@ lscpu | grep "Thread(s) per core"
 
 Формула для workers:
 workers = 2 * CPU + 1
+
+Кол-во оперативной памяти:
+free -h
