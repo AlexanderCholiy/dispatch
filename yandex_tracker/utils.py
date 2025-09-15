@@ -909,7 +909,9 @@ class YandexTrackerManager:
         closed_statuses: list[str] = [
             {'id': status['id']}
             for status in self.all_statuses
-            if status['key'] == self.closed_status_key
+            if status['key'] in (
+                self.closed_status_key, self.on_generation_status_key
+            )
         ]
         yield from self.filter_issues({'status': closed_statuses}, days_ago)
 
@@ -919,7 +921,9 @@ class YandexTrackerManager:
         unclosed_statuses: list[str] = [
             {'id': status['id']}
             for status in self.all_statuses
-            if status['key'] != self.closed_status_key
+            if status['key'] not in (
+                self.closed_status_key, self.on_generation_status_key
+            )
         ]
         yield from self.filter_issues({'status': unclosed_statuses}, days_ago)
 

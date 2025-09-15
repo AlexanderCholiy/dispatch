@@ -17,7 +17,6 @@ from core.wraps import min_wait_timer, timer
 from emails.email_parser import email_parser
 from incidents.constants import (
     DEFAULT_ERR_STATUS_NAME,
-    DEFAULT_GENERATION_STATUS_NAME,
     DEFAULT_NOTIFIED_AVR_STATUS_NAME,
     DEFAULT_NOTIFIED_OP_END_STATUS_NAME,
     DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_NAME,
@@ -293,18 +292,6 @@ class Command(BaseCommand):
                 elif status_key == yt_manager.in_work_status_key:
                     IncidentManager.add_in_work_status(
                         incident, 'Диспетчер принял работы в YandexTracker')
-                elif (
-                    status_key == yt_manager.on_generation_status_key
-                    and last_status_history.status.name != (
-                        DEFAULT_GENERATION_STATUS_NAME)
-                ):
-                    IncidentManager.add_generation_status(
-                        incident,
-                        (
-                            'Диспетчер указал в YandexTracker, что опора '
-                            'находится на генерации.'
-                        )
-                    )
                 elif (
                     status_key == (
                         yt_manager.notified_op_issue_in_work_status_key)

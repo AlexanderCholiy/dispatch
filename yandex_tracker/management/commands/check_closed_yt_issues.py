@@ -3,6 +3,7 @@ import time
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import OuterRef, Subquery
+from django.utils import timezone
 
 from core.constants import (
     MIN_WAIT_SEC_WITH_CRITICAL_EXC,
@@ -15,6 +16,8 @@ from core.wraps import min_wait_timer, timer
 from incidents.constants import (
     DEFAULT_END_STATUS_DESC,
     DEFAULT_END_STATUS_NAME,
+    DEFAULT_GENERATION_STATUS_DESC,
+    DEFAULT_GENERATION_STATUS_NAME,
 )
 from incidents.models import Incident, IncidentStatus, IncidentStatusHistory
 from yandex_tracker.constants import YT_ISSUES_DAYS_AGO_FILTER
@@ -81,6 +84,10 @@ class Command(BaseCommand):
             name=DEFAULT_END_STATUS_NAME,
             defaults={'description': DEFAULT_END_STATUS_DESC}
         )
+        default_generation_status, _ = IncidentStatus.objects.get_or_create(
+            name=DEFAULT_GENERATION_STATUS_NAME,
+            defaults={'description': DEFAULT_GENERATION_STATUS_DESC}
+        )
 
         total_processed = 0
         total_errors = 0
@@ -92,7 +99,11 @@ class Command(BaseCommand):
         for i, closed_issues in enumerate(closed_issues_batches, 1):
             batch_total, batch_errors, batch_updated = (
                 self.check_closed_batch_issues(
-                    i, yt_manager, closed_issues, default_end_status
+                    batch_number=i,
+                    yt_manager=yt_manager,
+                    closed_issues=closed_issues,
+                    default_end_status=default_end_status,
+                    default_generation_status=default_generation_status,
                 )
             )
             total_processed += batch_total
@@ -107,6 +118,7 @@ class Command(BaseCommand):
         yt_manager: YandexTrackerManager,
         closed_issues: list[dict],
         default_end_status: IncidentStatus,
+        default_generation_status: IncidentStatus,
     ):
         """
         Работа с заявками в YandexTracker со статусом ЗАКРЫТО.
@@ -135,24 +147,23 @@ class Command(BaseCommand):
                 database_ids_with_issues.append((database_id, issue))
             else:
                 yt_manager.create_incident_from_issue(issue, True)
-                updated_count += 1
 
         if not incident_ids_to_update:
             return total, error_count, updated_count
 
         # Подзапрос для последней даты статуса каждого инцидента:
-        latest_status_subquery = IncidentStatusHistory.objects.filter(
-            incident=OuterRef('pk')
-        ).order_by('-insert_date').values('insert_date')[:1]
+        latest_status_id_subquery = (
+            IncidentStatusHistory.objects
+            .filter(incident=OuterRef('pk'))
+            .order_by('-insert_date')
+            .values('status_id')[:1]
+        )
 
-        incidents_queryset = Incident.objects.filter(
-            id__in=incident_ids_to_update
-        ).select_related(
-            'incident_type',
-        ).prefetch_related(
-            'statuses'
-        ).annotate(
-            latest_status_date=Subquery(latest_status_subquery)
+        incidents_queryset = (
+            Incident.objects.filter(id__in=incident_ids_to_update)
+            .select_related('incident_type')
+            .prefetch_related('statuses')
+            .annotate(last_status_id=Subquery(latest_status_id_subquery))
         )
 
         incidents_dict = {
@@ -160,46 +171,66 @@ class Command(BaseCommand):
         }
 
         incidents_to_mark_finished = set()
-        incidents_to_add_status: set[Incident] = set()
+        incidents_to_add_end_status: set[Incident] = set()
+        incidents_to_add_generation_status: set[Incident] = set()
+        incidents_to_update_code: list[Incident] = []
 
         for database_id, issue in database_ids_with_issues:
             incident = incidents_dict.get(database_id)
             issue_key = issue['key']
+            status_key: str = issue['status']['key']
 
             if not incident:
                 yt_manager.create_incident_from_issue(issue, True)
-                updated_count += 1
                 continue
 
+            # Проверка и обновление кода:
             if incident.code != issue_key:
                 incident.code = issue_key
-                incident.save()
-                updated_count += 1
+                incidents_to_update_code.append(incident)
 
+            # Проверка SLA:
             is_sla_expired = issue.get(
                 yt_manager.is_sla_expired_global_field_id)
             valid_is_sla_expired = yt_manager.get_sla_status(incident)
 
             if is_sla_expired != valid_is_sla_expired:
                 yt_manager.update_issue_sla_status(issue, incident)
-                updated_count += 1
 
+            # Проверка признака завершённости:
             if not incident.is_incident_finish:
                 incidents_to_mark_finished.add(database_id)
 
-            if not incident.statuses.filter(id=default_end_status.pk).exists():
-                incidents_to_add_status.add(incident)
+            # Проверка последнего статуса:
+            last_status_id = incident.last_status_id
+
+            if status_key == yt_manager.on_generation_status_key:
+                if last_status_id != default_generation_status.pk:
+                    incidents_to_add_generation_status.add(incident)
+            else:
+                if last_status_id != default_end_status.pk:
+                    incidents_to_add_end_status.add(incident)
+
+        # Массовое обновление code:
+        if incidents_to_update_code:
+            Incident.objects.bulk_update(incidents_to_update_code, ['code'])
 
         if incidents_to_mark_finished:
+            now = timezone.now()
             Incident.objects.filter(id__in=incidents_to_mark_finished).update(
-                is_incident_finish=True
+                is_incident_finish=True,
+                incident_finish_date=now,
             )
             updated_count += len(incidents_to_mark_finished)
 
-        if incidents_to_add_status:
+        if incidents_to_add_end_status:
             with transaction.atomic():
-                for incident in incidents_to_add_status:
+                for incident in incidents_to_add_end_status:
                     incident.statuses.add(default_end_status)
-                    updated_count += 1
+
+        if incidents_to_add_generation_status:
+            with transaction.atomic():
+                for incident in incidents_to_add_generation_status:
+                    incident.statuses.add(default_generation_status)
 
         return total, error_count, updated_count

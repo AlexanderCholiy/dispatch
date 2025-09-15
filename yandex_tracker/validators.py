@@ -458,13 +458,9 @@ def check_yt_incident_data(
     type_of_incident_field_key = type_of_incident_field['id']
     type_of_incident: Optional[str] = issue.get(type_of_incident_field_key)
 
-    # Синхронизируем актуальность заявки в базе:
-    if incident.is_incident_finish:
+    # Синхронизируем актуальность заявки в базе, код заявки:
+    if incident.is_incident_finish or incident.code != issue_key:
         incident.is_incident_finish = False
-        incident.save()
-
-    # Синхронизируем код заявки:
-    if incident.code != issue_key:
         incident.code = issue_key
         incident.save()
 
