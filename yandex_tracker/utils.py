@@ -4,7 +4,7 @@ import re
 import time
 from datetime import datetime, timedelta
 from http import HTTPMethod, HTTPStatus
-from typing import Optional
+from typing import Generator, Optional
 
 import requests
 from django.db import models, transaction
@@ -409,8 +409,10 @@ class YandexTrackerManager:
         temp_files: Optional[list[str]] = None,
     ) -> dict:
         payload = {'text': comment}
+
         if temp_files:
             payload['attachmentIds'] = temp_files
+
         url = f'{self.create_issue_url}{issue_key}/comments'
         return self._make_request(
             HTTPMethod.POST,
@@ -452,6 +454,7 @@ class YandexTrackerManager:
 
         if temp_files:
             payload['attachmentIds'] = temp_files
+
         url = f'{self.create_issue_url}{issue_key}/comments'
         return self._make_request(
             HTTPMethod.POST,
@@ -787,7 +790,7 @@ class YandexTrackerManager:
             result.append(issue)
             incident = email_incident.email_incident
             incident.code = issue['key']
-            incident.save
+            incident.save()
         # Инцидент отсутствует в YandexTracker, но по нему пришло уточнение,
         # поэтому надо восстановить полностью цепочку писем для инцидента:
         elif not issues and not is_first_email:
@@ -817,7 +820,7 @@ class YandexTrackerManager:
             result.append(issue)
             incident = email_incident.email_incident
             incident.code = issue['key']
-            incident.save
+            incident.save()
             for email in all_email_incident[1:]:
                 self.add_issue_email_comment(email, issue)
         # Инцидент уже зарегестрирован в YandexTracker:
@@ -855,21 +858,25 @@ class YandexTrackerManager:
                     self.add_issue_email_comment(email_incident, issue)
             incident = email_incident.email_incident
             incident.code = key
-            incident.save
+            incident.save()
 
         return result
 
-    def filter_issues(self, yt_filter: dict, days_ago: int = 7) -> list[dict]:
+    def filter_issues(
+        self, yt_filter: dict, days_ago: int = 7
+    ) -> Generator[list[dict], None, None]:
         page = 1
-        per_page = 500
-        all_issues = []
+        per_page = 1000  # max 1000 по документации
+
         now: datetime = timezone.now()
         days_ago: datetime = now - timedelta(days=days_ago)
+
         yt_filter['queue'] = self.queue
         yt_filter['updatedAt'] = {
             'from': days_ago.isoformat(),
             'to': now.isoformat()
         }
+
         payload = {'filter': yt_filter}
 
         while True:
@@ -892,26 +899,29 @@ class YandexTrackerManager:
             if not batch:
                 break
 
-            all_issues.extend(batch)
+            yield batch
+
             page += 1
 
-        return all_issues
-
-    def closed_issues(self, days_ago: int = 7) -> list[dict]:
+    def closed_issues(
+        self, days_ago: int = 7
+    ) -> Generator[list[dict], None, None]:
         closed_statuses: list[str] = [
-            status['key']
+            {'id': status['id']}
             for status in self.all_statuses
             if status['key'] == self.closed_status_key
         ]
-        return self.filter_issues({'status': closed_statuses}, days_ago)
+        yield from self.filter_issues({'status': closed_statuses}, days_ago)
 
-    def unclosed_issues(self, days_ago: int = 7) -> list[dict]:
+    def unclosed_issues(
+        self, days_ago: int = 7
+    ) -> Generator[list[dict], None, None]:
         unclosed_statuses: list[str] = [
-            status['key']
+            {'id': status['id']}
             for status in self.all_statuses
             if status['key'] != self.closed_status_key
         ]
-        return self.filter_issues({'status': unclosed_statuses}, days_ago)
+        yield from self.filter_issues({'status': unclosed_statuses}, days_ago)
 
     @property
     def all_local_fields(self) -> list[dict]:

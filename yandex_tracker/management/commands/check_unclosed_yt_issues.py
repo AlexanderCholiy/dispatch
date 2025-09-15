@@ -53,12 +53,17 @@ class Command(BaseCommand):
 
         while True:
             err = None
-            error_count = 0
+            total_errors = 0
             total_operations = 0
 
             try:
-                total_operations, error_count = self.check_unclosed_issues(
-                    yt_manager)
+                total_operations, total_errors, total_updated = (
+                    self.check_unclosed_issues())
+                if total_updated or total_errors:
+                    yt_managment_logger.info(
+                        f'Обработано {total_operations} инцидент(ов), '
+                        f'обновлено {total_updated}, ошибок {total_errors}'
+                    )
             except KeyboardInterrupt:
                 return
             except Exception as e:
@@ -66,16 +71,16 @@ class Command(BaseCommand):
                 err = e
                 time.sleep(MIN_WAIT_SEC_WITH_CRITICAL_EXC)
             else:
-                if not first_success_sent and not error_count:
+                if not first_success_sent and not total_errors:
                     tg_manager.send_first_success_notification(__name__)
                     first_success_sent = True
 
-                if error_count and not had_errors_last_time:
+                if total_errors and not had_errors_last_time:
                     tg_manager.send_warning_counter_notification(
-                        __name__, error_count, total_operations
+                        __name__, total_errors, total_operations
                     )
 
-                had_errors_last_time = error_count > 0
+                had_errors_last_time = total_errors > 0
 
             finally:
                 if err is not None and last_error_type != type(err).__name__:
@@ -84,7 +89,65 @@ class Command(BaseCommand):
 
     @min_wait_timer(yt_managment_logger, min_wait)
     @timer(yt_managment_logger)
-    def check_unclosed_issues(self, yt_manager: YandexTrackerManager) -> tuple:
+    def check_unclosed_issues(self) -> tuple[int, int, int]:
+        yt_users = yt_manager.real_users_in_yt_tracker
+        yt_emails = AutoEmailsFromYT(yt_manager, email_parser)
+
+        type_of_incident_field: dict = (
+            yt_manager
+            .select_local_field(yt_manager.type_of_incident_local_field_id)
+        )
+
+        all_incident_types = list(IncidentType.objects.all())
+        valid_names_of_types = [tp.name for tp in all_incident_types]
+        all_users = User.objects.filter(role=Roles.DISPATCH, is_active=True)
+        usernames_in_db = [usr.username for usr in all_users]
+
+        all_poles = {p.pole: p for p in Pole.objects.all()}
+        all_base_stations = {
+            bs.bs_name: bs for bs in BaseStation.objects.all()}
+
+        total_processed = 0
+        total_errors = 0
+        total_updated = 0
+
+        unclosed_issues_batches = yt_manager.unclosed_issues(
+            YT_ISSUES_DAYS_AGO_FILTER)
+
+        for i, unclosed_issues in enumerate(unclosed_issues_batches, 1):
+            batch_total, batch_errors, batch_updated = (
+                self.check_unclosed_batch_issues(
+                    batch_number=i,
+                    yt_manager=yt_manager,
+                    unclosed_issues=unclosed_issues,
+                    yt_users=yt_users,
+                    type_of_incident_field=type_of_incident_field,
+                    valid_names_of_types=valid_names_of_types,
+                    usernames_in_db=usernames_in_db,
+                    all_poles=all_poles,
+                    all_base_stations=all_base_stations,
+                    yt_emails=yt_emails,
+                )
+            )
+            total_processed += batch_total
+            total_errors += batch_errors
+            total_updated += batch_updated
+
+        return total_processed, total_errors, total_updated
+
+    def check_unclosed_batch_issues(
+        self,
+        batch_number: int,
+        yt_manager: YandexTrackerManager,
+        unclosed_issues: list[dict],
+        yt_users: dict,
+        type_of_incident_field: dict,
+        valid_names_of_types: list[str],
+        usernames_in_db: list[str],
+        all_poles: dict[str, Pole],
+        all_base_stations: dict[str, BaseStation],
+        yt_emails: AutoEmailsFromYT,
+    ) -> tuple[int, int, int]:
         """
         Работа с заявками в YandexTracker с ОТКРЫТЫМ статусом.
 
@@ -102,27 +165,18 @@ class Command(BaseCommand):
             "Работы переданы подрядчику".
 
         Returns:
-            tuple: общее кол-во операций и кол-во ошибок.
+            tuple: общее кол-во операций, кол-во ошибок, кол-во обновленных
+            задач.
         """
-
-        unclosed_issues = yt_manager.unclosed_issues(YT_ISSUES_DAYS_AGO_FILTER)
-        yt_emails = AutoEmailsFromYT(yt_manager, email_parser)
         total = len(unclosed_issues)
-        yt_users = yt_manager.real_users_in_yt_tracker
-
-        type_of_incident_field: dict = (
-            yt_manager
-            .select_local_field(yt_manager.type_of_incident_local_field_id)
-        )
+        error_count = 0
         updated_incidents_counter = 0
 
-        error_count = 0
-
-        database_ids = []
-        for issue in unclosed_issues:
-            database_id = issue.get(yt_manager.database_global_field_id)
-            if database_id:
-                database_ids.append(database_id)
+        database_ids = [
+            issue.get(yt_manager.database_global_field_id)
+            for issue in unclosed_issues
+            if issue.get(yt_manager.database_global_field_id)
+        ]
 
         latest_status_subquery = IncidentStatusHistory.objects.filter(
             incident=OuterRef('pk')
@@ -151,22 +205,11 @@ class Command(BaseCommand):
             latest_status_date=Subquery(latest_status_subquery)
         ).in_bulk()
 
-        all_incident_types = list(IncidentType.objects.all())
-        valid_names_of_types = [tp.name for tp in all_incident_types]
-        all_users = User.objects.filter(role=Roles.DISPATCH, is_active=True)
-        usernames_in_db = [usr.username for usr in all_users]
-
-        all_poles = {}
-        for pole_obj in Pole.objects.all():
-            all_poles[pole_obj.pole] = pole_obj
-
-        all_base_stations = {}
-        for bs_obj in BaseStation.objects.all():
-            all_base_stations[bs_obj.bs_name] = bs_obj
-
         for index, issue in enumerate(unclosed_issues):
             PrettyPrint.progress_bar_info(
-                index, total, 'Обработка открытых заявок:')
+                index, total,
+                f'Обработка открытых заявок (стр.{batch_number}):'
+            )
 
             database_id: Optional[int] = issue.get(
                 yt_manager.database_global_field_id)
@@ -364,9 +407,4 @@ class Command(BaseCommand):
                 yt_managment_logger.exception(e)
                 error_count += 1
 
-        if updated_incidents_counter:
-            yt_managment_logger.info(
-                f'Было обновлено {updated_incidents_counter} инцидентов'
-            )
-
-        return total, error_count
+        return total, error_count, updated_incidents_counter

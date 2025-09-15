@@ -27,7 +27,7 @@ yt_managment_logger = LoggerFactory(
 class Command(BaseCommand):
     help = 'Обновление данных в YandexTracker.'
 
-    min_wait = 30
+    min_wait = 60
 
     def handle(self, *args, **kwargs):
         tg_manager.send_startup_notification(__name__)
@@ -38,11 +38,19 @@ class Command(BaseCommand):
 
         while True:
             err = None
-            error_count = 0
+            total_errors = 0
             total_operations = 0
+            total_updated = 0
 
             try:
-                self.check_closed_issues(yt_manager)
+                total_operations, total_errors, total_updated = (
+                    self.check_closed_issues())
+                if total_updated or total_errors:
+                    yt_managment_logger.info(
+                        f'Обработано {total_operations} закрытых '
+                        f'инцидент(ов), обновлено {total_updated}, '
+                        f'ошибок {total_errors}'
+                    )
             except KeyboardInterrupt:
                 return
             except Exception as e:
@@ -50,16 +58,16 @@ class Command(BaseCommand):
                 err = e
                 time.sleep(MIN_WAIT_SEC_WITH_CRITICAL_EXC)
             else:
-                if not first_success_sent and not error_count:
+                if not first_success_sent and not total_errors:
                     tg_manager.send_first_success_notification(__name__)
                     first_success_sent = True
 
-                if error_count and not had_errors_last_time:
+                if total_errors and not had_errors_last_time:
                     tg_manager.send_warning_counter_notification(
-                        __name__, error_count, total_operations
+                        __name__, total_errors, total_operations
                     )
 
-                had_errors_last_time = error_count > 0
+                had_errors_last_time = total_errors > 0
 
             finally:
                 if err is not None and last_error_type != type(err).__name__:
@@ -68,7 +76,38 @@ class Command(BaseCommand):
 
     @min_wait_timer(yt_managment_logger, min_wait)
     @timer(yt_managment_logger)
-    def check_closed_issues(self, yt_manager: YandexTrackerManager):
+    def check_closed_issues(self) -> tuple[int, int, int]:
+        default_end_status, _ = IncidentStatus.objects.get_or_create(
+            name=DEFAULT_END_STATUS_NAME,
+            defaults={'description': DEFAULT_END_STATUS_DESC}
+        )
+
+        total_processed = 0
+        total_errors = 0
+        total_updated = 0
+
+        closed_issues_batches = yt_manager.closed_issues(
+            YT_ISSUES_DAYS_AGO_FILTER)
+
+        for i, closed_issues in enumerate(closed_issues_batches, 1):
+            batch_total, batch_errors, batch_updated = (
+                self.check_closed_batch_issues(
+                    i, yt_manager, closed_issues, default_end_status
+                )
+            )
+            total_processed += batch_total
+            total_errors += batch_errors
+            total_updated += batch_updated
+
+        return total_processed, total_errors, total_updated
+
+    def check_closed_batch_issues(
+        self,
+        batch_number: int,
+        yt_manager: YandexTrackerManager,
+        closed_issues: list[dict],
+        default_end_status: IncidentStatus,
+    ):
         """
         Работа с заявками в YandexTracker со статусом ЗАКРЫТО.
 
@@ -76,34 +115,30 @@ class Command(BaseCommand):
             - Всем закрытым заявкам выставляем флаг закрытого инцидента, чтобы
             на диспетчеров могли равномерно распределяться заявки.
         """
-
-        closed_issues = yt_manager.closed_issues(YT_ISSUES_DAYS_AGO_FILTER)
         total = len(closed_issues)
-
-        if total == 0:
-            return
+        error_count = 0
+        updated_count = 0
 
         incident_ids_to_update = set()
-        database_ids_with_issues = []
-
-        default_end_status, _ = IncidentStatus.objects.get_or_create(
-            name=DEFAULT_END_STATUS_NAME,
-            defaults={'description': DEFAULT_END_STATUS_DESC}
-        )
+        database_ids_with_issues: list[tuple[int, dict]] = []
 
         for index, issue in enumerate(closed_issues):
             PrettyPrint.progress_bar_warning(
-                index, total, 'Обработка закрытых заявок:')
+                index, total,
+                f'Обработка закрытых заявок (стр.{batch_number}):'
+            )
 
             database_id = issue.get(yt_manager.database_global_field_id)
+
             if database_id is not None:
                 incident_ids_to_update.add(database_id)
                 database_ids_with_issues.append((database_id, issue))
             else:
                 yt_manager.create_incident_from_issue(issue, True)
+                updated_count += 1
 
         if not incident_ids_to_update:
-            return
+            return total, error_count, updated_count
 
         # Подзапрос для последней даты статуса каждого инцидента:
         latest_status_subquery = IncidentStatusHistory.objects.filter(
@@ -125,8 +160,7 @@ class Command(BaseCommand):
         }
 
         incidents_to_mark_finished = set()
-        incidents_to_add_status = set()
-        total = len(database_ids_with_issues)
+        incidents_to_add_status: set[Incident] = set()
 
         for database_id, issue in database_ids_with_issues:
             incident = incidents_dict.get(database_id)
@@ -134,11 +168,13 @@ class Command(BaseCommand):
 
             if not incident:
                 yt_manager.create_incident_from_issue(issue, True)
+                updated_count += 1
                 continue
 
             if incident.code != issue_key:
                 incident.code = issue_key
                 incident.save()
+                updated_count += 1
 
             is_sla_expired = issue.get(
                 yt_manager.is_sla_expired_global_field_id)
@@ -146,6 +182,7 @@ class Command(BaseCommand):
 
             if is_sla_expired != valid_is_sla_expired:
                 yt_manager.update_issue_sla_status(issue, incident)
+                updated_count += 1
 
             if not incident.is_incident_finish:
                 incidents_to_mark_finished.add(database_id)
@@ -157,11 +194,12 @@ class Command(BaseCommand):
             Incident.objects.filter(id__in=incidents_to_mark_finished).update(
                 is_incident_finish=True
             )
-            yt_managment_logger.info(
-                f'Закрыто {len(incidents_to_mark_finished)} инцидента(ов)'
-            )
+            updated_count += len(incidents_to_mark_finished)
 
         if incidents_to_add_status:
             with transaction.atomic():
                 for incident in incidents_to_add_status:
                     incident.statuses.add(default_end_status)
+                    updated_count += 1
+
+        return total, error_count, updated_count

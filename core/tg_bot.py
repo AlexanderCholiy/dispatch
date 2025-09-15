@@ -4,7 +4,7 @@ from typing import Optional, Union
 import telebot
 from telebot.types import Message
 
-from .constants import TG_NOTIFICATIONS_ROTATING_FILE
+from .constants import DEBUG_MODE, TG_NOTIFICATIONS_ROTATING_FILE
 from .loggers import LoggerFactory
 from .utils import Config
 from .wraps import retry
@@ -105,6 +105,8 @@ class TelegramNotifier:
         chat_id: Optional[Union[str, int]] = None,
         disable_web_page_preview: bool = True
     ) -> Optional[Message]:
+        if not DEBUG_MODE:
+            return
         formatted_message = self._format_message('debug', message, '⚙️')
         return self.send_message(
             formatted_message, chat_id, disable_web_page_preview)
@@ -267,9 +269,9 @@ class TelegramNotifier:
                 }
         return results
 
-    def check_debug_mode(self, is_debug: bool):
+    def check_debug_mode(self):
         """Проверяет режим DEBUG и отправляет уведомление в Telegram"""
-        if is_debug:
+        if DEBUG_MODE:
             message = (
                 'Сервер работает в *отладочном* режиме.\n'
                 'Это может представлять угрозу безопасности!'
