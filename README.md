@@ -4,8 +4,8 @@
 В дальнейшем его можно расширить до полноценной самостоятельной системы управления инцидентами.
 
 <p align="center">
-  <img src=".github/images/yandex_tracker/issues_list.png" alt="Список задач" width="500">
-  <img src=".github/images/yandex_tracker/issue.png" alt="Подробности по задаче" width="500">
+  <img src=".github/images/yandex_tracker/interface/issues_list.png" alt="Список задач" width="500">
+  <img src=".github/images/yandex_tracker/issue_detail.png" alt="Пример задачи" width="500">
 </p>
 
 ---
