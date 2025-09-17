@@ -211,7 +211,7 @@ class TelegramNotifier:
         return self.send_message(message, chat_id, disable_web_page_preview)
 
     def send_startup_notification(self, script_name: str):
-        message = f'```{script_name}```\nСкрипт запущен 🚀'
+        message = f'```{script_name}```\nСкрипт запущен ⏰'
         self.send_debug_message(message)
 
     def send_success_notification(self, script_name: str):
