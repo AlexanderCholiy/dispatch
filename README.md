@@ -136,10 +136,10 @@ Supervisor управляет запуском:
 
 2. Добавьте дополнительные статусы (ключи понадобятся в дальнейшем):  
    <p align="center">
-     <img src=".github/images/yandex_tracker/statuses/statuses_part_1.png" alt="Автодействия" width="500">
+     <img src=".github/images/yandex_tracker/statuses/statuses_part_1.png" alt="Автодействия" width="300">
    </p>
    <p align="center">
-     <img src=".github/images/yandex_tracker/statuses/statuses_part_2.png" alt="На генерации" width="500">
+     <img src=".github/images/yandex_tracker/statuses/statuses_part_2.png" alt="На генерации" width="300">
    </p>
 
 ### 3. Интеграция с почтой
@@ -154,16 +154,16 @@ Supervisor управляет запуском:
 
 Пример настроек:  
 <p align="center">
-  <img src=".github/images/yandex_tracker/email_setup/default_settings.png" alt="Интеграция с почтой" width="500">
+  <img src=".github/images/yandex_tracker/email_setup/default_settings.png" alt="Интеграция с почтой" width="300">
 </p>  
 <p align="center">
-  <img src=".github/images/yandex_tracker/email_setup/integrations_part_1.png" alt="Получение писем" width="500">
+  <img src=".github/images/yandex_tracker/email_setup/integrations_part_1.png" alt="Получение писем" width="300">
 </p>
 <p align="center">
-  <img src=".github/images/yandex_tracker/email_setup/integrations_part_2.png" alt="Параметры задач" width="500">
+  <img src=".github/images/yandex_tracker/email_setup/integrations_part_2.png" alt="Параметры задач" width="300">
 </p>
 <p align="center">
-  <img src=".github/images/yandex_tracker/email_setup/integrations_part_3.png" alt="Отправка ответов" width="500">
+  <img src=".github/images/yandex_tracker/email_setup/integrations_part_3.png" alt="Отправка ответов" width="300">
 </p>  
 
 ---
@@ -171,22 +171,22 @@ Supervisor управляет запуском:
 ### 4. Глобальные поля
 В разделе *Администрирование → Поля* создайте следующие глобальные поля (ключи понадобятся в дальнейшем):  
 <p align="center">
-  <img src=".github/images/yandex_tracker/fields/global/avr_name.png" alt="Имя подрядчика" width="500">
-  <img src=".github/images/yandex_tracker/fields/global/base_station_number.png" alt="Номер базовой станции" width="500">
-  <img src=".github/images/yandex_tracker/fields/global/email_comments_ids.png" alt="ID писем, добавленных в комментарии" width="500">
-  <img src=".github/images/yandex_tracker/fields/global/incident_date.png" alt="Дата регистрации инцидента" width="500">
-  <img src=".github/images/yandex_tracker/fields/global/incident_id.png" alt="ID инцидента" width="500">
-  <img src=".github/images/yandex_tracker/fields/global/is_new_msg.png" alt="Флаг нового письма" width="500">
-  <img src=".github/images/yandex_tracker/fields/global/operator.png" alt="Оператор базовой станции" width="500">
-  <img src=".github/images/yandex_tracker/fields/global/pole_number.png" alt="Шифр опоры" width="500">
-  <img src=".github/images/yandex_tracker/fields/global/sla_deadline.png" alt="Дедлайн SLA" width="500">
-  <img src=".github/images/yandex_tracker/fields/global/sla_status.png" alt="Статус SLA" width="500">
+  <img src=".github/images/yandex_tracker/fields/global/avr_name.png" alt="Имя подрядчика" width="300">
+  <img src=".github/images/yandex_tracker/fields/global/base_station_number.png" alt="Номер базовой станции" width="300">
+  <img src=".github/images/yandex_tracker/fields/global/email_comments_ids.png" alt="ID писем, добавленных в комментарии" width="300">
+  <img src=".github/images/yandex_tracker/fields/global/incident_date.png" alt="Дата регистрации инцидента" width="300">
+  <img src=".github/images/yandex_tracker/fields/global/incident_id.png" alt="ID инцидента" width="300">
+  <img src=".github/images/yandex_tracker/fields/global/is_new_msg.png" alt="Флаг нового письма" width="300">
+  <img src=".github/images/yandex_tracker/fields/global/operator.png" alt="Оператор базовой станции" width="300">
+  <img src=".github/images/yandex_tracker/fields/global/pole_number.png" alt="Шифр опоры" width="300">
+  <img src=".github/images/yandex_tracker/fields/global/sla_deadline.png" alt="Дедлайн SLA" width="300">
+  <img src=".github/images/yandex_tracker/fields/global/sla_status.png" alt="Статус SLA" width="300">
 </p>  
 
 ### 5. Локальные поля
 Перейдите: *Очереди → Имя очереди → Настройки очереди → Локальные поля* и создайте новые (ключи понадобятся в дальнейшем):  
 <p align="center">
-  <img src=".github/images/yandex_tracker/fields/local/type_of_problem.png" alt="Тип проблемы" width="500">
+  <img src=".github/images/yandex_tracker/fields/local/type_of_problem.png" alt="Тип проблемы" width="300">
 </p>  
 
 > Убедитесь, что значения поля *Тип проблемы* совпадают с используемыми в вашей системе.  
