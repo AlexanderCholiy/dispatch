@@ -172,22 +172,22 @@ Supervisor управляет запуском:
 ### 4. Глобальные поля
 В разделе *Администрирование → Поля* создайте следующие глобальные поля (ключи понадобятся в дальнейшем):  
 <p align="center">
-  <img src=".github/images/fields/global/avr_name.png" alt="Имя подрядчика" width="500">
-  <img src=".github/images/fields/global/base_station_number.png" alt="Номер базовой станции" width="500">
-  <img src=".github/images/fields/global/email_comments_ids.png" alt="ID писем, добавленных в комментарии" width="500">
-  <img src=".github/images/fields/global/incident_date.png" alt="Дата регистрации инцидента" width="500">
-  <img src=".github/images/fields/global/incident_id.png" alt="ID инцидента" width="500">
-  <img src=".github/images/fields/global/is_new_msg.png" alt="Флаг нового письма" width="500">
-  <img src=".github/images/fields/global/operator.png" alt="Оператор базовой станции" width="500">
-  <img src=".github/images/fields/global/pole_number.png" alt="Шифр опоры" width="500">
-  <img src=".github/images/fields/global/sla_deadline.png" alt="Дедлайн SLA" width="500">
-  <img src=".github/images/fields/global/sla_status.png" alt="Статус SLA" width="500">
+  <img src=".github/yandex_tracker/images/fields/global/avr_name.png" alt="Имя подрядчика" width="500">
+  <img src=".github/yandex_tracker/images/fields/global/base_station_number.png" alt="Номер базовой станции" width="500">
+  <img src=".github/yandex_tracker/images/fields/global/email_comments_ids.png" alt="ID писем, добавленных в комментарии" width="500">
+  <img src=".github/yandex_tracker/images/fields/global/incident_date.png" alt="Дата регистрации инцидента" width="500">
+  <img src=".github/yandex_tracker/images/fields/global/incident_id.png" alt="ID инцидента" width="500">
+  <img src=".github/yandex_tracker/images/fields/global/is_new_msg.png" alt="Флаг нового письма" width="500">
+  <img src=".github/yandex_tracker/images/fields/global/operator.png" alt="Оператор базовой станции" width="500">
+  <img src=".github/yandex_tracker/images/fields/global/pole_number.png" alt="Шифр опоры" width="500">
+  <img src=".github/yandex_tracker/images/fields/global/sla_deadline.png" alt="Дедлайн SLA" width="500">
+  <img src=".github/yandex_tracker/images/fields/global/sla_status.png" alt="Статус SLA" width="500">
 </p>  
 
 ### 5. Локальные поля
 Перейдите: *Очереди → Имя очереди → Настройки очереди → Локальные поля* и создайте новые (ключи понадобятся в дальнейшем):  
 <p align="center">
-  <img src=".github/images/fields/local/type_of_problem.png" alt="Тип проблемы" width="500">
+  <img src=".github/images/yandex_tracker/fields/local/type_of_problem.png" alt="Тип проблемы" width="500">
 </p>  
 
 > Убедитесь, что значения поля *Тип проблемы* совпадают с используемыми в вашей системе.  
