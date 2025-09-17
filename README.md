@@ -5,7 +5,7 @@
 
 <p align="center">
   <img src=".github/images/yandex_tracker/interface/issues_list.png" alt="Список задач" width="500">
-  <img src=".github/images/yandex_tracker/issue_detail.png" alt="Пример задачи" width="500">
+  <img src=".github/images/yandex_tracker/interface/issue_detail.png" alt="Пример задачи" width="500">
 </p>
 
 ---
