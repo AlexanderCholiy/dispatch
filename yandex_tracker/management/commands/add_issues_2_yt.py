@@ -2,6 +2,7 @@ import time
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.db.models import Min
 
 from core.constants import (
     MIN_WAIT_SEC_WITH_CRITICAL_EXC,
@@ -11,6 +12,7 @@ from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
 from core.tg_bot import tg_manager
 from core.wraps import min_wait_timer, timer
+from emails.models import EmailMessage
 from incidents.utils import IncidentManager
 from yandex_tracker.utils import YandexTrackerManager, yt_manager
 
@@ -65,35 +67,43 @@ class Command(BaseCommand):
     @timer(yt_managment_logger)
     def add_issues_2_yt(self, yt_manager: YandexTrackerManager):
         emails = YandexTrackerManager.emails_for_yandex_tracker()
-        previous_incident = None
         total = len(emails)
-
         error_count = 0
 
         if not emails:
             return total, error_count
 
-        # Поля database_global_field_id и emails_ids_global_field_id
-        # пользователи могут случайно изменить, поэтому снизим вероятность
-        # этого переключая состояния этих полей:
-        yt_manager.update_custom_field(
-            field_id=yt_manager.database_global_field_id,
-            readonly=False,
-            hidden=False,
-            visible=False,
+        # Определяем первое письмо по дате для каждого инцидента:
+        incident_ids = {e.email_incident for e in emails}
+
+        first_emails = (
+            EmailMessage.objects.filter(email_incident__in=incident_ids)
+            .values('email_incident')
+            .annotate(first_date=Min('email_date'))
         )
-        yt_manager.update_custom_field(
-            field_id=yt_manager.emails_ids_global_field_id,
-            readonly=False,
-            hidden=False,
-            visible=False,
-        )
+
+        first_email_map = {
+            item['email_incident']: item['first_date'] for item in first_emails
+        }
+
+        # Разблокируем кастомные поля
+        for field_id in [
+            yt_manager.database_global_field_id,
+            yt_manager.emails_ids_global_field_id,
+        ]:
+            yt_manager.update_custom_field(
+                field_id=field_id,
+                readonly=False,
+                hidden=False,
+                visible=False,
+            )
 
         for index, email in enumerate(emails):
             PrettyPrint().progress_bar_error(
                 index, total, 'Обновление заявок в YandexTracker:'
             )
             incident = email.email_incident
+
             with transaction.atomic():
                 if not incident.responsible_user:
                     incident.responsible_user = (
@@ -103,13 +113,12 @@ class Command(BaseCommand):
                     incident.save()
 
                 try:
-                    if incident != previous_incident and email.is_first_email:
-                        previous_incident = email.email_incident
-                        yt_manager.add_incident_to_yandex_tracker(email, True)
-                    else:
-                        yt_manager.add_incident_to_yandex_tracker(email, False)
+                    is_first = (
+                        email.email_date <= first_email_map.get(incident.pk)
+                    )
+                    yt_manager.add_incident_to_yandex_tracker(email, is_first)
                 except KeyboardInterrupt:
-                    return
+                    raise
                 except Exception as e:
                     error_count += 1
                     yt_managment_logger.exception(e)
@@ -117,18 +126,17 @@ class Command(BaseCommand):
                     email.was_added_2_yandex_tracker = True
                     email.save()
 
-        yt_manager.update_custom_field(
-            field_id=yt_manager.database_global_field_id,
-            readonly=True,
-            hidden=False,
-            visible=False,
-        )
-        yt_manager.update_custom_field(
-            field_id=yt_manager.emails_ids_global_field_id,
-            readonly=True,
-            hidden=False,
-            visible=False,
-        )
+        # Блокируем кастомные поля обратно:
+        for field_id in [
+            yt_manager.database_global_field_id,
+            yt_manager.emails_ids_global_field_id,
+        ]:
+            yt_manager.update_custom_field(
+                field_id=field_id,
+                readonly=True,
+                hidden=False,
+                visible=False,
+            )
 
         yt_managment_logger.info(
             'Добавление инцидентов в YandexTracker завершено. '

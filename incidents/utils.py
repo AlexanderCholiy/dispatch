@@ -139,28 +139,37 @@ class IncidentManager(IncidentValidator):
         должны проверить есть ли там номер инцидента, и уже по нему
         попробовть вытащить его:
         """
-        yt_incidents = yt_manager.find_yt_number_in_text(
+        if not email_msg.email_subject:
+            return
+
+        yt_incidents_keys = yt_manager.find_yt_number_in_text(
             email_msg.email_subject
-        ) if email_msg.email_subject else []
-        actual_email_incident = None
-        for key in yt_incidents:
+        )
+
+        if not yt_incidents_keys:
+            return
+
+        incident = (
+            Incident.objects.filter(code__in=yt_incidents_keys)
+            .order_by('-insert_date')
+            .first()
+        )
+        if incident:
+            return incident
+
+        for key in yt_incidents_keys:
             issues = yt_manager.select_issue(key=key)
-            database_ids = [
-                id for issue in issues
-                if (
-                    id := issue.get(yt_manager.database_global_field_id)
-                ) is not None
-            ]
 
-            for database_id in database_ids:
-                try:
-                    actual_email_incident = Incident.objects.get(
-                        id=database_id)
-                    break
-                except Incident.DoesNotExist:
-                    pass
+            for issue in issues:
+                database_id = issue.get(yt_manager.database_global_field_id)
+                if database_id is not None:
+                    try:
+                        incident = Incident.objects.get(pk=database_id)
+                        return incident
+                    except Incident.DoesNotExist:
+                        continue
 
-        return actual_email_incident
+        return
 
     @staticmethod
     def choice_dispatch_for_incident(
@@ -394,6 +403,13 @@ class IncidentManager(IncidentValidator):
         всей цепочки переписки, регистрация инцидента производится только в
         том случае, если в переписке присутствует самое первое сообщение.
 
+        Особенности:
+            - Новое сообщение от noc.rostov@info.t2.ru имеющее в теме
+            "(Закрыто)" и для которого найдется письмо с инцидентом будет
+            привязано к данному инциденту или по нему не будет создан Новый
+            инцидент. В противном случае инцидент по этому письму не будет
+            зарегестрирован.
+
         Args:
             email_msg (str): EmailMessage, по которому нужно найти переписку.
             yandex_tracker_manager: YandexTrackerManager, для ответов из
@@ -408,6 +424,7 @@ class IncidentManager(IncidentValidator):
         # Все письма относящиеся к переписке:
         emails_thread = self.get_email_thread(email_msg.email_msg_id)
         first_email = emails_thread[0] if emails_thread else None
+        new_incident = None
 
         # Есть ли в переписке первое сообщение:
         is_full_thread = any(et.is_first_email for et in emails_thread)
@@ -424,6 +441,7 @@ class IncidentManager(IncidentValidator):
             Incident.objects.get(id=actual_email_incident_id)
         ) if actual_email_incident_id is not None else None
 
+        # Резервный поиск по коду инцидента в теме письма:
         if not actual_email_incident and yt_manager:
             actual_email_incident = self.get_incident_by_yandex_tracker(
                 email_msg, yt_manager)
@@ -458,14 +476,38 @@ class IncidentManager(IncidentValidator):
             and is_full_thread
             and first_email.folder == EmailFolder.get_inbox()
         ):
-            new_incident = True
+            # Исключение для Tele2:
+            if (
+                # email_msg.email_from == 'noc.rostov@info.t2.ru'
+                email_msg.email_from == 'alexander.choliy@mail.ru'
+                and email_msg.email_subject
+                and email_msg.email_subject.lower().endswith('(закрыто)')
+            ):
+                new_incident = False
 
-            actual_email_incident = Incident.objects.create(
-                incident_date=emails_thread[0].email_date,
-                pole=pole,
-                base_station=base_station,
-            )
-            IncidentManager.add_default_status(actual_email_incident)
+                subject_2_find = email_msg.email_subject.replace(
+                    '(закрыто)', '').strip()
+
+                old_email_msg = (
+                    EmailMessage.objects.filter(
+                        email_subject__icontains=subject_2_find,
+                        email_incident__isnull=False
+                    )
+                    .order_by('-email_date')
+                    .first()
+                )
+
+                if old_email_msg:
+                    actual_email_incident = old_email_msg.email_incident
+
+            else:
+                new_incident = True
+
+                actual_email_incident = Incident.objects.create(
+                    incident_date=emails_thread[0].email_date,
+                    pole=pole,
+                    base_station=base_station,
+                )
 
         # У существующей переписки, обновляем номер инцидента к которой она
         # относится:

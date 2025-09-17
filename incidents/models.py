@@ -92,6 +92,7 @@ class Incident(models.Model):
         max_length=MAX_CODE_LEN,
         null=True,
         blank=True,
+        unique=True,
         help_text='Используется в заголовках писем'
     )
 
