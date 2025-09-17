@@ -86,7 +86,7 @@ class Command(BaseCommand):
             item['email_incident']: item['first_date'] for item in first_emails
         }
 
-        # Разблокируем кастомные поля
+        # Разблокируем кастомные поля:
         for field_id in [
             yt_manager.database_global_field_id,
             yt_manager.emails_ids_global_field_id,

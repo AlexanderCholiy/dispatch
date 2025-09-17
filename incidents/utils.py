@@ -478,8 +478,7 @@ class IncidentManager(IncidentValidator):
         ):
             # Исключение для Tele2:
             if (
-                # email_msg.email_from == 'noc.rostov@info.t2.ru'
-                email_msg.email_from == 'alexander.choliy@mail.ru'
+                email_msg.email_from == 'noc.rostov@info.t2.ru'
                 and email_msg.email_subject
                 and email_msg.email_subject.lower().endswith('(закрыто)')
             ):
