@@ -477,36 +477,36 @@ class IncidentManager(IncidentValidator):
             and first_email.folder == EmailFolder.get_inbox()
         ):
             # Исключение для Tele2:
-            if (
-                email_msg.email_from == 'noc.rostov@info.t2.ru'
-                and email_msg.email_subject
-                and email_msg.email_subject.lower().endswith('(закрыто)')
-            ):
-                new_incident = False
+            # if (
+            #     email_msg.email_from == 'noc.rostov@info.t2.ru'
+            #     and email_msg.email_subject
+            #     and email_msg.email_subject.lower().endswith('(закрыто)')
+            # ):
+            #     new_incident = False
 
-                subject_2_find = email_msg.email_subject.replace(
-                    '(закрыто)', '').strip()
+            #     subject_2_find = email_msg.email_subject.replace(
+            #         '(закрыто)', '').strip()
 
-                old_email_msg = (
-                    EmailMessage.objects.filter(
-                        email_subject__icontains=subject_2_find,
-                        email_incident__isnull=False
-                    )
-                    .order_by('-email_date')
-                    .first()
-                )
+            #     old_email_msg = (
+            #         EmailMessage.objects.filter(
+            #             email_subject__icontains=subject_2_find,
+            #             email_incident__isnull=False
+            #         )
+            #         .order_by('-email_date')
+            #         .first()
+            #     )
 
-                if old_email_msg:
-                    actual_email_incident = old_email_msg.email_incident
+            #     if old_email_msg:
+            #         actual_email_incident = old_email_msg.email_incident
 
-            else:
-                new_incident = True
+            # else:
+            new_incident = True
 
-                actual_email_incident = Incident.objects.create(
-                    incident_date=emails_thread[0].email_date,
-                    pole=pole,
-                    base_station=base_station,
-                )
+            actual_email_incident = Incident.objects.create(
+                incident_date=emails_thread[0].email_date,
+                pole=pole,
+                base_station=base_station,
+            )
 
         # У существующей переписки, обновляем номер инцидента к которой она
         # относится:
