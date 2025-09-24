@@ -271,6 +271,10 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
 
             try:
                 status, messages = mail.fetch(id_range, '(RFC822)')
+            except KeyboardInterrupt:
+                raise
+            except (imaplib.IMAP4.abort, ConnectionResetError, OSError):
+                continue
             except Exception as e:
                 email_parser_logger.error(
                     'Ошибка при FETCH (ids=%s): %s', id_range, str(e)
@@ -640,6 +644,8 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                             email_msg, self.yt_manager
                         )
                         email_err_msg_ids_to_del.append(email_msg_id)
+                    except KeyboardInterrupt:
+                        raise
                     except IntegrityError:
                         email_err_msg_ids.append(email_msg_id)
                         email_parser_logger.error(

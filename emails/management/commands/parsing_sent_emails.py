@@ -1,3 +1,4 @@
+import imaplib
 import time
 
 from django.core.management.base import BaseCommand
@@ -34,6 +35,9 @@ class Command(BaseCommand):
                     mailbox=email_parser.sent_folder_name)
             except KeyboardInterrupt:
                 return
+            except imaplib.IMAP4.abort:
+                email_managment_logger.debug(
+                    'Соединение с IMAP-сервером неожиданно закрылось')
             except Exception as e:
                 email_managment_logger.critical(e, exc_info=True)
                 err = e

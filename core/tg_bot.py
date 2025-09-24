@@ -216,7 +216,7 @@ class TelegramNotifier:
 
     def send_success_notification(self, script_name: str):
         message = f'```{script_name}```\nСкрипт успешно завершил работу 💡'
-        self.send_info_message(message)
+        self.send_debug_message(message)
 
     def send_first_success_notification(self, script_name: str):
         message = (

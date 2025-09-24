@@ -1,6 +1,8 @@
 import re
 from typing import Optional
 
+from django.db.models import QuerySet
+
 from emails.models import EmailMessage
 
 from .models import BaseStation, Pole
@@ -34,80 +36,86 @@ class IncidentValidator:
 
         return set(result)
 
-    def _find_pole_in_text(self, text: str) -> Optional[Pole]:
-        """Поиск шифра опоры в тексте."""
+    def _find_pole_in_text(self, text: str) -> QuerySet[Pole]:
+        """
+        Поиск опоры по самому длинному найденному шифру в тексте.
+
+        Возвращает QuerySet из одной или нескольких опор, если они совпадают с
+        самым длинным словом.
+        """
         result = []
+
         for word in self._find_num_in_text(text):
             pattern = r'\d{5}-'
-            match = re.match(pattern, word)
-            if match:
-                pole = (
-                    Pole.objects
-                    .filter(pole__istartswith=word)
-                    .first()
-                )
+            if re.match(pattern, word):
+                poles = Pole.objects.filter(pole__istartswith=word)
             else:
-                pole = Pole.objects.filter(pole=word).first()
+                poles = Pole.objects.filter(pole=word)
 
-            if pole:
-                result.append((word, pole))
+            if poles.exists():
+                result.append((word, list(poles)))
 
         if not result:
-            return None
+            return Pole.objects.none()
 
-        longest_word_tuple = max(result, key=lambda x: len(x[0]))
-        return longest_word_tuple[1]
+        longest_word, longest_poles = max(result, key=lambda x: len(x[0]))
 
-    def _find_base_station_in_text(self, text: str) -> Optional[BaseStation]:
-        """Поиск BaseStation в тексте."""
+        return Pole.objects.filter(id__in=[p.id for p in longest_poles])
+
+    def _find_base_station_in_text(self, text: str) -> QuerySet[BaseStation]:
+        """
+        Поиск BaseStation по самому длинному найденному шифру в тексте.
+
+        Если найдена опора, фильтруем BaseStation по этой опоре.
+        Возвращает QuerySet из одной или нескольких базовых станций,
+        соответствующих самому длинному слову.
+        """
         result = []
-        pole = self._find_pole_in_text(text)
+        poles = self._find_pole_in_text(text)
+
         for word in self._find_num_in_text(text):
             bs_stations = BaseStation.objects.filter(bs_name=word)
+            if poles.exists():
+                bs_stations = bs_stations.filter(pole__in=poles)
 
-            if bs_stations:
-                for bs_station in bs_stations:
-                    if pole and pole != bs_station.pole:
-                        continue
-                    result.append((word, bs_station))
+            if bs_stations.exists():
+                result.append((word, list(bs_stations)))
 
         if not result:
-            return None
+            return BaseStation.objects.none()
 
-        longest_word_tuple = max(result, key=lambda x: len(x[0]))
-        return longest_word_tuple[1]
+        longest_word, longest_bs = max(result, key=lambda x: len(x[0]))
 
-    def find_pole_and_base_station_in_text(self, text: str) -> tuple[
-        Optional[Pole], Optional[BaseStation]
-    ]:
+        return BaseStation.objects.filter(id__in=[bs.id for bs in longest_bs])
+
+    def find_pole_and_base_station_in_text(
+        self, text: str
+    ) -> tuple[Optional[Pole], Optional[BaseStation]]:
         """Поиск Pole и BaseStation в тексте."""
-        base_stations = self._find_base_station_in_text(text)
+        poles_qs = self._find_pole_in_text(text)
+        bs_qs = self._find_base_station_in_text(text)
 
-        if base_stations:
-            return base_stations.pole, base_stations
+        bs = bs_qs.first() if bs_qs.exists() else None
+        pole = bs.pole if bs else (
+            poles_qs.first() if poles_qs.exists() else None
+        )
 
-        pole = self._find_pole_in_text(text)
-        if pole:
-            return pole, None
-
-        return None, None
+        return pole, bs
 
     def find_pole_and_base_station_in_msg(
         self, msg: EmailMessage
     ) -> tuple[Optional[Pole], Optional[BaseStation]]:
         """Поиск Pole и BaseStation в теме или теле письма."""
-        subject_text = msg.email_subject
-        if subject_text:
+        if msg.email_subject:
             pole, base_station = (
-                self.find_pole_and_base_station_in_text(subject_text)
+                self.find_pole_and_base_station_in_text(msg.email_subject)
             )
             if pole is not None:
                 return pole, base_station
 
-        body_text = msg.email_body
-        if body_text:
+        if msg.email_body:
             pole, base_station = (
-                self.find_pole_and_base_station_in_text(body_text)
+                self.find_pole_and_base_station_in_text(msg.email_body)
             )
             if pole is not None:
                 return pole, base_station

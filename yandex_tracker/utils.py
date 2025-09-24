@@ -196,9 +196,8 @@ class YandexTrackerManager:
         определен шифр опоры из темы или тела письма и эти опоры НЕ находятся в
         указанном регионе INCIDENTS_REGION_NOT_FOR_YT.
 
-        Исключаем инциденты без ответственного диспетчера и старше N дней
-        назад, чтобы не добавлять неактуальные инциденты при смене основного
-        фильтра.
+        Исключаем инциденты старше N дней назад, чтобы не добавлять
+        неактуальные инциденты при смене основного фильтра.
 
         Args:
             days (days): Количество дней назад, для фильтрации инцидентов не
@@ -228,14 +227,15 @@ class YandexTrackerManager:
 
         exclusion_date = timezone.now() - timedelta(days=days)
 
+        # Union:
         emails = (
             emails_not_in_yt | emails_with_incidents_in_yt
         ).exclude(
-            models.Q(email_incident__responsible_user__isnull=True)
-            & models.Q(email_incident__incident_date__lt=exclusion_date)
+            models.Q(email_incident__incident_date__lt=exclusion_date)
         ).distinct().order_by(
             'email_incident_id', 'is_first_email', 'email_date', 'id'
         )
+
         return emails
 
     @staticmethod

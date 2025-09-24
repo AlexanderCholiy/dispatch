@@ -399,6 +399,8 @@ class IncidentManager(IncidentValidator):
         Регистрирует инцидент по переписке, связанной с указанным
         сообщением.
 
+        ОТКЛЮЧЕНО, т.к. скрипт всё равно работает непрерывно в одном потоке,
+        а функция определения первого письма была изменена:
         Для предотвращения дублирования инцидентов и возможности восстановления
         всей цепочки переписки, регистрация инцидента производится только в
         том случае, если в переписке присутствует самое первое сообщение.
@@ -426,8 +428,8 @@ class IncidentManager(IncidentValidator):
         first_email = emails_thread[0] if emails_thread else None
         new_incident = None
 
-        # Есть ли в переписке первое сообщение:
-        is_full_thread = any(et.is_first_email for et in emails_thread)
+        # Есть ли в переписке первое сообщение (отключено):
+        # is_full_thread = any(et.is_first_email for et in emails_thread)
 
         email_ids = [email.pk for email in emails_thread]
         actual_email_incident_id: Optional[int] = min(
@@ -473,7 +475,7 @@ class IncidentManager(IncidentValidator):
         # переписка и первое письмо из стандартной папки INBOX:
         elif (
             actual_email_incident is None
-            and is_full_thread
+            # and is_full_thread
             and first_email.folder == EmailFolder.get_inbox()
         ):
             # Исключение для Tele2:
