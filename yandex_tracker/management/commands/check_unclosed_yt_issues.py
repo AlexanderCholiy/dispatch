@@ -1,5 +1,5 @@
 import time
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Optional
 
 from django.core.management.base import BaseCommand
@@ -265,14 +265,17 @@ class Command(BaseCommand):
                 # Обработка автоответов (данные автоматически синхронизируются)
                 # добавлена дополнительная ошибка от спама, если нарушат
                 # переходы в рабочем процессе:
-                now = timezone.now()
-                last_status_dt: datetime = last_status_history.insert_date
-                delta: timedelta = now - last_status_dt
-
-                # True, если можно отправлять:
-                check_status_dt = delta >= NOTIFY_SPAM_DELAY
-                timeout = max(
-                    int((NOTIFY_SPAM_DELAY - delta).total_seconds()), 0)
+                if last_status_history:
+                    delta: timedelta = (
+                        timezone.now() - last_status_history.insert_date
+                    )
+                    check_status_dt = delta >= NOTIFY_SPAM_DELAY
+                    timeout = max(
+                        int((NOTIFY_SPAM_DELAY - delta).total_seconds()), 0)
+                else:
+                    IncidentManager.add_default_status(incident)
+                    updated_incidents_counter += 1
+                    continue
 
                 if (
                     status_key == yt_manager.error_status_key

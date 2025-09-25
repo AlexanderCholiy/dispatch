@@ -67,6 +67,7 @@ class Command(BaseCommand):
     @timer(yt_managment_logger)
     def add_issues_2_yt(self, yt_manager: YandexTrackerManager):
         emails = YandexTrackerManager.emails_for_yandex_tracker()
+
         total = len(emails)
         error_count = 0
 
@@ -87,16 +88,20 @@ class Command(BaseCommand):
         }
 
         # Разблокируем кастомные поля:
-        for field_id in [
+        fields = [
             yt_manager.database_global_field_id,
             yt_manager.emails_ids_global_field_id,
-        ]:
+        ]
+        for index, field_id in enumerate(fields):
             yt_manager.update_custom_field(
                 field_id=field_id,
                 readonly=False,
                 hidden=False,
                 visible=False,
             )
+
+            if index < len(fields) - 1:
+                time.sleep(1)
 
         for index, email in enumerate(emails):
             PrettyPrint().progress_bar_error(
@@ -127,16 +132,16 @@ class Command(BaseCommand):
                     email.save()
 
         # Блокируем кастомные поля обратно:
-        for field_id in [
-            yt_manager.database_global_field_id,
-            yt_manager.emails_ids_global_field_id,
-        ]:
+        for index, field_id in enumerate(fields):
             yt_manager.update_custom_field(
                 field_id=field_id,
                 readonly=True,
                 hidden=False,
                 visible=False,
             )
+
+            if index < len(fields) - 1:
+                time.sleep(1)
 
         yt_managment_logger.info(
             'Добавление инцидентов в YandexTracker завершено. '

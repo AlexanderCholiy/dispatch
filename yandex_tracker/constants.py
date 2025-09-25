@@ -13,7 +13,7 @@ INCIDENT_REGION_NOT_FOR_YT: list[str] = [
     'Kabardino-Balkariya Region',
     'Severnaya Osetiya-Alaniya Region',
     'Chechnya Region',
-]
+]  # Отключено
 
 MAX_ATTACHMENT_SIZE_IN_YT = 50 * 1024 * 1024  # (max 50 MB в YandexTracker)
 

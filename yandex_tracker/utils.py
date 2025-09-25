@@ -21,7 +21,6 @@ from incidents.constants import DEFAULT_STATUS_DESC, DEFAULT_STATUS_NAME
 from incidents.models import Incident, IncidentStatus, IncidentStatusHistory
 
 from .constants import (
-    INCIDENT_REGION_NOT_FOR_YT,
     MAX_ATTACHMENT_SIZE_IN_YT,
     IsExpiredSLA,
     IsNewMsg,
@@ -192,15 +191,15 @@ class YandexTrackerManager:
         Письма, которые должны быть добавлены в YandexTracker.
 
         Это письма, по которым был сформирован инцидент и они уже были
-        добавлены в YandexTracker, или письма для которых сформирован инцидент,
-        определен шифр опоры из темы или тела письма и эти опоры НЕ находятся в
-        указанном регионе INCIDENTS_REGION_NOT_FOR_YT.
+        добавлены в YandexTracker, или письма для которых сформирован инцидент
+        и эти опоры НЕ находятся в указанном регионе
+        INCIDENTS_REGION_NOT_FOR_YT.
 
-        Исключаем инциденты старше N дней назад, чтобы не добавлять
+        Исключаем письма старше N дней назад, чтобы не добавлять
         неактуальные инциденты при смене основного фильтра.
 
         Args:
-            days (days): Количество дней назад, для фильтрации инцидентов не
+            days (days): Количество дней назад, для фильтрации писем не
             зарегестрированных в YandexTracker. По умолчанию 1.
         Returns:
             Отсортированные от старых к новым QuerySet[EmailMessage] по
@@ -221,17 +220,14 @@ class YandexTrackerManager:
             is_email_from_yandex_tracker=False,
             was_added_2_yandex_tracker=False,
             email_incident__isnull=False,
-        ).exclude(
-            email_incident__pole__region__in=INCIDENT_REGION_NOT_FOR_YT
         )
-
         exclusion_date = timezone.now() - timedelta(days=days)
 
         # Union:
         emails = (
             emails_not_in_yt | emails_with_incidents_in_yt
         ).exclude(
-            models.Q(email_incident__incident_date__lt=exclusion_date)
+            models.Q(email_date__lt=exclusion_date)
         ).distinct().order_by(
             'email_incident_id', 'is_first_email', 'email_date', 'id'
         )
