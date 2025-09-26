@@ -66,7 +66,10 @@ class Command(BaseCommand):
     @min_wait_timer(yt_managment_logger, min_seconds)
     @timer(yt_managment_logger)
     def add_issues_2_yt(self, yt_manager: YandexTrackerManager):
-        emails = YandexTrackerManager.emails_for_yandex_tracker()
+        emails = (
+            YandexTrackerManager.emails_for_yandex_tracker()
+            .select_related('email_incident')
+        )
 
         total = len(emails)
         error_count = 0

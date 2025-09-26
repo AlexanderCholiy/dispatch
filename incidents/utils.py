@@ -4,8 +4,8 @@ from typing import Optional
 
 from django.db import connection, models
 from django.db.models import Count, Min, Q
-from django.utils import timezone
 from django.db.models.functions import Coalesce
+from django.utils import timezone
 
 from emails.models import EmailFolder, EmailMessage
 from users.models import Roles, User
@@ -135,10 +135,14 @@ class IncidentManager(IncidentValidator):
         email_msg: EmailMessage, yt_manager: YandexTrackerManager
     ) -> Optional[Incident]:
         """
-        Если письмо было ответом на письмо отправленное из Yandex Tracker,
-        тогда связь с основной цепочкой теряется. Поэтому мы из темы письма
-        должны проверить есть ли там номер инцидента, и уже по нему
-        попробовть вытащить его:
+        Получаем локальный Incident по письму из YandexTracker.
+
+        Логика:
+        1. Ищем номер инцидента в теме письма.
+        2. Проверяем, есть ли локальный Incident по коду.
+        3. Если нет, проверяем database_id в YT issue.
+        4. Если database_id нет, но задача с этим кодом есть в трекере —
+        создаем инцидент вручную по первому коду из темы письма.
         """
         if not email_msg.email_subject:
             return
@@ -146,7 +150,6 @@ class IncidentManager(IncidentValidator):
         yt_incidents_keys = yt_manager.find_yt_number_in_text(
             email_msg.email_subject
         )
-
         if not yt_incidents_keys:
             return
 
@@ -155,8 +158,11 @@ class IncidentManager(IncidentValidator):
             .order_by('-insert_date')
             .first()
         )
+
         if incident:
             return incident
+
+        found_issues = []
 
         for key in yt_incidents_keys:
             issues = yt_manager.select_issue(key=key)
@@ -169,6 +175,14 @@ class IncidentManager(IncidentValidator):
                         return incident
                     except Incident.DoesNotExist:
                         continue
+                else:
+                    found_issues.append(issue)
+
+        # Если есть хотя бы одна задача без database_id, создаём локальный
+        # инцидент по первой такой задаче:
+        if found_issues:
+            return yt_manager.create_incident_from_issue(
+                found_issues[0], False)
 
         return
 

@@ -693,7 +693,8 @@ class YandexTrackerManager:
         updated_email_ids_str = ', '.join(str(pk) for pk in updated_email_ids)
 
         payload = {
-            self.emails_ids_global_field_id: updated_email_ids_str
+            self.emails_ids_global_field_id: updated_email_ids_str,
+            self.is_new_msg_global_field_id: IsNewMsg.yes,
         }
 
         url = f'{self.create_issue_url}{issue_key}'
@@ -739,6 +740,10 @@ class YandexTrackerManager:
             eml.email_to for eml in email_incident.email_msg_cc.all()
         ]
         issues = self.select_issue(database_id)
+
+        if not issues and incident.code:
+            issues = self.select_issue(key=incident.code)
+
         key = issues[0]['key'] if issues else None
 
         return {
@@ -758,17 +763,23 @@ class YandexTrackerManager:
 
     def add_incident_to_yandex_tracker(
         self, email_incident: EmailMessage, is_first_email: bool
-    ) -> list[dict]:
-        """Создание инцидента в YandexTracker."""
+    ):
+        """
+        Создание инцидента в YandexTracker.
+
+        Особенности:
+            У EmailMessage обязательно должен быть Incident.
+        """
         data_for_yt = self._prepare_data_from_email(email_incident)
+
+        # Задача будет даже если создана вручную:
         issues: list[dict] = data_for_yt['issues']
         key = issues[0]['key'] if issues else None
-
-        result = []
 
         # Инцидент только пришел и ещё отсутствует в YandexTracker:
         if not issues and is_first_email:
             temp_files = self.download_email_temp_files(email_incident)
+
             issue = self.create_or_update_issue(
                 key=key,
                 summary=data_for_yt['summary'],
@@ -783,10 +794,11 @@ class YandexTrackerManager:
                 email_cc=data_for_yt['email_cc'],
                 temp_files=temp_files,
             )
-            result.append(issue)
+
             incident = email_incident.email_incident
             incident.code = issue['key']
             incident.save()
+
         # Инцидент отсутствует в YandexTracker, но по нему пришло уточнение,
         # поэтому надо восстановить полностью цепочку писем для инцидента:
         elif not issues and not is_first_email:
@@ -813,12 +825,13 @@ class YandexTrackerManager:
                 email_cc=new_data_for_yt['email_cc'],
                 temp_files=temp_files,
             )
-            result.append(issue)
+
             incident = email_incident.email_incident
             incident.code = issue['key']
             incident.save()
             for email in all_email_incident[1:]:
                 self.add_issue_email_comment(email, issue)
+
         # Инцидент уже зарегестрирован в YandexTracker:
         else:
             for issue in issues:
@@ -832,8 +845,12 @@ class YandexTrackerManager:
                 )
                 key: str = issue['key']
                 # Повторная обработка первого письма:
-                if is_first_email:
+                if (
+                    is_first_email
+                    and email_incident.email_incident.is_auto_incident
+                ):
                     temp_files = self.download_email_temp_files(email_incident)
+
                     issue = self.create_or_update_issue(
                         key=key,
                         summary=data_for_yt['summary'],
@@ -848,15 +865,14 @@ class YandexTrackerManager:
                         email_cc=data_for_yt['email_cc'],
                         temp_files=temp_files,
                     )
-                    result.append(issue)
+
                 # Необходимо добавить новые сообщения ввиде комментаривев:
                 else:
                     self.add_issue_email_comment(email_incident, issue)
+
             incident = email_incident.email_incident
             incident.code = key
             incident.save()
-
-        return result
 
     def filter_issues(
         self, yt_filter: dict, days_ago: int = 7
@@ -1172,12 +1188,14 @@ class YandexTrackerManager:
         incident.code = issue_key
         incident.save()
 
-        return self._make_request(
+        self._make_request(
             HTTPMethod.PATCH,
             url,
             json=payload,
             sub_func_name=inspect.currentframe().f_code.co_name,
         )
+
+        return incident
 
 
 yt_manager = YandexTrackerManager(
