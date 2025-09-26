@@ -15,6 +15,8 @@ from core.wraps import min_wait_timer, timer
 from emails.models import EmailMessage
 from incidents.utils import IncidentManager
 from yandex_tracker.utils import YandexTrackerManager, yt_manager
+from yandex_tracker.auto_emails import AutoEmailsFromYT
+from emails.email_parser import email_parser
 
 yt_managment_logger = LoggerFactory(
     __name__, YANDEX_TRACKER_ROTATING_FILE).get_logger
@@ -38,8 +40,10 @@ class Command(BaseCommand):
             total_operations = 0
 
             try:
+                yt_emails = AutoEmailsFromYT(yt_manager, email_parser)
                 total_operations, error_count = self.add_issues_2_yt(
-                    yt_manager)
+                    yt_manager, yt_emails
+                )
             except KeyboardInterrupt:
                 return
             except Exception as e:
@@ -65,7 +69,9 @@ class Command(BaseCommand):
 
     @min_wait_timer(yt_managment_logger, min_seconds)
     @timer(yt_managment_logger)
-    def add_issues_2_yt(self, yt_manager: YandexTrackerManager):
+    def add_issues_2_yt(
+        self, yt_manager: YandexTrackerManager, yt_emails: AutoEmailsFromYT
+    ):
         emails = (
             YandexTrackerManager.emails_for_yandex_tracker()
             .select_related('email_incident')
@@ -124,7 +130,9 @@ class Command(BaseCommand):
                     is_first = (
                         email.email_date <= first_email_map.get(incident.pk)
                     )
-                    yt_manager.add_incident_to_yandex_tracker(email, is_first)
+                    yt_manager.add_incident_to_yandex_tracker(
+                        email, is_first, yt_emails
+                    )
                 except KeyboardInterrupt:
                     raise
                 except Exception as e:

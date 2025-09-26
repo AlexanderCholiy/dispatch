@@ -762,7 +762,10 @@ class YandexTrackerManager:
         }
 
     def add_incident_to_yandex_tracker(
-        self, email_incident: EmailMessage, is_first_email: bool
+        self,
+        email_incident: EmailMessage,
+        is_first_email: bool,
+        yt_emails
     ):
         """
         Создание инцидента в YandexTracker.
@@ -799,6 +802,11 @@ class YandexTrackerManager:
             incident.code = issue['key']
             incident.save()
 
+            if incident.is_incident_finish:
+                yt_emails.auto_reply_incident_is_closed(
+                    issue, email_incident
+                )
+
         # Инцидент отсутствует в YandexTracker, но по нему пришло уточнение,
         # поэтому надо восстановить полностью цепочку писем для инцидента:
         elif not issues and not is_first_email:
@@ -829,6 +837,12 @@ class YandexTrackerManager:
             incident = email_incident.email_incident
             incident.code = issue['key']
             incident.save()
+
+            if incident.is_incident_finish:
+                yt_emails.auto_reply_incident_is_closed(
+                    issue, email_incident
+                )
+
             for email in all_email_incident[1:]:
                 self.add_issue_email_comment(email, issue)
 
@@ -869,6 +883,11 @@ class YandexTrackerManager:
                 # Необходимо добавить новые сообщения ввиде комментаривев:
                 else:
                     self.add_issue_email_comment(email_incident, issue)
+
+                if email_incident.email_incident.is_incident_finish:
+                    yt_emails.auto_reply_incident_is_closed(
+                        issue, email_incident
+                    )
 
             incident = email_incident.email_incident
             incident.code = key

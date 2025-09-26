@@ -385,3 +385,68 @@ class AutoEmailsFromYT:
         text_parts.append('\n\nВАЖНО: НЕ МЕНЯЙТЕ ТЕМУ ПИСЬМА ПРИ ОТВЕТЕ')
 
         return '\n'.join(text_parts)
+
+    def auto_reply_incident_is_closed(
+        self, issue: dict, email: EmailMessage
+    ) -> bool:
+        """
+        Уведомляем заявителя о том, что заявка уже закрыта.
+        """
+        email_to = [email.email_from]
+
+        success_message = 'Уведомили заявителя о том, что заявка уже закрыта.'
+        error_message = (
+            'Не удалось уведомить заявителя о том, что заявка уже закрыта.')
+
+        to_addresses = list(
+            email.email_msg_to.values_list('email_to', flat=True)
+        )
+
+        cc_addresses = list(
+            email.email_msg_cc.values_list('email_to', flat=True)
+        )
+
+        all_recipients = set(to_addresses) | set(cc_addresses)
+        all_recipients -= set(email_to)
+
+        incident = email.email_incident
+
+        text_parts = [
+            'Добрый день,\n',
+            (
+                'Ваше сообщение было отправлено с темой уже закрытого '
+                'инцидента либо является ответом на него.'
+            ),
+            (
+                'Если у вас есть новая актуальная информация, пожалуйста, '
+                'направьте её отдельным письмом в виде новой заявки.'
+            ),
+
+        ]
+
+        if email.email_body:
+            preview = email.email_body.strip()
+            if len(preview) > MAX_PREVIEW_TEXT_LEN:
+                preview = preview[:MAX_PREVIEW_TEXT_LEN].rstrip() + ' ...'
+
+            text_parts.append('\n\nДля справки, фрагмент вашего письма:\n')
+            text_parts.append(f'```\n{preview}\n```')
+
+        result = self.send_auto_reply(
+            issue=issue,
+            incident=incident,
+            email_to=email_to,
+            email_to_cc=list(all_recipients),
+            success_status_key=(
+                self.yt_manager.notified_op_issue_in_work_status_key
+            ),
+            success_message=success_message,
+            text_template='\n'.join(text_parts),
+            error_message=error_message,
+        )
+
+        if not result:
+            if incident.prefetched_statuses[0] != DEFAULT_ERR_STATUS_NAME:
+                IncidentManager.add_error_status(incident, error_message)
+
+        return result
