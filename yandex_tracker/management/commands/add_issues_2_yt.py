@@ -101,7 +101,7 @@ class Command(BaseCommand):
             )
 
             if index < len(fields) - 1:
-                time.sleep(1)
+                time.sleep(self.min_seconds)
 
         for index, email in enumerate(emails):
             PrettyPrint().progress_bar_error(
@@ -141,7 +141,7 @@ class Command(BaseCommand):
             )
 
             if index < len(fields) - 1:
-                time.sleep(1)
+                time.sleep(self.min_seconds)
 
         yt_managment_logger.info(
             'Добавление инцидентов в YandexTracker завершено. '

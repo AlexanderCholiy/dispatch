@@ -229,7 +229,7 @@ class YandexTrackerManager:
         ).exclude(
             models.Q(email_date__lt=exclusion_date)
         ).distinct().order_by(
-            'email_incident_id', 'is_first_email', 'email_date', 'id'
+            'email_incident_id', 'email_date', '-is_first_email', 'id'
         )
 
         return emails
@@ -792,7 +792,7 @@ class YandexTrackerManager:
         elif not issues and not is_first_email:
             all_email_incident = EmailMessage.objects.filter(
                 email_incident=email_incident.email_incident
-            ).order_by('is_first_email', 'email_date', 'id')
+            ).order_by('email_date', '-is_first_email', 'id')
 
             first_email_incident = all_email_incident.first()
             new_data_for_yt = self._prepare_data_from_email(

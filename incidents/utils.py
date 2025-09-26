@@ -5,6 +5,7 @@ from typing import Optional
 from django.db import connection, models
 from django.db.models import Count, Min, Q
 from django.utils import timezone
+from django.db.models.functions import Coalesce
 
 from emails.models import EmailFolder, EmailMessage
 from users.models import Roles, User
@@ -126,7 +127,7 @@ class IncidentManager(IncidentValidator):
 
         ids = [row[0] for row in rows]
         return EmailMessage.objects.filter(id__in=ids).order_by(
-            'email_incident_id', 'is_first_email', 'email_date', 'id'
+            'email_incident_id', 'email_date', '-is_first_email', 'id'
         )
 
     @staticmethod
@@ -191,12 +192,15 @@ class IncidentManager(IncidentValidator):
             User.objects
             .filter(is_active=True, role=Roles.DISPATCH)
             .annotate(
-                incident_count=Count(
-                    'incidents',
-                    filter=Q(
-                        incidents__is_incident_finish=False,
-                        incidents__insert_date__gte=since_date,
-                    )
+                incident_count=Coalesce(
+                    Count(
+                        'incidents',
+                        filter=Q(
+                            incidents__is_incident_finish=False,
+                            incidents__insert_date__gte=since_date,
+                        )
+                    ),
+                    0
                 )
             )
         )
@@ -211,7 +215,7 @@ class IncidentManager(IncidentValidator):
             )
 
         if not active_users_with_incidents.exists():
-            return None
+            return
 
         # Необходимо выбрать самого свободного диспетчера:
         min_count = active_users_with_incidents.aggregate(
@@ -221,6 +225,9 @@ class IncidentManager(IncidentValidator):
         free_users = active_users_with_incidents.filter(
             incident_count=min_count
         )
+
+        if not free_users:
+            return
 
         return random.choice(free_users)
 

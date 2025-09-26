@@ -34,7 +34,7 @@ class EmailMessageInline(admin.StackedInline):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.order_by('is_first_email', 'email_date', 'id')
+        return qs.order_by('email_date', '-is_first_email', 'id')
 
     def view_link(self, obj):
         url = reverse('admin:emails_emailmessage_change', args=[obj.id])

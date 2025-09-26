@@ -142,7 +142,7 @@ class AutoEmailsFromYT:
                 email_incident=incident, is_first_email=True
             )
             .order_by(
-                'email_incident_id', 'is_first_email', 'email_date', 'id'
+                'email_incident_id', 'email_date', '-is_first_email', 'id'
             )
         ).first()
         email_to = [] if not first_email else [first_email.email_from]
@@ -203,7 +203,7 @@ class AutoEmailsFromYT:
                 email_incident=incident, is_first_email=True
             )
             .order_by(
-                'email_incident_id', 'is_first_email', 'email_date', 'id'
+                'email_incident_id', 'email_date', '-is_first_email', 'id'
             )
         ).first()
         email_to = [] if not first_email else [first_email.email_from]
@@ -358,7 +358,7 @@ class AutoEmailsFromYT:
         emails = (
             EmailMessage.objects.filter(email_incident=incident)
             .order_by(
-                'email_incident_id', 'is_first_email', 'email_date', 'id'
+                'email_incident_id', 'email_date', '-is_first_email', 'id'
             )
         )
 
