@@ -170,13 +170,22 @@ class EmailManager:
                 settings.MEDIA_ROOT, str(relative_file_path)
             )
 
-            if os.path.exists(file_path):
-                files.append(file_path)
-            else:
+            if not os.path.exists(file_path):
                 try:
                     attachment.delete()
                 except DatabaseError:
                     pass
+                continue
+
+            size = os.path.getsize(file_path)
+            if size == 0:
+                try:
+                    attachment.delete()
+                except DatabaseError:
+                    pass
+                continue
+
+            files.append(file_path)
 
         return files
 
