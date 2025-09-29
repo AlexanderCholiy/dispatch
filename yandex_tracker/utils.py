@@ -802,10 +802,10 @@ class YandexTrackerManager:
             incident.code = issue['key']
             incident.save()
 
-            if incident.is_incident_finish:
-                yt_emails.auto_reply_incident_is_closed(
-                    issue, email_incident
-                )
+            # if incident.is_incident_finish:
+            #     yt_emails.auto_reply_incident_is_closed(
+            #         issue, email_incident
+            #     )
 
         # Инцидент отсутствует в YandexTracker, но по нему пришло уточнение,
         # поэтому надо восстановить полностью цепочку писем для инцидента:
@@ -838,10 +838,10 @@ class YandexTrackerManager:
             incident.code = issue['key']
             incident.save()
 
-            if incident.is_incident_finish:
-                yt_emails.auto_reply_incident_is_closed(
-                    issue, email_incident
-                )
+            # if incident.is_incident_finish:
+            #     yt_emails.auto_reply_incident_is_closed(
+            #         issue, email_incident
+            #     )
 
             for email in all_email_incident[1:]:
                 self.add_issue_email_comment(email, issue)
@@ -884,10 +884,10 @@ class YandexTrackerManager:
                 else:
                     self.add_issue_email_comment(email_incident, issue)
 
-                if email_incident.email_incident.is_incident_finish:
-                    yt_emails.auto_reply_incident_is_closed(
-                        issue, email_incident
-                    )
+                # if email_incident.email_incident.is_incident_finish:
+                #     yt_emails.auto_reply_incident_is_closed(
+                #         issue, email_incident
+                #     )
 
             incident = email_incident.email_incident
             incident.code = key
