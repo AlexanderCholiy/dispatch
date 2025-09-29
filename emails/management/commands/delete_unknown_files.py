@@ -28,28 +28,52 @@ class Command(BaseCommand):
     def _remove_unknown_files(
         self, file_path: Path, valid_files: set[Path], threshold: dt.datetime
     ):
-        if file_path.is_file():
-            relative_path = str(file_path.relative_to(settings.MEDIA_ROOT))
+        if not file_path.is_file():
+            return
 
-            if relative_path not in valid_files:
+        # Сразу удаляем пустые файлы:
+        try:
+            size = file_path.stat().st_size
+        except OSError:
+            email_managment_logger.warning(
+                f'Не удалось получить размер файла {file_path}'
+            )
+            return
+
+        if size == 0:
+            try:
+                file_path.unlink()
+                email_managment_logger.info(
+                    f'Удалён пустой файл вложения: {file_path}'
+                )
+            except OSError:
+                email_managment_logger.warning(
+                    f'Не удалось удалить пустой файл {file_path}'
+                )
+            return
+
+        # Проверяем, есть ли файл в базе:
+        relative_path = str(file_path.relative_to(settings.MEDIA_ROOT))
+
+        if relative_path not in valid_files:
+            try:
+                mtime = dt.datetime.fromtimestamp(
+                    file_path.stat().st_mtime,
+                    tz=timezone.get_current_timezone()
+                )
+            except OSError:
+                email_managment_logger.warning(
+                    'Не удалось получить время модификации '
+                    f'{file_path}'
+                )
+                return
+
+            if mtime < threshold:
                 try:
-                    mtime = dt.datetime.fromtimestamp(
-                        file_path.stat().st_mtime,
-                        tz=timezone.get_current_timezone()
-                    )
+                    file_path.unlink()
                 except OSError:
                     email_managment_logger.warning(
-                        'Не удалось получить время модификации '
-                        f'{file_path}'
-                    )
-                    return
-
-                if mtime < threshold:
-                    try:
-                        file_path.unlink()
-                    except OSError:
-                        email_managment_logger.warning(
-                            f'Не удалось удалить {file_path}')
+                        f'Не удалось удалить {file_path}')
 
     @timer(email_managment_logger)
     def handle(self, *args, **kwargs):
@@ -99,7 +123,7 @@ class Command(BaseCommand):
                                 folder_name, SUBFOLDER_DATE_FORMAT),
                             timezone.get_current_timezone()
                         )
-                        if folder_date < threshold:
+                        if folder_date < now - dt.timedelta(days=1):
                             dir_path.rmdir()
                 except OSError:
                     email_managment_logger.warning(
