@@ -554,3 +554,29 @@ class IncidentManager(IncidentValidator):
                 IncidentManager.add_default_status(actual_email_incident)
 
             return actual_email_incident, new_incident
+
+    @staticmethod
+    def all_incident_emails(incident: Incident) -> set[str]:
+        """Собираем все email, фигурирующие в письмах по инциденту."""
+        incident_emails = set()
+
+        # FROM
+        incident_emails.update(
+            em.email_from for em in incident.email_messages.all()
+        )
+
+        # TO
+        incident_emails.update(
+            eto.email_to
+            for em in incident.email_messages.all()
+            for eto in em.email_msg_to.all()
+        )
+
+        # CC
+        incident_emails.update(
+            ecc.email_to
+            for em in incident.email_messages.all()
+            for ecc in em.email_msg_cc.all()
+        )
+
+        return incident_emails

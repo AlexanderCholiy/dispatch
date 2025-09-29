@@ -193,8 +193,8 @@ class AutoEmailsFromYT:
         self, issue: dict, incident: Incident
     ) -> bool:
         """
-        Уведомляем оператора о принятии заявки в работу с обработкой ошибок и
-        меняем статус инцидента.
+        Уведомляем оператора о закрытии заявки с обработкой ошибок и меняем
+        статус инцидента.
         """
         issue_key: str = issue['key']
 
@@ -209,7 +209,8 @@ class AutoEmailsFromYT:
         email_to = [] if not first_email else [first_email.email_from]
 
         notify_before_message = (
-            'Диспетчер отправил автоответ заявителю о закрытии заявки.')
+            'Диспетчер отправил автоответ заявителю о закрытии заявки.'
+        )
         success_message = 'Уведомили оператора о закрытии заявки.'
         error_message = 'Не удалось уведомить оператора о закрытии заявки.'
 
@@ -225,7 +226,8 @@ class AutoEmailsFromYT:
         all_recipients -= set(email_to)
 
         IncidentManager.add_notify_op_end_status(
-            incident, notify_before_message)
+            incident, notify_before_message
+        )
 
         result = self.send_auto_reply(
             issue=issue,
@@ -444,6 +446,55 @@ class AutoEmailsFromYT:
             text_template='\n'.join(text_parts),
             error_message=error_message,
         )
+
+        if not result:
+            if incident.prefetched_statuses[0] != DEFAULT_ERR_STATUS_NAME:
+                IncidentManager.add_error_status(incident, error_message)
+
+        return result
+
+    def notify_avr_issue_close(
+        self, issue: dict, incident: Incident
+    ) -> bool:
+        """
+        Уведомляем подрядчика о закрытии заявки.
+        """
+        issue_key: str = issue['key']
+
+        email_to = [
+            ce.email
+            for ce in incident.pole.avr_contractor.emails.all()
+        ]
+
+        notify_before_message = (
+            'Диспетчер отправил автоответ подрядчику о закрытии заявки.'
+        )
+        success_message = 'Уведомили подрядчика о закрытии заявки.'
+        error_message = 'Не удалось уведомить подрядчика о закрытии заявки.'
+
+        IncidentManager.add_notify_op_end_status(
+            incident, notify_before_message)
+
+        result = self.send_auto_reply(
+            issue=issue,
+            incident=incident,
+            email_to=email_to,
+            email_to_cc=None,
+            success_status_key=(
+                self.yt_manager.notified_op_issue_closed_status_key
+            ),
+            success_message=success_message,
+            text_template=f'Заявка "{issue_key}" закрыта.',
+            error_message=error_message,
+        )
+
+        if result:
+            # Т.к. статус будет выставлен до этого, уведомление добавляем
+            # вручную:
+            self.yt_manager.create_comment(
+                issue_key=issue_key,
+                comment=success_message,
+            )
 
         if not result:
             if incident.prefetched_statuses[0] != DEFAULT_ERR_STATUS_NAME:

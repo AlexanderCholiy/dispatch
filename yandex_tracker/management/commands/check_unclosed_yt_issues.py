@@ -15,12 +15,14 @@ from core.pretty_print import PrettyPrint
 from core.tg_bot import tg_manager
 from core.wraps import min_wait_timer, timer
 from emails.email_parser import email_parser
+from emails.models import EmailMessage
 from incidents.constants import (
     DEFAULT_ERR_STATUS_NAME,
     DEFAULT_NOTIFIED_AVR_STATUS_NAME,
     DEFAULT_NOTIFIED_OP_END_STATUS_NAME,
     DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_NAME,
     DEFAULT_WAIT_ACCEPTANCE_STATUS_NAME,
+    DEFAULT_NOTIFY_AVR_STATUS_NAME,
 )
 from incidents.models import Incident, IncidentStatusHistory, IncidentType
 from incidents.utils import IncidentManager
@@ -192,6 +194,14 @@ class Command(BaseCommand):
         ).prefetch_related(
             'statuses',
             'base_station__operator',
+            'pole__avr_contractor__emails',
+            Prefetch(
+                'email_messages',
+                queryset=EmailMessage.objects.prefetch_related(
+                    'email_msg_to',
+                    'email_msg_cc',
+                ),
+            ),
             Prefetch(
                 'status_history',
                 queryset=(
@@ -284,6 +294,7 @@ class Command(BaseCommand):
                 ):
                     IncidentManager.add_error_status(incident)
                     updated_incidents_counter += 1
+
                 elif (
                     status_key == yt_manager.need_acceptance_status_key
                     and last_status_history.status.name != (
@@ -292,9 +303,12 @@ class Command(BaseCommand):
                 ):
                     IncidentManager.add_wait_acceptance_status(incident)
                     updated_incidents_counter += 1
+
                 elif status_key == yt_manager.in_work_status_key:
                     IncidentManager.add_in_work_status(
-                        incident, 'Диспетчер принял работы в YandexTracker')
+                        incident, 'Диспетчер принял работы в YandexTracker'
+                    )
+
                 elif (
                     status_key == (
                         yt_manager.notified_op_issue_in_work_status_key)
@@ -303,6 +317,7 @@ class Command(BaseCommand):
                 ):
                     IncidentManager.add_notified_op_status(incident)
                     updated_incidents_counter += 1
+
                 elif (
                     status_key == (
                         yt_manager.notified_op_issue_closed_status_key)
@@ -311,6 +326,7 @@ class Command(BaseCommand):
                 ):
                     IncidentManager.add_notified_op_end_status(incident)
                     updated_incidents_counter += 1
+
                 elif (
                     status_key == (
                         yt_manager.notified_avr_in_work_status_key)
@@ -319,6 +335,7 @@ class Command(BaseCommand):
                 ):
                     IncidentManager.add_notified_avr_status(incident)
                     updated_incidents_counter += 1
+
                 elif (
                     status_key == yt_manager.notify_op_issue_in_work_status_key
                 ):
@@ -347,6 +364,7 @@ class Command(BaseCommand):
                             )
                         )
                         updated_incidents_counter += 1
+
                 elif (
                     status_key == yt_manager.notify_op_issue_closed_status_key
                 ):
@@ -363,6 +381,38 @@ class Command(BaseCommand):
                         DEFAULT_NOTIFIED_OP_END_STATUS_NAME,
                     ):
                         yt_emails.notify_operator_issue_close(issue, incident)
+
+                        contractor_emails: set[str] = {
+                            ce.email
+                            for ce in incident.pole.avr_contractor.emails.all()
+                        }
+
+                        incident_emails = IncidentManager.all_incident_emails(
+                            incident
+                        )
+
+                        incident_status_names: set[str] = {
+                            st.name for st in incident.statuses.all()
+                        }
+
+                        if (
+                            incident.pole
+                            and incident.pole.avr_contractor
+                            and contractor_emails
+                            and (
+                                any(
+                                    s in incident_status_names for s in (
+                                        DEFAULT_NOTIFIED_AVR_STATUS_NAME,
+                                        DEFAULT_NOTIFY_AVR_STATUS_NAME,
+                                    )
+                                )
+                                or not contractor_emails.isdisjoint(
+                                    incident_emails
+                                )
+                            )
+                        ):
+                            yt_emails.notify_avr_issue_close(issue, incident)
+
                         updated_incidents_counter += 1
                     elif check_status_dt:
                         yt_manager.update_issue_status(
@@ -374,6 +424,7 @@ class Command(BaseCommand):
                             )
                         )
                         updated_incidents_counter += 1
+
                 elif (
                     status_key == yt_manager.notify_avr_in_work_status_key
                 ):

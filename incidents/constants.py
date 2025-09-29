@@ -57,7 +57,7 @@ DEFAULT_NOTIFIED_OP_END_STATUS_DESC = (
     'Отправили письмо заявителю о закрытии работ.')
 
 DEFAULT_NOTIFY_AVR_STATUS_NAME = 'Передать подрядчику'
-DEFAULT_NOTIFY_AVR_STATUS_DESC = 'Отправляем письмо с инцидентом.'
+DEFAULT_NOTIFY_AVR_STATUS_DESC = 'Отправляем письмо с инцидентом подрядчику.'
 
 DEFAULT_NOTIFIED_AVR_STATUS_NAME = 'Передано подрядчику'
-DEFAULT_NOTIFIED_AVR_STATUS_DESC = 'Отправили письмо с инцидентом.'
+DEFAULT_NOTIFIED_AVR_STATUS_DESC = 'Отправили письмо с инцидентом подрядчику.'

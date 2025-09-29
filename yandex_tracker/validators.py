@@ -703,7 +703,7 @@ def check_yt_incident_data(
             ) if operator_bs else None,
         )
         error_message = (
-            'необходимо обновить:'
+            'необходимо обновить: '
             + ', '.join(validation_errors)
         )
         logger.debug(f'Ошибка {issue_key}: {error_message}')
