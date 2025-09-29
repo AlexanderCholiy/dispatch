@@ -308,6 +308,7 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
         check_days: int = 0,
         check_err_days: int = 7,
         mailbox: str = inbox_folder_name,
+        imap_ssl_timeout: int = 600
     ):
         """
         Парсинг писем для получения непрочитанных сообщений и запись их в БД.
@@ -346,7 +347,11 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
             days=max((check_days + 1), (check_err_days + 1))
         )
 
-        with imaplib.IMAP4_SSL(self.email_server, self.email_port) as mail:
+        with imaplib.IMAP4_SSL(
+            self.email_server,
+            self.email_port,
+            timeout=imap_ssl_timeout
+        ) as mail:
             mail.login(self.email_login, self.email_pswd)
             mail.select(mailbox, readonly=True)
 
