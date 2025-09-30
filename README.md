@@ -554,3 +554,7 @@ sudo apt-get update --allow-unauthenticated
 # 4. Установка драйвера ODBC 17 и unixODBC
 sudo ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc unixodbc-dev
 Да, для Linux 24.04 (и вообще для многих Ubuntu) драйвер ODBC 18 иногда даёт проблемы с SSL, особенно если сервер MSSQL использует самоподписанный сертификат. В таких случаях переход на ODBC Driver 17 может быть проще и стабильнее.
+
+
+Доступный размер оперативной памяти 
+free -h

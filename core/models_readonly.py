@@ -1,5 +1,5 @@
-from django.db import models
 from django.core.exceptions import PermissionDenied
+from django.db import models
 
 
 class ReadOnlyQuerySet(models.QuerySet):

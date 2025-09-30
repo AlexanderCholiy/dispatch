@@ -3,8 +3,8 @@ import time
 
 from django.core.management.base import (
     BaseCommand,
-    CommandParser,
     CommandError,
+    CommandParser,
 )
 
 from core.constants import (

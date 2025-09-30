@@ -12,11 +12,11 @@ from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
 from core.tg_bot import tg_manager
 from core.wraps import min_wait_timer, timer
+from emails.email_parser import email_parser
 from emails.models import EmailMessage
 from incidents.utils import IncidentManager
-from yandex_tracker.utils import YandexTrackerManager, yt_manager
 from yandex_tracker.auto_emails import AutoEmailsFromYT
-from emails.email_parser import email_parser
+from yandex_tracker.utils import YandexTrackerManager, yt_manager
 
 yt_managment_logger = LoggerFactory(
     __name__, YANDEX_TRACKER_ROTATING_FILE).get_logger

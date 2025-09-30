@@ -1,10 +1,13 @@
 from django.contrib import admin
 
 from core.constants import EMPTY_VALUE
+
 from .constants import (
-    MSYS_MODEMS_PER_PAGE, MSYS_STATUSES_PER_PAGE, MSYS_POLES_PER_PAGE
+    MSYS_MODEMS_PER_PAGE,
+    MSYS_POLES_PER_PAGE,
+    MSYS_STATUSES_PER_PAGE,
 )
-from .models import MSysModem, MSysStatus, MSysPoles
+from .models import MSysModem, MSysPoles, MSysStatus
 
 admin.site.empty_value_display = EMPTY_VALUE
 

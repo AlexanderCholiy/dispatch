@@ -1,6 +1,6 @@
-import os
 import multiprocessing
-from typing import Optional, Callable, Any
+import os
+from typing import Any, Callable, Optional
 
 from django.utils import timezone
 

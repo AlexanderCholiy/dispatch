@@ -1,17 +1,27 @@
 from datetime import datetime
 from logging import Logger
-from typing import Optional
+from typing import Optional, TypedDict
 
 from dateutil import parser
 from django.db import models, transaction
 
 from incidents.models import Incident, IncidentType
 from incidents.utils import IncidentManager
+from monitoring.models import DeviceStatus, DeviceType
 from ts.constants import UNDEFINED_CASE
 from ts.models import AVRContractor, BaseStation, BaseStationOperator, Pole
 from users.models import User
 
 from .utils import YandexTrackerManager
+
+
+class DevicesData(TypedDict):
+    modem_ip: str
+    pole_1__pole: str
+    pole_2__pole: str | None
+    pole_3__pole: str | None
+    level: int
+    status__id: int
 
 
 def check_yt_pole_incident(
@@ -81,6 +91,7 @@ def check_yt_pole_incident(
             base_station_number=None,
             avr_name=None,
             operator_name=None,
+            monitoring_data=None,
         )
         if status_key != yt_manager.error_status_key:
             was_status_update = yt_manager.update_issue_status(
@@ -209,6 +220,7 @@ def check_yt_base_station_incident(
             base_station_number=None,
             avr_name=None,
             operator_name=None,
+            monitoring_data=None,
         )
         if status_key != yt_manager.error_status_key:
             was_status_update = yt_manager.update_issue_status(
@@ -415,6 +427,96 @@ def check_yt_expired_incident(
     return is_valid_expired_incident
 
 
+def prepare_monitoring_text(
+    devices: Optional[list[DevicesData]]
+) -> Optional[str]:
+    """Формирует текстовую сводку по оборудованию мониторинга."""
+    if not devices:
+        return
+
+    status_emojis = {
+        'NORMAL': '🟩',
+        'CRITICAL': '🟥',
+        'MAJOR': '🟧',
+        'MINOR': '🟨',
+        'WARNING': '🟦',
+        'UNMONITORED': '🟥',
+        'TERMINATED': '🟥',
+        'BLOCKED': '⬛️',
+    }
+
+    sorted_devices = sorted(
+        devices,
+        key=lambda d: (
+            -d['level'], d['modem_ip'].strip() if d['modem_ip'] else ''
+        )
+    )
+
+    # Длина колонок
+    type_width = 32
+    status_width = 32
+
+    # Заголовок
+    header = (
+        f'{"Тип устройства".ljust(type_width)}'
+        f'{"Статус        ".ljust(status_width)}'
+    )
+    lines = [header, '']
+
+    for dev in sorted_devices:
+        level_display = DeviceType(
+            dev.get('level')).label if dev.get('level') is not None else '-'
+        status_display = DeviceStatus(
+            dev.get('status__id')
+        ).label if dev.get('status__id') is not None else '-'
+        emoji = status_emojis.get(status_display, '')
+
+        status_text = f'{emoji} {status_display}'
+        status_aligned = status_text.ljust(status_width)
+
+        line = f'{level_display.ljust(type_width)} {status_aligned}'
+        lines.append(line)
+
+    return '\n'.join(lines)
+
+
+def check_yt_monitoring(
+    yt_manager: YandexTrackerManager,
+    issue: dict,
+    incident: Incident,
+    devices: dict[str, list[DevicesData]]
+) -> bool:
+    is_valid_yt_monitoring = True
+
+    incident_monitoring: Optional[str] = issue.get(
+        yt_manager.monitoring_global_field_id
+    )
+
+    if incident_monitoring and not incident.pole:
+        return False
+
+    if not incident_monitoring and not incident.pole:
+        return True
+
+    monitoring_devices = devices.get(incident.pole.pole)
+
+    if incident_monitoring and not monitoring_devices:
+        return False
+
+    if not incident_monitoring and monitoring_devices:
+        return False
+
+    if not incident_monitoring and not monitoring_devices:
+        return True
+
+    if incident_monitoring != prepare_monitoring_text(
+        devices.get(incident.pole.pole)
+    ):
+        return False
+
+    return is_valid_yt_monitoring
+
+
 @transaction.atomic
 def check_yt_incident_data(
     incident: Incident,
@@ -427,6 +529,7 @@ def check_yt_incident_data(
     usernames_in_db: list[str],
     all_poles: dict[str, Pole],
     all_base_stations: dict[str, BaseStation],
+    devices_by_pole: dict[str, list[DevicesData]],
 ) -> Optional[bool]:
     """
     Проверка данных в YandexTracker.
@@ -667,6 +770,11 @@ def check_yt_incident_data(
     elif is_valid_pole_number and not incident.base_station:
         is_valid_pole_number = base_station_number is None
 
+    # Проверяем, что статус оборудования в трекере совпадает с мониторингом
+    is_valid_monitoring_data = check_yt_monitoring(
+        yt_manager, issue, incident, devices_by_pole
+    )
+
     validation_errors = []
     checks = [
         (is_valid_avr_name, 'подрядчик по АВР'),
@@ -677,6 +785,7 @@ def check_yt_incident_data(
         (is_valid_expired_incident, 'статус SLA'),
         (is_valid_pole_number, 'шифр опоры'),
         (is_valid_base_station, 'номер базовой станции'),
+        (is_valid_monitoring_data, 'данные мониторинга'),
     ]
 
     for is_valid, error_text in checks:
@@ -701,6 +810,12 @@ def check_yt_incident_data(
             operator_name=(
                 ', '.join(op.operator_name for op in operator_bs)
             ) if operator_bs else None,
+            monitoring_data=(
+                prepare_monitoring_text(
+                    devices_by_pole.get(incident.pole.pole)
+                )
+                if incident.pole else None
+            )
         )
         error_message = (
             'необходимо обновить: '

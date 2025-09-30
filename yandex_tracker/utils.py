@@ -47,6 +47,7 @@ yt_manager_config = {
     'YT_IS_SLA_EXPIRED_GLOBAL_FIELD_ID': os.getenv('YT_IS_SLA_EXPIRED_GLOBAL_FIELD_ID'),  # noqa: E501
     'YT_OPERATOR_NAME_GLOBAL_FIELD_NAME': os.getenv('YT_OPERATOR_NAME_GLOBAL_FIELD_NAME'),  # noqa: E501
     'YT_AVR_NAME_GLOBAL_FIELD_ID': os.getenv('YT_AVR_NAME_GLOBAL_FIELD_ID'),  # noqa: E501
+    'YT_MONITORING_GLOBAL_FIELD_ID': os.getenv('YT_MONITORING_GLOBAL_FIELD_ID'),  # noqa: E501
     'YT_TYPE_OF_INCIDENT_LOCAL_FIELD_ID': os.getenv('YT_TYPE_OF_INCIDENT_LOCAL_FIELD_ID'),  # noqa: E501
     'YT_ON_GENERATION_STATUS_KEY': os.getenv('YT_ON_GENERATION_STATUS_KEY'),  # noqa: E501
     'YT_NOTIFY_OPERATOR_ISSUE_IN_WORK_STATUS_KEY': os.getenv('YT_NOTIFY_OPERATOR_ISSUE_IN_WORK_STATUS_KEY'),  # noqa: E501
@@ -106,6 +107,7 @@ class YandexTrackerManager:
         is_sla_expired_global_field_id: str,
         operator_name_global_field_name: str,
         avr_name_global_field_id: str,
+        monitoring_global_field_id: str,
         type_of_incident_local_field_id: str,
         on_generation_status_key: str,
         notify_op_issue_in_work_status_key: str,
@@ -132,6 +134,7 @@ class YandexTrackerManager:
         self.is_sla_expired_global_field_id = is_sla_expired_global_field_id
         self.operator_name_global_field_name = operator_name_global_field_name
         self.avr_name_global_field_id = avr_name_global_field_id
+        self.monitoring_global_field_id = monitoring_global_field_id
 
         self.type_of_incident_local_field_id = type_of_incident_local_field_id
         self.notify_op_issue_in_work_status_key = (
@@ -1011,6 +1014,7 @@ class YandexTrackerManager:
         base_station_number: Optional[str],
         avr_name: Optional[str],
         operator_name: Optional[str],
+        monitoring_data: Optional[str],
     ) -> dict:
         issue_key = issue['key']
 
@@ -1029,7 +1033,8 @@ class YandexTrackerManager:
             self.pole_number_global_field_id: pole_number,
             self.base_station_global_field_id: base_station_number,
             self.avr_name_global_field_id: avr_name,
-            self.operator_name_global_field_name: operator_name
+            self.operator_name_global_field_name: operator_name,
+            self.monitoring_global_field_id: monitoring_data,
         }
 
         url = f'{self.create_issue_url}{issue_key}'
@@ -1234,6 +1239,7 @@ yt_manager = YandexTrackerManager(
     is_sla_expired_global_field_id=yt_manager_config['YT_IS_SLA_EXPIRED_GLOBAL_FIELD_ID'],  # noqa: E501
     operator_name_global_field_name=yt_manager_config['YT_OPERATOR_NAME_GLOBAL_FIELD_NAME'],  # noqa: E501
     avr_name_global_field_id=yt_manager_config['YT_AVR_NAME_GLOBAL_FIELD_ID'],  # noqa: E501
+    monitoring_global_field_id=yt_manager_config['YT_MONITORING_GLOBAL_FIELD_ID'],  # noqa: E501
     type_of_incident_local_field_id=yt_manager_config['YT_TYPE_OF_INCIDENT_LOCAL_FIELD_ID'],  # noqa: E501
     on_generation_status_key=yt_manager_config['YT_ON_GENERATION_STATUS_KEY'],
     notify_op_issue_in_work_status_key=yt_manager_config['YT_NOTIFY_OPERATOR_ISSUE_IN_WORK_STATUS_KEY'],  # noqa: E501

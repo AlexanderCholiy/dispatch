@@ -3,7 +3,7 @@ from datetime import timedelta
 from typing import Optional
 
 from django.core.management.base import BaseCommand
-from django.db.models import OuterRef, Prefetch, Subquery
+from django.db.models import OuterRef, Prefetch, Q, Subquery
 from django.utils import timezone
 
 from core.constants import (
@@ -21,11 +21,12 @@ from incidents.constants import (
     DEFAULT_NOTIFIED_AVR_STATUS_NAME,
     DEFAULT_NOTIFIED_OP_END_STATUS_NAME,
     DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_NAME,
-    DEFAULT_WAIT_ACCEPTANCE_STATUS_NAME,
     DEFAULT_NOTIFY_AVR_STATUS_NAME,
+    DEFAULT_WAIT_ACCEPTANCE_STATUS_NAME,
 )
 from incidents.models import Incident, IncidentStatusHistory, IncidentType
 from incidents.utils import IncidentManager
+from monitoring.models import MSysModem
 from ts.models import BaseStation, Pole
 from users.models import Roles, User
 from yandex_tracker.auto_emails import AutoEmailsFromYT
@@ -214,6 +215,42 @@ class Command(BaseCommand):
             latest_status_date=Subquery(latest_status_subquery)
         ).in_bulk()
 
+        # Оборудование мониторинга:
+        pole_codes_in_yt = set([
+            issue.get(yt_manager.pole_number_global_field_id)
+            for issue in unclosed_issues
+        ])
+
+        pole_codes = pole_codes_in_yt & set(all_poles.keys())
+
+        all_devices = (
+            MSysModem.objects
+            .filter(
+                Q(pole_1__pole__in=pole_codes)
+                | Q(pole_2__pole__in=pole_codes)
+                | Q(pole_3__pole__in=pole_codes)
+            )
+            .select_related('pole_1', 'pole_2', 'pole_3', 'status')
+            .values(
+                'modem_ip',
+                'pole_1__pole',
+                'pole_2__pole',
+                'pole_3__pole',
+                'level',
+                'status__id',
+            )
+        )
+
+        devices_by_pole: dict[str, list] = {}
+        for dev in all_devices:
+            for pole in (
+                dev['pole_1__pole'],
+                dev['pole_2__pole'],
+                dev['pole_3__pole'],
+            ):
+                if pole:
+                    devices_by_pole.setdefault(pole.strip(), []).append(dev)
+
         for index, issue in enumerate(unclosed_issues):
             PrettyPrint.progress_bar_info(
                 index, total,
@@ -266,6 +303,7 @@ class Command(BaseCommand):
                     usernames_in_db=usernames_in_db,
                     all_poles=all_poles,
                     all_base_stations=all_base_stations,
+                    devices_by_pole=devices_by_pole,
                 )
 
                 if not is_valid_yt_data:
