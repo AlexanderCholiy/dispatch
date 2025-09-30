@@ -310,6 +310,10 @@ class AutoEmailsFromYT:
     def _prepare_incident_text_for_avr(self, incident: Incident) -> str:
         text_parts = ['На вас назначен новый инцидент.']
 
+        text_parts.append(
+            f'Подрядчик по АВР: {incident.avr_contractor.contractor_name}'
+        )
+
         if incident.pole:
             text_parts.append('ИНФОРМАЦИЯ ОБ ОПОРЕ:')
             text_parts.append(f'   • Шифр опоры: {incident.pole.pole}')

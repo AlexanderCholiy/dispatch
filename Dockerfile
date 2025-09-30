@@ -8,6 +8,19 @@ RUN apt-get update && apt-get install -y \
     cron \
     supervisor \
     postgresql-client \
+    curl \
+    gnupg \
+    apt-transport-https \
+    unixodbc \
+    unixodbc-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Добавление репозитория Microsoft для ODBC Driver 18:
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg \
+    && mv microsoft.gpg /etc/apt/trusted.gpg.d/ \
+    && curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list -o /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update \
+    && ACCEPT_EULA=Y apt-get install -y msodbcsql17 \
     && rm -rf /var/lib/apt/lists/*
 
 # Копирование requirements и установка Python пакетов:

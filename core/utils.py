@@ -1,5 +1,6 @@
 import os
-from typing import Optional
+import multiprocessing
+from typing import Optional, Callable, Any
 
 from django.utils import timezone
 
@@ -79,3 +80,35 @@ class Config:
             except ConfigEnvError as e:
                 app_logger.critical(e)
                 raise
+
+
+def run_with_timeout_process(
+    func: Callable, func_timeout: int, *args, **kwargs
+) -> Any:
+    """Запуск функции в отдельном процессе с ограничением по времени."""
+    with multiprocessing.Manager() as manager:
+        return_dict = manager.dict()
+
+        def wrapper(return_dict):
+            try:
+                result = func(*args, **kwargs)
+                return_dict['result'] = result
+            except Exception as e:
+                return_dict['exception'] = e
+
+        p = multiprocessing.Process(target=wrapper, args=(return_dict,))
+        p.start()
+        p.join(func_timeout)
+
+        if p.is_alive():
+            p.terminate()
+            p.join()
+            raise TimeoutError(
+                f'Время выполнения функции {func.__name__} превысило '
+                f'{func_timeout} секунд'
+            )
+
+        if 'exception' in return_dict:
+            raise return_dict['exception']
+
+        return return_dict.get('result')

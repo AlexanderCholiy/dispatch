@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'incidents.apps.IncidentsConfig',
     'yandex_tracker.apps.YandexTrackerConfig',
     'api.apps.ApiConfig',
+    'monitoring.apps.MonitoringConfig',
     'rest_framework',
     'django_filters',
     'djoser',
@@ -110,7 +111,23 @@ DATABASES = {
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': int(os.getenv('DB_PORT', 5432)),
     },
+    'monitoring': {
+        'ENGINE': 'mssql',
+        'NAME': os.getenv('MONITORING_DB_NAME', 'django'),
+        'USER': os.getenv('MONITORING_DB_USER', 'django'),
+        'PASSWORD': os.getenv('MONITORING_DB_PASSWORD', ''),
+        'HOST': os.getenv('MONITORING_DB_HOST', 'localhost'),
+        'PORT': int(os.getenv('MONITORING_DB_PORT', 1433)),
+        'OPTIONS': {
+            'driver': 'ODBC Driver 17 for SQL Server',
+            'Encrypt': 'no',
+            'TrustServerCertificate': 'yes',
+            'Connection Timeout': 10,
+        },
+    },
 }
+
+DATABASE_ROUTERS = ['monitoring.routers.ReadOnlyRouter']
 
 AUTH_PASSWORD_VALIDATORS = [
     {

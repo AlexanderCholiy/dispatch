@@ -10,7 +10,7 @@ from imaplib import IMAP4
 from typing import Any, List, Optional, Tuple, Union
 
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from requests.exceptions import RequestException
 
@@ -622,32 +622,33 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                     )
 
                     try:
-                        email_msg = self.add_email_message(
-                            email_msg_id=email_msg_id,
-                            email_msg_reply_id=email_msg_reply_id,
-                            email_subject=email_subject,
-                            email_from=email_from,
-                            email_date=email_date,
-                            email_body=email_body,
-                            is_first_email=is_first_email,
-                            is_email_from_yandex_tracker=(
-                                is_email_from_yandex_tracker
-                            ),
-                            was_added_2_yandex_tracker=(
-                                is_email_from_yandex_tracker
-                            ),
-                            email_to=email_to,
-                            email_to_cc=email_to_cc,
-                            email_msg_references=email_msg_references,
-                            email_attachments_urls=email_attachments_urls,
-                            email_attachments_intext_urls=(
-                                email_attachments_intext_urls
-                            ),
-                            folder=folder,
-                        )
-                        self.add_incident_from_email(
-                            email_msg, self.yt_manager
-                        )
+                        with transaction.atomic():
+                            email_msg = self.add_email_message(
+                                email_msg_id=email_msg_id,
+                                email_msg_reply_id=email_msg_reply_id,
+                                email_subject=email_subject,
+                                email_from=email_from,
+                                email_date=email_date,
+                                email_body=email_body,
+                                is_first_email=is_first_email,
+                                is_email_from_yandex_tracker=(
+                                    is_email_from_yandex_tracker
+                                ),
+                                was_added_2_yandex_tracker=(
+                                    is_email_from_yandex_tracker
+                                ),
+                                email_to=email_to,
+                                email_to_cc=email_to_cc,
+                                email_msg_references=email_msg_references,
+                                email_attachments_urls=email_attachments_urls,
+                                email_attachments_intext_urls=(
+                                    email_attachments_intext_urls
+                                ),
+                                folder=folder,
+                            )
+                            self.add_incident_from_email(
+                                email_msg, self.yt_manager
+                            )
                         email_err_msg_ids_to_del.append(email_msg_id)
                     except KeyboardInterrupt:
                         raise

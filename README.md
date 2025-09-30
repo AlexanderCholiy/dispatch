@@ -527,3 +527,30 @@ cd ~ && rm -rf ~/.vscode-server
 
 ## 👋 Автор
 **Чолий Александр** ([Telegram](https://t.me/alexander_choliy))
+
+
+sudo apt-get install -y curl
+
+Узнайте версию Ubuntu
+lsb_release -a
+
+У меня 24.04
+
+1️⃣ Удаляем возможные некорректные файлы
+sudo rm -f /etc/apt/sources.list.d/mssql-release.list
+
+# 1. Импорт ключа Microsoft
+curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg
+sudo mv microsoft.gpg /etc/apt/trusted.gpg.d/microsoft.gpg
+
+# 2. Добавление репозитория Microsoft (замени '22.04' на твою версию Ubuntu)
+sudo curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list -o /etc/apt/sources.list.d/mssql-release.list
+
+💡 Важно: Microsoft пока не выпускает полноценную поддержку Ubuntu 24.04 (noble). Если выше не работает, проще перейти на Ubuntu 22.04 (jammy) в серверной среде — там все официально поддерживается.
+
+# 3. Обновляем пакеты
+sudo apt-get update --allow-unauthenticated
+
+# 4. Установка драйвера ODBC 17 и unixODBC
+sudo ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc unixodbc-dev
+Да, для Linux 24.04 (и вообще для многих Ubuntu) драйвер ODBC 18 иногда даёт проблемы с SSL, особенно если сервер MSSQL использует самоподписанный сертификат. В таких случаях переход на ODBC Driver 17 может быть проще и стабильнее.

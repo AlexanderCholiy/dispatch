@@ -13,6 +13,7 @@ from core.constants import (
 )
 from core.loggers import LoggerFactory
 from core.tg_bot import tg_manager
+from core.utils import run_with_timeout_process
 from emails.email_parser import email_parser
 
 email_managment_logger = LoggerFactory(
@@ -57,7 +58,7 @@ class Command(BaseCommand):
         last_error_type = None
 
         min_timeout = 300  # 5 минут
-        max_timeout = 1200  # 20 минут
+        max_timeout = 900  # 15 минут
         timeout_step = 30
         reserve_sec = 30
         current_timeout = min_timeout
@@ -70,9 +71,11 @@ class Command(BaseCommand):
             start_time = time.time()
 
             try:
-                email_parser.fetch_unread_emails(
+                run_with_timeout_process(
+                    email_parser.fetch_unread_emails,
+                    func_timeout=max_timeout + reserve_sec,
                     mailbox=mailbox_name,
-                    imap_ssl_timeout=current_timeout
+                    imap_ssl_timeout=current_timeout,
                 )
             except KeyboardInterrupt:
                 return
@@ -101,11 +104,11 @@ class Command(BaseCommand):
                     min_timeout, min(new_timeout, max_timeout)
                 )
 
-                if calculated_timeout != current_timeout:
-                    email_managment_logger.debug(
-                        f'Установлен новый таймаут: {current_timeout} сек.'
-                    )
-                    current_timeout = calculated_timeout
+                email_managment_logger.debug(
+                    f'Установлен новый таймаут: {current_timeout} сек.'
+                )
+
+                current_timeout = calculated_timeout
 
                 if not first_success_sent and not error_count:
                     tg_manager.send_first_success_notification(__name__)
