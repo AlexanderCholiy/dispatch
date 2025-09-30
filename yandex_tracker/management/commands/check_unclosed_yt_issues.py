@@ -223,23 +223,27 @@ class Command(BaseCommand):
 
         pole_codes = pole_codes_in_yt & set(all_poles.keys())
 
-        all_devices = (
-            MSysModem.objects
-            .filter(
-                Q(pole_1__pole__in=pole_codes)
-                | Q(pole_2__pole__in=pole_codes)
-                | Q(pole_3__pole__in=pole_codes)
+        try:
+            all_devices = (
+                MSysModem.objects
+                .filter(
+                    Q(pole_1__pole__in=pole_codes)
+                    | Q(pole_2__pole__in=pole_codes)
+                    | Q(pole_3__pole__in=pole_codes)
+                )
+                .select_related('pole_1', 'pole_2', 'pole_3', 'status')
+                .values(
+                    'modem_ip',
+                    'pole_1__pole',
+                    'pole_2__pole',
+                    'pole_3__pole',
+                    'level',
+                    'status__id',
+                )
             )
-            .select_related('pole_1', 'pole_2', 'pole_3', 'status')
-            .values(
-                'modem_ip',
-                'pole_1__pole',
-                'pole_2__pole',
-                'pole_3__pole',
-                'level',
-                'status__id',
-            )
-        )
+        except Exception as e:
+            yt_managment_logger.exception(e)
+            all_devices = []
 
         devices_by_pole: dict[str, list] = {}
         for dev in all_devices:
