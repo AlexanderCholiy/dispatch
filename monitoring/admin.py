@@ -19,7 +19,9 @@ class MSysModemAdmin(admin.ModelAdmin):
         'pole_1',
         'updated_at',
     )
-    search_fields = ('modem_ip', 'pole_1', 'pole_2', 'pole_3')
+    search_fields = (
+        'modem_ip', 'pole_1__pole', 'pole_2__pole', 'pole_3__pole'
+    )
     autocomplete_fields = ('pole_1', 'pole_2', 'pole_3', 'status',)
     ordering = ('updated_at', 'modem_ip',)
 

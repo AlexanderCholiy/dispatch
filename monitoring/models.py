@@ -3,7 +3,7 @@ from django.db import models
 from core.models_readonly import ReadOnlyModel
 
 
-class DeviceTypes(models.IntegerChoices):
+class DeviceType(models.IntegerChoices):
     HU = (0, 'ЩУ')
     OLD_RHU = (1, 'Старый РЩУ')
     RHU = (2, 'РЩУ')
@@ -25,10 +25,52 @@ class DeviceTypes(models.IntegerChoices):
     HU_NEVA_NEW = (107, 'ЩУ Нева NEW')
 
 
+class DeviceStatus(models.IntegerChoices):
+    POLE_NORMAL_0 = (0, 'NORMAL')
+    POLE_CRITICAL_0 = (1, 'CRITICAL')
+    POLE_MAJOR_0 = (2, 'MAJOR')
+    POLE_MINOR_0 = (3, 'MINOR')
+    POLE_WARNING_0 = (4, 'WARNING')
+
+    POLE_CRITICAL_1 = (11, 'CRITICAL')
+    POLE_MAJOR_1 = (12, 'MAJOR')
+    POLE_MINOR_1 = (13, 'MINOR')
+    POLE_WARNING_1 = (14, 'WARNING')
+
+    POLE_CRITICAL_2 = (21, 'CRITICAL')
+    POLE_MAJOR_2 = (22, 'MAJOR')
+    POLE_MINOR_2 = (23, 'MINOR')
+    POLE_WARNING_2 = (24, 'WARNING')
+
+    POLE_CRITICAL_3 = (31, 'CRITICAL')
+    POLE_MAJOR_3 = (32, 'MAJOR')
+    POLE_MINOR_3 = (33, 'MINOR')
+    POLE_WARNING_3 = (34, 'WARNING')
+
+    POLE_UNMONITORED_1 = (501, 'UNMONITORED')
+    POLE_UNMONITORED_2 = (502, 'UNMONITORED')
+    POLE_UNMONITORED_3 = (503, 'UNMONITORED')
+    POLE_UNMONITORED_4 = (504, 'UNMONITORED')
+    POLE_UNMONITORED_5 = (505, 'UNMONITORED')
+    POLE_UNMONITORED_6 = (506, 'UNMONITORED')
+    POLE_UNMONITORED_8 = (508, 'UNMONITORED')
+    POLE_UNMONITORED_9 = (509, 'UNMONITORED')
+
+    POLE_TERMINATED = (507, 'TERMINATED')
+
+    MODEM_NORMAL = (1000, 'NORMAL')
+    MODEM_CRITICAL = (1001, 'CRITICAL')
+    MODEM_MAJOR = (1002, 'MAJOR')
+    MODEM_WARNING = (1004, 'WARNING')
+
+    MODEM_BLOCKED = (1011, 'BLOCKED')
+
+
 class MSysStatus(ReadOnlyModel):
     id = models.BigIntegerField(
         primary_key=True,
         db_column='StatusID',
+        choices=DeviceStatus.choices,
     )
     description = models.CharField(
         'Описание',
@@ -44,7 +86,7 @@ class MSysStatus(ReadOnlyModel):
         verbose_name_plural = 'Статусы Мониторинга'
 
     def __str__(self):
-        return str(self.id)
+        return str(self.get_id_display())
 
 
 class MSysPoles(ReadOnlyModel):
@@ -81,7 +123,7 @@ class MSysModem(ReadOnlyModel):
     level = models.IntegerField(
         'Тип устройства',
         db_column='ModemLevel',
-        choices=DeviceTypes.choices,
+        choices=DeviceType.choices,
     )
     status = models.ForeignKey(
         MSysStatus,
