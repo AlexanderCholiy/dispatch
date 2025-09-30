@@ -4,10 +4,11 @@ import imaplib
 import json
 import os
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from email import header, message
 from imaplib import IMAP4
 from typing import Any, List, Optional, Tuple, Union
+from zoneinfo import ZoneInfo
 
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
@@ -150,6 +151,17 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
 
         human_text = remaining_text.replace('\n\n', '\n').strip()
         return json_blocks, human_text
+
+    @staticmethod
+    def is_time_in_range(start: time, end: time, check_time: time) -> bool:
+        """
+        Проверяет, находится ли время check_time в диапазоне между start и end.
+        """
+        if start <= end:
+            return start <= check_time <= end
+        else:
+            # Диапазон через полночь:
+            return check_time >= start or check_time <= end
 
     def _is_first_email(
         self,
@@ -324,6 +336,16 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                 Папка для проверки новых писем.
                 По умолчанию стандартная папка входящих писем INBOX.
         """
+        if (
+            check_days == 0
+            and self.is_time_in_range(
+                start=time(0, 0),
+                end=time(1, 0),
+                check_time=datetime.now(ZoneInfo('Europe/Moscow')).time()
+            )
+        ):
+            check_days = 1
+
         if mailbox == self.inbox_folder_name:
             folder, _ = EmailFolder.objects.get_or_create(
                 name='INBOX',
