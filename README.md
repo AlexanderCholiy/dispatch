@@ -558,3 +558,18 @@ sudo ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc unixodbc-dev
 
 Доступный размер оперативной памяти 
 free -h
+
+SELECT
+em.id,
+em.email_msg_id,
+em.email_msg_reply_id,
+er.email_msg_references,
+em.email_date,
+em.email_subject,
+em.email_body
+FROM emails_emailmessage AS em
+FULL JOIN emails_emailreference AS er
+ON em.id = er.email_msg_id
+WHERE em.email_incident_id IN (64762)
+ORDER BY em.email_date, em.id, er.id
+LIMIT 100
