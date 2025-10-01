@@ -50,8 +50,7 @@ def check_yt_pole_incident(
     try:
         # Ищем опоры, которые начинаются с указанного шифра
         if pole_number in all_poles:
-            # Точное совпадение
-            pass
+            return pole_is_valid
         else:
             # Ищем опоры, которые начинаются с указанного шифра
             matching_poles = [
@@ -110,17 +109,18 @@ def check_yt_base_station_incident(
     issue: dict,
     type_of_incident_field: dict,
     incident: Incident,
-    all_base_stations: dict[str, BaseStation]
+    all_base_stations: dict[tuple[str, Optional[str]], BaseStation]
 ) -> bool:
     base_station_is_valid = True
     comment = None
-    error_exception = None
 
     issue_key = issue['key']
     base_station_number: Optional[str] = issue.get(
-        yt_manager.base_station_global_field_id)
+        yt_manager.base_station_global_field_id
+    )
     pole_number: Optional[str] = issue.get(
-        yt_manager.pole_number_global_field_id)
+        yt_manager.pole_number_global_field_id
+    )
     status_key: str = issue['status']['key']
 
     type_of_incident_field_key = (
@@ -133,79 +133,66 @@ def check_yt_base_station_incident(
         return base_station_is_valid
 
     try:
-        # Сначала проверяем точное совпадение
-        if base_station_number in all_base_stations:
-            bs = all_base_stations[base_station_number]
-
-            # Проверяем соответствие опоры, если она указана
-            if pole_number and bs.pole:
-                if not bs.pole.pole.startswith(pole_number):
-                    raise Pole.DoesNotExist(
-                        f'Базовая станция "{bs.bs_name}" привязана '
-                        f'к опоре "{bs.pole.pole}", '
-                        f'а указана опора "{pole_number}"'
-                    )
-            # Если всё совпадает - возвращаем успех
+        # Проверяем точное совпадение по ключу (номер БС + опора)
+        bs_key = (base_station_number, pole_number)
+        if bs_key in all_base_stations:
             return base_station_is_valid
-
         else:
-            # Ищем БС, которые начинаются с указанного номера
+            # Ищем все БС, которые начинаются с номера
             matching_stations = [
-                bs for bs_name, bs in all_base_stations.items()
+                bs for (bs_name, _), bs in all_base_stations.items()
                 if bs_name.startswith(base_station_number)
             ]
 
-            if not matching_stations:
-                raise BaseStation.DoesNotExist(
-                    f'Не найдено БС, начинающихся с "{base_station_number}"')
-
-            # Если указана опора, фильтруем по ней
             if pole_number:
                 matching_stations = [
                     bs for bs in matching_stations
                     if bs.pole and bs.pole.pole.startswith(pole_number)
                 ]
 
-                if not matching_stations:
-                    raise Pole.DoesNotExist(
-                        f'Найдено БС, начинающихся с "{base_station_number}", '
-                        'но ни одна не привязана к опоре, начинающейся с '
-                        f'"{pole_number}".'
-                    )
+            if not matching_stations:
+                raise ValueError((
+                    f'Не найдено БС, начинающихся с "{base_station_number}"'
+                    + (
+                        f' и привязанных к опоре "{pole_number}"'
+                    ) if pole_number else ''
+                ))
 
-            # Проверяем количество совпадений
             if len(matching_stations) > 1:
-                # Ищем точное совпадение среди отфильтрованных
                 exact_matches = [
                     bs for bs in matching_stations
-                    if bs.bs_name == base_station_number
+                    if (
+                        bs.bs_name == base_station_number
+                        and (
+                            not pole_number
+                            or (bs.pole and bs.pole.pole == pole_number)
+                        )
+                    )
                 ]
 
-                if not exact_matches:
+                if not exact_matches or len(exact_matches) > 1:
                     example_stations = [
                         bs.bs_name for bs in matching_stations[:3]]
-                    error_msg = (
-                        f'Найдено {len(matching_stations)} БС, начинающихся с '
-                        f'"{base_station_number}"'
+                    examples_text = (
+                        f'Примеры: {", ".join(example_stations)}. '
+                        if example_stations else ''
                     )
 
-                    if pole_number:
-                        error_msg += (
-                            ' и привязанных к опорам, начинающимся с '
-                            f'"{pole_number}"'
+                    raise ValueError(
+                        f'Найдено {len(matching_stations)} БС, начинающихся '
+                        f'с "{base_station_number}"'
+                        + (
+                            (
+                                f' и привязанных к опоре "{pole_number}". '
+                            ) if pole_number else '. '
                         )
-
-                    error_msg += (
-                        f'. Примеры: {", ".join(example_stations)}. '
-                        'Уточните шифр базовой станции.'
+                        + examples_text
+                        + 'Уточните шифр опоры и номер БС.'
                     )
 
-                    raise ValueError(error_msg)
-
-    except (BaseStation.DoesNotExist, Pole.DoesNotExist, ValueError) as e:
+    except ValueError as e:
         base_station_is_valid = False
         comment = str(e)
-        error_exception = e
 
     if not base_station_is_valid:
         yt_manager.update_incident_data(
@@ -215,8 +202,7 @@ def check_yt_base_station_incident(
             email_datetime=incident.incident_date,
             sla_deadline=incident.sla_deadline,
             is_sla_expired=yt_manager.get_sla_status(incident),
-            pole_number=pole_number if not isinstance(
-                error_exception, Pole.DoesNotExist) else None,
+            pole_number=pole_number,
             base_station_number=None,
             avr_name=None,
             operator_name=None,
@@ -528,7 +514,7 @@ def check_yt_incident_data(
     valid_names_of_types: list[str],
     usernames_in_db: list[str],
     all_poles: dict[str, Pole],
-    all_base_stations: dict[str, BaseStation],
+    all_base_stations: dict[tuple[str, Optional[str]], BaseStation],
     devices_by_pole: dict[str, list[DevicesData]],
 ) -> Optional[bool]:
     """
@@ -637,66 +623,47 @@ def check_yt_incident_data(
         return False
 
     # Синхронизируем БС и опору из БС
-    if not incident_bs and base_station_number:
-        exact_bs = BaseStation.objects.filter(
-            bs_name=base_station_number).first()
-        if exact_bs:
-            incident.base_station = exact_bs
-            # Если нашли БС, устанавливаем опору из БС
-            if exact_bs.pole:
-                incident.pole = exact_bs.pole
+    if base_station_number:
+        bs_key = (base_station_number, pole_number)
+        incident_bs_candidate = all_base_stations.get(bs_key)
+
+        if not incident_bs_candidate:
+            matching_stations = [
+                bs
+                for (bs_name, bs_pole_number), bs in all_base_stations.items()
+                if bs_name.startswith(base_station_number)
+                and (
+                    pole_number is None
+                    or (
+                        bs_pole_number
+                        and bs_pole_number.startswith(pole_number)
+                    )
+                )
+            ]
+            # Берём первую подходящую БС:
+            incident_bs_candidate = (
+                matching_stations[0]) if matching_stations else None
+
+        # Устанавливаем БС и опору из найденного кандидата
+        if incident_bs_candidate:
+            bs_changed = incident.base_station != incident_bs_candidate
+            pole_changed = (
+                incident_bs_candidate.pole
+                and incident.pole != incident_bs_candidate.pole
+            )
+
+            if bs_changed or pole_changed:
+                incident.base_station = incident_bs_candidate
+                incident.pole = incident_bs_candidate.pole
+                incident.save()
         else:
-            bs_candidate = BaseStation.objects.filter(
-                bs_name__istartswith=base_station_number
-            ).order_by('bs_name').first()
-            if bs_candidate:
-                incident.base_station = bs_candidate
-                # Если нашли БС, устанавливаем опору из БС
-                if bs_candidate.pole:
-                    incident.pole = bs_candidate.pole
-        incident.save()
+            if incident.base_station is not None:
+                incident.base_station = None
+                incident.save()
 
     elif incident_bs and not base_station_number:
         incident.base_station = None
         incident.save()
-
-    elif incident_bs and base_station_number:
-        if not incident_bs.bs_name.startswith(base_station_number):
-            exact_bs = BaseStation.objects.filter(
-                bs_name=base_station_number).first()
-            if exact_bs:
-                incident.base_station = exact_bs
-                # Обновляем опору из новой БС
-                if exact_bs.pole:
-                    incident.pole = exact_bs.pole
-            else:
-                bs_candidate = BaseStation.objects.filter(
-                    bs_name__istartswith=base_station_number
-                ).order_by('bs_name').first()
-                if bs_candidate:
-                    incident.base_station = bs_candidate
-                    # Обновляем опору из новой БС
-                    if bs_candidate.pole:
-                        incident.pole = bs_candidate.pole
-            incident.save()
-
-    # ОТДЕЛЬНАЯ ОБРАБОТКА: есть номер БС, но нет опоры
-    if base_station_number and not incident.pole:
-        # Пытаемся найти БС и взять опору из неё
-        exact_bs = BaseStation.objects.filter(
-            bs_name=base_station_number).first()
-        if exact_bs and exact_bs.pole:
-            incident.base_station = exact_bs
-            incident.pole = exact_bs.pole
-            incident.save()
-        else:
-            bs_candidate = BaseStation.objects.filter(
-                bs_name__istartswith=base_station_number
-            ).order_by('bs_name').first()
-            if bs_candidate and bs_candidate.pole:
-                incident.base_station = bs_candidate
-                incident.pole = bs_candidate.pole
-                incident.save()
 
     # ТЕПЕРЬ проверяем опору (после того как БС могла установить опору)
     is_valid_pole_number = check_yt_pole_incident(

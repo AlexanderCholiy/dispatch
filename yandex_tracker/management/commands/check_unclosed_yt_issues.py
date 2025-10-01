@@ -107,7 +107,9 @@ class Command(BaseCommand):
 
         all_poles = {p.pole: p for p in Pole.objects.all()}
         all_base_stations = {
-            bs.bs_name: bs for bs in BaseStation.objects.all()}
+            (bs.bs_name, bs.pole.pole if bs.pole else None): bs
+            for bs in BaseStation.objects.select_related('pole').all()
+        }
 
         total_processed = 0
         total_errors = 0
