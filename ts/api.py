@@ -170,17 +170,19 @@ class Api(SocialValidators):
         total = len(avr)
 
         # Удаляем не актуальные записи:
-        new_project_ids: set[int] = set(avr['Подрядчик'])
-        existing_project_ids: set[int] = set(
+        new_project_names: set[int] = set(avr['Подрядчик'])
+        existing_project_names: set[int] = set(
             AVRContractor.objects.values_list('contractor_name', flat=True))
-        project_ids_to_delete = (
-            existing_project_ids
-            - new_project_ids
+        project_names_to_delete = (
+            existing_project_names
+            - new_project_names
             - {UNDEFINED_CASE}
         )
-        if project_ids_to_delete:
+
+        if project_names_to_delete:
             AVRContractor.objects.filter(
-                project_id__in=project_ids_to_delete).delete()
+                contractor_name__in=project_names_to_delete
+            ).delete()
 
         # Добавляем подрядчика по умолчанию:
         with transaction.atomic():
@@ -241,7 +243,8 @@ class Api(SocialValidators):
 
             if contractor_phones:
                 valid_contractor_phones, _ = Api.split_and_validate_phones(
-                    contractor_phones)
+                    contractor_phones
+                )
             else:
                 valid_contractor_phones = []
 
