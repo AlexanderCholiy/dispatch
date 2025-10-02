@@ -20,8 +20,8 @@ class Command(BaseCommand):
         tg_manager.send_startup_notification(__name__)
 
         os.makedirs(TS_DATA_DIR, exist_ok=True)
-        # Api.update_poles()  # данные по опорам обновляем в первую очередь
-        Api.update_avr(False)
-        # Api.update_base_stations()
+        Api.update_poles()  # данные по опорам обновляем в первую очередь
+        Api.update_avr()
+        Api.update_base_stations()
 
         tg_manager.send_success_notification(__name__)

@@ -11,6 +11,7 @@ from incidents.constants import (
     DEFAULT_NOTIFIED_OP_END_STATUS_NAME,
 )
 from incidents.models import Incident
+from ts.models import PoleContractorEmail
 
 from .utils import conversion_utc_datetime
 
@@ -105,9 +106,11 @@ class IncidentSerializer(serializers.ModelSerializer):
 
     def get_vendor_emails(self, obj: Incident):
         if obj.pole and obj.pole.avr_contractor:
-            return ', '.join(
-                [email.email for email in obj.pole.avr_contractor.emails.all()]
-            )
+            emails = PoleContractorEmail.objects.filter(
+                pole=obj.pole,
+                contractor=obj.pole.avr_contractor
+            ).values_list('email__email', flat=True).distinct()
+            return ', '.join(sorted(emails)) if emails else None
         return
 
     def get_operator_group(self, obj: Incident):

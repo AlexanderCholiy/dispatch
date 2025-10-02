@@ -3,6 +3,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import permissions, viewsets
 
 from incidents.models import Incident, IncidentStatusHistory
+from ts.models import PoleContractorEmail
 
 from .filters import IncidentFilter
 from .serializers import IncidentSerializer
@@ -23,7 +24,12 @@ class IncidentViewSet(viewsets.ReadOnlyModelViewSet):
         'responsible_user'
     ).prefetch_related(
         'base_station__operator',
-        'pole__avr_contractor__emails',
+        Prefetch(
+            'pole__pole_emails',
+            queryset=PoleContractorEmail.objects.select_related(
+                'email', 'contractor'
+            ),
+        ),
         Prefetch(
             'status_history',
             queryset=(
