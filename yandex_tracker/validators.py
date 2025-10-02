@@ -11,8 +11,8 @@ from monitoring.models import DeviceStatus, DeviceType
 from ts.constants import UNDEFINED_CASE
 from ts.models import AVRContractor, BaseStation, BaseStationOperator, Pole
 from users.models import User
-from .constants import MAX_MONITORING_DEVICES
 
+from .constants import MAX_MONITORING_DEVICES
 from .utils import YandexTrackerManager
 
 

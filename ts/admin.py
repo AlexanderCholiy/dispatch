@@ -4,6 +4,7 @@ from django.contrib import admin
 from django.db.models import Prefetch
 
 from core.constants import EMPTY_VALUE
+
 from .constants import (
     AVR_CONTRACTORS_PER_PAGE,
     BASE_STATION_OPERATORS_PER_PAGE,

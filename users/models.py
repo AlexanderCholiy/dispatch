@@ -6,7 +6,6 @@ from django.core.files.storage import default_storage
 from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils import timezone
-from django.contrib.auth.password_validation import validate_password
 
 from .constants import (
     ALLOWED_IMAGE_EXTENSIONS,
@@ -19,8 +18,8 @@ from .constants import (
 )
 from .validators import (
     username_format_validators,
-    validate_pending_password,
     validate_pending_email,
+    validate_pending_password,
     validate_pending_username,
     validate_user_email,
     validate_user_username
