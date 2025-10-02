@@ -27,7 +27,7 @@ from incidents.constants import (
 from incidents.models import Incident, IncidentStatusHistory, IncidentType
 from incidents.utils import IncidentManager
 from monitoring.models import MSysModem
-from ts.models import BaseStation, Pole
+from ts.models import BaseStation, Pole, PoleContractorEmail
 from users.models import Roles, User
 from yandex_tracker.auto_emails import AutoEmailsFromYT
 from yandex_tracker.constants import (
@@ -197,7 +197,12 @@ class Command(BaseCommand):
         ).prefetch_related(
             'statuses',
             'base_station__operator',
-            'pole__avr_contractor__emails',
+            Prefetch(
+                'pole__pole_emails',
+                queryset=PoleContractorEmail.objects.select_related(
+                    'email', 'contractor'
+                ),
+            ),
             Prefetch(
                 'email_messages',
                 queryset=EmailMessage.objects.prefetch_related(
@@ -426,10 +431,9 @@ class Command(BaseCommand):
                     ):
                         yt_emails.notify_operator_issue_close(issue, incident)
 
-                        contractor_emails: set[str] = {
-                            ce.email
-                            for ce in incident.pole.avr_contractor.emails.all()
-                        }
+                        contractor_emails = IncidentManager.get_avr_emails(
+                            incident
+                        )
 
                         incident_emails = IncidentManager.all_incident_emails(
                             incident

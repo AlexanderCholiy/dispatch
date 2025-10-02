@@ -580,3 +580,20 @@ class IncidentManager(IncidentValidator):
         )
 
         return incident_emails
+
+    @staticmethod
+    def get_avr_emails(incident: Incident) -> list[str]:
+        email_to = []
+        if (
+            incident.pole
+            and incident.pole.avr_contractor
+        ):
+            pole_emails = incident.pole.pole_emails.filter(
+                contractor=incident.pole.avr_contractor
+            ).select_related('email')
+
+            for pole_email in pole_emails:
+                if pole_email.email:
+                    email_to.append(pole_email.email.email)
+
+        return email_to

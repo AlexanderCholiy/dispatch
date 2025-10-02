@@ -260,14 +260,7 @@ class AutoEmailsFromYT:
         """
         issue_key: str = issue['key']
 
-        email_to = []
-        if (
-            incident.pole
-            and incident.pole.avr_contractor
-            and incident.pole.avr_contractor.emails.exists()
-        ):
-            for eml in incident.pole.avr_contractor.emails.all():
-                email_to.append(eml.email)
+        email_to = IncidentManager.get_avr_emails(incident)
 
         if not email_to:
             comment = 'Не найден email подрядчика для автоответа.' if (
@@ -465,10 +458,7 @@ class AutoEmailsFromYT:
         """
         issue_key: str = issue['key']
 
-        email_to = [
-            ce.email
-            for ce in incident.pole.avr_contractor.emails.all()
-        ]
+        email_to = IncidentManager.get_avr_emails(incident)
 
         notify_before_message = (
             'Диспетчер отправил автоответ подрядчику о закрытии заявки.'
