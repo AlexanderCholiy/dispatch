@@ -129,6 +129,10 @@ DATABASES = {
 
 DATABASE_ROUTERS = ['monitoring.routers.ReadOnlyRouter']
 
+MIGRATION_MODULES = {
+    'monitoring': None,
+}
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': (

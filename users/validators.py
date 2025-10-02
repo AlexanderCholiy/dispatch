@@ -34,6 +34,11 @@ password_validators = [
 ]
 
 
+def validate_pending_password(value):
+    for validator in password_validators:
+        validator.validate(value)
+
+
 def validate_user_username(username: str, instance=None):
     from .models import PendingUser, User
 

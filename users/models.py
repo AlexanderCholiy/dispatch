@@ -6,6 +6,7 @@ from django.core.files.storage import default_storage
 from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth.password_validation import validate_password
 
 from .constants import (
     ALLOWED_IMAGE_EXTENSIONS,
@@ -17,8 +18,8 @@ from .constants import (
     USERNAME_HELP_TEXT
 )
 from .validators import (
-    password_validators,
     username_format_validators,
+    validate_pending_password,
     validate_pending_email,
     validate_pending_username,
     validate_user_email,
@@ -127,9 +128,10 @@ class PendingUser(models.Model):
         validators=[validate_pending_email],
         help_text='Введите адрес электронной почты',
     )
+
     password = models.CharField(
         max_length=MAX_USER_PASSWORD_LEN,
-        validators=[v.validate for v in password_validators],
+        validators=[validate_pending_password],
         help_text=PASSWORD_HELP_TEXT,
     )
 

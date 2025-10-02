@@ -1,7 +1,9 @@
+from collections import defaultdict
+
 from django.contrib import admin
+from django.db.models import Prefetch
 
 from core.constants import EMPTY_VALUE
-
 from .constants import (
     AVR_CONTRACTORS_PER_PAGE,
     BASE_STATION_OPERATORS_PER_PAGE,
@@ -13,9 +15,25 @@ from .models import (
     BaseStation,
     BaseStationOperator,
     Pole,
+    PoleContractorEmail,
+    PoleContractorPhone,
 )
 
 admin.site.empty_value_display = EMPTY_VALUE
+
+
+class PoleEmailsInline(admin.TabularInline):
+    model = PoleContractorEmail
+    extra = 0
+    readonly_fields = ('contractor', 'email')
+    can_delete = False
+
+
+class PolePhonesInline(admin.TabularInline):
+    model = PoleContractorPhone
+    extra = 0
+    readonly_fields = ('contractor', 'phone')
+    can_delete = False
 
 
 @admin.register(Pole)
@@ -30,10 +48,15 @@ class PoleAdmin(admin.ModelAdmin):
     )
     search_fields = ('pole', 'bs_name', 'address',)
     list_filter = ('infrastructure_company', 'region_ru')
+    inlines = [PoleEmailsInline, PolePhonesInline]
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.select_related('avr_contractor',)
+        return (
+            qs
+            .select_related('avr_contractor',)
+            .prefetch_related('avr_emails', 'avr_phones')
+        )
 
 
 @admin.register(AVRContractor)
@@ -48,7 +71,69 @@ class AVRContractorAdmin(admin.ModelAdmin):
     )
     list_filter = ('is_excluded_from_contract',)
     ordering = ('contractor_name',)
-    filter_horizontal = ('emails', 'phones',)
+    readonly_fields = ('all_emails', 'all_phones')
+
+    fieldsets = (
+        (None, {
+            'fields': ('contractor_name', 'is_excluded_from_contract')
+        }),
+        ('Контакты подрядчика', {
+            'fields': ('all_emails', 'all_phones')
+        }),
+    )
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        emails_qs = PoleContractorEmail.objects.select_related('email', 'pole')
+        phones_qs = PoleContractorPhone.objects.select_related('phone', 'pole')
+        return qs.prefetch_related(
+            Prefetch('contractor_emails', queryset=emails_qs),
+            Prefetch('contractor_phones', queryset=phones_qs),
+        )
+
+    def all_emails(self, obj):
+        emails = obj.contractor_emails.all().values_list(
+            'email__email',
+            'pole__region_ru',
+            'pole',
+        ).distinct().order_by('pole__region_ru', 'email__email')
+
+        if not emails:
+            return EMPTY_VALUE
+
+        # Группируем email по региону
+        region_map = defaultdict(set)
+        for email, region, _ in emails:
+            region_key = region if region else EMPTY_VALUE
+            region_map[region_key].add(email)
+
+        # Форматируем красиво
+        formatted = []
+        for region in sorted(region_map.keys()):
+            email_list = sorted(region_map[region])
+            formatted.append(f'{region}: {email_list}')
+
+        return '\n'.join(formatted)
+
+    all_emails.short_description = 'Email подрядчика'
+
+    def all_phones(self, obj):
+        phones = obj.contractor_phones.all().values_list(
+            'phone__phone',
+            'pole__region_ru',
+            'pole',
+        )
+
+        if not phones:
+            return EMPTY_VALUE
+
+        formatted = [
+            f'{phone} ({region})' if region else f'{phone} ({EMPTY_VALUE})'
+            for phone, region in phones
+        ]
+        return ', '.join(formatted)
+
+    all_phones.short_description = 'Телефоны подрядчика'
 
 
 @admin.register(BaseStation)

@@ -33,6 +33,8 @@ from .models import (
     ContractorEmail,
     ContractorPhone,
     Pole,
+    PoleContractorEmail,
+    PoleContractorPhone,
 )
 from .validators import SocialValidators
 
@@ -169,127 +171,176 @@ class Api(SocialValidators):
         avr = Api.json_2_df(AVR_FILE, COLUMNS_TO_KEEP_AVR_REPORT)
         total = len(avr)
 
-        # Удаляем не актуальные записи:
-        new_project_names: set[int] = set(avr['Подрядчик'])
-        existing_project_names: set[int] = set(
-            AVRContractor.objects.values_list('contractor_name', flat=True))
-        project_names_to_delete = (
-            existing_project_names
-            - new_project_names
-            - {UNDEFINED_CASE}
+        # Удаляем не актуальные записи
+        new_contractors: set[str] = set(avr['Подрядчик'].dropna())
+        existing_contractors: set[str] = set(
+            AVRContractor.objects.values_list('contractor_name', flat=True)
+        )
+        contractors_to_delete = (
+            existing_contractors - new_contractors - {UNDEFINED_CASE}
         )
 
-        if project_names_to_delete:
+        if contractors_to_delete:
             AVRContractor.objects.filter(
-                contractor_name__in=project_names_to_delete
+                contractor_name__in=contractors_to_delete
             ).delete()
 
-        # Добавляем подрядчика по умолчанию:
+        # Дефолтный подрядчик и дефолтная опора
         with transaction.atomic():
-            default_contractor, is_up = AVRContractor.objects.update_or_create(
+            default_contractor, _ = AVRContractor.objects.update_or_create(
                 contractor_name=UNDEFINED_CASE,
                 defaults={'is_excluded_from_contract': False}
             )
 
-            email_objs = []
-            for email in UNDEFINED_EMAILS:
-                email_obj, _ = ContractorEmail.objects.get_or_create(
-                    email=email)
-                email_objs.append(email_obj)
-            if is_up:
-                default_contractor.emails.set(email_objs)
+            default_pole = Pole.add_default_value()
+            default_pole.avr_contractor = default_contractor
+            default_pole.save()
 
-            pole = Pole.add_default_value()
-            pole.avr_contractor = default_contractor
-            pole.save()
+            # Дефолтные email для дефолтной опоры
+            email_objs = [
+                ContractorEmail.objects.get_or_create(email=email)[0]
+                for email in UNDEFINED_EMAILS
+            ]
+            for email_obj in email_objs:
+                PoleContractorEmail.objects.get_or_create(
+                    contractor=default_contractor,
+                    pole=default_pole,
+                    email=email_obj
+                )
 
-        # Обновляем актуальные записи:
-        find_unvalid_values = False
+        # Кеш всех опор
         poles_cache = {p.pole: p for p in Pole.objects.all()}
+
+        # Кэш существующих email/phone связей
+        existing_email_links = PoleContractorEmail.objects.select_related(
+            'email'
+        ).all()
+        email_cache: dict[tuple[int, int], set[str]] = {}
+        for link in existing_email_links:
+            key = (link.contractor_id, link.pole_id)
+            email_cache.setdefault(key, set()).add(link.email.email)
+
+        existing_phone_links = PoleContractorPhone.objects.select_related(
+            'phone'
+        ).all()
+        phone_cache: dict[tuple[int, int], set[str]] = {}
+        for link in existing_phone_links:
+            key = (link.contractor_id, link.pole_id)
+            phone_cache.setdefault(key, set()).add(link.phone.phone)
+
+        find_unvalid_values = False
 
         for index, row in avr.iterrows():
             PrettyPrint.progress_bar_info(
                 index, total,
                 (
                     'Обновление AVRContractor, ContractorEmail, '
-                    'ContractorPhone и связи между AVRContractor и Poles:'
+                    'ContractorPhone и связи с опорами'
                 )
             )
 
-            is_excluded_from_contract = (
-                row['Исключен из договора'].strip().lower() != 'нет'
-            )
-            pole_number = row['Шифр опоры']
-            contractor_name = row['Подрядчик'] or None
-            contractor_emails = row['Контактные данные подрядчика Email']
-            contractor_phones = row['Контактные данные подрядчика Телефон']
+            try:
+                pole_number = row['Шифр опоры']
+                contractor_name = row.get('Подрядчик')
+                contractor_emails = row.get(
+                    'Контактные данные подрядчика Email')
+                contractor_phones = row.get(
+                    'Контактные данные подрядчика Телефон')
+                is_excluded_from_contract = row[
+                    'Исключен из договора'].strip().lower() != 'нет'
 
-            if (
-                not isinstance(is_excluded_from_contract, bool)
-                or not isinstance(pole_number, str)
-                or not isinstance(contractor_name, (str, NoneType))
-                or not isinstance(contractor_emails, (str, NoneType))
-                or not isinstance(contractor_phones, (str, NoneType))
-            ):
-                find_unvalid_values = True
-                continue
-
-            if contractor_emails:
-                valid_contractor_emails, _ = Api.split_and_validate_emails(
-                    contractor_emails)
-            else:
-                # Чтобы заявки на АВР приходили на emails по умолчанию:
-                valid_contractor_emails = UNDEFINED_EMAILS
-
-            if contractor_phones:
-                valid_contractor_phones, _ = Api.split_and_validate_phones(
-                    contractor_phones
-                )
-            else:
-                valid_contractor_phones = []
-
-            if contractor_name:
-                try:
-                    with transaction.atomic():
-                        contractor, _ = AVRContractor.objects.update_or_create(
-                            contractor_name=contractor_name,
-                            defaults={
-                                'is_excluded_from_contract': (
-                                    is_excluded_from_contract)
-                            }
-                        )
-
-                        email_objs = []
-                        for email in valid_contractor_emails:
-                            email_obj, _ = (
-                                ContractorEmail
-                                .objects.get_or_create(email=email)
-                            )
-                            email_objs.append(email_obj)
-                        contractor.emails.set(email_objs)
-
-                        phone_objs = []
-                        for phone in valid_contractor_phones:
-                            phone_obj, _ = (
-                                ContractorPhone
-                                .objects.get_or_create(phone=phone)
-                            )
-                            phone_objs.append(phone_obj)
-                        contractor.phones.set(phone_objs)
-
-                        pole = poles_cache.get(pole_number)
-                        if pole:
-                            pole.avr_contractor = contractor
-                            pole.save()
-
-                except IntegrityError:
+                # Проверка типов
+                if not isinstance(pole_number, str):
                     find_unvalid_values = True
+                    continue
 
-            else:
-                pole = poles_cache.get(pole_number)
-                if pole:
-                    pole.avr_contractor = default_contractor
-                    pole.save()
+                # Подрядчик
+                if contractor_name:
+                    contractor, _ = AVRContractor.objects.update_or_create(
+                        contractor_name=contractor_name,
+                        defaults={
+                            'is_excluded_from_contract': (
+                                is_excluded_from_contract
+                            )
+                        }
+                    )
+                else:
+                    contractor = default_contractor
+
+                # Опора
+                pole = poles_cache.get(pole_number, default_pole)
+                pole.avr_contractor = contractor
+                pole.save()
+
+                # Email
+                if contractor_emails:
+                    valid_emails, _ = Api.split_and_validate_emails(
+                        contractor_emails
+                    )
+                else:
+                    valid_emails = UNDEFINED_EMAILS
+                valid_emails_set = set(valid_emails)
+
+                key = (contractor.pk, pole.pk)
+                current_emails_set = email_cache.get(key, set())
+
+                # Удаляем устаревшие связи
+                to_remove = current_emails_set - valid_emails_set
+                if to_remove:
+                    PoleContractorEmail.objects.filter(
+                        contractor=contractor,
+                        pole=pole,
+                        email__email__in=to_remove
+                    ).delete()
+
+                # Добавляем новые
+                for email in valid_emails_set - current_emails_set:
+                    email_obj, _ = ContractorEmail.objects.get_or_create(
+                        email=email
+                    )
+                    PoleContractorEmail.objects.get_or_create(
+                        contractor=contractor,
+                        pole=pole,
+                        email=email_obj
+                    )
+
+                email_cache[key] = valid_emails_set
+
+                # Phone
+                if contractor_phones:
+                    valid_phones, _ = Api.split_and_validate_phones(
+                        contractor_phones
+                    )
+                else:
+                    valid_phones = []
+                valid_phones_set = set(valid_phones)
+
+                current_phones_set = phone_cache.get(key, set())
+                # Удаляем устаревшие
+                to_remove_phones = current_phones_set - valid_phones_set
+                if to_remove_phones:
+                    PoleContractorPhone.objects.filter(
+                        contractor=contractor,
+                        pole=pole,
+                        phone__phone__in=to_remove_phones
+                    ).delete()
+
+                # Добавляем новые
+                for phone in valid_phones_set - current_phones_set:
+                    phone_obj, _ = ContractorPhone.objects.get_or_create(
+                        phone=phone
+                    )
+                    PoleContractorPhone.objects.get_or_create(
+                        contractor=contractor,
+                        pole=pole,
+                        phone=phone_obj
+                    )
+
+                phone_cache[key] = valid_phones_set
+
+            except Exception:
+                ts_api_logger.debug(f'Проверьте данные: {row}')
+                find_unvalid_values = True
 
         if find_unvalid_values:
             ts_api_logger.warning(f'Проверьте данные в {TS_AVR_REPORT_URL}')

@@ -19,6 +19,44 @@ def get_default_contractor():
     return contractor.pk
 
 
+class PoleContractorEmail(models.Model):
+    pole = models.ForeignKey(
+        'Pole',
+        on_delete=models.CASCADE,
+        related_name='pole_emails'
+    )
+    contractor = models.ForeignKey(
+        'AVRContractor',
+        on_delete=models.CASCADE,
+        related_name='contractor_emails'
+    )
+    email = models.ForeignKey('ContractorEmail', on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('pole', 'contractor', 'email')
+        verbose_name = 'Email подрядчика для опоры'
+        verbose_name_plural = 'Emails подрядчиков для опор'
+
+
+class PoleContractorPhone(models.Model):
+    pole = models.ForeignKey(
+        'Pole',
+        on_delete=models.CASCADE,
+        related_name='pole_phones',
+    )
+    contractor = models.ForeignKey(
+        'AVRContractor',
+        on_delete=models.CASCADE,
+        related_name='contractor_phones'
+    )
+    phone = models.ForeignKey('ContractorPhone', on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('pole', 'contractor', 'phone')
+        verbose_name = 'Телефон подрядчика для опоры'
+        verbose_name_plural = 'Телефоны подрядчиков для опор'
+
+
 class ContractorEmail(models.Model):
     """Email адрес подрядчика."""
     email = models.EmailField(
@@ -61,18 +99,6 @@ class AVRContractor(models.Model):
         unique=True,
     )
     is_excluded_from_contract = models.BooleanField('Исключен из договора')
-    emails = models.ManyToManyField(
-        ContractorEmail,
-        blank=True,
-        related_name='contractors',
-        verbose_name='Emails',
-    )
-    phones = models.ManyToManyField(
-        ContractorPhone,
-        blank=True,
-        related_name='contractors',
-        verbose_name='Телефоны',
-    )
 
     class Meta:
         verbose_name = 'подрядчик по АВР'
@@ -158,6 +184,18 @@ class Pole(models.Model):
         default=get_default_contractor,
         related_name='poles',
         verbose_name='Подрядчик по АВР',
+    )
+    avr_emails = models.ManyToManyField(
+        'ContractorEmail',
+        through='PoleContractorEmail',
+        related_name='poles',
+        verbose_name='Emails подрядчиков на опоре'
+    )
+    avr_phones = models.ManyToManyField(
+        'ContractorPhone',
+        through='PoleContractorPhone',
+        related_name='poles',
+        verbose_name='Телефоны подрядчиков на опоре'
     )
 
     class Meta:
