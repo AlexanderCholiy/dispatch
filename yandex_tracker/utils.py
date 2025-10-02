@@ -604,6 +604,7 @@ class YandexTrackerManager:
         if email.email_subject:
             subject = EmailManager.normalize_text_with_json(
                 email.email_subject, True)
+            subject = subject.replace('```', '')
 
         comment_like_email = [
             f'### 📧 "**{subject}**"' if subject else '*Без темы*',
@@ -636,6 +637,7 @@ class YandexTrackerManager:
             # Убираем лишние переносы строк и добавляем Markdown-форматирование
             # Два пробела для переноса строк в Markdown:
             formatted_body = normalized_body.replace('\n', '  \n')
+            formatted_body = formatted_body.replace('```', '')
 
             # Если есть цитаты (обычно начинаются с ">"), форматируем их как
             # blockquote:

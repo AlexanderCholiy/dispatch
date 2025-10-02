@@ -301,14 +301,10 @@ class AutoEmailsFromYT:
         return result
 
     def _prepare_incident_text_for_avr(self, incident: Incident) -> str:
-        text_parts = ['На вас назначен новый инцидент.']
-
-        text_parts.append(
-            f'Подрядчик по АВР: {incident.avr_contractor.contractor_name}'
-        )
+        text_parts = ['На вас назначен новый инцидент.\n']
 
         if incident.pole:
-            text_parts.append('ИНФОРМАЦИЯ ОБ ОПОРЕ:')
+            text_parts.append('**ИНФОРМАЦИЯ ОБ ОПОРЕ:**')
             text_parts.append(f'   • Шифр опоры: {incident.pole.pole}')
             text_parts.append(f'   • Регион: {incident.pole.region}')
             text_parts.append(f'   • Адрес: {incident.pole.address}')
@@ -319,11 +315,9 @@ class AutoEmailsFromYT:
                 )
 
         if incident.base_station:
-            text_parts.append('\nИНФОРМАЦИЯ О БАЗОВОЙ СТАНЦИИ:')
+            text_parts.append('\n**ИНФОРМАЦИЯ О БАЗОВОЙ СТАНЦИИ:**')
             text_parts.append(
-                f'   • Номер БС: {incident.base_station.bs_name}'
-            )
-
+                f'   • Номер БС: {incident.base_station.bs_name}')
             if incident.base_station.operator.exists():
                 operators = ', '.join(
                     [
@@ -333,7 +327,10 @@ class AutoEmailsFromYT:
                 )
                 text_parts.append(f'   • Операторы: {operators}')
 
-        text_parts.append('\nДЕТАЛИ ИНЦИДЕНТА:')
+        text_parts.append('\n**ДЕТАЛИ ИНЦИДЕНТА:**')
+        text_parts.append(
+            f'   • Подрядчик по АВР: {incident.avr_contractor.contractor_name}'
+        )
         text_parts.append(
             '   • Дата регистрации: '
             f'{incident.incident_date.astimezone(CURRENT_TZ):%d.%m.%Y %H:%M}'
@@ -342,8 +339,7 @@ class AutoEmailsFromYT:
         if incident.sla_deadline:
             sla_deadline_2_repr = incident.sla_deadline.astimezone(CURRENT_TZ)
             text_parts.append(
-                '   • SLA дедлайн: '
-                f'{sla_deadline_2_repr:%d.%m.%Y %H:%M}'
+                f'   • SLA дедлайн: {sla_deadline_2_repr:%d.%m.%Y %H:%M}'
             )
 
         if incident.incident_type:
@@ -362,26 +358,29 @@ class AutoEmailsFromYT:
         )
 
         if emails:
-            text_parts.append('\nИСТОРИЯ ПЕРЕПИСКИ:')
-            text_parts.append('-' * 30)
-
+            text_parts.append('\n**ИСТОРИЯ ПЕРЕПИСКИ:**')
             counter_email = 0
 
             for email in emails:
                 if email.email_body:
-                    preview = email.email_body.strip()
-                    if len(preview) > MAX_PREVIEW_TEXT_LEN:
-                        preview = preview[:MAX_PREVIEW_TEXT_LEN] + ' ...'
+                    email_text = email.email_body.strip()
+                    if len(email_text) > MAX_PREVIEW_TEXT_LEN:
+                        email_text = email_text[:MAX_PREVIEW_TEXT_LEN] + ' ...'
 
                     eml_datetime = email.email_date.astimezone(CURRENT_TZ)
                     counter_email += 1
+
                     text_parts.append(
-                        f'\n*Сообщение №{counter_email} *'
+                        f'\n**Сообщение №{counter_email}** '
                         f'({eml_datetime:%d.%m.%Y %H:%M}):'
                     )
-                    text_parts.append(preview)
 
-        text_parts.append('\n\nВАЖНО: НЕ МЕНЯЙТЕ ТЕМУ ПИСЬМА ПРИ ОТВЕТЕ')
+                    # Тело письма в блоке кода:
+                    email_text = email_text.replace('```', '')
+                    text_parts.append(f'```\n{email_text}\n```')
+                    text_parts.append('---')
+
+        text_parts.append('\n\n**ВАЖНО:** НЕ МЕНЯЙТЕ ТЕМУ ПИСЬМА ПРИ ОТВЕТЕ')
 
         return '\n'.join(text_parts)
 

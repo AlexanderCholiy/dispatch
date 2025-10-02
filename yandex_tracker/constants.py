@@ -36,3 +36,5 @@ class IsExpiredSLA:
 class IsNewMsg:
     yes = '✔️ Да'
     no = '✖️ Нет'
+
+MAX_MONITORING_DEVICES = 10

@@ -11,6 +11,7 @@ from monitoring.models import DeviceStatus, DeviceType
 from ts.constants import UNDEFINED_CASE
 from ts.models import AVRContractor, BaseStation, BaseStationOperator, Pole
 from users.models import User
+from .constants import MAX_MONITORING_DEVICES
 
 from .utils import YandexTrackerManager
 
@@ -436,7 +437,7 @@ def prepare_monitoring_text(
         key=lambda d: (
             -d['level'], d['modem_ip'].strip() if d['modem_ip'] else ''
         )
-    )
+    )[:MAX_MONITORING_DEVICES]
 
     # Длина колонок
     type_width = 32

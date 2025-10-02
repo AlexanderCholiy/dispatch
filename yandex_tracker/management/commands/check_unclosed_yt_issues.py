@@ -486,7 +486,7 @@ class Command(BaseCommand):
                             issue_key, yt_manager.error_status_key,
                             (
                                 'Информация об инциденте уже была передана в '
-                                'работу подрядчику.'
+                                'работу подрядчику. '
                                 f'Попробуйте снова через {timeout} секунд.'
                             )
                         )
