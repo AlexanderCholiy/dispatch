@@ -263,10 +263,10 @@ class Command(BaseCommand):
                     devices_by_pole.setdefault(pole.strip(), []).append(dev)
 
         for index, issue in enumerate(unclosed_issues):
-            PrettyPrint.progress_bar_info(
-                index, total,
-                f'Обработка открытых заявок (стр.{batch_number}):'
-            )
+            # PrettyPrint.progress_bar_info(
+            #     index, total,
+            #     f'Обработка открытых заявок (стр.{batch_number}):'
+            # )
 
             database_id: Optional[int] = issue.get(
                 yt_manager.database_global_field_id)

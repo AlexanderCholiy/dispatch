@@ -110,7 +110,7 @@ class AutoEmailsFromYT:
         """Отправляет email."""
         issue_key = issue['key']
 
-        subject = subject_template or f'Re: {issue_key}: {issue["summary"]}'
+        subject = subject_template or f'{issue_key}: {issue["summary"]}'
 
         try:
             self.yt_manager.create_comment_like_email_and_send(

@@ -439,29 +439,43 @@ def prepare_monitoring_text(
         )
     )[:MAX_MONITORING_DEVICES]
 
-    # Длина колонок
-    type_width = 32
-    status_width = 32
+    # Длина колонок (с учетом отступов (не четное число))
+    column_1_width = max([len(choice.label) for choice in DeviceType]) + 31
+    column_2_width = max([len(choice.label) for choice in DeviceStatus])
 
-    # Заголовок
-    header = (
-        f'{"Тип устройства".ljust(type_width)}'
-        f'{"Статус        ".ljust(status_width)}'
+    column_1_name = 'Тип устройства'
+    column_2_name = 'Статус'
+
+    # # Заголовок
+    column_1_display = column_1_name.ljust(
+        max(column_1_width - len(column_1_name), 0)
     )
-    lines = [header, '']
+    column_2_display = column_2_name.ljust(
+        max(column_2_width - len(column_2_name), 0)
+    )
+
+    header = f'{column_1_display}\t{column_2_display}'
+    spacer = '=' * (len(header) - 5)
+    lines = [header, spacer]
 
     for dev in sorted_devices:
         level_display = DeviceType(
-            dev.get('level')).label if dev.get('level') is not None else '-'
+            dev.get('level')
+        ).label if dev.get('level') is not None else 'UNKNOWN'
+        level_aligned = level_display.ljust(
+            max(column_1_width - len(level_display) - 8, 0)
+        )
+
         status_display = DeviceStatus(
             dev.get('status__id')
-        ).label if dev.get('status__id') is not None else '-'
-        emoji = status_emojis.get(status_display, '')
-
+        ).label if dev.get('status__id') is not None else 'UNKNOWN'
+        emoji = status_emojis.get(status_display, '⬜️')
         status_text = f'{emoji} {status_display}'
-        status_aligned = status_text.ljust(status_width)
+        status_aligned = status_text.ljust(
+            max(column_2_width - len(status_text), 0)
+        )
 
-        line = f'{level_display.ljust(type_width)} {status_aligned}'
+        line = f'{level_aligned}\t{status_aligned}'
         lines.append(line)
 
     return '\n'.join(lines)
