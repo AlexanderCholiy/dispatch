@@ -229,9 +229,7 @@ class Command(BaseCommand):
             for issue in unclosed_issues
         ])
 
-        pole_codes = pole_codes_in_yt & set(
-            [row[0] for row in pole_names_sorted]
-        )
+        pole_codes = pole_codes_in_yt & set(pole_names_sorted)
 
         try:
             all_devices = (

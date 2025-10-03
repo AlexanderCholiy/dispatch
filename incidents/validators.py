@@ -2,6 +2,7 @@ import re
 from typing import Optional
 
 from django.db.models import QuerySet
+from django.db.models.functions import Length
 
 from emails.models import EmailMessage
 
@@ -74,7 +75,12 @@ class IncidentValidator:
         poles = self._find_pole_in_text(text)
 
         for word in self._find_num_in_text(text):
-            bs_stations = BaseStation.objects.filter(bs_name=word)
+            bs_stations = BaseStation.objects.filter(
+                bs_name__icontains=word
+            ).annotate(
+                name_length=Length('bs_name')
+            ).order_by('name_length')
+
             if poles.exists():
                 bs_stations = bs_stations.filter(pole__in=poles)
 

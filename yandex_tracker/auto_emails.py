@@ -1,3 +1,4 @@
+import re
 from typing import Optional
 
 from core.constants import YANDEX_TRACKER_AUTO_EMAILS_ROTATING_FILE
@@ -110,7 +111,7 @@ class AutoEmailsFromYT:
         """Отправляет email."""
         issue_key = issue['key']
 
-        subject = subject_template or f'{issue_key}: {issue["summary"]}'
+        subject = subject_template or f'Re: {issue_key}: {issue["summary"]}'
 
         try:
             self.yt_manager.create_comment_like_email_and_send(
@@ -278,7 +279,14 @@ class AutoEmailsFromYT:
         error_message = 'Не удалось уведомить подрядчика о заявке.'
 
         IncidentManager.add_notify_avr_status(
-            incident, notify_before_message)
+            incident, notify_before_message
+        )
+
+        subject_raw: str = issue['summary']
+        cleaned_subject = re.sub(
+            r'^(?:\s*Re:\s*)+', '', subject_raw, flags=re.IGNORECASE
+        )
+        subject_template = f'{issue_key}: {cleaned_subject}'
 
         result = self.send_auto_reply(
             issue=issue,
@@ -289,6 +297,7 @@ class AutoEmailsFromYT:
             ),
             success_message=success_message,
             text_template=self._prepare_incident_text_for_avr(incident),
+            subject_template=subject_template,
             error_message=error_message,
         )
 
@@ -304,10 +313,17 @@ class AutoEmailsFromYT:
         text_parts = ['На вас назначен новый инцидент.\n']
 
         if incident.pole:
+            pole_region = incident.pole.region_ru or incident.pole.region
+
             text_parts.append('**ИНФОРМАЦИЯ ОБ ОПОРЕ:**')
             text_parts.append(f'   • Шифр опоры: {incident.pole.pole}')
-            text_parts.append(f'   • Регион: {incident.pole.region}')
-            text_parts.append(f'   • Адрес: {incident.pole.address}')
+
+            if pole_region:
+                text_parts.append(f'   • Регион: {pole_region}')
+
+            if incident.pole.address:
+                text_parts.append(f'   • Адрес: {incident.pole.address}')
+
             if incident.pole.pole_latitude and incident.pole.pole_longtitude:
                 text_parts.append(
                     f'   • Координаты: {incident.pole.pole_latitude}, '
