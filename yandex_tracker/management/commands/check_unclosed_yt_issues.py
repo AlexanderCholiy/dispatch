@@ -455,7 +455,7 @@ class Command(BaseCommand):
                                         DEFAULT_NOTIFY_AVR_STATUS_NAME,
                                     )
                                 )
-                                or not contractor_emails.isdisjoint(
+                                or not set(contractor_emails).isdisjoint(
                                     incident_emails
                                 )
                             )

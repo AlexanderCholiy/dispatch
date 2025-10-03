@@ -737,7 +737,14 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                         email_parser_logger.exception(
                             f'Не валидные данные: {invalid_data}')
 
-            if email_msg_counter:
+            if (
+                email_msg_counter
+                or self.is_time_in_range(
+                    start=time(0, 0),
+                    end=time(3, 0),
+                    check_time=datetime.now(ZoneInfo('Europe/Moscow')).time()
+                )
+            ):
                 email_parser_logger.info(
                     f'Было найдено {email_msg_counter} новых сообщений '
                     f'в папке {folder.name}'
