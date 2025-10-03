@@ -240,6 +240,7 @@ Supervisor управляет запуском:
   <img src=".github/images/yandex_tracker/fields/global/pole_number.png" alt="Шифр опоры" width="300">
   <img src=".github/images/yandex_tracker/fields/global/sla_deadline.png" alt="Дедлайн SLA" width="300">
   <img src=".github/images/yandex_tracker/fields/global/sla_status.png" alt="Статус SLA" width="300">
+  <img src=".github/images/yandex_tracker/fields/global/monitoring.png" alt="Мониторинг" width="300">
 </p>  
 
 ### 5. Локальные поля
@@ -286,6 +287,13 @@ POSTGRES_DB=XXXX
 POSTGRES_USER=XXXX
 POSTGRES_PASSWORD=XXXX
 
+# База данных мониторинга (только для чтения)
+MONITORING_DB_NAME=XXXX
+MONITORING_DB_USER=XXXX
+MONITORING_DB_PASSWORD=XXXX
+MONITORING_DB_HOST=XXXX
+MONITORING_DB_PORT=XXXX
+
 # API TowerStore
 TS_POLES_TL_URL=url_с_данными_по_опоры
 TS_AVR_REPORT_URL=url_с_данными_по_подрядчика_подрядчика
@@ -321,6 +329,7 @@ YT_SLA_DEADLINE_GLOBAL_FIELD_ID=...
 YT_IS_SLA_EXPIRED_GLOBAL_FIELD_ID=...
 YT_OPERATOR_NAME_GLOBAL_FIELD_NAME=...
 YT_AVR_NAME_GLOBAL_FIELD_ID=...
+YT_MONITORING_GLOBAL_FIELD_ID=...
 YT_TYPE_OF_INCIDENT_LOCAL_FIELD_ID=...
 
 # YandexTracker (кастомные статусы)
@@ -448,6 +457,38 @@ python3.12 -m venv venv
 pip install -r requirements.txt
 ```
 > Установка зависимостей.
+sudo apt-get install -y curl
+
+4. Установите Microsoft ODBC 17 Driver for SQL Server (Linux):
+```bash
+sudo apt-get install -y curl
+```
+> Установка утилиты для передачи данных по различным сетевым протоколам
+```bash
+sudo rm -f /etc/apt/sources.list.d/mssql-release.list
+```
+> Удаляем возможные некорректные файлы
+```bash
+curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg
+sudo mv microsoft.gpg /etc/apt/trusted.gpg.d/microsoft.gpg
+```
+> Импорт ключа Microsoft
+```bash
+sudo curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list -o /etc/apt/sources.list.d/mssql-release.list
+```
+> Добавление репозитория Microsoft (замени '22.04' на твою версию Ubuntu)
+> 
+> Microsoft пока не выпускает полноценную поддержку Ubuntu 24.04 (noble). Если выше не работает, проще перейти на Ubuntu 22.04
+```bash
+sudo apt-get update --allow-unauthenticated
+```
+> Обновляем пакеты
+```bash
+sudo ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc unixodbc-dev
+```
+> Установка драйвера ODBC 17 и unixODBC
+> 
+> В Linux 24.04 ODBC Driver 18 иногда вызывает проблемы с SSL-соединением, особенно при работе с серверами MSSQL, использующими самоподписанные сертификаты.
 
 ---
 
@@ -499,6 +540,10 @@ lscpu | grep "Thread(s) per core"
 free -h
 ```
 > Проверка объёма оперативной памяти.
+```bash
+lsb_release -a
+```
+> Узнать версию Ubuntu.
 Формула расчёта числа воркеров: `workers = 2 * CPU + 1`
 
 ### 4. Проверка стиля кода
@@ -527,49 +572,3 @@ cd ~ && rm -rf ~/.vscode-server
 
 ## 👋 Автор
 **Чолий Александр** ([Telegram](https://t.me/alexander_choliy))
-
-
-sudo apt-get install -y curl
-
-Узнайте версию Ubuntu
-lsb_release -a
-
-У меня 24.04
-
-1️⃣ Удаляем возможные некорректные файлы
-sudo rm -f /etc/apt/sources.list.d/mssql-release.list
-
-# 1. Импорт ключа Microsoft
-curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg
-sudo mv microsoft.gpg /etc/apt/trusted.gpg.d/microsoft.gpg
-
-# 2. Добавление репозитория Microsoft (замени '22.04' на твою версию Ubuntu)
-sudo curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list -o /etc/apt/sources.list.d/mssql-release.list
-
-💡 Важно: Microsoft пока не выпускает полноценную поддержку Ubuntu 24.04 (noble). Если выше не работает, проще перейти на Ubuntu 22.04 (jammy) в серверной среде — там все официально поддерживается.
-
-# 3. Обновляем пакеты
-sudo apt-get update --allow-unauthenticated
-
-# 4. Установка драйвера ODBC 17 и unixODBC
-sudo ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc unixodbc-dev
-Да, для Linux 24.04 (и вообще для многих Ubuntu) драйвер ODBC 18 иногда даёт проблемы с SSL, особенно если сервер MSSQL использует самоподписанный сертификат. В таких случаях переход на ODBC Driver 17 может быть проще и стабильнее.
-
-
-Доступный размер оперативной памяти 
-free -h
-
-SELECT
-em.id,
-em.email_msg_id,
-em.email_msg_reply_id,
-er.email_msg_references,
-em.email_date,
-em.email_subject,
-em.email_body
-FROM emails_emailmessage AS em
-FULL JOIN emails_emailreference AS er
-ON em.id = er.email_msg_id
-WHERE em.email_incident_id IN (64762)
-ORDER BY em.email_date, em.id, er.id
-LIMIT 100
