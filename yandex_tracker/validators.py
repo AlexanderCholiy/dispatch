@@ -1,3 +1,4 @@
+import bisect
 from datetime import datetime
 from logging import Logger
 from typing import Optional, TypedDict
@@ -25,12 +26,25 @@ class DevicesData(TypedDict):
     status__id: int
 
 
+def find_poles_by_prefix(
+    pole_names_sorted: list[str], prefix: str
+) -> list[str]:
+    """
+    Возвращает список опор, начинающихся с prefix, используя бинарный поиск.
+    """
+    start_index = bisect.bisect_left(pole_names_sorted, prefix)
+    end_prefix = prefix[:-1] + chr(ord(prefix[-1]) + 1) if prefix else prefix
+    end_index = bisect.bisect_left(pole_names_sorted, end_prefix)
+
+    return pole_names_sorted[start_index:end_index]
+
+
 def check_yt_pole_incident(
     yt_manager: YandexTrackerManager,
     issue: dict,
     type_of_incident_field: dict,
     incident: Incident,
-    all_poles: dict[str, Pole],
+    pole_names_sorted: list[str, Pole],
 ) -> bool:
     pole_is_valid = True
     comment = None
@@ -49,31 +63,31 @@ def check_yt_pole_incident(
         return pole_is_valid
 
     try:
-        # Ищем опоры, которые начинаются с указанного шифра
-        if pole_number in all_poles:
+        # Сначала точное совпадение (O(1) через бинарный поиск)
+        idx = bisect.bisect_left(pole_names_sorted, pole_number)
+        if (
+            idx < len(pole_names_sorted)
+            and pole_names_sorted[idx] == pole_number
+        ):
             return pole_is_valid
-        else:
-            # Ищем опоры, которые начинаются с указанного шифра
-            matching_poles = [
-                pole for pole_name, pole in all_poles.items()
-                if pole_name.startswith(pole_number)
-            ]
 
-            if not matching_poles:
-                raise Pole.DoesNotExist(
-                    f'Не найдено опор, начинающихся с "{pole_number}"')
+        # Если точного нет — ищем все по префиксу
+        matching_names = find_poles_by_prefix(pole_names_sorted, pole_number)
 
-            elif len(matching_poles) > 1:
-                exact_matches = [
-                    p for p in matching_poles if p.pole == pole_number]
-                if not exact_matches:
-                    example_poles = [p.pole for p in matching_poles[:3]]
-                    raise Pole.MultipleObjectsReturned(
-                        f'Найдено {len(matching_poles)} опор, начинающихся с '
-                        f'"{pole_number}". '
-                        f'Примеры: {", ".join(example_poles)}. '
-                        'Уточните шифр опоры.'
-                    )
+        if not matching_names:
+            raise Pole.DoesNotExist(
+                f'Не найдено опор, начинающихся с "{pole_number}"'
+            )
+
+        elif len(matching_names) > 1:
+            exact_matches = [p for p in matching_names if p == pole_number]
+            if not exact_matches:
+                example_poles = matching_names[:3]
+                raise Pole.MultipleObjectsReturned(
+                    f'Найдено {len(matching_names)} опор, начинающихся с '
+                    f'"{pole_number}". Примеры: {", ".join(example_poles)}. '
+                    'Уточните шифр опоры.'
+                )
 
     except (Pole.DoesNotExist, Pole.MultipleObjectsReturned) as e:
         pole_is_valid = False
@@ -528,7 +542,7 @@ def check_yt_incident_data(
     type_of_incident_field: dict,
     valid_names_of_types: list[str],
     usernames_in_db: list[str],
-    all_poles: dict[str, Pole],
+    pole_names_sorted: list[str, Pole],
     all_base_stations: dict[tuple[str, Optional[str]], BaseStation],
     devices_by_pole: dict[str, list[DevicesData]],
 ) -> Optional[bool]:
@@ -682,14 +696,13 @@ def check_yt_incident_data(
 
     # ТЕПЕРЬ проверяем опору (после того как БС могла установить опору)
     is_valid_pole_number = check_yt_pole_incident(
-        yt_manager, issue, type_of_incident_field, incident, all_poles)
-    incident_pole = incident.pole
+        yt_manager, issue, type_of_incident_field, incident, pole_names_sorted)
     if not is_valid_pole_number:
         logger.debug(f'Ошибка {issue_key}: неверный шифр опоры.')
         return False
 
     # Синхронизируем данные по опоре (только если БС не установила опору)
-    if not incident_pole and pole_number:
+    if not incident.pole and pole_number:
         exact_pole = Pole.objects.filter(pole=pole_number).first()
         if exact_pole:
             incident.pole = exact_pole
@@ -699,21 +712,21 @@ def check_yt_incident_data(
             ).order_by('pole').first()
         incident.save()
 
-    elif incident_pole and not pole_number:
+    elif incident.pole and not pole_number:
         # Удаляем опору только если она не от БС
         if (
             not incident.base_station
-            or incident.base_station.pole != incident_pole
+            or incident.base_station.pole != incident.pole
         ):
             incident.pole = None
             incident.save()
 
-    elif incident_pole and pole_number:
-        if not incident_pole.pole.startswith(pole_number):
+    elif incident.pole and pole_number:
+        if not incident.pole.pole.startswith(pole_number):
             # Обновляем опору только если она не от БС
             if (
                 not incident.base_station
-                or incident.base_station.pole != incident_pole
+                or incident.base_station.pole != incident.pole
             ):
                 exact_pole = Pole.objects.filter(pole=pole_number).first()
                 if exact_pole:

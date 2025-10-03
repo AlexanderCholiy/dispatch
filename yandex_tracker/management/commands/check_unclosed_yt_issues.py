@@ -100,12 +100,13 @@ class Command(BaseCommand):
             .select_local_field(yt_manager.type_of_incident_local_field_id)
         )
 
+        pole_names_sorted = [p.pole for p in Pole.objects.order_by('pole')]
+
         all_incident_types = list(IncidentType.objects.all())
         valid_names_of_types = [tp.name for tp in all_incident_types]
         all_users = User.objects.filter(role=Roles.DISPATCH, is_active=True)
         usernames_in_db = [usr.username for usr in all_users]
 
-        all_poles = {p.pole: p for p in Pole.objects.all()}
         all_base_stations = {
             (bs.bs_name, bs.pole.pole if bs.pole else None): bs
             for bs in BaseStation.objects.select_related('pole').all()
@@ -128,7 +129,7 @@ class Command(BaseCommand):
                     type_of_incident_field=type_of_incident_field,
                     valid_names_of_types=valid_names_of_types,
                     usernames_in_db=usernames_in_db,
-                    all_poles=all_poles,
+                    pole_names_sorted=pole_names_sorted,
                     all_base_stations=all_base_stations,
                     yt_emails=yt_emails,
                 )
@@ -148,8 +149,8 @@ class Command(BaseCommand):
         type_of_incident_field: dict,
         valid_names_of_types: list[str],
         usernames_in_db: list[str],
-        all_poles: dict[str, Pole],
-        all_base_stations: dict[str, BaseStation],
+        pole_names_sorted: list[str],
+        all_base_stations: dict[tuple[str, Optional[str]], BaseStation],
         yt_emails: AutoEmailsFromYT,
     ) -> tuple[int, int, int]:
         """
@@ -228,7 +229,9 @@ class Command(BaseCommand):
             for issue in unclosed_issues
         ])
 
-        pole_codes = pole_codes_in_yt & set(all_poles.keys())
+        pole_codes = pole_codes_in_yt & set(
+            [row[0] for row in pole_names_sorted]
+        )
 
         try:
             all_devices = (
@@ -263,10 +266,10 @@ class Command(BaseCommand):
                     devices_by_pole.setdefault(pole.strip(), []).append(dev)
 
         for index, issue in enumerate(unclosed_issues):
-            # PrettyPrint.progress_bar_info(
-            #     index, total,
-            #     f'Обработка открытых заявок (стр.{batch_number}):'
-            # )
+            PrettyPrint.progress_bar_info(
+                index, total,
+                f'Обработка открытых заявок (стр.{batch_number}):'
+            )
 
             database_id: Optional[int] = issue.get(
                 yt_manager.database_global_field_id)
@@ -312,7 +315,7 @@ class Command(BaseCommand):
                     type_of_incident_field=type_of_incident_field,
                     valid_names_of_types=valid_names_of_types,
                     usernames_in_db=usernames_in_db,
-                    all_poles=all_poles,
+                    pole_names_sorted=pole_names_sorted,
                     all_base_stations=all_base_stations,
                     devices_by_pole=devices_by_pole,
                 )
