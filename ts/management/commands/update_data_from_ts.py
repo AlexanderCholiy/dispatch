@@ -15,7 +15,7 @@ ts_managment_logger = LoggerFactory(__name__, TS_LOG_ROTATING_FILE).get_logger
 class Command(BaseCommand):
     help = 'Обновление таблиц опор, БС, операторов и подрядчиков по АВР'
 
-    @timer(ts_managment_logger)
+    @timer(ts_managment_logger, False)
     def handle(self, *args, **kwargs):
         tg_manager.send_startup_notification(__name__)
 

@@ -75,7 +75,14 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
         date_since = start_date.strftime('%d-%b-%Y')
         date_before = end_date.strftime('%d-%b-%Y')
 
-        search_query = f'(SINCE {date_since} BEFORE {date_before})'
+        if self.is_time_in_range(
+            start=time(0, 0),
+            end=time(3, 0),
+            check_time=datetime.now(ZoneInfo('Europe/Moscow')).time()
+        ):
+            search_query = f'(SINCE {date_since})'
+        else:
+            search_query = f'(SINCE {date_since} BEFORE {date_before})'
 
         status, messages = mail.search(None, search_query)
         if status != 'OK' or not messages[0]:
@@ -103,10 +110,21 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
             PrettyPrint.progress_bar_error(
                 index, total, 'Поиск писем из EmailErr:')
 
-            search_query = (
-                f'HEADER Message-ID "{message_id}" '
-                f'SINCE "{date_since}" BEFORE "{date_before}"'
-            )
+            if self.is_time_in_range(
+                start=time(0, 0),
+                end=time(3, 0),
+                check_time=datetime.now(ZoneInfo('Europe/Moscow')).time()
+            ):
+                search_query = (
+                    f'HEADER Message-ID "{message_id}" '
+                    f'SINCE "{date_since}"'
+                )
+            else:
+                search_query = (
+                    f'HEADER Message-ID "{message_id}" '
+                    f'SINCE "{date_since}" BEFORE "{date_before}"'
+                )
+
             status, messages = mail.search(None, search_query)
 
             if status == 'OK':
@@ -314,7 +332,7 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
             ]
 
     @min_wait_timer(email_parser_logger)
-    @timer(email_parser_logger)
+    @timer(email_parser_logger, False)
     def fetch_unread_emails(
         self,
         check_days: int = 0,

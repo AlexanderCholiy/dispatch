@@ -57,9 +57,9 @@ class Command(BaseCommand):
         had_errors_last_time = False
         last_error_type = None
 
-        min_timeout = 300  # 5 минут
-        max_timeout = 900  # 15 минут
-        timeout_step = 30
+        min_timeout = 600  # 10 минут
+        max_timeout = 1200  # 20 минут
+        timeout_step = 300
         reserve_sec = 30
         current_timeout = min_timeout
 

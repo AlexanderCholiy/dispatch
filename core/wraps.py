@@ -12,7 +12,7 @@ from .exceptions import ApiServerError, ApiTooManyRequests
 from .utils import format_seconds
 
 
-def timer(logger: Logger) -> Callable:
+def timer(logger: Logger, is_debug: bool = True) -> Callable:
     """Декоратор для измерения и логирования времени выполнения функции."""
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
@@ -23,24 +23,12 @@ def timer(logger: Logger) -> Callable:
             finally:
                 execution_time = datetime.now() - start_time
                 total_seconds = execution_time.total_seconds()
+                msg = (
+                    f'Время выполнения {func.__name__}: '
+                    f'{format_seconds(total_seconds)}'
+                )
 
-                if total_seconds >= 60:
-                    minutes = int(total_seconds // 60)
-                    seconds = total_seconds % 60
-                    logger.debug(
-                        f'Время выполнения {func.__name__}: {minutes} мин '
-                        f'{round(seconds, 2)} сек'
-                    )
-                elif total_seconds >= 1:
-                    seconds = round(total_seconds, 2)
-                    logger.debug(
-                        f'Время выполнения {func.__name__}: {seconds} сек'
-                    )
-                else:
-                    milliseconds = round(execution_time.microseconds / 1000, 2)
-                    logger.debug(
-                        f'Время выполнения {func.__name__}: {milliseconds} мс'
-                    )
+                logger.debug(msg) if is_debug else logger.info(msg)
 
         return wrapper
     return decorator
@@ -96,7 +84,7 @@ def retry(
                         f'пробуем запустить {func.__name__} '
                         f'{msg_sub_func_name}'
                         f'с параметрами args={args} kwargs={kwargs} '
-                        f'снова через {current_delay:.1f} секунд(ы)'
+                        f'снова через {format_seconds(current_delay)}'
                     )
                     logger.debug(msg, exc_info=True)
                     time.sleep(current_delay)
@@ -201,7 +189,7 @@ def min_wait_timer(logger: Logger, min_seconds: int = 10):
             if execution_time < min_seconds:
                 sleep_time = min_seconds - execution_time
                 logger.debug(
-                    f'Ждем {format_seconds(sleep_time)} секунд(ы) для '
+                    f'Ждем {format_seconds(sleep_time)} для '
                     f'завершения работы функции {func.__name__}'
                 )
                 time.sleep(sleep_time)
