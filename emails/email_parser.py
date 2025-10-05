@@ -332,7 +332,7 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
             ]
 
     @min_wait_timer(email_parser_logger)
-    @timer(email_parser_logger, False)
+    @timer(email_parser_logger)
     def fetch_unread_emails(
         self,
         check_days: int = 0,
@@ -358,7 +358,7 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
             check_days == 0
             and self.is_time_in_range(
                 start=time(0, 0),
-                end=time(1, 0),
+                end=time(0, 30),
                 check_time=datetime.now(ZoneInfo('Europe/Moscow')).time()
             )
         ):
@@ -737,14 +737,7 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                         email_parser_logger.exception(
                             f'Не валидные данные: {invalid_data}')
 
-            if (
-                email_msg_counter
-                or self.is_time_in_range(
-                    start=time(0, 0),
-                    end=time(3, 0),
-                    check_time=datetime.now(ZoneInfo('Europe/Moscow')).time()
-                )
-            ):
+            if email_msg_counter:
                 email_parser_logger.info(
                     f'Было найдено {email_msg_counter} новых сообщений '
                     f'в папке {folder.name}'
