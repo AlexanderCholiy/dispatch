@@ -1,6 +1,9 @@
 import time
+import os
 from datetime import timedelta
-from typing import Optional
+from typing import Optional, Callable
+from functools import partial
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from django.core.management.base import BaseCommand
 from django.db.models import OuterRef, Prefetch, Q, Subquery
@@ -14,6 +17,7 @@ from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
 from core.tg_bot import tg_manager
 from core.wraps import min_wait_timer, timer
+from core.threads import tasks_in_threads
 from emails.email_parser import email_parser
 from emails.models import EmailMessage
 from incidents.constants import (
@@ -115,12 +119,14 @@ class Command(BaseCommand):
         total_processed = 0
         total_errors = 0
         total_updated = 0
+        all_tasks: list[Callable] = []
 
         unclosed_issues_batches = yt_manager.unclosed_issues(
-            YT_ISSUES_DAYS_AGO_FILTER)
+            YT_ISSUES_DAYS_AGO_FILTER
+        )
 
         for i, unclosed_issues in enumerate(unclosed_issues_batches, 1):
-            batch_total, batch_errors, batch_updated = (
+            batch_total, batch_errors, batch_updated, tasks = (
                 self.check_unclosed_batch_issues(
                     batch_number=i,
                     yt_manager=yt_manager,
@@ -134,9 +140,13 @@ class Command(BaseCommand):
                     yt_emails=yt_emails,
                 )
             )
+
             total_processed += batch_total
             total_errors += batch_errors
             total_updated += batch_updated
+            all_tasks.extend(tasks)
+
+        tasks_in_threads(all_tasks, yt_managment_logger)
 
         return total_processed, total_errors, total_updated
 
@@ -152,7 +162,7 @@ class Command(BaseCommand):
         pole_names_sorted: list[str],
         all_base_stations: dict[tuple[str, Optional[str]], BaseStation],
         yt_emails: AutoEmailsFromYT,
-    ) -> tuple[int, int, int]:
+    ) -> tuple[int, int, int, list[Callable]]:
         """
         Работа с заявками в YandexTracker с ОТКРЫТЫМ статусом.
 
@@ -263,6 +273,8 @@ class Command(BaseCommand):
                 if pole:
                     devices_by_pole.setdefault(pole.strip(), []).append(dev)
 
+        validation_tasks = []
+
         for index, issue in enumerate(unclosed_issues):
             PrettyPrint.progress_bar_info(
                 index, total,
@@ -288,13 +300,14 @@ class Command(BaseCommand):
                             f'{yt_manager.database_global_field_id} для '
                             'внутреннего номера инцидента.'
                         )
-                        was_status_update = yt_manager.update_issue_status(
-                            issue_key,
-                            yt_manager.error_status_key,
-                            comment
+                        validation_tasks.append(
+                            partial(
+                                yt_manager.update_issue_status,
+                                issue_key,
+                                yt_manager.error_status_key,
+                                comment
+                            )
                         )
-                        if was_status_update:
-                            yt_managment_logger.debug(comment)
                     continue
 
                 last_status_history = None
@@ -304,7 +317,9 @@ class Command(BaseCommand):
                 ):
                     last_status_history = incident.prefetched_statuses[0]
 
-                is_valid_yt_data = check_yt_incident_data(
+                (
+                    is_valid_yt_data, update_data_func, update_status_func
+                ) = check_yt_incident_data(
                     incident=incident,
                     yt_manager=yt_manager,
                     logger=yt_managment_logger,
@@ -319,6 +334,12 @@ class Command(BaseCommand):
                 )
 
                 if not is_valid_yt_data:
+                    if update_data_func:
+                        validation_tasks.append(update_data_func)
+
+                    if update_status_func:
+                        validation_tasks.append(update_status_func)
+
                     updated_incidents_counter += 1
                     continue
 
@@ -390,11 +411,16 @@ class Command(BaseCommand):
                     status_key == yt_manager.notify_op_issue_in_work_status_key
                 ):
                     if not incident.is_auto_incident:
-                        yt_manager.update_issue_status(
-                            issue_key, yt_manager.error_status_key,
-                            (
-                                'Нельзя отправить автоматическое уведомление '
-                                'заявителю для заявки, созданной вручную.'
+                        validation_tasks.append(
+                            partial(
+                                yt_manager.update_issue_status,
+                                issue_key,
+                                yt_manager.error_status_key,
+                                (
+                                    'Нельзя отправить автоматическое '
+                                    'уведомление заявителю для заявки, '
+                                    'созданной вручную.'
+                                )
                             )
                         )
                         updated_incidents_counter += 1
@@ -405,12 +431,16 @@ class Command(BaseCommand):
                             issue, incident)
                         updated_incidents_counter += 1
                     elif check_status_dt:
-                        yt_manager.update_issue_status(
-                            issue_key, yt_manager.error_status_key,
-                            (
-                                'Уведомление о принятии работ недавно было '
-                                'отправлено заявителю. '
-                                f'Попробуйте снова через {timeout} секунд.'
+                        validation_tasks.append(
+                            partial(
+                                yt_manager.update_issue_status,
+                                issue_key,
+                                yt_manager.error_status_key,
+                                (
+                                    'Уведомление о принятии работ недавно '
+                                    'было отправлено заявителю. '
+                                    f'Попробуйте снова через {timeout} секунд.'
+                                )
                             )
                         )
                         updated_incidents_counter += 1
@@ -419,11 +449,16 @@ class Command(BaseCommand):
                     status_key == yt_manager.notify_op_issue_closed_status_key
                 ):
                     if not incident.is_auto_incident:
-                        yt_manager.update_issue_status(
-                            issue_key, yt_manager.error_status_key,
-                            (
-                                'Нельзя отправить автоматическое уведомление '
-                                'заявителю для заявки, созданной вручную.'
+                        validation_tasks.append(
+                            partial(
+                                yt_manager.update_issue_status,
+                                issue_key,
+                                yt_manager.error_status_key,
+                                (
+                                    'Нельзя отправить автоматическое '
+                                    'уведомление заявителю для заявки, '
+                                    'созданной вручную.'
+                                )
                             )
                         )
                         updated_incidents_counter += 1
@@ -464,12 +499,16 @@ class Command(BaseCommand):
 
                         updated_incidents_counter += 1
                     elif check_status_dt:
-                        yt_manager.update_issue_status(
-                            issue_key, yt_manager.error_status_key,
-                            (
-                                'Уведомление о закрытии работ уже было '
-                                'отправлено заявителю. '
-                                f'Попробуйте снова через {timeout} секунд.'
+                        validation_tasks.append(
+                            partial(
+                                yt_manager.update_issue_status,
+                                issue_key,
+                                yt_manager.error_status_key,
+                                (
+                                    'Уведомление о закрытии работ уже было '
+                                    'отправлено заявителю.'
+                                    f'Попробуйте снова через {timeout} секунд.'
+                                )
                             )
                         )
                         updated_incidents_counter += 1
@@ -483,12 +522,16 @@ class Command(BaseCommand):
                         yt_emails.notify_avr_contractor(issue, incident)
                         updated_incidents_counter += 1
                     elif check_status_dt:
-                        yt_manager.update_issue_status(
-                            issue_key, yt_manager.error_status_key,
-                            (
-                                'Информация об инциденте уже была передана в '
-                                'работу подрядчику. '
-                                f'Попробуйте снова через {timeout} секунд.'
+                        validation_tasks.append(
+                            partial(
+                                yt_manager.update_issue_status,
+                                issue_key,
+                                yt_manager.error_status_key,
+                                (
+                                    'Информация об инциденте уже была '
+                                    'передана в работу подрядчику. '
+                                    f'Попробуйте снова через {timeout} секунд.'
+                                )
                             )
                         )
                         updated_incidents_counter += 1
@@ -497,4 +540,4 @@ class Command(BaseCommand):
                 yt_managment_logger.exception(e)
                 error_count += 1
 
-        return total, error_count, updated_incidents_counter
+        return total, error_count, updated_incidents_counter, validation_tasks

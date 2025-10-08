@@ -1,7 +1,8 @@
 import bisect
 from datetime import datetime
 from logging import Logger
-from typing import Optional, TypedDict
+from functools import partial
+from typing import Optional, TypedDict, Callable
 
 from dateutil import parser
 from django.db import models, transaction
@@ -256,42 +257,37 @@ def check_yt_user_incident(
 
 
 def check_yt_type_of_incident(
-    yt_manager: YandexTrackerManager,
     issue: dict,
     type_of_incident_field: Optional[dict],
-    incident: Incident,
     valid_names_of_types: list[str],
 ) -> bool:
-    type_of_incident_is_valid = True
+    """
+    Проверяет корректность типа инцидента в задаче Yandex Tracker.
 
+    Returns:
+        (is_valid, message):
+            - is_valid: bool — результат проверки.
+            - message: str — описание результата (успех или ошибка).
+    """
     type_of_incident_field_key = (
         type_of_incident_field['id']) if type_of_incident_field else None
     type_of_incident: Optional[str] = issue.get(
         type_of_incident_field_key
     ) if type_of_incident_field_key else None
 
-    issue_key = issue['key']
-    status_key: str = issue['status']['key']
+    if not type_of_incident:
+        return True, 'Тип инцидента не указан — проверка не требуется.'
 
     if (
         type_of_incident
         and type_of_incident not in valid_names_of_types
     ):
-        type_of_incident_is_valid = False
-        if status_key != yt_manager.error_status_key:
-            comment = (
-                f'Неверно указан тип инцидента ({type_of_incident}).'
-                f'Допустимые значения: {", ".join(valid_names_of_types)}.'
-            )
-            was_status_update = yt_manager.update_issue_status(
-                issue_key,
-                yt_manager.error_status_key,
-                comment
-            )
-            if was_status_update:
-                IncidentManager.add_error_status(incident, comment)
+        return False, (
+            f'Неверно указан тип инцидента ({type_of_incident}).'
+            f'Допустимые значения: {", ".join(valid_names_of_types)}.'
+        )
 
-    return type_of_incident_is_valid
+    return True, f'Тип инцидента "{type_of_incident}" валиден.'
 
 
 def check_yt_datetime_incident(
@@ -335,11 +331,9 @@ def check_yt_deadline_incident(
         except ValueError:
             incident_deadline = None
 
-    is_valid_type_of_incident = check_yt_type_of_incident(
-        yt_manager,
+    is_valid_type_of_incident, _ = check_yt_type_of_incident(
         issue,
         type_of_incident_field,
-        incident,
         valid_names_of_types,
     )
 
@@ -498,13 +492,16 @@ def check_yt_incident_data(
     pole_names_sorted: list[str, Pole],
     all_base_stations: dict[tuple[str, Optional[str]], BaseStation],
     devices_by_pole: dict[str, list[DevicesData]],
-) -> Optional[bool]:
+) -> tuple[bool, Optional[Callable], Optional[Callable]]:
     """
     Проверка данных в YandexTracker.
 
     Returns:
-        bool | None: Если данные по инциденту корректны вернем True, если нет
-        False. Если заявка без YT_DATABASE_GLOBAL_FIELD_ID, тогда None.
+        (
+            is_valid: bool,
+            update_incident_data_func: Optional[Callable],
+            update_issue_status_func: Optional[Callable]
+        )
 
     Особенности:
         - Установить инциденту is_incident_finish=False.
@@ -518,6 +515,9 @@ def check_yt_incident_data(
         - Имя оператора и подрядчика по АВР всегда берем из БД.
         - Если установлен известный тип инцидента, выставим дедлайн SLA.
     """
+    update_incident_data_func = None
+    update_issue_status_func = None
+
     issue_key = issue['key']
     status_key: str = issue['status']['key']
 
@@ -554,11 +554,9 @@ def check_yt_incident_data(
             incident.save()
 
     # Проверяем, что тип инцидента соответствует одному из типов в базе:
-    is_valid_type_of_incident = check_yt_type_of_incident(
-        yt_manager,
+    is_valid_type_of_incident, incident_comment = check_yt_type_of_incident(
         issue,
         type_of_incident_field,
-        incident,
         valid_names_of_types,
     )
 
@@ -578,6 +576,16 @@ def check_yt_incident_data(
         elif incident.incident_type:
             incident.incident_type = None
             incident.save()
+    elif (
+        not is_valid_type_of_incident
+        and status_key != yt_manager.error_status_key
+    ):
+        update_issue_status_func = partial(
+            yt_manager.update_issue_status,
+            issue_key,
+            yt_manager.error_status_key,
+            incident_comment
+        )
 
     # Проверка даты и времени регистрации инциденты:
     is_valid_incident_datetime = check_yt_datetime_incident(
@@ -603,7 +611,8 @@ def check_yt_incident_data(
     )
     incident_bs = incident.base_station
     if not is_valid_base_station:
-        yt_manager.update_incident_data(
+        update_incident_data_func = partial(
+            yt_manager.update_incident_data,
             issue=issue,
             type_of_incident_field=type_of_incident_field,
             types_of_incident=type_of_incident,
@@ -617,17 +626,16 @@ def check_yt_incident_data(
             monitoring_data=issue.get(yt_manager.monitoring_global_field_id)
         )
         if status_key != yt_manager.error_status_key:
-            was_status_update = yt_manager.update_issue_status(
+            update_issue_status_func = partial(
+                yt_manager.update_issue_status,
                 issue_key,
                 yt_manager.error_status_key,
                 bs_comment
             )
-            if was_status_update:
-                IncidentManager.add_error_status(incident, bs_comment)
 
         logger.debug(f'Ошибка {issue_key}: неверный номер базовой станции.')
 
-        return False
+        return False, update_incident_data_func, update_issue_status_func
 
     # Синхронизируем БС и опору из БС
     if base_station_number:
@@ -677,7 +685,8 @@ def check_yt_incident_data(
         yt_manager, issue, pole_names_sorted
     )
     if not is_valid_pole_number:
-        yt_manager.update_incident_data(
+        update_incident_data_func = partial(
+            yt_manager.update_incident_data,
             issue=issue,
             type_of_incident_field=type_of_incident_field,
             types_of_incident=type_of_incident,
@@ -692,17 +701,16 @@ def check_yt_incident_data(
         )
 
         if status_key != yt_manager.error_status_key:
-            was_status_update = yt_manager.update_issue_status(
+            update_issue_status_func = partial(
+                yt_manager.update_issue_status,
                 issue_key,
                 yt_manager.error_status_key,
                 pole_comment
             )
-            if was_status_update:
-                IncidentManager.add_error_status(incident, pole_comment)
 
         logger.debug(f'Ошибка {issue_key}: неверный шифр опоры.')
 
-        return False
+        return False, update_incident_data_func, update_issue_status_func
 
     # Синхронизируем данные по опоре (только если БС не установила опору)
     if not incident.pole and pole_number:
@@ -792,7 +800,8 @@ def check_yt_incident_data(
             validation_errors.append(error_text)
 
     if validation_errors:
-        yt_manager.update_incident_data(
+        update_incident_data_func = partial(
+            yt_manager.update_incident_data,
             issue=issue,
             type_of_incident_field=type_of_incident_field,
             types_of_incident=(
@@ -816,11 +825,14 @@ def check_yt_incident_data(
                 if incident.pole else None
             )
         )
+
         error_message = (
             'необходимо обновить: '
             + ', '.join(validation_errors)
         )
-        logger.debug(f'Ошибка {issue_key}: {error_message}')
-        return False
 
-    return True
+        logger.debug(f'Ошибка {issue_key}: {error_message}')
+
+        return False, update_incident_data_func, update_issue_status_func
+
+    return True, update_incident_data_func, update_issue_status_func
