@@ -42,25 +42,22 @@ def find_poles_by_prefix(
 def check_yt_pole_incident(
     yt_manager: YandexTrackerManager,
     issue: dict,
-    type_of_incident_field: dict,
-    incident: Incident,
     pole_names_sorted: list[str, Pole],
-) -> bool:
-    pole_is_valid = True
-    comment = None
+) -> tuple[bool, Optional[str]]:
+    """
+    Проверяет корректность шифра опоры в задаче Яндекс Трекера.
 
-    issue_key = issue['key']
+    Returns:
+        (is_valid, message):
+            - is_valid: bool — флаг корректности.
+            - message: str — сообщение об ошибке или успехе.
+    """
     pole_number: Optional[str] = issue.get(
-        yt_manager.pole_number_global_field_id)
-    status_key: str = issue['status']['key']
-
-    type_of_incident_field_key = type_of_incident_field['id']
-    type_of_incident: Optional[str] = issue.get(
-        type_of_incident_field_key
-    ) if type_of_incident_field_key else None
+        yt_manager.pole_number_global_field_id
+    )
 
     if not pole_number:
-        return pole_is_valid
+        return True, 'Шифр опоры не указан — проверка не требуется.'
 
     try:
         # Сначала точное совпадение (O(1) через бинарный поиск)
@@ -69,7 +66,7 @@ def check_yt_pole_incident(
             idx < len(pole_names_sorted)
             and pole_names_sorted[idx] == pole_number
         ):
-            return pole_is_valid
+            return True, f'Опора "{pole_number}" найдена точно.'
 
         # Если точного нет — ищем все по префиксу
         matching_names = find_poles_by_prefix(pole_names_sorted, pole_number)
@@ -89,150 +86,106 @@ def check_yt_pole_incident(
                     'Уточните шифр опоры.'
                 )
 
+        return True, f'Опора "{pole_number}" найдена по префиксу.'
+
     except (Pole.DoesNotExist, Pole.MultipleObjectsReturned) as e:
-        pole_is_valid = False
-        comment = str(e)
-
-    if not pole_is_valid:
-        yt_manager.update_incident_data(
-            issue=issue,
-            type_of_incident_field=type_of_incident_field,
-            types_of_incident=type_of_incident,
-            email_datetime=incident.incident_date,
-            sla_deadline=incident.sla_deadline,
-            is_sla_expired=yt_manager.get_sla_status(incident),
-            pole_number=None,
-            base_station_number=None,
-            avr_name=None,
-            operator_name=None,
-            monitoring_data=None,
-        )
-        if status_key != yt_manager.error_status_key:
-            was_status_update = yt_manager.update_issue_status(
-                issue_key,
-                yt_manager.error_status_key,
-                comment
-            )
-            if was_status_update:
-                IncidentManager.add_error_status(incident, comment)
-
-    return pole_is_valid
+        return False, str(e)
 
 
 def check_yt_base_station_incident(
     yt_manager: YandexTrackerManager,
     issue: dict,
-    type_of_incident_field: dict,
-    incident: Incident,
     all_base_stations: dict[tuple[str, Optional[str]], BaseStation]
-) -> bool:
-    base_station_is_valid = True
-    comment = None
+) -> tuple[bool, str]:
+    """
+    Проверяет корректность номера базовой станции и её соответствие опоре.
 
-    issue_key = issue['key']
+    Returns:
+        (is_valid, message):
+            - is_valid: bool — результат проверки.
+            - message: str — описание результата (успех или ошибка).
+    """
     base_station_number: Optional[str] = issue.get(
         yt_manager.base_station_global_field_id
     )
     pole_number: Optional[str] = issue.get(
         yt_manager.pole_number_global_field_id
     )
-    status_key: str = issue['status']['key']
-
-    type_of_incident_field_key = (
-        type_of_incident_field['id']) if type_of_incident_field else None
-    type_of_incident: Optional[str] = issue.get(
-        type_of_incident_field_key
-    ) if type_of_incident_field_key else None
 
     if not base_station_number:
-        return base_station_is_valid
+        return True, 'Номер базовой станции не указан — проверка не требуется.'
 
     try:
         # Проверяем точное совпадение по ключу (номер БС + опора)
         bs_key = (base_station_number, pole_number)
+
         if bs_key in all_base_stations:
-            return base_station_is_valid
-        else:
-            # Ищем все БС, которые начинаются с номера
+            return True, (
+                f'Базовая станция "{base_station_number}"'
+                + (f' (опора "{pole_number}")' if pole_number else '')
+                + " найдена точно."
+            )
+
+        # Ищем все БС, которые начинаются с номера
+        matching_stations = [
+            bs for (bs_name, _), bs in all_base_stations.items()
+            if bs_name.startswith(base_station_number)
+        ]
+
+        if pole_number:
             matching_stations = [
-                bs for (bs_name, _), bs in all_base_stations.items()
-                if bs_name.startswith(base_station_number)
+                bs for bs in matching_stations
+                if bs.pole and bs.pole.pole.startswith(pole_number)
             ]
 
-            if pole_number:
-                matching_stations = [
-                    bs for bs in matching_stations
-                    if bs.pole and bs.pole.pole.startswith(pole_number)
-                ]
+        if not matching_stations:
+            raise ValueError((
+                f'Не найдено БС, начинающихся с "{base_station_number}"'
+                + (
+                    f' и привязанных к опоре "{pole_number}"'
+                ) if pole_number else ''
+            ))
 
-            if not matching_stations:
-                raise ValueError((
-                    f'Не найдено БС, начинающихся с "{base_station_number}"'
+        if len(matching_stations) > 1:
+            exact_matches = [
+                bs for bs in matching_stations
+                if (
+                    bs.bs_name == base_station_number
+                    and (
+                        not pole_number
+                        or (bs.pole and bs.pole.pole == pole_number)
+                    )
+                )
+            ]
+
+            if not exact_matches or len(exact_matches) > 1:
+                example_stations = [
+                    bs.bs_name for bs in matching_stations[:3]]
+                examples_text = (
+                    f'Примеры: {", ".join(example_stations)}. '
+                    if example_stations else ''
+                )
+
+                raise ValueError(
+                    f'Найдено {len(matching_stations)} БС, начинающихся '
+                    f'с "{base_station_number}"'
                     + (
-                        f' и привязанных к опоре "{pole_number}"'
-                    ) if pole_number else ''
-                ))
-
-            if len(matching_stations) > 1:
-                exact_matches = [
-                    bs for bs in matching_stations
-                    if (
-                        bs.bs_name == base_station_number
-                        and (
-                            not pole_number
-                            or (bs.pole and bs.pole.pole == pole_number)
-                        )
+                        (
+                            f' и привязанных к опоре "{pole_number}". '
+                        ) if pole_number else '. '
                     )
-                ]
+                    + examples_text
+                    + 'Уточните шифр опоры и номер БС.'
+                )
 
-                if not exact_matches or len(exact_matches) > 1:
-                    example_stations = [
-                        bs.bs_name for bs in matching_stations[:3]]
-                    examples_text = (
-                        f'Примеры: {", ".join(example_stations)}. '
-                        if example_stations else ''
-                    )
-
-                    raise ValueError(
-                        f'Найдено {len(matching_stations)} БС, начинающихся '
-                        f'с "{base_station_number}"'
-                        + (
-                            (
-                                f' и привязанных к опоре "{pole_number}". '
-                            ) if pole_number else '. '
-                        )
-                        + examples_text
-                        + 'Уточните шифр опоры и номер БС.'
-                    )
+        return True, (
+            f'Базовая станция "{base_station_number}" '
+            + (f'(опора "{pole_number}")' if pole_number else '')
+            + ' найдена по префиксу.'
+        )
 
     except ValueError as e:
-        base_station_is_valid = False
-        comment = str(e)
-
-    if not base_station_is_valid:
-        yt_manager.update_incident_data(
-            issue=issue,
-            type_of_incident_field=type_of_incident_field,
-            types_of_incident=type_of_incident,
-            email_datetime=incident.incident_date,
-            sla_deadline=incident.sla_deadline,
-            is_sla_expired=yt_manager.get_sla_status(incident),
-            pole_number=pole_number,
-            base_station_number=None,
-            avr_name=None,
-            operator_name=None,
-            monitoring_data=None,
-        )
-        if status_key != yt_manager.error_status_key:
-            was_status_update = yt_manager.update_issue_status(
-                issue_key,
-                yt_manager.error_status_key,
-                comment
-            )
-            if was_status_update:
-                IncidentManager.add_error_status(incident, comment)
-
-    return base_station_is_valid
+        return False, str(e)
 
 
 def check_yt_avr_incident(
@@ -566,6 +519,7 @@ def check_yt_incident_data(
         - Если установлен известный тип инцидента, выставим дедлайн SLA.
     """
     issue_key = issue['key']
+    status_key: str = issue['status']['key']
 
     pole_number: Optional[str] = issue.get(
         yt_manager.pole_number_global_field_id)
@@ -644,11 +598,35 @@ def check_yt_incident_data(
     )
 
     # Синхронизируем данные по базовой станции (ДО проверки опоры):
-    is_valid_base_station = check_yt_base_station_incident(
-        yt_manager, issue, type_of_incident_field, incident, all_base_stations)
+    is_valid_base_station, bs_comment = check_yt_base_station_incident(
+        yt_manager, issue, all_base_stations
+    )
     incident_bs = incident.base_station
     if not is_valid_base_station:
+        yt_manager.update_incident_data(
+            issue=issue,
+            type_of_incident_field=type_of_incident_field,
+            types_of_incident=type_of_incident,
+            email_datetime=incident.incident_date,
+            sla_deadline=incident.sla_deadline,
+            is_sla_expired=yt_manager.get_sla_status(incident),
+            pole_number=pole_number,
+            base_station_number=None,
+            avr_name=issue.get(yt_manager.avr_name_global_field_id),
+            operator_name=None,
+            monitoring_data=issue.get(yt_manager.monitoring_global_field_id)
+        )
+        if status_key != yt_manager.error_status_key:
+            was_status_update = yt_manager.update_issue_status(
+                issue_key,
+                yt_manager.error_status_key,
+                bs_comment
+            )
+            if was_status_update:
+                IncidentManager.add_error_status(incident, bs_comment)
+
         logger.debug(f'Ошибка {issue_key}: неверный номер базовой станции.')
+
         return False
 
     # Синхронизируем БС и опору из БС
@@ -695,10 +673,35 @@ def check_yt_incident_data(
         incident.save()
 
     # ТЕПЕРЬ проверяем опору (после того как БС могла установить опору)
-    is_valid_pole_number = check_yt_pole_incident(
-        yt_manager, issue, type_of_incident_field, incident, pole_names_sorted)
+    is_valid_pole_number, pole_comment = check_yt_pole_incident(
+        yt_manager, issue, pole_names_sorted
+    )
     if not is_valid_pole_number:
+        yt_manager.update_incident_data(
+            issue=issue,
+            type_of_incident_field=type_of_incident_field,
+            types_of_incident=type_of_incident,
+            email_datetime=incident.incident_date,
+            sla_deadline=incident.sla_deadline,
+            is_sla_expired=yt_manager.get_sla_status(incident),
+            pole_number=None,
+            base_station_number=None,
+            avr_name=None,
+            operator_name=None,
+            monitoring_data=None,
+        )
+
+        if status_key != yt_manager.error_status_key:
+            was_status_update = yt_manager.update_issue_status(
+                issue_key,
+                yt_manager.error_status_key,
+                pole_comment
+            )
+            if was_status_update:
+                IncidentManager.add_error_status(incident, pole_comment)
+
         logger.debug(f'Ошибка {issue_key}: неверный шифр опоры.')
+
         return False
 
     # Синхронизируем данные по опоре (только если БС не установила опору)
@@ -746,7 +749,8 @@ def check_yt_incident_data(
 
     # Синхронизируем данные подрядчика по АВР:
     is_valid_operator_bs = check_yt_operator_bs_incident(
-        yt_manager, issue, incident)
+        yt_manager, issue, incident
+    )
     # Связь m2m:
     operator_bs = None
     if incident.base_station and incident.base_station.operator.exists():
