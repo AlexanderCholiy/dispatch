@@ -178,6 +178,7 @@ class Command(BaseCommand):
         for database_id, issue in database_ids_with_issues:
             incident = incidents_dict.get(database_id)
             issue_key = issue['key']
+
             status_key: str = issue['status']['key']
 
             if not incident:

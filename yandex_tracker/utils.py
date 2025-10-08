@@ -899,45 +899,96 @@ class YandexTrackerManager:
             incident.save()
 
     def filter_issues(
-        self, yt_filter: dict, days_ago: int = 7
+        self, yt_filter: dict, days_ago: int = 7, chunk_days: int = 5
     ) -> Generator[list[dict], None, None]:
-        page = 1
-        per_page = 1000  # max 1000 по документации
+        """
+        Фильтрует задачи по переданному фильтру и диапазону дат, учитывая лимит
+        в 10_000 элементов.
+        Разбивает диапазон дат на куски по chunk_days, чтобы обойти ограничение
+        API.
+        """
+        per_page = 1000   # максимум по документации
+        max_pages = 10    # 10 × 1000 = 10_000 элементов
 
         now: datetime = timezone.now()
-        days_ago: datetime = now - timedelta(days=days_ago)
+        start_date: datetime = now - timedelta(days=days_ago)
 
         yt_filter['queue'] = self.queue
-        yt_filter['updatedAt'] = {
-            'from': days_ago.isoformat(),
-            'to': now.isoformat()
-        }
 
-        payload = {'filter': yt_filter}
+        for chunk_start, chunk_end in self.split_date_range(
+            start_date, now, chunk_days
+        ):
+            page = 1
 
-        while True:
-            params = {
-                'page': page,
-                'perPage': per_page
+            yt_filter['updatedAt'] = {
+                'from': chunk_start.isoformat(),
+                'to': chunk_end.isoformat(),
             }
 
-            if page > 1:
-                time.sleep(1)
+            payload = {'filter': yt_filter, 'order': '-updatedAt'}
 
-            batch = self._make_request(
-                HTTPMethod.POST,
-                self.filter_issues_url,
-                json=payload,
-                params=params,
-                sub_func_name=inspect.currentframe().f_code.co_name,
-            )
+            while page <= max_pages:
+                params = {
+                    'page': page,
+                    'perPage': per_page,
+                }
 
-            if not batch:
-                break
+                if page > 1:
+                    time.sleep(1)  # чтобы не заддосить API
 
-            yield batch
+                batch = self._make_request(
+                    HTTPMethod.POST,
+                    self.filter_issues_url,
+                    json=payload,
+                    params=params,
+                    sub_func_name=inspect.currentframe().f_code.co_name,
+                )
 
-            page += 1
+                if not batch:
+                    break
+
+                yield batch
+
+                if len(batch) < per_page:
+                    break
+
+                page += 1
+
+    @staticmethod
+    def split_date_range(
+        start: datetime,
+        end: datetime,
+        chunk_days: int,
+        newest_first: bool = True
+    ) -> Generator[tuple[datetime, datetime], None, None]:
+        """
+        Разбивает диапазон дат на интервалы по chunk_days.
+
+        Args:
+            start (datetime): начало диапазона
+            end (datetime): конец диапазона
+            chunk_days (int): размер одного интервала в днях
+            newest_first (bool): если True — сначала возвращаются самые новые
+                интервалы (от end к start), если False — от старых к новым (от
+                start к end).
+                По умолчанию `True`.
+        """
+        if newest_first:
+            current_end = end
+            while current_end > start:
+                current_start = max(
+                    current_end - timedelta(days=chunk_days), start
+                )
+                yield current_start, current_end
+                current_end = current_start
+        else:
+            current_start = start
+            while current_start < end:
+                current_end = min(
+                    current_start + timedelta(days=chunk_days), end
+                )
+                yield current_start, current_end
+                current_start = current_end
 
     def closed_issues(
         self, days_ago: int = 7
