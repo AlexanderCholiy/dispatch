@@ -439,14 +439,17 @@ class YandexTrackerManager:
         temp_files: Optional[list[str]] = None
     ) -> dict:
         """Создаем комментарий-email и отправляем его из YandexTracker."""
+        to = set([em for em in to if em != email_from])
+        cc = set([em for em in cc if em not in to]) if cc else set()
+
         payload = {
             'email': {
                 'subject': subject,
                 'text': text,
                 'info': {
                     'from': email_from,
-                    'to': to,
-                    'cc': cc
+                    'to': list(to),
+                    'cc': list(cc)
                 },
             }
         }

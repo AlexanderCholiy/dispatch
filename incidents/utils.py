@@ -432,6 +432,12 @@ class IncidentManager(IncidentValidator):
             привязано к данному инциденту или по нему не будет создан Новый
             инцидент. В противном случае инцидент по этому письму не будет
             зарегестрирован.
+            - Если у нас уже есть письма с таким же отправителем, темой и
+            телом, и среди них есть связанные инциденты, которые ещё не
+            завершены, то при поступлении нового письма находим первый (
+            старейший) и привязываем новое письмо к нему. У такого письма
+            отмечаем was_added_2_yandex_tracker = True чтобы не дублировать
+            его в трекере.
 
         Args:
             email_msg (str): EmailMessage, по которому нужно найти переписку.
@@ -463,6 +469,27 @@ class IncidentManager(IncidentValidator):
         actual_email_incident: Optional[Incident] = (
             Incident.objects.get(id=actual_email_incident_id)
         ) if actual_email_incident_id is not None else None
+
+        # Исключение для писем с одинаковой темой, телом и отправителем:
+        if not actual_email_incident:
+            similar_messages_qs = (
+                EmailMessage.objects.filter(
+                    email_subject=email_msg.email_subject,
+                    email_body=email_msg.email_body,
+                    email_from=email_msg.email_from,
+                    was_added_2_yandex_tracker=True,
+                    email_incident__isnull=False,
+                    email_incident__is_incident_finish=False,
+                )
+                .select_related('email_incident')
+                .order_by('email_date')
+            )
+            if similar_messages_qs.exists():
+                actual_email_incident = (
+                    similar_messages_qs.first().email_incident
+                )
+                email_msg.was_added_2_yandex_tracker = True
+                email_msg.save()
 
         # Резервный поиск по коду инцидента в теме письма:
         if not actual_email_incident and yt_manager:
