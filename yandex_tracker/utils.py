@@ -478,6 +478,9 @@ class YandexTrackerManager:
         temp_files = []
 
         for filepath in EmailManager.get_email_attachments(email):
+            if not filepath or not os.path.isfile(filepath):
+                continue
+
             size = os.path.getsize(filepath)
             if size > MAX_ATTACHMENT_SIZE_IN_YT:
                 yt_manager_logger.warning(
@@ -490,6 +493,7 @@ class YandexTrackerManager:
 
             response = self.download_temporary_file(filepath)
             file_id = response.get('id')
+
             if file_id:
                 temp_files.append(file_id)
             else:

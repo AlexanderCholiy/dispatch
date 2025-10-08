@@ -13,6 +13,8 @@ from django.utils import timezone
 
 from core.constants import SUBFOLDER_DATE_FORMAT, SUBFOLDER_EMAIL_NAME
 from core.models import Attachment
+from core.loggers import LoggerFactory
+from core.constants import INCIDENTS_LOG_ROTATING_FILE
 
 from .models import (
     EmailAttachment,
@@ -24,6 +26,10 @@ from .models import (
     EmailTo,
     EmailToCC,
 )
+
+
+incident_manager_logger = LoggerFactory(
+    __name__, INCIDENTS_LOG_ROTATING_FILE).get_logger
 
 
 class EmailManager:
@@ -160,34 +166,67 @@ class EmailManager:
         model.objects.bulk_create(objs, ignore_conflicts=True)
 
     @staticmethod
+    def delete_attachment_safely(
+        attachment: EmailAttachment | EmailInTextAttachment, reason: str
+    ):
+        try:
+            attachment.delete()
+
+        except DatabaseError as e:
+            incident_manager_logger.warning(
+                f'Ошибка базы данных при удалении {type(attachment)} '
+                f'{attachment.pk} ({reason}): {e}'
+            )
+
+        except KeyboardInterrupt:
+            raise
+
+        except Exception:
+
+            incident_manager_logger.exception(
+                f'Ошибка удаления {type(attachment)} {attachment.pk} '
+                f'({reason})'
+            )
+
+    @staticmethod
     def valid_email_file_path(
-        attachments: EmailAttachment | EmailInTextAttachment
+        attachments: list[EmailAttachment] | list[EmailInTextAttachment]
     ) -> list[str]:
-        files = []
+        """
+        Возвращает список валидных путей к вложениям.
+        Удаляет записи из БД, если файл отсутствует или некорректен.
+        """
+        valid_files = []
+
         for attachment in attachments:
             relative_file_path = Path(attachment.file_url.name)
             file_path = os.path.join(
                 settings.MEDIA_ROOT, str(relative_file_path)
             )
 
-            if not os.path.exists(file_path):
-                try:
-                    attachment.delete()
-                except DatabaseError:
-                    pass
+            if not file_path or not os.path.isfile(file_path):
+                EmailManager.delete_attachment_safely(
+                    attachment, reason='файл отсутствует или путь некорректен'
+                )
                 continue
 
-            size = os.path.getsize(file_path)
+            try:
+                size = os.path.getsize(file_path)
+            except OSError as e:
+                incident_manager_logger.warning(
+                    f'Ошибка при получении размера файла "{file_path}": {e}'
+                )
+                continue
+
             if size == 0:
-                try:
-                    attachment.delete()
-                except DatabaseError:
-                    pass
+                EmailManager.delete_attachment_safely(
+                    attachment, reason='размер файла равен 0'
+                )
                 continue
 
-            files.append(file_path)
+            valid_files.append(file_path)
 
-        return files
+        return valid_files
 
     @staticmethod
     def get_email_attachments(email: EmailMessage) -> list[str]:
