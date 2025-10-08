@@ -25,7 +25,7 @@ yt_managment_logger = LoggerFactory(
 class Command(BaseCommand):
     help = 'Обновление данных в YandexTracker.'
 
-    min_seconds = 3
+    min_seconds = 1
 
     def handle(self, *args, **kwargs):
         tg_manager.send_startup_notification(__name__)
