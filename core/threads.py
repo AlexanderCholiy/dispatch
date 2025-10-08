@@ -31,10 +31,6 @@ def tasks_in_threads(tasks: list[Callable], logger: Logger):
     cpu_count = os.cpu_count() or 1
     max_workers = min(len(tasks), cpu_count * 5)
 
-    logger.debug(
-        f'Запуск {len(tasks)} задач в {max_workers} потоках'
-    )
-
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_name = {}
         for task in tasks:
