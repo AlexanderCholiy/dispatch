@@ -1,8 +1,8 @@
+import functools
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from logging import Logger
 from typing import Callable
-import functools
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 def get_task_name(task: Callable) -> str:

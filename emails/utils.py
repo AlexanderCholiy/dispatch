@@ -11,10 +11,13 @@ from django.core.files import File
 from django.db import DatabaseError, models, transaction
 from django.utils import timezone
 
-from core.constants import SUBFOLDER_DATE_FORMAT, SUBFOLDER_EMAIL_NAME
-from core.models import Attachment
+from core.constants import (
+    INCIDENTS_LOG_ROTATING_FILE,
+    SUBFOLDER_DATE_FORMAT,
+    SUBFOLDER_EMAIL_NAME
+)
 from core.loggers import LoggerFactory
-from core.constants import INCIDENTS_LOG_ROTATING_FILE
+from core.models import Attachment
 
 from .models import (
     EmailAttachment,
@@ -26,7 +29,6 @@ from .models import (
     EmailTo,
     EmailToCC,
 )
-
 
 incident_manager_logger = LoggerFactory(
     __name__, INCIDENTS_LOG_ROTATING_FILE).get_logger

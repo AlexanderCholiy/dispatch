@@ -1,9 +1,7 @@
 import time
-import os
 from datetime import timedelta
-from typing import Optional, Callable
 from functools import partial
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Callable, Optional
 
 from django.core.management.base import BaseCommand
 from django.db.models import OuterRef, Prefetch, Q, Subquery
@@ -16,8 +14,8 @@ from core.constants import (
 from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
 from core.tg_bot import tg_manager
-from core.wraps import min_wait_timer, timer
 from core.threads import tasks_in_threads
+from core.wraps import min_wait_timer, timer
 from emails.email_parser import email_parser
 from emails.models import EmailMessage
 from incidents.constants import (

@@ -1,14 +1,13 @@
 import bisect
 from datetime import datetime
-from logging import Logger
 from functools import partial
-from typing import Optional, TypedDict, Callable
+from logging import Logger
+from typing import Callable, Optional, TypedDict
 
 from dateutil import parser
 from django.db import models, transaction
 
 from incidents.models import Incident, IncidentType
-from incidents.utils import IncidentManager
 from monitoring.models import DeviceStatus, DeviceType
 from ts.constants import UNDEFINED_CASE
 from ts.models import AVRContractor, BaseStation, BaseStationOperator, Pole
