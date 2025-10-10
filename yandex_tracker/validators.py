@@ -247,7 +247,8 @@ def check_yt_user_incident(
 
     user_uid = int(user['id']) if user else None
     username: Optional[str] = next(
-        (name for name, uid in yt_users.items() if uid == user_uid), None)
+        (name for name, uid in yt_users.items() if uid == user_uid), None
+    )
 
     if username and username not in usernames_in_db:
         user_is_valid = False
@@ -537,18 +538,27 @@ def check_yt_incident_data(
 
     # Проверяем можно ли указанному диспетчеру назначать заявки:
     is_valid_user = check_yt_user_incident(
-        issue, yt_users, usernames_in_db)
+        issue, yt_users, usernames_in_db
+    )
 
     # Синхронизируем ответственного диспетчера в базе:
     if is_valid_user:
         user_uid = int(user['id']) if user else None
         username: Optional[str] = next(
-            (name for name, uid in yt_users.items() if uid == user_uid), None)
+            (name for name, uid in yt_users.items() if uid == user_uid), None
+        )
 
         if incident.responsible_user and not username:
             incident.responsible_user = None
             incident.save()
         elif not incident.responsible_user and username:
+            incident.responsible_user = User.objects.get(username=username)
+            incident.save()
+        elif (
+            incident.responsible_user
+            and username
+            and username != incident.responsible_user.username
+        ):
             incident.responsible_user = User.objects.get(username=username)
             incident.save()
 

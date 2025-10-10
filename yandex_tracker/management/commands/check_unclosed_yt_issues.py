@@ -48,6 +48,23 @@ class Command(BaseCommand):
 
     min_wait = 1
 
+    cache_timer = 600
+
+    _pole_names_sorted_cache = None
+    _pole_names_sorted_cache_last_update = 0
+
+    _valid_names_of_types_cache = None
+    _valid_names_of_types_cache_last_update = 0
+
+    _usernames_in_db_cache = None
+    _usernames_in_db_cache_last_update = 0
+
+    _all_base_stations_cache = None
+    _all_base_stations_last_update = 0
+
+    _devices_by_pole_cache = None
+    _devices_by_pole_last_update = 0
+
     def handle(self, *args, **kwargs):
         tg_manager.send_startup_notification(__name__)
 
@@ -91,6 +108,114 @@ class Command(BaseCommand):
                     tg_manager.send_error_notification(__name__, err)
                     last_error_type = type(err).__name__
 
+    def _get_pole_names_sorted_from_cache(self):
+        if (
+            self._pole_names_sorted_cache is None
+            or (
+                time.time()
+                - self._pole_names_sorted_cache_last_update > self.cache_timer
+            )
+        ):
+            self._pole_names_sorted_cache = list(
+                Pole.objects.order_by('pole').values_list('pole', flat=True)
+            )
+            self._pole_names_sorted_cache_last_update = time.time()
+        return self._pole_names_sorted_cache
+
+    def _get_valid_names_of_types_from_cache(self):
+        if (
+            self._valid_names_of_types_cache is None
+            or (
+                time.time()
+                - self._valid_names_of_types_cache_last_update
+                > self.cache_timer
+            )
+        ):
+            self._valid_names_of_types_cache = list(
+                IncidentType.objects.all().values_list('name', flat=True)
+            )
+            self._valid_names_of_types_cache_last_update = time.time()
+        return self._valid_names_of_types_cache
+
+    def _get_usernames_in_db_from_cache(self):
+        if (
+            self._usernames_in_db_cache is None
+            or (
+                time.time()
+                - self._usernames_in_db_cache_last_update > self.cache_timer
+            )
+        ):
+            self._usernames_in_db_cache = list(
+                User.objects
+                .filter(role=Roles.DISPATCH)
+                .values_list('username', flat=True)
+            )
+            self._usernames_in_db_cache_last_update = time.time()
+        return self._usernames_in_db_cache
+
+    def _get_all_base_stations_from_cache(self):
+        if (
+            self._all_base_stations_cache is None
+            or (
+                time.time()
+                - self._all_base_stations_last_update > self.cache_timer
+            )
+        ):
+            self._all_base_stations_cache = {
+                (bs.bs_name, bs.pole.pole if bs.pole else None): bs
+                for bs in BaseStation.objects.select_related('pole').all()
+            }
+            self._all_base_stations_last_update = time.time()
+        return self._all_base_stations_cache
+
+    def _get_devices_by_pole_from_cache(self):
+        """Оборудование мониторинга"""
+        if (
+            self._devices_by_pole_cache is None
+            or (
+                time.time()
+                - self._devices_by_pole_last_update > self.cache_timer
+            )
+        ):
+            pole_codes = self._pole_names_sorted_cache or []
+
+            try:
+                all_devices = (
+                    MSysModem.objects
+                    .filter(
+                        Q(pole_1__pole__in=pole_codes)
+                        | Q(pole_2__pole__in=pole_codes)
+                        | Q(pole_3__pole__in=pole_codes)
+                    )
+                    .select_related('pole_1', 'pole_2', 'pole_3', 'status')
+                    .values(
+                        'modem_ip',
+                        'pole_1__pole',
+                        'pole_2__pole',
+                        'pole_3__pole',
+                        'level',
+                        'status__id',
+                    )
+                )
+            except Exception as e:
+                yt_managment_logger.exception(e)
+                all_devices = []
+
+            self._devices_by_pole_cache: dict[str, list] = {}
+            for dev in all_devices:
+                for pole in (
+                    dev['pole_1__pole'],
+                    dev['pole_2__pole'],
+                    dev['pole_3__pole'],
+                ):
+                    if pole:
+                        self._devices_by_pole_cache.setdefault(
+                            pole.strip(), []
+                        ).append(dev)
+
+            self._devices_by_pole_last_update = time.time()
+        return self._devices_by_pole_cache
+
     @min_wait_timer(yt_managment_logger, min_wait)
     @timer(yt_managment_logger)
     def check_unclosed_issues(self) -> tuple[int, int, int]:
@@ -102,17 +227,10 @@ class Command(BaseCommand):
             .select_local_field(yt_manager.type_of_incident_local_field_id)
         )
 
-        pole_names_sorted = [p.pole for p in Pole.objects.order_by('pole')]
-
-        all_incident_types = list(IncidentType.objects.all())
-        valid_names_of_types = [tp.name for tp in all_incident_types]
-        all_users = User.objects.filter(role=Roles.DISPATCH, is_active=True)
-        usernames_in_db = [usr.username for usr in all_users]
-
-        all_base_stations = {
-            (bs.bs_name, bs.pole.pole if bs.pole else None): bs
-            for bs in BaseStation.objects.select_related('pole').all()
-        }
+        pole_names_sorted = self._get_pole_names_sorted_from_cache()
+        valid_names_of_types = self._get_valid_names_of_types_from_cache()
+        usernames_in_db = self._get_usernames_in_db_from_cache()
+        all_base_stations = self._get_all_base_stations_from_cache()
 
         total_processed = 0
         total_errors = 0
@@ -231,46 +349,6 @@ class Command(BaseCommand):
             latest_status_date=Subquery(latest_status_subquery)
         ).in_bulk()
 
-        # Оборудование мониторинга:
-        pole_codes_in_yt = set([
-            issue.get(yt_manager.pole_number_global_field_id)
-            for issue in unclosed_issues
-        ])
-
-        pole_codes = pole_codes_in_yt & set(pole_names_sorted)
-
-        try:
-            all_devices = (
-                MSysModem.objects
-                .filter(
-                    Q(pole_1__pole__in=pole_codes)
-                    | Q(pole_2__pole__in=pole_codes)
-                    | Q(pole_3__pole__in=pole_codes)
-                )
-                .select_related('pole_1', 'pole_2', 'pole_3', 'status')
-                .values(
-                    'modem_ip',
-                    'pole_1__pole',
-                    'pole_2__pole',
-                    'pole_3__pole',
-                    'level',
-                    'status__id',
-                )
-            )
-        except Exception as e:
-            yt_managment_logger.exception(e)
-            all_devices = []
-
-        devices_by_pole: dict[str, list] = {}
-        for dev in all_devices:
-            for pole in (
-                dev['pole_1__pole'],
-                dev['pole_2__pole'],
-                dev['pole_3__pole'],
-            ):
-                if pole:
-                    devices_by_pole.setdefault(pole.strip(), []).append(dev)
-
         validation_tasks = []
 
         for index, issue in enumerate(unclosed_issues):
@@ -328,7 +406,7 @@ class Command(BaseCommand):
                     usernames_in_db=usernames_in_db,
                     pole_names_sorted=pole_names_sorted,
                     all_base_stations=all_base_stations,
-                    devices_by_pole=devices_by_pole,
+                    devices_by_pole=self._get_devices_by_pole_from_cache(),
                 )
 
                 if not is_valid_yt_data:
