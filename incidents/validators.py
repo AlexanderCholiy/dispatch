@@ -14,10 +14,23 @@ class IncidentValidator:
     def _find_num_in_text(self, text: str) -> set[str]:
         """Извлекает слова с минимум 4 цифрами (столько содержит номер БС)."""
         symbols_2_replace: set[str] = {
-            '[', ']', '(', ')', '{', '}', ':', '|', ',', '.', ';',
-            "'", '"', '`', '/', '\\', 'БС-', 'бс-'
+            '[', ']', '{', '}', '(', ')', '<', '>',  # скобки
+            ':', ';', ',', '.', '|', '/', '\\',  # разделители
+            "'", '"', '`',  # кавычки
+            'БС-', 'бс-',  # метки для станций
         }
+
+        exclude_pattern: set[re.Pattern] = {
+            re.compile(r'\bIP:\s*\S+', re.IGNORECASE),
+            re.compile(r'\bTel:\s*\S+', re.IGNORECASE),
+            re.compile(r'\bmob:\s*\S+', re.IGNORECASE),
+        }
+
         new_text = text
+
+        for pattern in exclude_pattern:
+            new_text = pattern.sub('', new_text)
+
         for symbol in symbols_2_replace:
             new_text = new_text.replace(symbol, ' ')
 
