@@ -19,7 +19,10 @@ ALLOWED_HOSTS = [
 
 INTERNAL_IPS = ['127.0.0.1', 'localhost']
 
-CSRF_TRUSTED_ORIGINS = ['https://fridge.newtowers.ru']
+CSRF_TRUSTED_ORIGINS = [
+    dom.strip() for dom in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
+    if dom.strip()
+]
 
 CSRF_FAILURE_VIEW = 'core.views.csrf_failure'
 
