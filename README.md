@@ -267,7 +267,8 @@ cd dispatch
 ```
 # Django
 SECRET_KEY=ключ_для_django
-DJANGO_ALLOWED_HOSTS=ip_сервера, 127.0.0.1
+DJANGO_ALLOWED_HOSTS=ip_сервера, 127.0.0.1, доменное_имя
+CSRF_TRUSTED_ORIGINS=https://доменное_имя, https://ip_сервера
 DEBUG=False
 EMAIL_HOST=SMTP_хост
 EMAIL_HOST_USER=email_для_приложения
