@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.views import LoginView, PasswordResetView
 from django.db.models import Q
+from django.core.paginator import Paginator
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.utils.decorators import method_decorator
@@ -20,8 +21,14 @@ from core.constants import EMAIL_LOG_ROTATING_FILE
 from core.loggers import LoggerFactory
 
 from .forms import ChangeEmailForm, UserForm, UserRegisterForm
-from .models import PendingUser, User
-from .utils import role_required, send_activation_email, send_confirm_email
+from .models import PendingUser, User, Roles
+from .constants import MAX_USERS_PER_PAGE
+from .utils import (
+    role_required,
+    send_activation_email,
+    send_confirm_email,
+    staff_required,
+)
 
 email_logger = LoggerFactory(__name__, EMAIL_LOG_ROTATING_FILE).get_logger
 
@@ -219,3 +226,28 @@ class CustomLoginView(LoginView):
                     )
 
         return response
+
+
+@login_required
+@staff_required()
+def users(request: HttpRequest) -> HttpResponse:
+    template_name = 'users/users.html'
+
+    query = request.GET.get('q', '').strip()
+    paginator = Paginator([], MAX_USERS_PER_PAGE)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    query_params = request.GET.copy()
+    query_params.pop('page', None)
+    page_url_base = f'?{query_params.urlencode()}&' if query_params else '?'
+
+    users = User.objects.exclude(role=Roles.GUEST).order_by('username')
+
+    context = {
+        'page_obj': page_obj,
+        'search_query': query,
+        'page_url_base': page_url_base,
+    }
+
+    return render(request, template_name, context)

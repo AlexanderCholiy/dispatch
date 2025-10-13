@@ -2,16 +2,16 @@
   background: none;
   border: none;
   color: var(--priority-color);
-  font-size: 1.3rem;
+  font-size: var(--font-md);
   cursor: pointer;
-  padding: 0.4rem;
+  padding: var(--space-sm);
   border-radius: 20%;
   transition: all var(--transition-value);
   outline: none;
 }
 .btn-icon:hover {
   color: var(--priority-color);
-  box-shadow: 0 0 2px var(--extra-color);
+  box-shadow: 0 0 var(--space-xl) var(--extra-color);
   transform: scale(1.05);
 }
 
@@ -20,9 +20,9 @@
 }
 
 .btn {
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
-  font-size: 0.95rem;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-md);
   font-weight: 500;
   cursor: pointer;
   color: var(--add-background-color);
@@ -40,7 +40,7 @@ body.dark .btn{
 }
 
 .btn:hover {
-  box-shadow: 0 0 5px var(--extra-color);
+  box-shadow: 0 0 var(--space-xs) var(--extra-color);
   transform: translateY(-1px);
   color: var(--background-color);
 }
@@ -54,16 +54,16 @@ body.dark .btn:hover {
 }
 
 .btn-primary {
-  border: 1.8px solid var(--blue-color);
+  border: var(--space-xs) solid var(--blue-color);
   background-color: var(--blue-color);
 }
 
 .btn-danger {
-  border: 1.8px solid var(--red-color);
+  border: var(--space-xs) solid var(--red-color);
   background-color: var(--red-color);
 }
 
 .btn-secondary {
-  border: 1.8px solid var(--gray-color);
+  border: var(--space-xs) solid var(--gray-color);
   background-color: var(--gray-color);
 }

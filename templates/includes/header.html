@@ -36,7 +36,10 @@
     </button>
 
     <div class="user-menu-wrapper">
-      <button id="user-toggle" class="tooltip" data-title="Профиль">
+      <button 
+        id="user-toggle" 
+        class="tooltip"
+        data-title="{% if user.is_authenticated %}{{ user.username }}{% else %}Профиль{% endif %}">
         {% if user.is_authenticated %}
           {% if user.avatar and user.avatar.url %}
             <img src="{{ user.avatar.url }}" class="user-icon" alt="{{ user.username }}">

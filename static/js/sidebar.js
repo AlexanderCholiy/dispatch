@@ -85,12 +85,23 @@ document.addEventListener("DOMContentLoaded", () => {
   const header = document.getElementById("header");
   const sidebarContent = document.querySelector(".sidebar-content");
 
+  if (!header || !sidebarContent) return;
+
   const headerHeight = header.offsetHeight;
+
+  const isMobile = () => window.innerWidth <= 768;
 
   const observer = new IntersectionObserver(
     ([entry]) => {
+      if (isMobile()) {
+        // На мобильных — сбрасываем отступ
+        sidebarContent.style.marginTop = "0px";
+        return;
+      }
+
+      // На десктопе — вычисляем отступ
       const ratio = entry.intersectionRatio; // от 0 до 1
-      const offset = headerHeight * ratio;
+      const offset = headerHeight * ratio + 22;
       sidebarContent.style.marginTop = `${offset}px`;
     },
     {
@@ -99,7 +110,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   );
 
-  if (header) {
-    observer.observe(header);
-  }
+  observer.observe(header);
+
+  // При ресайзе — если стал мобильным, сразу убрать offset
+  window.addEventListener("resize", () => {
+    if (isMobile()) {
+      sidebarContent.style.marginTop = "0px";
+    }
+  });
 });

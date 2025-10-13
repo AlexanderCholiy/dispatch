@@ -2,10 +2,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
   background-color: var(--background-color);
-  box-shadow: 0 2px 6px var(--extra-color);
+  box-shadow: 0 var(--space-xs) var(--space-sm) var(--extra-color);
   position: relative;
   z-index: 10;
   transition: background-color var(--transition-value), box-shadow var(--transition-value);
@@ -16,7 +16,7 @@
 .header-right {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-xs);
 }
 
 .header-center {
@@ -32,7 +32,7 @@
   border: none;
   cursor: pointer;
   color: inherit;
-  font-size: 1.6rem;
+  font-size: var(--font-xl);
   border-radius: 20%;
   padding: 0;
   margin: 0;
@@ -44,7 +44,7 @@
 
 .btn-toggle:hover,
 #theme-toggle:hover,
-#user-toggle:hover {
+#user-toggle:hover i {
   color: var(--priority-color);
 }
 
@@ -68,7 +68,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.8rem;
+  font-size: var(--font-xl);
   color: var(--add-color);
   transition: color var(--transition-value);
 }
@@ -81,7 +81,6 @@
   .site-header {
     flex-wrap: wrap;
     height: auto;
-    padding: 0.5rem 1rem;
     gap: 0;
   }
 
@@ -99,7 +98,6 @@
   .header-center {
     flex-basis: 100%;
     order: 2;
-    margin-top: 0.5rem;
     justify-content: stretch;
     width: 100%;
   }

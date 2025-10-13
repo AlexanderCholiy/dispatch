@@ -19,6 +19,24 @@
 
     --background-color: #f5f9ff;
     --add-background-color: #d5dbe5;
+
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2rem;
+
+    --font-xs: 0.75rem;
+    --font-sm: 0.875rem;
+    --font-md: 1rem;
+    --font-lg: 1.25rem;
+    --font-xl: 1.5rem;
+
+    --radius-xs: 2px;
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 20px;
 }
 
 
@@ -40,4 +58,26 @@ body.dark {
     --background-color: #1a1d23;
     --add-background-color: #31343b;
 
+}
+
+@media (max-width: 768px) {
+    :root {
+        --space-xs: 0.2rem;
+        --space-sm: 0.35rem;
+        --space-md: 0.75rem;
+        --space-lg: 1rem;
+        --space-xl: 1.25rem;
+
+        --font-xs: 0.65rem;
+        --font-sm: 0.8rem;
+        --font-md: 0.9rem;
+        --font-lg: 1.1rem;
+        --font-xl: 1.3rem;
+
+        --radius-xs: 1px;
+        --radius-sm: 3px;
+        --radius-md: 6px;
+        --radius-lg: 10px;
+        --radius-xl: 16px;
+    }
 }

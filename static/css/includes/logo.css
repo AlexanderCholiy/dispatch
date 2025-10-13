@@ -2,7 +2,7 @@ header .logo {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
 }
 
 header .logo:active .logo-img {

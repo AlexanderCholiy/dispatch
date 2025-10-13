@@ -4,7 +4,7 @@ footer {
   z-index: 10;
   background-color: var(--background-color);
   margin-top: auto;
-  box-shadow: 0 2px 6px var(--extra-color);
+  box-shadow: 0 var(--space-xs) var(--space-md)var(--extra-color);
 }
 
 .footer-container {
@@ -13,12 +13,12 @@ footer {
   text-align: center;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  padding-block: 1.5rem;
+  gap: var(--space-lg);
+  padding-block: var(--space-lg);
 }
 
 .footer-container .logo a {
-  font-size: 1.5rem;
+  font-size: var(--space-lg);
   font-weight: bold;
   margin: 0;
   color: var(--priority-color);
@@ -37,7 +37,7 @@ footer {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 1.5rem;
+  gap: var(--space-lg);
 }
 
 .footer-nav li a {
@@ -46,13 +46,13 @@ footer {
   display: flex;
   flex-direction: column;
   align-items: center;
-  font-size: 0.95rem;
+  font-size: var(--font-md);
   transition: color var(--transition-value);
 }
 
 .footer-nav li a i {
-  font-size: 1.25rem;
-  margin-bottom: 0.25rem;
+  font-size: var(--font-lg);
+  margin-bottom: var(--space-xs);
 }
 
 .footer-nav li a:hover,
@@ -64,17 +64,17 @@ footer {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
-  font-size: 0.85rem;
+  gap: var(--space-sm);
+  font-size: var(--font-sm);
 }
 
 #scroll-to-top {
-  padding: 0.5rem 1rem;
-  border-radius: 999px;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-xl);
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-sm);
 }
 
 .bottom p {
@@ -85,15 +85,5 @@ footer {
   .footer-nav ul {
     flex-direction: column;
     align-items: center;
-    gap: 0.75rem;
-  }
-
-  .footer-container .logo h2 {
-    font-size: 1.25rem;
-  }
-
-  #scroll-to-top {
-    font-size: 0.9rem;
-    padding: 0.5rem 0.75rem;
   }
 }

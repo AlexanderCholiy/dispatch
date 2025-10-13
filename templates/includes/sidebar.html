@@ -6,8 +6,15 @@
           <li>
             <a href="{% url 'emails:index' %}" 
               class="nav-link {% if view_name == 'emails:index' %}active{% endif %}">
+              <i class='bx  bx-folder'></i> 
+              <span class="link-text">Задачи</span>
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'users:users' %}" 
+              class="nav-link {% if view_name == 'users:users' %}active{% endif %}">
               <i class="bx bx-user"></i>
-              <span class="link-text">Заявки</span>
+              <span class="link-text">Пользователи</span>
             </a>
           </li>
         {% endif %}

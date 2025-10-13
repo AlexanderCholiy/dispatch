@@ -5,7 +5,7 @@ from django.contrib.auth.forms import UserChangeForm, UserCreationForm
 from core.constants import EMPTY_VALUE
 
 from .constants import MAX_USERS_PER_PAGE
-from .models import PendingUser, User
+from .models import PendingUser, User, WorkSchedule
 
 admin.site.empty_value_display = EMPTY_VALUE
 
@@ -20,6 +20,12 @@ class CustomUserChangeForm(UserChangeForm):
     class Meta(UserChangeForm.Meta):
         model = User
         fields = ('email', 'username', 'avatar', 'role', 'date_of_birth')
+
+
+class WorkScheduleInline(admin.StackedInline):
+    model = WorkSchedule
+    extra = 0
+    can_delete = False
 
 
 @admin.register(User)
@@ -80,6 +86,7 @@ class BaseUserAdmin(UserAdmin):
 
     search_fields = ('email', 'username', 'first_name', 'last_name')
     ordering = ('email',)
+    inlines = [WorkScheduleInline] 
 
 
 @admin.register(PendingUser)

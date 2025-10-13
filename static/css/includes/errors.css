@@ -1,7 +1,7 @@
 /* Ошибки в карточках */
 .error-message {
-  margin: 2rem auto;
-  font-size: 0.95rem;
+  margin: var(--space-xl) auto;
+  font-size: var(--space-md);
   line-height: 1.5;
   color: var(--red-color);
 }
@@ -9,16 +9,16 @@
 /* Ошибки в формах */
 .error {
   width: 100%;
-  margin: 0.4rem auto 0;
+  margin: var(--space-sm) auto 0;
   color: var(--add-color);
   background-color: var(--red-color);
-  margin-top: 0.4rem;
-  border-radius: 6px;
-  font-size: 0.85rem;
+  margin-top: var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-sm);
   font-weight: 600;
   animation: fadeIn var(--transition-value);
-  box-shadow: 0 1px 3px var(--extra-color);
-  min-height: 2rem;
+  box-shadow: 0 var(--space-md) var(--space-xl) var(--extra-color);
+  min-height: var(--space-xl);
   display: flex;
   align-items: center;
   text-align: center;
@@ -29,15 +29,15 @@
 }
 
 .form-errors {
-  margin: 1rem auto;
+  margin: var(--space-md) auto;
   max-width: 760px;
   background-color: var(--red-color);
   color: var(--add-color);
-  padding: 1rem 1.25rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px var(--extra-color);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  box-shadow: 0 var(--space-xs) var(--space-sm) var(--extra-color);
   animation: fadeIn 0.4s ease-in-out;
-  font-size: 0.95rem;
+  font-size: var(--font-md);
   line-height: 1.5;
 }
 
@@ -53,10 +53,10 @@
 
 .form-errors li::before {
   content: '⚠ ';
-  margin-right: 4px;
+  margin-right: var(--space-sm);
   color: inherit;
 }
 
 .help-text {
-  font-size: 0.75rem;
+  font-size: var(--font-xs);
 }

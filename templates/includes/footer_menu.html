@@ -5,7 +5,13 @@
       <li>
         <a href="{% url 'emails:index' %}" 
             class="{% if view_name == 'emails:index' %}active{% endif %}">
-          <span>Заявки</span>
+          <span>Задачи</span>
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'users:users' %}" 
+            class="{% if view_name == 'users:users' %}active{% endif %}">
+          <span>Пользователи</span>
         </a>
       </li>
       {% endif %}

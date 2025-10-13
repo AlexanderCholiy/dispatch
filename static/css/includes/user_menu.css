@@ -1,13 +1,13 @@
 .user-menu {
   position: absolute;
   right: 0;
-  top: calc(100% + 8px);
+  top: calc(100% + var(--spase-sm));
   background-color: var(--background-color);
   border: 1px solid var(--gray-color);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   min-width: 200px;
-  padding: 0.5rem 0;
-  box-shadow: 0 4px 12px var(--extra-color);
+  padding: var(--space-sm) 0;
+  box-shadow: 0 var(--space-xs) var(--space-md) var(--extra-color);
   z-index: 1000;
   max-height: 0;
   overflow: hidden;
@@ -38,10 +38,10 @@
 .user-menu .btn-logout {
   display: block;
   width: 100%;
-  padding: 0.6rem 1rem;
+  padding: var(--space-sm) var(--space-md);
   background: none;
   border: none;
-  font-size: 0.95rem;
+  font-size: var(--font-md);
   text-align: left;
   color: inherit;
   text-decoration: none;

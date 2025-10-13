@@ -99,7 +99,9 @@ class User(AbstractUser):
         validate_user_email(self.email, self)
 
     def save(self, *args, **kwargs) -> None:
+        is_new = self.pk is None
         self.full_clean()
+
         try:
             old_avatar = User.objects.get(pk=self.pk).avatar
         except User.DoesNotExist:
@@ -110,6 +112,57 @@ class User(AbstractUser):
         if old_avatar and old_avatar != self.avatar:
             if default_storage.exists(old_avatar.name):
                 default_storage.delete(old_avatar.name)
+
+        if is_new:
+            WorkSchedule.objects.create(user=self)
+
+
+class WorkSchedule(models.Model):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='work_schedule',
+        verbose_name='Пользователь'
+    )
+    monday = models.BooleanField('Понедельник', default=True)
+    tuesday = models.BooleanField('Вторник', default=True)
+    wednesday = models.BooleanField('Среда', default=True)
+    thursday = models.BooleanField('Четверг', default=True)
+    friday = models.BooleanField('Пятница', default=True)
+    saturday = models.BooleanField('Суббота', default=False)
+    sunday = models.BooleanField('Воскресенье', default=False)
+
+    start_time = models.TimeField('Начало', default='09:00')
+    end_time = models.TimeField('Конец', default='18:00')
+
+    class Meta:
+        verbose_name = 'Расписание рабочего времени'
+        verbose_name_plural = 'Расписания рабочего времени'
+
+    @property
+    def is_working_now(self) -> bool:
+        now = timezone.localtime()
+        weekday = now.weekday()
+        current_time = now.time()
+
+        days = {
+            0: self.monday,
+            1: self.tuesday,
+            2: self.wednesday,
+            3: self.thursday,
+            4: self.friday,
+            5: self.saturday,
+            6: self.sunday,
+        }
+
+        if not days.get(weekday, False):
+            return False
+
+        return self.start_time <= current_time <= self.end_time
+
+    def __str__(self):
+        is_work = 'работает' if self.is_working_now else 'не работает'
+        return f'{self.user.username}: {is_work}'
 
 
 class PendingUser(models.Model):
