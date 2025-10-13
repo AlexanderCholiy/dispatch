@@ -101,7 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // На десктопе — вычисляем отступ
       const ratio = entry.intersectionRatio; // от 0 до 1
-      const offset = headerHeight * ratio + 22;
+      const offset = headerHeight * ratio + 5;
       sidebarContent.style.marginTop = `${offset}px`;
     },
     {

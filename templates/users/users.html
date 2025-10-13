@@ -10,9 +10,35 @@
 
 {% block content %}
 <div class="container">
-    <div class="card-grid">
-      {% for user in page_obj %}
-        <div class="user-card {% if user.work_schedule.is_working_now %}online{% else %}offline{% endif %}">
+  <div class="card-grid">
+    {% for user in page_obj %}
+      <div class="user-card {% if user.work_schedule.is_working_now %}online{% else %}offline{% endif %}">       
+        <div class="user-info">
+          <p class="user-role">{{ user.get_role_display }}</p>
+          {% if user.first_name and user.last_name %}
+            <p class="user-name">{{ user.first_name }} {{ user.last_name }}</p>
+          {% else %}
+            <p class="user-name">Новый пользователь</p>
+          {% endif %}
+          <p class="user-email">{{ user.email }}</p>
+          <p class="user-schedule">
+            <strong>График:</strong>
+            {% if user.work_schedule.start_time == user.work_schedule.end_time %}
+              Круглосуточно
+            {% else %}
+              {{ user.work_schedule.start_time }} – {{ user.work_schedule.end_time }}
+            {% endif %}
+            <br>
+            <small>
+              Рабочие дни:
+              {% for day, work in user.work_schedule.get_fields.items %}
+                {% if work %}{{ day }} {% endif %}
+              {% endfor %}
+            </small>
+          </p>
+        </div>
+
+        <div class="user-right">
           <div class="user-avatar">
             {% if user.avatar %}
               <img src="{{ user.avatar.url }}" alt="Аватар">
@@ -20,50 +46,25 @@
               <div class="avatar-placeholder">{{ user.username|first|upper }}</div>
             {% endif %}
           </div>
-
-          <div class="user-info">
-            {% if user.first_name and user.last_name %}
-              <h5 class="user-name">{{ user.first_name }} {{ user.last_name }}</h5>
-            {% else %}
-              <h5 class="user-name">Новый пользователь</h5>
-            {% endif %}
-            <p class="user-role">{{ user.get_role_display }}</p>
-            <p class="user-email">{{ user.email }}</p>
-
-            <p class="user-schedule">
-              <strong>График:</strong> 
-              {% if user.work_schedule.start_time == user.work_schedule.end_time %}
-                Круглосуточно
-              {% else %}
-                {{ user.work_schedule.start_time }} – {{ user.work_schedule.end_time }}
-              {% endif %}
-              </br>
-              <small>
-                Рабочие дни:
-                {% for day, work in user.work_schedule.get_fields.items %}
-                  {% if work %}{{ day }} {% endif %}
-                {% endfor %}
-              </small>
-            </p>
-
-            <div class="user-actions">
-              <button class="btn btn-secondary" data-title="Подробнее о сотруднике">Подробнее</button>
-            </div>
+          <div class="user-actions">
+            <button class="btn btn-secondary">Подробнее</button>
           </div>
         </div>
-      {% endfor %}
-    </div>
 
-    {% if not page_obj %}
-      <div class="card">
-          <div class="card-body">
-              <p class="card-text error-message">Ничего не найдено</p>
-          </div>
       </div>
-    {% endif %}
+    {% endfor %}
+  </div>
 
-    {% if page_obj.has_other_pages %}
-      {% include "includes/paginator.html" %}
-    {% endif %}
+  {% if not page_obj %}
+    <div class="card">
+        <div class="card-body">
+            <p class="card-text error-message">Ничего не найдено</p>
+        </div>
+    </div>
+  {% endif %}
+
+  {% if page_obj.has_other_pages %}
+    {% include "includes/paginator.html" %}
+  {% endif %}
 </div>
 {% endblock %}

@@ -169,6 +169,9 @@ class WorkSchedule(models.Model):
         if not days.get(weekday, False):
             return False
 
+        if self.start_time == self.end_time:
+            return True
+
         return self.start_time <= current_time <= self.end_time
 
     def __str__(self):
