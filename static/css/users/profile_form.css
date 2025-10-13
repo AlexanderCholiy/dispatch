@@ -79,11 +79,12 @@ body.dark .form-group input[type="date"]::-webkit-calendar-picker-indicator {
   display: flex;
   align-items: center;
   gap: var(--font-md);
+  width: 100%;
   cursor: pointer;
   border-radius: var(--radius-lg);
   padding: var(--space-sm) var(--space-md);
   border: 1px solid var(--gray-color);
-  max-width: 320px;
+  max-width: 294px;
 }
 
 .avatar-label:hover,
@@ -92,16 +93,19 @@ body.dark .form-group input[type="date"]::-webkit-calendar-picker-indicator {
   background-color: var(--add-background-color);
 }
 
-.avatar-preview img {
+.avatar-preview img,
+.avatar-preview .profile-avatar {
   width: 72px;
   height: 72px;
   border-radius: 50%;
   object-fit: cover;
-}
-
-.avatar-preview i {
-  font-size: 3.4rem;
-  color: var(--gray-color);
+  background: var(--gray-color);
+  color: var(--background-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-lg);
+  font-weight: 600;
 }
 
 .avatar-preview {

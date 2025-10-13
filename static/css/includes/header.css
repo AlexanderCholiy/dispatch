@@ -16,7 +16,7 @@
 .header-right {
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
+  gap: var(--space-md);
 }
 
 .header-center {
@@ -43,8 +43,7 @@
 }
 
 .btn-toggle:hover,
-#theme-toggle:hover,
-#user-toggle:hover i {
+#theme-toggle:hover {
   color: var(--priority-color);
 }
 
@@ -59,18 +58,13 @@
   height: 36px;
   border-radius: 50%;
   object-fit: cover;
-}
-
-.user-icon-fallback {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  background: var(--gray-color);
+  color: var(--background-color);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-xl);
-  color: var(--add-color);
-  transition: color var(--transition-value);
+  font-size: var(--font-lg);
+  font-weight: 500;
 }
 
 .user-menu-wrapper {

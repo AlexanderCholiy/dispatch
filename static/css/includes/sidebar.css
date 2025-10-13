@@ -84,7 +84,7 @@
 }
 
 .sidebar .link-text {
-  margin-left: var(--space-sm);
+  margin-left: var(--space-md);
   display: inline-block;
   max-width: 100%;
   white-space: nowrap;

@@ -19,9 +19,9 @@
           <label for="id_avatar" class="avatar-label" tabindex="0" aria-label="Загрузить или заменить аватар">
             <div class="avatar-preview" id="avatarPreview">
               {% if form.instance.avatar and form.instance.avatar.name %}
-                <img src="{{ form.instance.avatar.url }}" alt="Аватар" id="avatarImage">
+                <img src="{{ form.instance.avatar.url }}" alt="{{ user.username }}" id="avatarImage">
               {% else %}
-                <i class="bx bx-user-circle" id="avatarIcon"></i>
+                <div class="profile-avatar">{{ user.username|first|upper }}</div>
               {% endif %}
             </div>
             <span class="avatar-text">загрузить / заменить</span>
@@ -60,7 +60,7 @@
         <div class="form-group">
           {{ form.date_of_birth.label_tag }}
           {{ form.date_of_birth }}
-          {% if  form.date_of_birth.errors %}
+          {% if form.date_of_birth.errors %}
             <div class="error">{{ form.date_of_birth.errors }}</div>
           {% endif %}
         </div>
@@ -96,7 +96,7 @@
     const checkbox = document.getElementById('id_avatar-clear');
 
     if (checkbox.checked) {
-      avatarPreview.innerHTML = '<i class="bx bx-user-circle" id="avatarIcon"></i>';
+      avatarPreview.innerHTML = '<div class="profile-avatar">{{ user.username|first|upper }}</div>';
     } else {
       if (originalAvatarUrl) {
         avatarPreview.innerHTML = `<img src="${originalAvatarUrl}" alt="avatar" id="avatarImage">`;

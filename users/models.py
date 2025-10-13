@@ -139,6 +139,17 @@ class WorkSchedule(models.Model):
         verbose_name = 'Расписание рабочего времени'
         verbose_name_plural = 'Расписания рабочего времени'
 
+    def get_fields(self):
+        return {
+            'Пн': self.monday,
+            'Вт': self.tuesday,
+            'Ср': self.wednesday,
+            'Чт': self.thursday,
+            'Пт': self.friday,
+            'Сб': self.saturday,
+            'Вс': self.sunday,
+        }
+
     @property
     def is_working_now(self) -> bool:
         now = timezone.localtime()

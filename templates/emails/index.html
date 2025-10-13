@@ -8,14 +8,14 @@
 {% block content %}
  <div class="container">
 
-  <div class="card">
-    <div class="card-body">
-      <p class="card-text error-message">Контента пока нет :(</p>
+    <div class="card">
+      <div class="card-body">
+        <p class="card-text error-message">Контента пока нет :(</p>
+      </div>
     </div>
-  </div>
 
-  {% if page_obj.has_other_pages %}
-    {% include "includes/paginator.html" %}
-  {% endif %}
-</div>
+    {% if page_obj.has_other_pages %}
+      {% include "includes/paginator.html" %}
+    {% endif %}
+  </div>
 {% endblock %}

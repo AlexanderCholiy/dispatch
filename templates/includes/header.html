@@ -44,10 +44,10 @@
           {% if user.avatar and user.avatar.url %}
             <img src="{{ user.avatar.url }}" class="user-icon" alt="{{ user.username }}">
           {% else %}
-            <i class="bx bx-user-circle user-icon-fallback"></i>
+            <div class="user-icon tooltip" data-title="{{ user.username }}">{{ user.username|first|upper }}</div>
           {% endif %}
         {% else %}
-          <i class="bx bx-user-circle user-icon-fallback"></i>
+          <div class="user-icon tooltip" data-title="Профиль">X</div>
         {% endif %}
       </button>
       <div id="user-menu" class="user-menu">

@@ -234,15 +234,14 @@ def users(request: HttpRequest) -> HttpResponse:
     template_name = 'users/users.html'
 
     query = request.GET.get('q', '').strip()
-    paginator = Paginator([], MAX_USERS_PER_PAGE)
+    users = User.objects.exclude(role=Roles.GUEST).order_by('username')
+    paginator = Paginator(users, MAX_USERS_PER_PAGE)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
     query_params = request.GET.copy()
     query_params.pop('page', None)
     page_url_base = f'?{query_params.urlencode()}&' if query_params else '?'
-
-    users = User.objects.exclude(role=Roles.GUEST).order_by('username')
 
     context = {
         'page_obj': page_obj,

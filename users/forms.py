@@ -195,7 +195,8 @@ class UserForm(forms.ModelForm):
                         year=date.today().year - MIN_USER_AGE)),
                     'min': str(date.today().replace(
                         year=date.today().year - MAX_USER_AGE))
-                }
+                },
+                format='%Y-%m-%d'
             )
         }
 
