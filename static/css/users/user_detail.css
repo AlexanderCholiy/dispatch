@@ -1,0 +1,96 @@
+.user-detail-card {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  position: relative;
+  gap: var(--space-xl);
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  flex: 1;
+  justify-content: space-between; 
+  max-width: 320px;
+}
+
+.user-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  justify-content: space-between;
+}
+
+.user-info p {
+  margin: var(--space-sm) 0;
+  font-size: var(--font-md);
+}
+
+.user-info small,
+.user-role {
+  color: var(--gray-color);
+  font-style: italic;
+}
+
+.user-avatar img {
+  width: 180px;
+  height: 180px;
+  border-radius: var(--radius-xl);
+  object-fit: cover;
+  box-shadow: 0 0 var(--space-sm) var(--extra-color);
+}
+
+.avatar-placeholder {
+  width: 180px;
+  height: 180px;
+  border-radius: var(--radius-xl);
+  background-color: var(--gray-color);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: 700;
+  font-size: var(--font-xl);
+  color: var(--background-color);
+}
+
+.stats-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+
+.stat-card {
+  flex: 1 1 160px;
+  padding: var(--space-md);
+  border-radius: var(--radius-sm);
+  background: var(--add-background-color);
+  text-align: center;
+  box-shadow: 0 0 var(--space-xs) var(--extra-color);
+  transition: transform var(--transition-value), box-shadow var(--transition-value);
+}
+
+body.dark .stat-card {
+  background: var(--add-background-color);
+  color: var(--color);
+}
+
+.stat-title {
+  font-size: var(--font-sm);
+  margin-bottom: var(--space-sm);
+  font-weight: 500;
+  color: var(--gray-color);
+}
+
+.stat-value {
+  font-size: var(--font-xl);
+  font-weight: 700;
+}
+
+.stat-open .stat-value { color: var(--yellow-color); }
+.stat-closed .stat-value { color: var(--green-color); }
+.stat-week-open .stat-value { color: var(--yellow-color); }
+.stat-week-closed .stat-value { color: var(--green-color); }
+.stat-sla .stat-value { color: var(--blue-color); }

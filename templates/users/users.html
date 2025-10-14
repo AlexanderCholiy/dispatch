@@ -47,7 +47,9 @@
             {% endif %}
           </div>
           <div class="user-actions">
-            <button class="btn btn-secondary">Подробнее</button>
+            <a href="{% url 'users:user_detail' user.id %}" class="btn btn-secondary">
+                Подробнее
+            </a>
           </div>
         </div>
 

@@ -10,7 +10,7 @@ from django.contrib.auth.views import LoginView, PasswordResetView
 from django.db.models import Q
 from django.core.paginator import Paginator
 from django.http import HttpRequest, HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, get_object_or_404
 from django.utils.decorators import method_decorator
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
@@ -29,6 +29,7 @@ from .utils import (
     send_confirm_email,
     staff_required,
 )
+from incidents.models import Incident
 
 email_logger = LoggerFactory(__name__, EMAIL_LOG_ROTATING_FILE).get_logger
 
@@ -229,12 +230,26 @@ class CustomLoginView(LoginView):
 
 
 @login_required
-@staff_required()
-def users(request: HttpRequest) -> HttpResponse:
-    template_name = 'users/users.html'
-
+def users_list(request: HttpRequest) -> HttpResponse:
     query = request.GET.get('q', '').strip()
-    users = User.objects.exclude(role=Roles.GUEST).order_by('username')
+    base_qs = User.objects.exclude(role=Roles.GUEST).order_by('username')
+
+    if query:
+        words = {w.strip().lower() for w in query.split(' ') if w.strip()}
+        q_filter = Q()
+        for word in words:
+            q_filter |= Q(username__icontains=word)
+            q_filter |= Q(first_name__icontains=word)
+            q_filter |= Q(last_name__icontains=word)
+
+        new_user_keywords = ['новый', 'пользователь']
+        if any(word in words for word in new_user_keywords):
+            q_filter |= Q(first_name__exact='') & Q(last_name__exact='')
+
+        users = base_qs.filter(q_filter)
+    else:
+        users = base_qs
+
     paginator = Paginator(users, MAX_USERS_PER_PAGE)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -249,4 +264,42 @@ def users(request: HttpRequest) -> HttpResponse:
         'page_url_base': page_url_base,
     }
 
-    return render(request, template_name, context)
+    return render(request, 'users/users.html', context)
+
+
+@login_required
+def user_detail(request, user_id):
+    """Подробная информация о пользователе со статистикой."""
+    user = get_object_or_404(User, pk=user_id)
+
+    sla_percentage = 0
+
+    incidents = Incident.objects.filter(responsible_user=user)
+    open_incidents = incidents.filter(is_incident_finish=False).count()
+    closed_incidents = incidents.filter(is_incident_finish=True).count()
+
+    last_week = now() - timedelta(days=7)
+    open_last_week = incidents.filter(
+        is_incident_finish=False, insert_date__gte=last_week
+    ).count()
+    closed_last_week = incidents.filter(
+        is_incident_finish=True, update_date__gte=last_week
+    ).count()
+
+    if closed_incidents:
+        closed_qs = incidents.filter(
+            is_incident_finish=True, insert_date__gte=last_week
+        ).select_related('incident_type')
+        sla_closed = sum(1 for i in closed_qs if i.is_sla_expired is False)
+        sla_percentage = round(sla_closed / closed_incidents * 100, 1)
+
+    context = {
+        'user': user,
+        'open_incidents': open_incidents,
+        'closed_incidents': closed_incidents,
+        'open_last_week': open_last_week,
+        'closed_last_week': closed_last_week,
+        'sla_percentage': sla_percentage,
+    }
+
+    return render(request, 'users/user_detail.html', context)

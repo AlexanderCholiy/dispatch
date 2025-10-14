@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/users/user_detail.css' %}">
+{% endblock %}
+
+{% block title %}
+    {% if user.first_name and user.last_name %}
+        {{ user.first_name }} {{ user.last_name }}
+    {% else %}
+        Новый пользователь
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container-sm">
+  <div class="card">
+    <div class="card-header">
+      {% if user.first_name and user.last_name %}
+          {{ user.first_name }} {{ user.last_name }}
+      {% else %}
+          Новый пользователь
+      {% endif %}
+    </div>
+    <div class="card-body">
+      <div class="user-detail-card">   
+        <div class="user-info">
+          <p><strong>Email:</strong> {{ user.email }}</p>
+          <p><strong>Дата рождения:</strong> {{ user.date_of_birth|default:"Не указана" }}</p>
+    
+          <p><strong>График работы:</strong>
+          {% if user.work_schedule.start_time == user.work_schedule.end_time %}
+            Круглосуточно
+          {% else %}
+            {{ user.work_schedule.start_time }} – {{ user.work_schedule.end_time }}
+          {% endif %}
+          <br>
+          <p><strong>Рабочие дни:</strong>
+          <small>
+            {% for day, work in user.work_schedule.get_fields.items %}
+                {% if work %}{{ day }} {% endif %}
+            {% endfor %}
+          </small>
+          </p>
+    
+          {% if user.is_staff or user.is_admin %}
+            <a href="#" class="btn btn-danger">Изменить расписание</a>
+          {% endif %}
+        </div>
+
+        <div class="user-right">
+          <div class="user-avatar">
+            {% if user.avatar %}
+                <img src="{{ user.avatar.url }}" alt="Аватар">
+            {% else %}
+                <div class="avatar-placeholder">{{ user.username|first|upper }}</div>
+            {% endif %}
+          </div>
+          <small class="user-role">
+            {{ user.get_role_display|lower }}
+          </small>
+        </div>
+      </div>
+
+      <div class="incident-stats">
+        <h3>Статистика инцидентов</h3>
+        <div class="stats-grid">
+          <div class="stat-card stat-open">
+            <p class="stat-title">Открытые</p>
+            <p class="stat-value">{{ open_incidents }}</p>
+          </div>
+
+          <div class="stat-card stat-closed">
+            <p class="stat-title">Закрытые</p>
+            <p class="stat-value">{{ closed_incidents }}</p>
+          </div>
+
+          <div class="stat-card stat-week-open">
+            <p class="stat-title">Открытые за неделю</p>
+            <p class="stat-value">{{ open_last_week }}</p>
+          </div>
+
+          <div class="stat-card stat-week-closed">
+            <p class="stat-title">Закрытые за неделю</p>
+            <p class="stat-value">{{ closed_last_week }}</p>
+          </div>
+
+          <div class="stat-card stat-sla">
+            <p class="stat-title">Закрытые вовремя</p>
+            <p class="stat-value" 
+              style="
+                {% if sla_percentage >= 90 %}
+                  color: var(--green-color);
+                {% elif sla_percentage >= 70 %}
+                  color: var(--blue-color);
+                {% elif sla_percentage >= 50 %}
+                  color: var(--yellow-color);
+                {% else %}
+                  color: var(--red-color);
+                {% endif %}
+              ">
+              {{ sla_percentage }}%
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

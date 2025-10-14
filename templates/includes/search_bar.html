@@ -1,6 +1,6 @@
 {% with request.resolver_match.view_name as view_name %}
-  {% if view_name == 'users:users' %}
-    <form method="get" action="{% url 'users:users' %}" class="header-search">
+  {% if view_name in 'users:users_list users:user_detail' %}
+    <form method="get" action="{% url 'users:users_list' %}" class="header-search">
       <input
         type="text"
         name="q"
