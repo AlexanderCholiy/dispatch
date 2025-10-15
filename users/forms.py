@@ -12,7 +12,7 @@ from .constants import (
     MIN_USER_AGE,
     MIN_USER_PASSWORD_LEN
 )
-from .models import PendingUser, User
+from .models import PendingUser, User, WorkSchedule
 from .validators import validate_user_email
 
 
@@ -234,3 +234,77 @@ class UserForm(forms.ModelForm):
             user.save()
 
         return user
+
+
+class WorkScheduleForm(forms.ModelForm):
+    class Meta:
+        model = WorkSchedule
+        fields = (
+            'start_time',
+            'end_time',
+            'monday',
+            'tuesday',
+            'wednesday',
+            'thursday',
+            'friday',
+            'saturday',
+            'sunday',
+        )
+        widgets = {
+            'start_time': forms.TimeInput(
+                attrs={'type': 'time', 'class': 'form-control'}
+            ),
+            'end_time': forms.TimeInput(
+                attrs={'type': 'time', 'class': 'form-control'}
+            ),
+            'monday': forms.CheckboxInput(
+                attrs={'class': 'form-check-input'}
+            ),
+            'tuesday': forms.CheckboxInput(
+                attrs={'class': 'form-check-input'}
+            ),
+            'wednesday': forms.CheckboxInput(
+                attrs={'class': 'form-check-input'}
+            ),
+            'thursday': forms.CheckboxInput(
+                attrs={'class': 'form-check-input'}
+            ),
+            'friday': forms.CheckboxInput(
+                attrs={'class': 'form-check-input'}
+            ),
+            'saturday': forms.CheckboxInput(
+                attrs={'class': 'form-check-input'}
+            ),
+            'sunday': forms.CheckboxInput(
+                attrs={'class': 'form-check-input'}
+            ),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start = cleaned_data.get('start_time')
+        end = cleaned_data.get('end_time')
+        days_selected = any(
+            cleaned_data.get(day) for day in
+            [
+                'monday',
+                'tuesday',
+                'wednesday',
+                'thursday',
+                'friday',
+                'saturday',
+                'sunday'
+            ]
+        )
+
+        if start and end and start > end:
+            raise ValidationError(
+                'Время начала не может быть позже времени окончания.'
+            )
+
+        if days_selected and (start is None or end is None):
+            raise forms.ValidationError(
+                'Укажите время начала и конца рабочего дня.'
+            )
+
+        return cleaned_data

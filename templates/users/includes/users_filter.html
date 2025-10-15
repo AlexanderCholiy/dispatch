@@ -1,0 +1,18 @@
+{% load static %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/users/includes/users_filter.css' %}">
+{% endblock %}
+
+<form method="get" class="user-filter-form">
+  <div class="filter-wrapper">
+    <div class="select-wrapper">
+      <select name="role" class="select">
+        <option value="">Все роли</option>
+        <option value="user" {% if selected_role == 'user' %}selected{% endif %}>Пользователь</option>
+        <option value="dispatch" {% if selected_role == 'dispatch' %}selected{% endif %}>Диспетчер</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Фильтр</button>
+  </div>
+</form>

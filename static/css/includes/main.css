@@ -22,10 +22,14 @@
 
 .card {
   border-radius: var(--radius-md);
-  box-shadow: 0 0 var(--space-sm) var(--extra-color);
   overflow: hidden;
+  box-shadow: 0 0 var(--space-xs) var(--extra-color);
   background-color: var(--background-color);
   transition: background-color var(--transition-value), box-shadow var(--transition-value);
+}
+
+.card:hover {
+  box-shadow: 0 0 var(--space-sm) var(--extra-color);
 }
 
 .card-header {

@@ -86,7 +86,7 @@ class BaseUserAdmin(UserAdmin):
 
     search_fields = ('email', 'username', 'first_name', 'last_name')
     ordering = ('email',)
-    inlines = [WorkScheduleInline] 
+    inlines = [WorkScheduleInline]
 
 
 @admin.register(PendingUser)

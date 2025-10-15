@@ -10,6 +10,8 @@
 
 {% block content %}
 <div class="container">
+  {% include "users/includes/users_filter.html" %}
+
   <div class="card-grid">
     {% for user in page_obj %}
       <div class="user-card {% if user.work_schedule.is_working_now %}online{% else %}offline{% endif %}">       
@@ -20,21 +22,25 @@
           {% else %}
             <p class="user-name">Новый пользователь</p>
           {% endif %}
-          <p class="user-email">{{ user.email }}</p>
+          <p class="user-email copy-text" data-text={{ user.email }}>{{ user.email }}</p>
           <p class="user-schedule">
             <strong>График:</strong>
-            {% if user.work_schedule.start_time == user.work_schedule.end_time %}
-              Круглосуточно
+            {% if user.work_schedule.is_working %}
+              {% if user.work_schedule.start_time == user.work_schedule.end_time %}
+                Круглосуточно
+              {% else %}
+                {{ user.work_schedule.start_time }} – {{ user.work_schedule.end_time }}
+              {% endif %}
+              <br>
+              <small>
+                Рабочие дни:
+                {% for day, work in user.work_schedule.get_fields.items %}
+                  {% if work %}{{ day }} {% endif %}
+                {% endfor %}
+              </small>
             {% else %}
-              {{ user.work_schedule.start_time }} – {{ user.work_schedule.end_time }}
+              Не работает
             {% endif %}
-            <br>
-            <small>
-              Рабочие дни:
-              {% for day, work in user.work_schedule.get_fields.items %}
-                {% if work %}{{ day }} {% endif %}
-              {% endfor %}
-            </small>
           </p>
         </div>
 

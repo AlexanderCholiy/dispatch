@@ -55,23 +55,19 @@ def role_required(
     return decorator
 
 
-def staff_required():
-    """
-    Декоратор который предоставляет доступ админу или модератору
-    """
-    def decorator(view_func: Callable):
-        @wraps(view_func)
-        def wrapped_view(request: HttpRequest, *args, **kwargs):
-            user: User = request.user
-            if not user.is_superuser and not user.is_staff:
-                messages.error(
-                    request,
-                    'Данная страница доступна только персоналу'
-                )
-                return redirect(reverse(settings.LOGIN_URL))
-            return view_func(request, *args, **kwargs)
-        return wrapped_view
-    return decorator
+def staff_required(view_func: Callable):
+    """Декоратор который предоставляет доступ админу или персоналу"""
+    @wraps(view_func)
+    def wrapped_view(request: HttpRequest, *args, **kwargs):
+        user: User = request.user
+        if not user.is_superuser and not user.is_staff:
+            messages.error(
+                request,
+                'Данная страница доступна только владельцу или персоналу'
+            )
+            return redirect(reverse(settings.LOGIN_URL))
+        return view_func(request, *args, **kwargs)
+    return wrapped_view
 
 
 def timedelta_to_human_time(time_delta: timedelta) -> str:

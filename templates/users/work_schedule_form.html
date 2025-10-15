@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Расписание{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/users/work_schedule_form.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-sm">
+  <div class="card">
+    <div class="schedule-header">
+      <p>
+        <i class='bx bx-calendar-alt'></i> 
+        Рабочее расписание для {{ user_obj.username }}
+      </p>
+    </div>
+
+    <form method="post" class="schedule-form">
+      {% csrf_token %}
+      
+      <div class="form-section">
+        <h3 class="section-title">
+          Время работы
+        </h3>
+        <div class="time-inputs">
+          <div class="input-group">
+            <label for="id_start_time" class="input-label">
+              Начало работы
+            </label>
+            <div class="input-wrapper">
+              {{ form.start_time }}
+            </div>
+          </div>
+          
+          <div class="input-group">
+            <label for="id_end_time" class="input-label">
+              Окончание работы
+            </label>
+            <div class="input-wrapper">
+              {{ form.end_time }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3 class="section-title">
+          Рабочие дни
+        </h3>
+        <div class="days-grid">
+          <div class="day-checkbox">
+            {{ form.monday }}
+            <label for="id_monday" class="day-label">
+              <span class="day-name">Пн</span>
+            </label>
+          </div>
+          
+          <div class="day-checkbox">
+            {{ form.tuesday }}
+            <label for="id_tuesday" class="day-label">
+              <span class="day-name">Вт</span>
+            </label>
+          </div>
+          
+          <div class="day-checkbox">
+            {{ form.wednesday }}
+            <label for="id_wednesday" class="day-label">
+              <span class="day-name">Ср</span>
+            </label>
+          </div>
+          
+          <div class="day-checkbox">
+            {{ form.thursday }}
+            <label for="id_thursday" class="day-label">
+              <span class="day-name">Чт</span>
+            </label>
+          </div>
+          
+          <div class="day-checkbox">
+            {{ form.friday }}
+            <label for="id_friday" class="day-label">
+              <span class="day-name">Пт</span>
+            </label>
+          </div>
+          
+          <div class="day-checkbox">
+            {{ form.saturday }}
+            <label for="id_saturday" class="day-label">
+              <span class="day-name">Сб</span>
+            </label>
+          </div>
+          
+          <div class="day-checkbox">
+            {{ form.sunday }}
+            <label for="id_sunday" class="day-label">
+              <span class="day-name">Вс</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+          Сохранить расписание
+        </button>
+        <a href="{% url 'users:user_detail' user_obj.id %}" class="btn btn-secondary">
+          Отмена
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

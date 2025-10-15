@@ -1,0 +1,57 @@
+input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(0);
+  opacity: 0.9;
+}
+
+body.dark input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+.select-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 200px;
+}
+
+.select {
+  width: 100%;
+  padding: var(--space-sm);
+  padding-right: calc(var(--space-sm) * 2.5);
+  border-radius: var(--radius-md);
+  background-color: var(--add-background-color);
+  font-size: var(--font-md);
+  cursor: pointer;
+  box-shadow: 0 0 var(--space-xs) var(--extra-color);
+  transition: box-shadow var(--transition-value);
+  color: var(--gray-color);
+
+  /* Убираем стандартную стрелку */
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.select-wrapper::after {
+  content: "▼";
+  position: absolute;
+  right: var(--space-sm);
+  top: 45%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  font-size: var(--font-md);
+  color: var(--gray-color);
+}
+
+.select:focus {
+  outline: none;
+  box-shadow: 0 0 var(--space-sm) var(--extra-color);
+}
+
+.select option {
+  color: var(--add-color);
+}
+
+.select option:checked {
+  color: var(--gray-color);
+}

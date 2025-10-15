@@ -1,8 +1,11 @@
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(calc(320px + var(--space-xl)), max-content));
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: var(--space-xl);
-  justify-content: center;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  justify-items: center;
 }
 
 .user-card {
@@ -13,8 +16,9 @@
   padding: var(--space-md);
   box-shadow: 0 0 var(--space-sm) var(--extra-color);
   transition: transform var(--transition-value), box-shadow var(--transition-value);
-  max-width: 320px;
+  box-sizing: border-box;
   width: 100%;
+  max-width: 420px;
   position: relative;
   gap: var(--space-md);
 }
@@ -52,6 +56,12 @@
   color: var(--gray-color);
   margin: 0;
   word-break: break-word;
+  transition: color var(--transition-value);
+}
+
+.user-email:hover {
+  color: var(--yellow-color);
+  text-decoration: underline;
 }
 
 .user-schedule {
@@ -98,7 +108,7 @@
   padding: var(--space-xs) var(--space-sm);
   font-size: var(--font-sm);
   border-radius: var(--radius-md);
-  width: 102px;
+  width: 76px;
 }
 
 @media (max-width: 768px) {

@@ -1,5 +1,5 @@
 {% with request.resolver_match.view_name as view_name %}
-  {% if view_name in 'users:users_list users:user_detail' %}
+  {% if view_name in 'users:users_list users:user_detail users:work_schedule' %}
     <form method="get" action="{% url 'users:users_list' %}" class="header-search">
       <input
         type="text"

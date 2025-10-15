@@ -151,6 +151,20 @@ class WorkSchedule(models.Model):
         }
 
     @property
+    def is_working(self) -> bool:
+        return any(
+            (
+                self.monday,
+                self.tuesday,
+                self.wednesday,
+                self.thursday,
+                self.friday,
+                self.saturday,
+                self.sunday,
+            )
+        )
+
+    @property
     def is_working_now(self) -> bool:
         now = timezone.localtime()
         weekday = now.weekday()

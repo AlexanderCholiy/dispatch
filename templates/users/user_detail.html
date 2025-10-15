@@ -16,36 +16,33 @@
 {% block content %}
 <div class="container-sm">
   <div class="card">
-    <div class="card-header">
-      {% if user.first_name and user.last_name %}
-          {{ user.first_name }} {{ user.last_name }}
-      {% else %}
-          Новый пользователь
-      {% endif %}
-    </div>
     <div class="card-body">
       <div class="user-detail-card">   
         <div class="user-info">
-          <p><strong>Email:</strong> {{ user.email }}</p>
+          <p><strong>Email: </strong><span class="user-email copy-text" data-text={{ user.email }}>{{ user.email }}</span></p>
           <p><strong>Дата рождения:</strong> {{ user.date_of_birth|default:"Не указана" }}</p>
     
           <p><strong>График работы:</strong>
-          {% if user.work_schedule.start_time == user.work_schedule.end_time %}
-            Круглосуточно
-          {% else %}
-            {{ user.work_schedule.start_time }} – {{ user.work_schedule.end_time }}
-          {% endif %}
-          <br>
-          <p><strong>Рабочие дни:</strong>
-          <small>
-            {% for day, work in user.work_schedule.get_fields.items %}
-                {% if work %}{{ day }} {% endif %}
-            {% endfor %}
-          </small>
+          {% if user.work_schedule.is_working %}
+            {% if user.work_schedule.start_time == user.work_schedule.end_time %}
+              Круглосуточно
+            {% else %}
+              {{ user.work_schedule.start_time }} – {{ user.work_schedule.end_time }}
+            {% endif %}
+            <p>
+            <strong>Рабочие дни:</strong>
+            <small>
+              {% for day, work in user.work_schedule.get_fields.items %}
+                  {% if work %}{{ day }} {% endif %}
+              {% endfor %}
+            </small>
+            {% else %}
+              Не работает
+            {% endif %}
           </p>
     
-          {% if user.is_staff or user.is_admin %}
-            <a href="#" class="btn btn-danger">Изменить расписание</a>
+          {% if request.user.is_staff or request.user.is_admin or request.user == user %}
+            <a href="{% url 'users:work_schedule' user.id %}" class="btn btn-danger">Изменить расписание</a>
           {% endif %}
         </div>
 
@@ -57,9 +54,13 @@
                 <div class="avatar-placeholder">{{ user.username|first|upper }}</div>
             {% endif %}
           </div>
-          <small class="user-role">
-            {{ user.get_role_display|lower }}
-          </small>
+          <p class="user-role">
+            {% if user.first_name and user.last_name %}
+                {{ user.get_role_display }} {{ user.first_name }} {{ user.last_name }}
+            {% else %}
+                Новый {{ user.get_role_display|lower }}
+            {% endif %}
+          </p>
         </div>
       </div>
 

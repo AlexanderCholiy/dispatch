@@ -64,6 +64,7 @@
   align-items: center;
   padding: var(--space-sm) var(--space-md);
   text-decoration: none;
+  gap: calc(var(--space-md) + var(--space-xs));
   color: var(--add-color);
   width: 100%;
   white-space: nowrap;
@@ -84,7 +85,6 @@
 }
 
 .sidebar .link-text {
-  margin-left: var(--space-md);
   display: inline-block;
   max-width: 100%;
   white-space: nowrap;

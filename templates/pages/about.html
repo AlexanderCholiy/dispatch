@@ -1,15 +1,54 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/pages/about.css' %}">
+{% endblock %}
+
 {% block content %}
 <div class="container-sm">
   <div class="card">
-    <div class="card-header">
-      О проекте
-    </div>
     <div class="card-body">
-      <p class="card-text"><small class="text-muted">Пока что контент отсутствует, но мы работаем над его добавлением!</small></p>
+      <h1 class="about-title">О проекте</h1>
+
+      <section class="about-section">
+        <p class="card-text">
+          Данный веб-сервис разработан для компании <strong>ООО «Новые Башни»</strong> и предназначен
+          для автоматизации процессов диспетчерской службы.  
+          Он интегрирован с корпоративной электронной почтой и системой <strong>Yandex Tracker</strong>,
+          что позволяет обрабатывать входящие письма, создавать инциденты и контролировать выполнение задач.
+        </p>
+      </section>
+
+      <section class="about-section">
+        <div class="contacts">
+          <table>
+            <colgroup>
+              <col style="width: 60%;">
+              <col style="width: 40%;">
+              <col style="width: 60%;">
+              <col style="width: 40%;">
+            </colgroup>
+            <tr>
+              <th colspan="2">Техническая поддержка</th>
+              <th colspan="2">Диспетчерская служба</th>
+            </tr>
+            <tr>
+              <td class="contact-cell">
+                <span class="email-link copy-text" data-text="a.choliy@newtowers.ru">a.choliy@newtowers.ru</span>
+              </td>
+              <td class="contact-name">Чолий Александр</td>
+              <td class="contact-cell">
+                <span class="email-link copy-text" data-text="vi.bogomolov@newtowers.ru">vi.bogomolov@newtowers.ru</span>
+              </td>
+              <td class="contact-name">Богомолов Виталий</td>
+            </tr>
+          </table>
+        </div>
+      </section>
+
     </div>
   </div>
 </div>
+
 {% endblock %}

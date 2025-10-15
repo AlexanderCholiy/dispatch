@@ -28,10 +28,26 @@
   font-size: var(--font-md);
 }
 
-.user-info small,
-.user-role {
+.user-info small {
   color: var(--gray-color);
   font-style: italic;
+}
+
+.user-email {
+  transition: color var(--transition-value);
+}
+
+.user-email:hover {
+  color: var(--yellow-color);
+  text-decoration: underline;
+}
+
+.user-role {
+  font-weight: 400;
+  font-size: var(--font-sm);
+  color: var(--gray-color);
+  justify-content: center;
+  align-items: center;
 }
 
 .user-avatar img {

@@ -7,10 +7,11 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.views import LoginView, PasswordResetView
-from django.db.models import Q
 from django.core.paginator import Paginator
+from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
-from django.shortcuts import redirect, render, get_object_or_404
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
@@ -19,17 +20,21 @@ from django_ratelimit.decorators import ratelimit
 
 from core.constants import EMAIL_LOG_ROTATING_FILE
 from core.loggers import LoggerFactory
+from incidents.models import Incident
 
-from .forms import ChangeEmailForm, UserForm, UserRegisterForm
-from .models import PendingUser, User, Roles
 from .constants import MAX_USERS_PER_PAGE
+from .forms import (
+    ChangeEmailForm,
+    UserForm,
+    UserRegisterForm,
+    WorkScheduleForm,
+)
+from .models import PendingUser, Roles, User, WorkSchedule
 from .utils import (
     role_required,
     send_activation_email,
     send_confirm_email,
-    staff_required,
 )
-from incidents.models import Incident
 
 email_logger = LoggerFactory(__name__, EMAIL_LOG_ROTATING_FILE).get_logger
 
@@ -232,7 +237,12 @@ class CustomLoginView(LoginView):
 @login_required
 def users_list(request: HttpRequest) -> HttpResponse:
     query = request.GET.get('q', '').strip()
+    role_filter = request.GET.get('role', '').strip().lower()
+
     base_qs = User.objects.exclude(role=Roles.GUEST).order_by('username')
+
+    if role_filter:
+        base_qs = base_qs.filter(role=role_filter)
 
     if query:
         words = {w.strip().lower() for w in query.split(' ') if w.strip()}
@@ -262,13 +272,14 @@ def users_list(request: HttpRequest) -> HttpResponse:
         'page_obj': page_obj,
         'search_query': query,
         'page_url_base': page_url_base,
+        'selected_role': role_filter,
     }
 
     return render(request, 'users/users.html', context)
 
 
 @login_required
-def user_detail(request, user_id):
+def user_detail(request: HttpRequest, user_id):
     """Подробная информация о пользователе со статистикой."""
     user = get_object_or_404(User, pk=user_id)
 
@@ -303,3 +314,40 @@ def user_detail(request, user_id):
     }
 
     return render(request, 'users/user_detail.html', context)
+
+
+@login_required
+def work_schedule(request: HttpRequest, user_id: int):
+    user = get_object_or_404(User, pk=user_id)
+
+    if (
+        not request.user.is_superuser
+        and not request.user.is_staff
+        and request.user != user
+    ):
+        messages.error(
+            request,
+            'Данная страница доступна только персоналу'
+        )
+        return redirect(reverse(settings.LOGIN_URL))
+
+    schedule, _ = WorkSchedule.objects.get_or_create(user=user)
+
+    if request.method == 'POST':
+        form = WorkScheduleForm(request.POST, instance=schedule)
+        if form.is_valid():
+            form.save()
+            return redirect('users:user_detail', user_id=user.id)
+        else:
+            for _, errors in form.errors.items():
+                for error in set(errors):
+                    messages.error(request, error)
+    else:
+        form = WorkScheduleForm(instance=schedule)
+
+    context = {
+        'user_obj': user,
+        'form': form,
+    }
+
+    return render(request, 'users/work_schedule_form.html', context)

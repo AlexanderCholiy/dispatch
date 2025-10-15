@@ -193,7 +193,7 @@ class IncidentManager(IncidentValidator):
         hour_back: int = 3,
     ) -> Optional[User]:
         """
-        Возвращает самого свободного диспетчера.
+        Возвращает самого свободного диспетчера, который сейчас работает.
 
         - выбирает только активных пользователей с ролью DISPATCH;
         - может ограничивать максимальное число активных инцидентов;
@@ -202,20 +202,27 @@ class IncidentManager(IncidentValidator):
         """
         since_date = timezone.now() - timedelta(hours=hour_back)
 
-        active_users_with_incidents = (
-            User.objects
-            .filter(is_active=True, role=Roles.DISPATCH)
-            .annotate(
-                incident_count=Coalesce(
-                    Count(
-                        'incidents',
-                        filter=Q(
-                            incidents__is_incident_finish=False,
-                            incidents__insert_date__gte=since_date,
-                        )
-                    ),
-                    0
-                )
+        active_users = User.objects.filter(is_active=True, role=Roles.DISPATCH)
+
+        working_users = [
+            u.pk for u in active_users
+            if hasattr(u, 'work_schedule') and u.work_schedule.is_working_now
+        ]
+        if not working_users:
+            return
+
+        qs = active_users.filter(pk__in=working_users)
+
+        active_users_with_incidents = qs.annotate(
+            incident_count=Coalesce(
+                Count(
+                    'incidents',
+                    filter=Q(
+                        incidents__is_incident_finish=False,
+                        incidents__insert_date__gte=since_date,
+                    )
+                ),
+                0
             )
         )
 
