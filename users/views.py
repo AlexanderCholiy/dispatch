@@ -305,10 +305,11 @@ def user_detail(request: HttpRequest, user_id):
             incident_type__sla_deadline__isnull=False,
         ).select_related('incident_type')
         sla_closed = sum(1 for i in closed_qs if i.is_sla_expired is False)
-        sla_percentage = round(sla_closed / len(closed_qs) * 100, 1)
-        sla_percentage = int(
-            sla_percentage
-        ) if sla_percentage.is_integer() else sla_percentage
+        if closed_qs:
+            sla_percentage = round(sla_closed / len(closed_qs) * 100, 1)
+            sla_percentage = int(
+                sla_percentage
+            ) if sla_percentage.is_integer() else sla_percentage
 
     context = {
         'user': user,
