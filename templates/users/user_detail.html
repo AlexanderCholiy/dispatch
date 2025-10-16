@@ -91,7 +91,9 @@
             <p class="stat-title">Вовремя закрытые (неделя)</p>
             <p class="stat-value" 
               style="
-                {% if sla_percentage >= 90 %}
+                {% if sla_percentage == 0 %}
+                  color: var(--gray-color);
+                {% elif sla_percentage >= 90 %}
                   color: var(--green-color);
                 {% elif sla_percentage >= 70 %}
                   color: var(--blue-color);
