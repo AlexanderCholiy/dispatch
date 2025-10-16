@@ -223,3 +223,4 @@ logs/*
 logs/supervisor/*
 !logs/cron/
 logs/cron/*
+!logs/django/

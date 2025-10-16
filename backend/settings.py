@@ -1,5 +1,6 @@
 import os
 from datetime import timedelta
+from logging import Filter
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -235,4 +236,71 @@ SWAGGER_SETTINGS = {
             'in': 'header'
         }
     }
+}
+
+
+class ServerErrorFilter(Filter):
+    def filter(self, record):
+        return getattr(record, 'status_code', None) == 500
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'filters': {
+        'server_error_filter': {
+            '()': ServerErrorFilter,
+        },
+    },
+    'formatters': {
+        'verbose': {
+            'format': '%(asctime)s | %(levelname).1s | %(name)s | %(funcName)s | %(message)s',  # noqa: E501
+        },
+    },
+    'handlers': {
+        **({'console': {
+            'class': 'logging.StreamHandler',
+            'level': 'WARNING',
+            'formatter': 'verbose',
+        }} if DEBUG else {}),
+        'rotating_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'level': 'WARNING',
+            'formatter': 'verbose',
+            'filename': os.path.join(
+                BASE_DIR, 'logs', 'django', 'django.log'
+            ),
+            'maxBytes': 10 * 1024 * 1024,
+            'backupCount': 3,
+            'encoding': 'utf-8',
+        },
+        'rotating_500_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'level': 'ERROR',
+            'formatter': 'verbose',
+            'filename': os.path.join(
+                BASE_DIR, 'logs', 'django', '500.log'
+            ),
+            'maxBytes': 10 * 1024 * 1024,
+            'backupCount': 3,
+            'encoding': 'utf-8',
+            'filters': ['server_error_filter'],
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': [
+                'rotating_file', 'console'
+            ] if DEBUG else ['rotating_file'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': [
+                'rotating_file', 'console'
+            ] if DEBUG else ['rotating_500_file'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
 }
