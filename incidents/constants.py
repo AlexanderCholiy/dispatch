@@ -5,6 +5,7 @@ from django.conf import settings
 INCIDENTS_PER_PAGE = 32
 INCIDENT_TYPES_PER_PAGE = 32
 INCIDENT_STATUSES_PER_PAGE = 32
+INCIDENT_CATEGORIES_PER_PAGE = 32
 
 MAX_STATUS_COMMENT_LEN = 512
 MAX_CODE_LEN = 32
@@ -12,6 +13,9 @@ MAX_CODE_LEN = 32
 INCIDENTS_DATA_DIR = os.path.join(settings.BASE_DIR, 'data', 'incidents')
 INCIDENT_TYPES_FILE = os.path.join(INCIDENTS_DATA_DIR, 'types.xlsx')
 INCIDENT_STATUSES_FILE = os.path.join(INCIDENTS_DATA_DIR, 'statuses.xlsx')
+
+# n-ое письмо после которого закрытая заявка, становится сново открытой:
+MAX_EMAILS_ON_CLOSED_INCIDENTS = 2
 
 DEFAULT_STATUS_NAME = 'Новый'
 DEFAULT_STATUS_DESC = (
@@ -61,3 +65,8 @@ DEFAULT_NOTIFY_AVR_STATUS_DESC = 'Отправляем письмо с инци�
 
 DEFAULT_NOTIFIED_AVR_STATUS_NAME = 'Передано подрядчику'
 DEFAULT_NOTIFIED_AVR_STATUS_DESC = 'Отправили письмо с инцидентом подрядчику.'
+
+# В Трекере должно быть также:
+DEFAULT_AVR_CATEGORY = 'АВР'
+DEFAULT_RVR_CATEGORY = 'РВР'
+DEFAULT_DGU_CATEGORY = 'ДГУ'

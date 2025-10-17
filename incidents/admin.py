@@ -6,12 +6,15 @@ from core.constants import EMPTY_VALUE
 from emails.models import EmailMessage
 
 from .constants import (
+    INCIDENT_CATEGORIES_PER_PAGE,
     INCIDENT_STATUSES_PER_PAGE,
     INCIDENT_TYPES_PER_PAGE,
     INCIDENTS_PER_PAGE,
 )
 from .models import (
     Incident,
+    IncidentCategory,
+    IncidentCategoryRelation,
     IncidentStatus,
     IncidentStatusHistory,
     IncidentType,
@@ -46,8 +49,17 @@ class EmailMessageInline(admin.StackedInline):
 class IncidentStatusHistoryInline(admin.TabularInline):
     model = IncidentStatusHistory
     extra = 1
+    autocomplete_fields = ['status']
     verbose_name = 'Статус инцидента'
     verbose_name_plural = 'Статусы инцидента'
+
+
+class IncidentCategoryRelationInline(admin.TabularInline):
+    model = IncidentCategoryRelation
+    extra = 0
+    autocomplete_fields = ['category']
+    verbose_name = 'Категория инцидента'
+    verbose_name_plural = 'Категории инцидента'
 
 
 @admin.register(Incident)
@@ -55,13 +67,14 @@ class IncidentAdmin(admin.ModelAdmin):
     list_per_page = INCIDENTS_PER_PAGE
     list_display = (
         'id',
+        'code',
         'pole',
         'responsible_user',
         'incident_type',
         'get_last_status',
         'incident_date',
     )
-    search_fields = ('pole__pole', 'id',)
+    search_fields = ('pole__pole', 'id', 'code')
     list_filter = (
         'incident_type',
         'responsible_user',
@@ -70,7 +83,11 @@ class IncidentAdmin(admin.ModelAdmin):
     autocomplete_fields = ('pole', 'base_station')
     list_editable = ('incident_type', 'responsible_user')
 
-    inlines = [IncidentStatusHistoryInline, EmailMessageInline]
+    inlines = [
+        IncidentCategoryRelationInline,
+        IncidentStatusHistoryInline,
+        EmailMessageInline,
+    ]
 
     def get_last_status(self, obj):
         latest = obj.status_history.order_by('-insert_date').first()
@@ -84,7 +101,7 @@ class IncidentAdmin(admin.ModelAdmin):
             'base_station',
             'responsible_user',
             'incident_type',
-        ).prefetch_related('statuses',)
+        ).prefetch_related('statuses', 'categories')
 
     readonly_fields = ('avr_contractor', 'sla_deadline', 'is_sla_expired')
 
@@ -121,8 +138,16 @@ class IncidentTypeAdmin(admin.ModelAdmin):
 
 
 @admin.register(IncidentStatus)
-class IncidentStatusdmin(admin.ModelAdmin):
+class IncidentStatusAdmin(admin.ModelAdmin):
     list_per_page = INCIDENT_STATUSES_PER_PAGE
+    list_display = ('name', 'description',)
+    list_editable = ('description',)
+    search_fields = ('name', 'description',)
+
+
+@admin.register(IncidentCategory)
+class IncidentCategoryAdmin(admin.ModelAdmin):
+    list_per_page = INCIDENT_CATEGORIES_PER_PAGE
     list_display = ('name', 'description',)
     list_editable = ('description',)
     search_fields = ('name', 'description',)

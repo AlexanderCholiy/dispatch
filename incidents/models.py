@@ -9,7 +9,11 @@ from django.utils import timezone
 from core.models import Detail
 from ts.models import AVRContractor, BaseStation, Pole
 
-from .constants import MAX_CODE_LEN, MAX_STATUS_COMMENT_LEN
+from .constants import (
+    DEFAULT_AVR_CATEGORY,
+    MAX_CODE_LEN,
+    MAX_STATUS_COMMENT_LEN,
+)
 
 User = get_user_model()
 
@@ -95,13 +99,20 @@ class Incident(models.Model):
         unique=True,
         help_text='Используется в заголовках писем'
     )
+    categories = models.ManyToManyField(
+        'IncidentCategory',
+        through='IncidentCategoryRelation',
+        blank=True,
+        related_name='incidents',
+        verbose_name='Категории инцидента',
+    )
 
     class Meta:
         verbose_name = 'инцидент'
         verbose_name_plural = 'Инциденты'
 
     def __str__(self):
-        return f'№{self.pk}'
+        return self.code or f'Внутренний номер {self.pk}'
 
     def save(self, *args, **kwargs):
         if self.is_incident_finish and not self.incident_finish_date:
@@ -109,7 +120,18 @@ class Incident(models.Model):
         elif not self.is_incident_finish:
             # Если вдруг снова открыли:
             self.incident_finish_date = None
+
+        is_new = self.pk is None
         super().save(*args, **kwargs)
+
+        if is_new and not self.categories.exists():
+            avr_category, _ = IncidentCategory.objects.get_or_create(
+                name=DEFAULT_AVR_CATEGORY
+            )
+            IncidentCategoryRelation.objects.get_or_create(
+                incident=self,
+                category=avr_category
+            )
 
     @property
     def is_sla_expired(self) -> Optional[bool]:
@@ -140,6 +162,45 @@ class Incident(models.Model):
     def avr_contractor(self) -> Optional[AVRContractor]:
         return self.pole.avr_contractor if self.pole else None
     avr_contractor.fget.short_description = 'Подрядчик по АВР'
+
+
+class IncidentCategory(Detail):
+    """Категории инцидентов"""
+    class Meta:
+        verbose_name = 'категория инцидента'
+        verbose_name_plural = 'Категории инцидентов'
+
+    def __str__(self):
+        return self.name
+
+
+class IncidentCategoryRelation(models.Model):
+    """Связь инцидента и категории"""
+    incident = models.ForeignKey(
+        Incident,
+        on_delete=models.CASCADE,
+        related_name='incident_category_links',
+        verbose_name='Инцидент'
+    )
+    category = models.ForeignKey(
+        IncidentCategory,
+        on_delete=models.CASCADE,
+        related_name='incident_category_links',
+        verbose_name='Категория'
+    )
+
+    class Meta:
+        verbose_name = 'связь инцидента и категории'
+        verbose_name_plural = 'Связи инцидентов и категорий'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['incident', 'category'],
+                name='unique_incident_category'
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.incident} - {self.category}'
 
 
 class IncidentType(Detail):
@@ -174,7 +235,6 @@ class IncidentStatus(Detail):
 
 class IncidentStatusHistory(models.Model):
     """Таблица статусов инцидентов"""
-
     incident = models.ForeignKey(
         Incident, related_name='status_history', on_delete=models.CASCADE)
     status = models.ForeignKey(

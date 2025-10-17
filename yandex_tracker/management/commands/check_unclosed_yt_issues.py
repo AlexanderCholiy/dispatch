@@ -26,7 +26,12 @@ from incidents.constants import (
     DEFAULT_NOTIFY_AVR_STATUS_NAME,
     DEFAULT_WAIT_ACCEPTANCE_STATUS_NAME,
 )
-from incidents.models import Incident, IncidentStatusHistory, IncidentType
+from incidents.models import (
+    Incident,
+    IncidentCategory,
+    IncidentStatusHistory,
+    IncidentType,
+)
 from incidents.utils import IncidentManager
 from monitoring.models import MSysModem
 from ts.models import BaseStation, Pole, PoleContractorEmail
@@ -46,7 +51,7 @@ yt_managment_logger = LoggerFactory(
 class Command(BaseCommand):
     help = 'Обновление данных в YandexTracker, с уведомлениями в Telegram.'
 
-    min_wait = 1
+    min_wait = 5
 
     cache_timer = 600
 
@@ -55,6 +60,9 @@ class Command(BaseCommand):
 
     _valid_names_of_types_cache = None
     _valid_names_of_types_cache_last_update = 0
+
+    _valid_names_of_categories_cache = None
+    _valid_names_of_categories_cache_last_update = 0
 
     _usernames_in_db_cache = None
     _usernames_in_db_cache_last_update = 0
@@ -136,6 +144,21 @@ class Command(BaseCommand):
             )
             self._valid_names_of_types_cache_last_update = time.time()
         return self._valid_names_of_types_cache
+
+    def _get_valid_names_of_categories_from_cache(self):
+        if (
+            self._valid_names_of_categories_cache is None
+            or (
+                time.time()
+                - self._valid_names_of_categories_cache_last_update
+                > self.cache_timer
+            )
+        ):
+            self._valid_names_of_categories_cache = list(
+                IncidentCategory.objects.all().values_list('name', flat=True)
+            )
+            self._valid_names_of_categories_cache_last_update = time.time()
+        return self._valid_names_of_categories_cache
 
     def _get_usernames_in_db_from_cache(self):
         if (
@@ -226,9 +249,15 @@ class Command(BaseCommand):
             yt_manager
             .select_local_field(yt_manager.type_of_incident_local_field_id)
         )
+        category_field: dict = (
+            yt_manager.select_local_field(yt_manager.category_local_field_id)
+        )
 
         pole_names_sorted = self._get_pole_names_sorted_from_cache()
         valid_names_of_types = self._get_valid_names_of_types_from_cache()
+        valid_names_of_categories = (
+            self._get_valid_names_of_categories_from_cache()
+        )
         usernames_in_db = self._get_usernames_in_db_from_cache()
         all_base_stations = self._get_all_base_stations_from_cache()
 
@@ -250,6 +279,8 @@ class Command(BaseCommand):
                     yt_users=yt_users,
                     type_of_incident_field=type_of_incident_field,
                     valid_names_of_types=valid_names_of_types,
+                    category_field=category_field,
+                    valid_names_of_categories=valid_names_of_categories,
                     usernames_in_db=usernames_in_db,
                     pole_names_sorted=pole_names_sorted,
                     all_base_stations=all_base_stations,
@@ -274,6 +305,8 @@ class Command(BaseCommand):
         yt_users: dict,
         type_of_incident_field: dict,
         valid_names_of_types: list[str],
+        category_field: dict,
+        valid_names_of_categories: list[str],
         usernames_in_db: list[str],
         pole_names_sorted: list[str],
         all_base_stations: dict[tuple[str, Optional[str]], BaseStation],
@@ -323,6 +356,7 @@ class Command(BaseCommand):
             'responsible_user'
         ).prefetch_related(
             'statuses',
+            'categories',
             'base_station__operator',
             Prefetch(
                 'pole__pole_emails',
@@ -403,6 +437,8 @@ class Command(BaseCommand):
                     yt_users=yt_users,
                     type_of_incident_field=type_of_incident_field,
                     valid_names_of_types=valid_names_of_types,
+                    category_field=category_field,
+                    valid_names_of_categories=valid_names_of_categories,
                     usernames_in_db=usernames_in_db,
                     pole_names_sorted=pole_names_sorted,
                     all_base_stations=all_base_stations,
