@@ -239,7 +239,11 @@ def users_list(request: HttpRequest) -> HttpResponse:
     query = request.GET.get('q', '').strip()
     role_filter = request.GET.get('role', '').strip().lower()
 
-    base_qs = User.objects.exclude(role=Roles.GUEST).order_by('username')
+    base_qs = (
+        User.objects
+        .exclude(role=Roles.GUEST).exclude(is_active=False)
+        .order_by('username')
+    )
 
     if role_filter:
         base_qs = base_qs.filter(role=role_filter)
@@ -281,7 +285,7 @@ def users_list(request: HttpRequest) -> HttpResponse:
 @login_required
 def user_detail(request: HttpRequest, user_id):
     """Подробная информация о пользователе со статистикой."""
-    user = get_object_or_404(User, pk=user_id)
+    user = get_object_or_404(User, pk=user_id, is_active=True)
 
     sla_percentage = 0
 
@@ -325,7 +329,7 @@ def user_detail(request: HttpRequest, user_id):
 
 @login_required
 def work_schedule(request: HttpRequest, user_id: int):
-    user = get_object_or_404(User, pk=user_id)
+    user = get_object_or_404(User, pk=user_id, is_active=True)
 
     if (
         not request.user.is_superuser
