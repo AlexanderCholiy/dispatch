@@ -46,7 +46,6 @@ def tasks_in_threads(
     max_workers = min(len(tasks), cpu_count * threads_multiplier)
 
     completed = 0
-    iteration = 0
     total = len(tasks)
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -67,11 +66,6 @@ def tasks_in_threads(
             except Exception as e:
                 logger.exception(
                     f'Ошибка при выполнении задачи {task_name}: {e}'
-                )
-            finally:
-                iteration += 1
-                PrettyPrint.progress_bar_debug(
-                    iteration, total, 'Выполнение задач:'
                 )
 
         logger.debug(

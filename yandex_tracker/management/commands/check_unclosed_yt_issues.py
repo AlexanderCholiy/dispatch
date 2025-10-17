@@ -25,6 +25,7 @@ from incidents.constants import (
     DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_NAME,
     DEFAULT_NOTIFY_AVR_STATUS_NAME,
     DEFAULT_WAIT_ACCEPTANCE_STATUS_NAME,
+    DEFAULT_AVR_CATEGORY,
 )
 from incidents.models import (
     Incident,
@@ -154,6 +155,7 @@ class Command(BaseCommand):
                 > self.cache_timer
             )
         ):
+            IncidentCategory.objects.get_or_create(name=DEFAULT_AVR_CATEGORY)
             self._valid_names_of_categories_cache = list(
                 IncidentCategory.objects.all().values_list('name', flat=True)
             )
