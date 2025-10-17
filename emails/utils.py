@@ -18,6 +18,7 @@ from core.constants import (
 )
 from core.loggers import LoggerFactory
 from core.models import Attachment
+from incidents.models import Incident
 
 from .models import (
     EmailAttachment,
@@ -35,6 +36,28 @@ incident_manager_logger = LoggerFactory(
 
 
 class EmailManager:
+
+    @staticmethod
+    def is_nth_email_after_incident_close(
+        incident: Incident, n: int
+    ) -> bool:
+        """Пришло ли n-ое письмо после закрытия инцидента."""
+        if (
+            not incident.is_incident_finish
+            or not incident.incident_finish_date
+        ):
+            return False
+
+        emails_after_close = incident.email_messages.filter(
+            email_date__gt=incident.incident_finish_date,
+            folder=EmailFolder.get_inbox()
+        ).order_by('email_date')
+
+        try:
+            emails_after_close[n - 1]
+            return True
+        except IndexError:
+            return False
 
     @staticmethod
     @transaction.atomic

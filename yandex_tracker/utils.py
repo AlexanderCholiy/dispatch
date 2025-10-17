@@ -17,7 +17,11 @@ from core.utils import Config
 from core.wraps import safe_request
 from emails.models import EmailMessage
 from emails.utils import EmailManager
-from incidents.constants import DEFAULT_STATUS_DESC, DEFAULT_STATUS_NAME
+from incidents.constants import (
+    DEFAULT_STATUS_DESC,
+    DEFAULT_STATUS_NAME,
+    MAX_EMAILS_ON_CLOSED_INCIDENTS,
+)
 from incidents.models import Incident, IncidentStatus, IncidentStatusHistory
 
 from .constants import (
@@ -49,6 +53,7 @@ yt_manager_config = {
     'YT_AVR_NAME_GLOBAL_FIELD_ID': os.getenv('YT_AVR_NAME_GLOBAL_FIELD_ID'),  # noqa: E501
     'YT_MONITORING_GLOBAL_FIELD_ID': os.getenv('YT_MONITORING_GLOBAL_FIELD_ID'),  # noqa: E501
     'YT_TYPE_OF_INCIDENT_LOCAL_FIELD_ID': os.getenv('YT_TYPE_OF_INCIDENT_LOCAL_FIELD_ID'),  # noqa: E501
+    'YT_CATEGORY_LOCAL_FIELD_ID': os.getenv('YT_CATEGORY_LOCAL_FIELD_ID'),  # noqa: E501
     'YT_ON_GENERATION_STATUS_KEY': os.getenv('YT_ON_GENERATION_STATUS_KEY'),  # noqa: E501
     'YT_NOTIFY_OPERATOR_ISSUE_IN_WORK_STATUS_KEY': os.getenv('YT_NOTIFY_OPERATOR_ISSUE_IN_WORK_STATUS_KEY'),  # noqa: E501
     'YT_NOTIFIED_OPERATOR_ISSUE_IN_WORK_STATUS_KEY': os.getenv('YT_NOTIFIED_OPERATOR_ISSUE_IN_WORK_STATUS_KEY'),  # noqa: E501
@@ -109,6 +114,7 @@ class YandexTrackerManager:
         avr_name_global_field_id: str,
         monitoring_global_field_id: str,
         type_of_incident_local_field_id: str,
+        category_local_field_id: str,
         on_generation_status_key: str,
         notify_op_issue_in_work_status_key: str,
         notified_op_issue_in_work_status_key: str,
@@ -137,6 +143,8 @@ class YandexTrackerManager:
         self.monitoring_global_field_id = monitoring_global_field_id
 
         self.type_of_incident_local_field_id = type_of_incident_local_field_id
+        self.category_local_field_id = category_local_field_id
+
         self.notify_op_issue_in_work_status_key = (
             notify_op_issue_in_work_status_key)
         self.notified_op_issue_in_work_status_key = (
@@ -773,6 +781,44 @@ class YandexTrackerManager:
             'key': key,
         }
 
+    def _check_yt_issue(self, issue: dict, email_incident: EmailMessage):
+        incident = email_incident.email_incident
+        update_incident = False
+
+        comment_for_again_open = (
+            'Инцидент автоматически открыт повторно: получено '
+            f'{MAX_EMAILS_ON_CLOSED_INCIDENTS}-е письмо после его закрытия.'
+        )
+
+        if not incident.code or incident.code != issue['key']:
+            incident.code = issue['key']
+            update_incident = True
+
+        # Открываем закрытый инцидент, если пришло более N сообщений:
+        if EmailManager.is_nth_email_after_incident_close(
+            incident, MAX_EMAILS_ON_CLOSED_INCIDENTS
+        ):
+            incident.is_incident_finish = False
+
+            update_incident = True
+
+            self.update_issue_status(
+                issue['key'],
+                self.in_work_status_key,
+                comment_for_again_open,
+            )
+
+        if update_incident:
+            incident.save()
+
+        # if (
+        #     incident.is_incident_finish
+        #     and email_incident.folder == EmailFolder.get_inbox()
+        # ):
+        #     yt_emails.auto_reply_incident_is_closed(
+        #         issue, email_incident
+        #     )
+
     def add_incident_to_yandex_tracker(
         self,
         email_incident: EmailMessage,
@@ -810,14 +856,7 @@ class YandexTrackerManager:
                 temp_files=temp_files,
             )
 
-            incident = email_incident.email_incident
-            incident.code = issue['key']
-            incident.save()
-
-            # if incident.is_incident_finish:
-            #     yt_emails.auto_reply_incident_is_closed(
-            #         issue, email_incident
-            #     )
+            self._check_yt_issue(issue, email_incident)
 
         # Инцидент отсутствует в YandexTracker, но по нему пришло уточнение,
         # поэтому надо восстановить полностью цепочку писем для инцидента:
@@ -846,14 +885,7 @@ class YandexTrackerManager:
                 temp_files=temp_files,
             )
 
-            incident = email_incident.email_incident
-            incident.code = issue['key']
-            incident.save()
-
-            # if incident.is_incident_finish:
-            #     yt_emails.auto_reply_incident_is_closed(
-            #         issue, email_incident
-            #     )
+            self._check_yt_issue(issue, email_incident)
 
             for email in all_email_incident[1:]:
                 self.add_issue_email_comment(email, issue)
@@ -870,6 +902,7 @@ class YandexTrackerManager:
                     data_for_yt['base_station_number']
                 )
                 key: str = issue['key']
+
                 # Повторная обработка первого письма:
                 if (
                     is_first_email
@@ -896,14 +929,7 @@ class YandexTrackerManager:
                 else:
                     self.add_issue_email_comment(email_incident, issue)
 
-                # if email_incident.email_incident.is_incident_finish:
-                #     yt_emails.auto_reply_incident_is_closed(
-                #         issue, email_incident
-                #     )
-
-            incident = email_incident.email_incident
-            incident.code = key
-            incident.save()
+                self._check_yt_issue(issue, email_incident)
 
     def filter_issues(
         self, yt_filter: dict, days_ago: int = 7, chunk_days: int = 5
@@ -1067,6 +1093,8 @@ class YandexTrackerManager:
         issue: dict,
         type_of_incident_field: dict,
         types_of_incident: Optional[str],
+        category_field: dict,
+        category: Optional[list[str]],
         email_datetime: Optional[datetime],
         sla_deadline: Optional[datetime],
         is_sla_expired: Optional[str],
@@ -1079,6 +1107,7 @@ class YandexTrackerManager:
         issue_key = issue['key']
 
         type_of_incident_field_key = type_of_incident_field['id']
+        category_filed_key = category_field['id']
 
         valid_email_datetime = email_datetime.isoformat() if isinstance(
             email_datetime, datetime) else None
@@ -1087,6 +1116,7 @@ class YandexTrackerManager:
 
         payload = {
             type_of_incident_field_key: types_of_incident,
+            category_filed_key: category,
             self.sla_deadline_global_field_id: valid_sla_deadline,
             self.is_sla_expired_global_field_id: is_sla_expired,
             self.email_datetime_global_field_id: valid_email_datetime,
@@ -1301,6 +1331,7 @@ yt_manager = YandexTrackerManager(
     avr_name_global_field_id=yt_manager_config['YT_AVR_NAME_GLOBAL_FIELD_ID'],  # noqa: E501
     monitoring_global_field_id=yt_manager_config['YT_MONITORING_GLOBAL_FIELD_ID'],  # noqa: E501
     type_of_incident_local_field_id=yt_manager_config['YT_TYPE_OF_INCIDENT_LOCAL_FIELD_ID'],  # noqa: E501
+    category_local_field_id=yt_manager_config['YT_CATEGORY_LOCAL_FIELD_ID'],  # noqa: E501
     on_generation_status_key=yt_manager_config['YT_ON_GENERATION_STATUS_KEY'],
     notify_op_issue_in_work_status_key=yt_manager_config['YT_NOTIFY_OPERATOR_ISSUE_IN_WORK_STATUS_KEY'],  # noqa: E501
     notified_op_issue_in_work_status_key=yt_manager_config['YT_NOTIFIED_OPERATOR_ISSUE_IN_WORK_STATUS_KEY'],  # noqa: E501

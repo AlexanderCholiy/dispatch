@@ -42,6 +42,7 @@ class IncidentSerializer(serializers.ModelSerializer):
     incident_datetime = serializers.SerializerMethodField()
     incident_finish_datetime = serializers.SerializerMethodField()
     operator_group = serializers.SerializerMethodField()
+    categories = serializers.SerializerMethodField()
 
     class Meta:
         model = Incident
@@ -68,11 +69,13 @@ class IncidentSerializer(serializers.ModelSerializer):
             'vendor',
             'vendor_emails',
             'registration_method',
+            'categories',
         )
 
     def get_registration_method(self, obj: Incident):
         return 'Автоматически из почты' if obj.is_auto_incident else (
-            'Вручную через диспетчера')
+            'Вручную через диспетчера'
+        )
 
     def get_last_status(self, obj: Incident):
         if (
@@ -206,3 +209,11 @@ class IncidentSerializer(serializers.ModelSerializer):
         if not obj.incident_finish_date:
             return
         return conversion_utc_datetime(obj.incident_finish_date)
+
+    def get_categories(self, obj: Incident):
+        categories = obj.categories.all()
+        if categories:
+            return ', '.join(set(
+                [cat.name for cat in categories]
+            ))
+        return

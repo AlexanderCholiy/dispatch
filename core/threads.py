@@ -4,6 +4,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from logging import Logger
 from typing import Callable, Optional
 
+from core.pretty_print import PrettyPrint
+
 
 def get_task_name(task: Callable) -> str:
     """Возвращает короткое имя задачи для логирования."""
@@ -43,11 +45,15 @@ def tasks_in_threads(
     cpu_count = os.cpu_count() or 1
     max_workers = min(len(tasks), cpu_count * threads_multiplier)
 
+    completed = 0
+    iteration = 0
+    total = len(tasks)
+
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_name = {}
+
         for task in tasks:
             task_name = get_task_name(task)
-            logger.debug(f'Запуск задачи: {task_name}')
             future = executor.submit(task)
             future_to_name[future] = task_name
 
@@ -55,10 +61,19 @@ def tasks_in_threads(
             task_name = future_to_name[future]
             try:
                 future.result()
-                logger.debug(f'Задача завершена успешно: {task_name}')
+                completed += 1
             except KeyboardInterrupt:
                 raise
             except Exception as e:
                 logger.exception(
                     f'Ошибка при выполнении задачи {task_name}: {e}'
                 )
+            finally:
+                iteration += 1
+                PrettyPrint.progress_bar_debug(
+                    iteration, total, 'Выполнение задач:'
+                )
+
+        logger.debug(
+            f'Выполнено {completed}/{total} задач'
+        )

@@ -7,7 +7,13 @@ from typing import Callable, Optional, TypedDict
 from dateutil import parser
 from django.db import models, transaction
 
-from incidents.models import Incident, IncidentType
+from incidents.constants import DEFAULT_AVR_CATEGORY
+from incidents.models import (
+    Incident,
+    IncidentCategory,
+    IncidentCategoryRelation,
+    IncidentType,
+)
 from monitoring.models import DeviceStatus, DeviceType
 from ts.constants import UNDEFINED_CASE
 from ts.models import AVRContractor, BaseStation, BaseStationOperator, Pole
@@ -260,7 +266,7 @@ def check_yt_type_of_incident(
     issue: dict,
     type_of_incident_field: Optional[dict],
     valid_names_of_types: list[str],
-) -> bool:
+) -> tuple[bool, str]:
     """
     Проверяет корректность типа инцидента в задаче Yandex Tracker.
 
@@ -288,6 +294,40 @@ def check_yt_type_of_incident(
         )
 
     return True, f'Тип инцидента "{type_of_incident}" валиден.'
+
+
+def check_yt_category(
+    issue: dict,
+    category_field: Optional[dict],
+    valid_names_of_category: list[str],
+) -> tuple[bool, str]:
+    """
+    Проверяет корректность категории инцидента в задаче Yandex Tracker.
+
+    Returns:
+        (is_valid, message):
+            - is_valid: bool — результат проверки.
+            - message: str — описание результата (успех или ошибка).
+    """
+    category_field_key = (
+        category_field['id']) if category_field else None
+    category: Optional[list[str]] = issue.get(
+        category_field_key
+    ) if category_field_key else None
+
+    if not category:
+        return True, 'Выставляем значение по умолчанию'
+
+    if (
+        category
+        and not set(category).issubset(valid_names_of_category)
+    ):
+        return False, (
+            f'Неверно указана категория инцидента ({', '.join(category)}). '
+            f'Допустимые значения: {", ".join(valid_names_of_category)}.'
+        )
+
+    return True, 'Категории инцидента валидны.'
 
 
 def check_yt_datetime_incident(
@@ -488,6 +528,8 @@ def check_yt_incident_data(
     yt_users: dict,
     type_of_incident_field: dict,
     valid_names_of_types: list[str],
+    category_field: dict,
+    valid_names_of_categories: list[str],
     usernames_in_db: list[str],
     pole_names_sorted: list[str, Pole],
     all_base_stations: dict[tuple[str, Optional[str]], BaseStation],
@@ -529,6 +571,9 @@ def check_yt_incident_data(
 
     type_of_incident_field_key = type_of_incident_field['id']
     type_of_incident: Optional[str] = issue.get(type_of_incident_field_key)
+
+    category_field_key = category_field['id']
+    category: Optional[list[str]] = issue.get(category_field_key)
 
     # Синхронизируем актуальность заявки в базе, код заявки:
     if incident.is_incident_finish or incident.code != issue_key:
@@ -596,6 +641,81 @@ def check_yt_incident_data(
             incident_comment
         )
 
+    # Проверка, что категория валидна и если ничего не выбрано то АВР:
+    is_valid_category, incident_comment = check_yt_category(
+        issue, category_field, valid_names_of_categories
+    )
+
+    # Синхронизируем категорию инцидента в базе:
+    if is_valid_category:
+        if category:
+            current_categories = [
+                cat.name for cat in incident.categories.all()
+            ]
+
+            if set(category) != set(current_categories):
+                cat_2_del = (
+                    set(current_categories) - set(category)
+                )
+                IncidentCategoryRelation.objects.filter(
+                    incident=incident,
+                    category__name__in=cat_2_del
+                ).delete()
+
+                for cat in category:
+                    inc_cat, _ = IncidentCategory.objects.get_or_create(
+                        name=cat
+                    )
+                    IncidentCategoryRelation.objects.get_or_create(
+                        incident=incident,
+                        category=inc_cat
+                    )
+        else:
+            # Выставляем значение по умолчанию:
+            inc_cat, _ = IncidentCategory.objects.get_or_create(
+                name=DEFAULT_AVR_CATEGORY
+            )
+            IncidentCategoryRelation.objects.get_or_create(
+                incident=incident,
+                category=inc_cat
+            )
+            update_incident_data_func = partial(
+                yt_manager.update_incident_data,
+                issue=issue,
+                type_of_incident_field=type_of_incident_field,
+                types_of_incident=type_of_incident,
+                category_field=category_field,
+                category=[DEFAULT_AVR_CATEGORY],
+                email_datetime=incident.incident_date,
+                sla_deadline=incident.sla_deadline,
+                is_sla_expired=yt_manager.get_sla_status(incident),
+                pole_number=pole_number,
+                base_station_number=base_station_number,
+                avr_name=issue.get(yt_manager.avr_name_global_field_id),
+                operator_name=issue.get(
+                    yt_manager.operator_name_global_field_name
+                ),
+                monitoring_data=issue.get(
+                    yt_manager.monitoring_global_field_id
+                )
+            )
+
+            logger.debug(
+                f'Ошибка {issue_key}: не указана ни одна категория инцидента.'
+            )
+
+            return False, update_incident_data_func, update_issue_status_func
+    elif (
+        not is_valid_category
+        and status_key != yt_manager.error_status_key
+    ):
+        update_issue_status_func = partial(
+            yt_manager.update_issue_status,
+            issue_key,
+            yt_manager.error_status_key,
+            incident_comment
+        )
+
     # Проверка даты и времени регистрации инциденты:
     is_valid_incident_datetime = check_yt_datetime_incident(
         yt_manager, issue, incident)
@@ -625,6 +745,8 @@ def check_yt_incident_data(
             issue=issue,
             type_of_incident_field=type_of_incident_field,
             types_of_incident=type_of_incident,
+            category_field=category_field,
+            category=category,
             email_datetime=incident.incident_date,
             sla_deadline=incident.sla_deadline,
             is_sla_expired=yt_manager.get_sla_status(incident),
@@ -699,6 +821,8 @@ def check_yt_incident_data(
             issue=issue,
             type_of_incident_field=type_of_incident_field,
             types_of_incident=type_of_incident,
+            category_field=category_field,
+            category=category,
             email_datetime=incident.incident_date,
             sla_deadline=incident.sla_deadline,
             is_sla_expired=yt_manager.get_sla_status(incident),
@@ -797,6 +921,7 @@ def check_yt_incident_data(
         (is_valid_operator_bs, 'оператор базовой станции'),
         (is_valid_incident_datetime, 'дата и время инцидента'),
         (is_valid_type_of_incident, 'тип инцидента'),
+        (is_valid_category, 'категория инцидента'),
         (is_valid_incident_deadline, 'дедлайн SLA'),
         (is_valid_expired_incident, 'статус SLA'),
         (is_valid_pole_number, 'шифр опоры'),
@@ -816,6 +941,8 @@ def check_yt_incident_data(
             types_of_incident=(
                 incident.incident_type.name
             ) if incident.incident_type else None,
+            category_field=category_field,
+            category=category if is_valid_category else [DEFAULT_AVR_CATEGORY],
             email_datetime=incident.incident_date,
             sla_deadline=incident.sla_deadline,
             is_sla_expired=yt_manager.get_sla_status(incident),
