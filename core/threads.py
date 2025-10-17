@@ -4,8 +4,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from logging import Logger
 from typing import Callable, Optional
 
-from core.pretty_print import PrettyPrint
-
 
 def get_task_name(task: Callable) -> str:
     """Возвращает короткое имя задачи для логирования."""
