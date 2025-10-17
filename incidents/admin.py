@@ -143,6 +143,7 @@ class IncidentStatusAdmin(admin.ModelAdmin):
     list_display = ('name', 'description',)
     list_editable = ('description',)
     search_fields = ('name', 'description',)
+    ordering = ('name',)
 
 
 @admin.register(IncidentCategory)
@@ -151,3 +152,4 @@ class IncidentCategoryAdmin(admin.ModelAdmin):
     list_display = ('name', 'description',)
     list_editable = ('description',)
     search_fields = ('name', 'description',)
+    ordering = ('name',)
