@@ -13,6 +13,7 @@ MAX_CODE_LEN = 32
 INCIDENTS_DATA_DIR = os.path.join(settings.BASE_DIR, 'data', 'incidents')
 INCIDENT_TYPES_FILE = os.path.join(INCIDENTS_DATA_DIR, 'types.xlsx')
 INCIDENT_STATUSES_FILE = os.path.join(INCIDENTS_DATA_DIR, 'statuses.xlsx')
+INCIDENT_CATEGORIES_FILE = os.path.join(INCIDENTS_DATA_DIR, 'categories.xlsx')
 
 # n-ое письмо после которого закрытая заявка, становится сново открытой:
 MAX_EMAILS_ON_CLOSED_INCIDENTS = 2
@@ -68,5 +69,3 @@ DEFAULT_NOTIFIED_AVR_STATUS_DESC = 'Отправили письмо с инци�
 
 # В Трекере должно быть также:
 DEFAULT_AVR_CATEGORY = 'АВР'
-DEFAULT_RVR_CATEGORY = 'РВР'
-DEFAULT_DGU_CATEGORY = 'ДГУ'
