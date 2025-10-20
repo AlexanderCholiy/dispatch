@@ -25,6 +25,7 @@ class IncidentViewSet(viewsets.ReadOnlyModelViewSet):
     ).prefetch_related(
         'base_station__operator',
         'statuses',
+        'categories',
         Prefetch(
             'pole__pole_emails',
             queryset=PoleContractorEmail.objects.select_related(
