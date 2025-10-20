@@ -8,7 +8,14 @@ from incidents.models import Incident
 
 class IncidentFilter(django_filters.FilterSet):
     incident_date = django_filters.DateFromToRangeFilter()
-    last_month = django_filters.BooleanFilter(method='filter_last_month')
+    last_month = django_filters.BooleanFilter(
+        method='filter_last_month',
+        label='Последний месяц',
+        help_text=(
+            'Возвращает инциденты с первого числа предыдущего месяца по '
+            'сегодняшний день'
+        )
+    )
 
     class Meta:
         model = Incident

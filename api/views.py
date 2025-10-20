@@ -1,12 +1,13 @@
 from django.db.models import Prefetch
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import permissions, viewsets
+from rest_framework import permissions, viewsets, filters
 
 from incidents.models import Incident, IncidentStatusHistory
 from ts.models import PoleContractorEmail
 
 from .filters import IncidentFilter
 from .serializers import IncidentSerializer
+from .pagination import IncidentPagination
 
 
 class IncidentViewSet(viewsets.ReadOnlyModelViewSet):
@@ -41,9 +42,12 @@ class IncidentViewSet(viewsets.ReadOnlyModelViewSet):
             ),
             to_attr='prefetched_statuses'
         ),
-    ).order_by('-incident_date', '-id')
+    )
 
     serializer_class = IncidentSerializer
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
-    filter_backends = (DjangoFilterBackend,)
+    permission_classes = (permissions.AllowAny,)
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
     filterset_class = IncidentFilter
+    pagination_class = IncidentPagination
+    ordering_fields = ('incident_date', 'id')
+    ordering = ('-incident_date', '-id')
