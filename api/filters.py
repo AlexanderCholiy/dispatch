@@ -6,7 +6,7 @@ from django.utils import timezone
 from incidents.models import Incident
 
 
-class IncidentFilter(django_filters.FilterSet):
+class IncidentReportFilter(django_filters.FilterSet):
     incident_date = django_filters.DateFromToRangeFilter()
     last_month = django_filters.BooleanFilter(
         method='filter_last_month',

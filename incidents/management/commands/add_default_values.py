@@ -9,6 +9,7 @@ from core.pretty_print import PrettyPrint
 from core.wraps import timer
 from incidents.constants import (
     DEFAULT_AVR_CATEGORY,
+    DEFAULT_RVR_CATEGORY,
     INCIDENT_CATEGORIES_FILE,
     INCIDENT_STATUSES_FILE,
     INCIDENT_TYPES_FILE,
@@ -138,9 +139,8 @@ class Command(BaseCommand):
                     description=description,
                 )
 
-        IncidentCategory.objects.get_or_create(
-            name=DEFAULT_AVR_CATEGORY
-        )
+        for category_name in (DEFAULT_AVR_CATEGORY, DEFAULT_RVR_CATEGORY):
+            IncidentCategory.objects.get_or_create(name=category_name)
 
         valid_category_ids = set(
             IncidentCategory.objects.values_list('id', flat=True)

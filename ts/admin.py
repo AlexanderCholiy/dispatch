@@ -9,15 +9,19 @@ from .constants import (
     AVR_CONTRACTORS_PER_PAGE,
     BASE_STATION_OPERATORS_PER_PAGE,
     BASE_STATIONS_PER_PAGE,
+    CONTRACTOR_EMAILS_PER_PAGE,
     POLES_PER_PAGE,
+    REGIONS_PER_PAGE,
 )
 from .models import (
     AVRContractor,
     BaseStation,
     BaseStationOperator,
+    ContractorEmail,
     Pole,
     PoleContractorEmail,
     PoleContractorPhone,
+    Region,
 )
 
 admin.site.empty_value_display = EMPTY_VALUE
@@ -45,17 +49,19 @@ class PoleAdmin(admin.ModelAdmin):
         'bs_name',
         'address',
         'infrastructure_company',
-        'region_ru',
+        'region',
     )
     search_fields = ('pole', 'bs_name', 'address',)
-    list_filter = ('infrastructure_company', 'region_ru')
+    list_filter = ('infrastructure_company', 'region')
     inlines = [PoleEmailsInline, PolePhonesInline]
+    ordering = ('pole', 'bs_name',)
+    autocomplete_fields = ('region',)
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return (
             qs
-            .select_related('avr_contractor',)
+            .select_related('avr_contractor', 'region')
             .prefetch_related('avr_emails', 'avr_phones')
         )
 
@@ -95,9 +101,9 @@ class AVRContractorAdmin(admin.ModelAdmin):
     def all_emails(self, obj):
         emails = obj.contractor_emails.all().values_list(
             'email__email',
-            'pole__region_ru',
+            'pole__region__region_ru',
             'pole',
-        ).distinct().order_by('pole__region_ru', 'email__email')
+        ).distinct().order_by('pole__region__region_ru', 'email__email')
 
         if not emails:
             return EMPTY_VALUE
@@ -121,7 +127,7 @@ class AVRContractorAdmin(admin.ModelAdmin):
     def all_phones(self, obj):
         phones = obj.contractor_phones.all().values_list(
             'phone__phone',
-            'pole__region_ru',
+            'pole__region__region_ru',
             'pole',
         )
 
@@ -130,7 +136,7 @@ class AVRContractorAdmin(admin.ModelAdmin):
 
         formatted = [
             f'{phone} ({region})' if region else f'{phone} ({EMPTY_VALUE})'
-            for phone, region in phones
+            for phone, region, _ in phones
         ]
         return ', '.join(formatted)
 
@@ -154,3 +160,19 @@ class OperatorTSAdmin(admin.ModelAdmin):
     search_fields = ('operator_name', 'operator_group',)
     ordering = ('operator_name',)
     list_filter = ('operator_group',)
+
+
+@admin.register(ContractorEmail)
+class ContractorEmailAdmin(admin.ModelAdmin):
+    list_per_page = CONTRACTOR_EMAILS_PER_PAGE
+    search_fields = ('email',)
+    ordering = ('email',)
+
+
+@admin.register(Region)
+class RegionAdmin(admin.ModelAdmin):
+    list_per_page = REGIONS_PER_PAGE
+    list_display = ('region_en', 'region_ru',)
+    search_fields = ('region_en', 'region_ru',)
+    ordering = ('region_en',)
+    autocomplete_fields = ('rvr_email',)

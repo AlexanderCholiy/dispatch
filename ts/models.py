@@ -19,6 +19,11 @@ def get_default_contractor():
     return contractor.pk
 
 
+def get_default_region():
+    region, _ = Region.objects.get_or_create(region_en='Moscow')
+    return region.pk
+
+
 class PoleContractorEmail(models.Model):
     pole = models.ForeignKey(
         'Pole',
@@ -34,8 +39,8 @@ class PoleContractorEmail(models.Model):
 
     class Meta:
         unique_together = ('pole', 'contractor', 'email')
-        verbose_name = 'Email подрядчика для опоры'
-        verbose_name_plural = 'Emails подрядчиков для опор'
+        verbose_name = 'АВР email подрядчика для опоры'
+        verbose_name_plural = 'АВР emails подрядчиков для опор'
 
 
 class PoleContractorPhone(models.Model):
@@ -53,8 +58,8 @@ class PoleContractorPhone(models.Model):
 
     class Meta:
         unique_together = ('pole', 'contractor', 'phone')
-        verbose_name = 'Телефон подрядчика для опоры'
-        verbose_name_plural = 'Телефоны подрядчиков для опор'
+        verbose_name = 'АВР телефон подрядчика для опоры'
+        verbose_name_plural = 'АВР телефоны подрядчиков для опор'
 
 
 class ContractorEmail(models.Model):
@@ -75,7 +80,7 @@ class ContractorEmail(models.Model):
 
 
 class ContractorPhone(models.Model):
-    """Телефон подрядчика."""
+    """Телефон подрядчика"""
     phone = models.CharField(
         'Телефон',
         max_length=MAX_PHONE_LEN,
@@ -106,6 +111,35 @@ class AVRContractor(models.Model):
 
     def __str__(self):
         return self.contractor_name
+
+
+class Region(models.Model):
+    region_en = models.CharField(
+        max_length=MAX_ST_DESCRIPTION,
+        verbose_name='Регион',
+        unique=True
+    )
+    region_ru = models.CharField(
+        max_length=MAX_ST_DESCRIPTION,
+        null=True,
+        blank=True,
+        verbose_name='Регион (ru)'
+    )
+    rvr_email = models.ForeignKey(
+        ContractorEmail,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='regions',
+        verbose_name='Email подрядчика по РВР',
+    )
+
+    class Meta:
+        verbose_name = 'регион'
+        verbose_name_plural = 'Регионы'
+
+    def __str__(self):
+        return self.region_ru or self.region_en
 
 
 class Pole(models.Model):
@@ -148,17 +182,12 @@ class Pole(models.Model):
         blank=True,
         verbose_name='Высота опоры'
     )
-    region = models.CharField(
-        max_length=MAX_ST_DESCRIPTION,
-        null=True,
-        blank=True,
-        verbose_name='Регион'
-    )
-    region_ru = models.CharField(
-        max_length=MAX_ST_DESCRIPTION,
-        null=True,
-        blank=True,
-        verbose_name='Регион (ru)'
+    region = models.ForeignKey(
+        Region,
+        on_delete=models.PROTECT,
+        related_name='poles',
+        verbose_name='Регион',
+        default=get_default_region,
     )
     address = models.CharField(
         max_length=MAX_LG_DESCRIPTION,
@@ -189,13 +218,13 @@ class Pole(models.Model):
         'ContractorEmail',
         through='PoleContractorEmail',
         related_name='poles',
-        verbose_name='Emails подрядчиков на опоре'
+        verbose_name='Emails подрядчиков АВР на опоре'
     )
     avr_phones = models.ManyToManyField(
         'ContractorPhone',
         through='PoleContractorPhone',
         related_name='poles',
-        verbose_name='Телефоны подрядчиков на опоре'
+        verbose_name='Телефоны подрядчиков АВР на опоре'
     )
 
     class Meta:
@@ -210,6 +239,9 @@ class Pole(models.Model):
 
     @staticmethod
     def add_default_value():
+        region, _ = Region.objects.get_or_create(
+            region_en='Moscow'
+        )
         pole, _ = Pole.objects.get_or_create(
             site_id=UNDEFINED_ID,
             defaults={
@@ -219,7 +251,7 @@ class Pole(models.Model):
                 'pole_latitude': None,
                 'pole_longtitude': None,
                 'pole_height': None,
-                'region': None,
+                'region': region,
                 'address': None,
                 'infrastructure_company': None,
                 'anchor_operator': None,

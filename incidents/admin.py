@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.http import HttpRequest
 from django.urls import reverse
 from django.utils.html import format_html
 
@@ -62,6 +63,22 @@ class IncidentCategoryRelationInline(admin.TabularInline):
     verbose_name_plural = 'Категории инцидента'
 
 
+class IncidentCategoryFilter(admin.SimpleListFilter):
+    title = 'Категория инцидента'
+    parameter_name = 'category'
+
+    def lookups(self, request: HttpRequest, model_admin):
+        return [
+            (c.id, c.name)
+            for c in IncidentCategory.objects.all().order_by('name')
+        ]
+
+    def queryset(self, request: HttpRequest, queryset):
+        if self.value():
+            return queryset.filter(categories__id=self.value())
+        return queryset
+
+
 @admin.register(Incident)
 class IncidentAdmin(admin.ModelAdmin):
     list_per_page = INCIDENTS_PER_PAGE
@@ -79,6 +96,7 @@ class IncidentAdmin(admin.ModelAdmin):
         'incident_type',
         'responsible_user',
         'is_incident_finish',
+        IncidentCategoryFilter,
     )
     autocomplete_fields = ('pole', 'base_station')
     list_editable = ('incident_type', 'responsible_user')

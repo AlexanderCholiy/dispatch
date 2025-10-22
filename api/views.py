@@ -1,16 +1,17 @@
 from django.db.models import Prefetch
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import permissions, viewsets, filters
+from rest_framework import filters, permissions, viewsets
+from rest_framework.request import Request
 
 from incidents.models import Incident, IncidentStatusHistory
 from ts.models import PoleContractorEmail
 
-from .filters import IncidentFilter
-from .serializers import IncidentSerializer
-from .pagination import IncidentPagination
+from .filters import IncidentReportFilter
+from .pagination import IncidentReportPagination
+from .serializers import IncidentReportSerializer
 
 
-class IncidentViewSet(viewsets.ReadOnlyModelViewSet):
+class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Возвращает подробную информации по инцидентам.
 
@@ -22,7 +23,8 @@ class IncidentViewSet(viewsets.ReadOnlyModelViewSet):
         'pole',
         'pole__avr_contractor',
         'base_station',
-        'responsible_user'
+        'responsible_user',
+        'pole__region',
     ).prefetch_related(
         'base_station__operator',
         'statuses',
@@ -44,10 +46,18 @@ class IncidentViewSet(viewsets.ReadOnlyModelViewSet):
         ),
     )
 
-    serializer_class = IncidentSerializer
+    serializer_class = IncidentReportSerializer
     permission_classes = (permissions.AllowAny,)
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
-    filterset_class = IncidentFilter
-    pagination_class = IncidentPagination
+    filterset_class = IncidentReportFilter
+    pagination_class = IncidentReportPagination
     ordering_fields = ('incident_date', 'id')
     ordering = ('-incident_date', '-id')
+
+    def get_queryset(self):
+        """Если передан all=true, возвращаем все записи без пагинации"""
+        qs = super().get_queryset()
+        self.request: Request
+        if self.request.query_params.get('all', '').lower() == 'true':
+            self.pagination_class = None
+        return qs

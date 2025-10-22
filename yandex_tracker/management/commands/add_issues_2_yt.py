@@ -12,10 +12,8 @@ from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
 from core.tg_bot import tg_manager
 from core.wraps import min_wait_timer, timer
-from emails.email_parser import email_parser
 from emails.models import EmailMessage
 from incidents.utils import IncidentManager
-from yandex_tracker.auto_emails import AutoEmailsFromYT
 from yandex_tracker.utils import YandexTrackerManager, yt_manager
 
 yt_managment_logger = LoggerFactory(
@@ -25,7 +23,7 @@ yt_managment_logger = LoggerFactory(
 class Command(BaseCommand):
     help = 'Обновление данных в YandexTracker.'
 
-    min_seconds = 1
+    min_seconds = 5
 
     def handle(self, *args, **kwargs):
         tg_manager.send_startup_notification(__name__)
@@ -40,9 +38,8 @@ class Command(BaseCommand):
             total_operations = 0
 
             try:
-                yt_emails = AutoEmailsFromYT(yt_manager, email_parser)
                 total_operations, error_count = self.add_issues_2_yt(
-                    yt_manager, yt_emails
+                    yt_manager
                 )
             except KeyboardInterrupt:
                 return
@@ -69,9 +66,7 @@ class Command(BaseCommand):
 
     @min_wait_timer(yt_managment_logger, min_seconds)
     @timer(yt_managment_logger)
-    def add_issues_2_yt(
-        self, yt_manager: YandexTrackerManager, yt_emails: AutoEmailsFromYT
-    ):
+    def add_issues_2_yt(self, yt_manager: YandexTrackerManager):
         emails = (
             YandexTrackerManager.emails_for_yandex_tracker()
             .select_related('email_incident')
@@ -130,9 +125,7 @@ class Command(BaseCommand):
                     is_first = (
                         email.email_date <= first_email_map.get(incident.pk)
                     )
-                    yt_manager.add_incident_to_yandex_tracker(
-                        email, is_first, yt_emails
-                    )
+                    yt_manager.add_incident_to_yandex_tracker(email, is_first)
                 except KeyboardInterrupt:
                     raise
                 except Exception as e:

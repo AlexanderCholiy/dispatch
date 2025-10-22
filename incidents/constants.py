@@ -69,3 +69,4 @@ DEFAULT_NOTIFIED_AVR_STATUS_DESC = 'Отправили письмо с инци�
 
 # В Трекере должно быть также:
 DEFAULT_AVR_CATEGORY = 'АВР'
+DEFAULT_RVR_CATEGORY = 'РВР'

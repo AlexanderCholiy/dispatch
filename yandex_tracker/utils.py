@@ -202,9 +202,7 @@ class YandexTrackerManager:
         Письма, которые должны быть добавлены в YandexTracker.
 
         Это письма, по которым был сформирован инцидент и они уже были
-        добавлены в YandexTracker, или письма для которых сформирован инцидент
-        и эти опоры НЕ находятся в указанном регионе
-        INCIDENTS_REGION_NOT_FOR_YT.
+        добавлены в YandexTracker, или письма для которых сформирован инцидент.
 
         Исключаем письма старше N дней назад, чтобы не добавлять
         неактуальные инциденты при смене основного фильтра.
@@ -823,7 +821,6 @@ class YandexTrackerManager:
         self,
         email_incident: EmailMessage,
         is_first_email: bool,
-        yt_emails
     ):
         """
         Создание инцидента в YandexTracker.
@@ -1140,7 +1137,7 @@ class YandexTrackerManager:
         issue_key: str,
         new_status_key: str,
         comment: str,
-    ) -> Optional[list[dict]]:
+    ) -> Optional[dict]:
         """Выставление нового статуса задаче, согласно рабочему процессу."""
         transitions = self.get_available_transitions(issue_key)
 

@@ -16,7 +16,7 @@ from ts.models import PoleContractorEmail
 from .utils import conversion_utc_datetime
 
 
-class IncidentSerializer(serializers.ModelSerializer):
+class IncidentReportSerializer(serializers.ModelSerializer):
     base_station = serializers.CharField(
         source='base_station.bs_name', read_only=True)
     pole = serializers.CharField(source='pole.pole', read_only=True)
@@ -27,7 +27,9 @@ class IncidentSerializer(serializers.ModelSerializer):
     address = serializers.CharField(source='pole.address', read_only=True)
     incident_type = serializers.CharField(
         source='incident_type.name', read_only=True)
-    region_ru = serializers.CharField(source='pole.region_ru', read_only=True)
+    region_ru = serializers.CharField(
+        source='pole.region.region_ru', read_only=True
+    )
     vendor = serializers.CharField(
         source='pole.avr_contractor.contractor_name', read_only=True)
 

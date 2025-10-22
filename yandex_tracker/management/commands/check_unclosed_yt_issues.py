@@ -245,8 +245,6 @@ class Command(BaseCommand):
     @timer(yt_managment_logger)
     def check_unclosed_issues(self) -> tuple[int, int, int]:
         yt_users = yt_manager.real_users_in_yt_tracker
-        yt_emails = AutoEmailsFromYT(yt_manager, email_parser)
-
         type_of_incident_field: dict = (
             yt_manager
             .select_local_field(yt_manager.type_of_incident_local_field_id)
@@ -286,7 +284,6 @@ class Command(BaseCommand):
                     usernames_in_db=usernames_in_db,
                     pole_names_sorted=pole_names_sorted,
                     all_base_stations=all_base_stations,
-                    yt_emails=yt_emails,
                 )
             )
 
@@ -312,7 +309,6 @@ class Command(BaseCommand):
         usernames_in_db: list[str],
         pole_names_sorted: list[str],
         all_base_stations: dict[tuple[str, Optional[str]], BaseStation],
-        yt_emails: AutoEmailsFromYT,
     ) -> tuple[int, int, int, list[Callable]]:
         """
         Работа с заявками в YandexTracker с ОТКРЫТЫМ статусом.
@@ -355,7 +351,9 @@ class Command(BaseCommand):
             'pole',
             'pole__avr_contractor',
             'base_station',
-            'responsible_user'
+            'responsible_user',
+            'pole__region',
+            'pole__region__rvr_email',
         ).prefetch_related(
             'statuses',
             'categories',
@@ -394,7 +392,8 @@ class Command(BaseCommand):
             )
 
             database_id: Optional[int] = issue.get(
-                yt_manager.database_global_field_id)
+                yt_manager.database_global_field_id
+            )
 
             status_key: str = issue['status']['key']
             issue_key: str = issue['key']
@@ -472,6 +471,10 @@ class Command(BaseCommand):
                     updated_incidents_counter += 1
                     continue
 
+                yt_emails = AutoEmailsFromYT(
+                    yt_manager, email_parser, issue, incident
+                )
+
                 if (
                     status_key == yt_manager.error_status_key
                     and last_status_history.status.name != (
@@ -541,8 +544,7 @@ class Command(BaseCommand):
                     elif last_status_history.status.name not in (
                         DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_NAME,
                     ):
-                        yt_emails.notify_operator_issue_in_work(
-                            issue, incident)
+                        yt_emails.notify_operator_issue_in_work()
                         updated_incidents_counter += 1
                     elif check_status_dt:
                         validation_tasks.append(
@@ -579,7 +581,7 @@ class Command(BaseCommand):
                     elif last_status_history.status.name not in (
                         DEFAULT_NOTIFIED_OP_END_STATUS_NAME,
                     ):
-                        yt_emails.notify_operator_issue_close(issue, incident)
+                        yt_emails.notify_operator_issue_close()
 
                         contractor_emails = IncidentManager.get_avr_emails(
                             incident
@@ -609,7 +611,7 @@ class Command(BaseCommand):
                                 )
                             )
                         ):
-                            yt_emails.notify_avr_issue_close(issue, incident)
+                            yt_emails.notify_avr_issue_close()
 
                         updated_incidents_counter += 1
                     elif check_status_dt:
@@ -633,7 +635,7 @@ class Command(BaseCommand):
                     if last_status_history.status.name not in (
                         DEFAULT_NOTIFIED_AVR_STATUS_NAME,
                     ):
-                        yt_emails.notify_avr_contractor(issue, incident)
+                        yt_emails.notify_contractors(category_field)
                         updated_incidents_counter += 1
                     elif check_status_dt:
                         validation_tasks.append(

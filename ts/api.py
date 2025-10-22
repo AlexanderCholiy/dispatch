@@ -6,6 +6,7 @@ from types import NoneType
 import pandas as pd
 import requests
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 from numpy import nan
 
 from core.constants import TS_LOG_ROTATING_FILE
@@ -25,6 +26,7 @@ from .constants import (
     TS_POLES_TL_URL,
     UNDEFINED_CASE,
     UNDEFINED_EMAILS,
+    UNDEFINED_ID,
 )
 from .models import (
     AVRContractor,
@@ -35,6 +37,7 @@ from .models import (
     Pole,
     PoleContractorEmail,
     PoleContractorPhone,
+    Region,
 )
 from .validators import SocialValidators
 
@@ -92,11 +95,12 @@ class Api(SocialValidators):
         # Удаляем не актуальные записи:
         new_site_ids: set[int] = set(poles['SiteId'])
         existing_site_ids: set[int] = set(
-            Pole.objects.values_list('site_id', flat=True))
+            Pole.objects.values_list('site_id', flat=True)
+        )
         site_ids_to_delete = (
             existing_site_ids
             - new_site_ids
-            - {UNDEFINED_CASE}
+            - {UNDEFINED_ID}
         )
         if site_ids_to_delete:
             Pole.objects.filter(site_id__in=site_ids_to_delete).delete()
@@ -117,10 +121,10 @@ class Api(SocialValidators):
             pole_latitude = row['Широта'] or None
             pole_longtitude = row['Долгота'] or None
             pole_height = row['Высота опоры'] or None
-            region = row['Регион'] or None
             address = row['Адрес'] or None
             infrastructure_company = row['Инфраструктурная компания'] or None
             anchor_operator = row['Якорный оператор'] or None
+            region_en = row['Регион'] or None
             region_ru = row['RegionRu'] or None
 
             if (
@@ -131,16 +135,21 @@ class Api(SocialValidators):
                 or not isinstance(pole_latitude, (float, NoneType))
                 or not isinstance(pole_longtitude, (float, NoneType))
                 or not isinstance(pole_height, (float, NoneType))
-                or not isinstance(region, (str, NoneType))
                 or not isinstance(address, (str, NoneType))
                 or not isinstance(infrastructure_company, (str, NoneType))
                 or not isinstance(anchor_operator, (str, NoneType))
+                or not isinstance(region_en, str)
                 or not isinstance(region_ru, (str, NoneType))
             ):
                 find_unvalid_values = True
                 continue
 
             try:
+                region_obj, _ = Region.objects.update_or_create(
+                    region_en=region_en,
+                    defaults={'region_ru': region_ru},
+                )
+
                 Pole.objects.update_or_create(
                     site_id=site_id,
                     defaults={
@@ -150,11 +159,10 @@ class Api(SocialValidators):
                         'pole_latitude': pole_latitude,
                         'pole_longtitude': pole_longtitude,
                         'pole_height': pole_height,
-                        'region': region,
+                        'region': region_obj,
                         'address': address,
                         'infrastructure_company': infrastructure_company,
                         'anchor_operator': anchor_operator,
-                        'region_ru': region_ru,
                     },
                 )
             except IntegrityError:
@@ -246,8 +254,12 @@ class Api(SocialValidators):
                     'Контактные данные подрядчика Email')
                 contractor_phones = row.get(
                     'Контактные данные подрядчика Телефон')
-                is_excluded_from_contract = row[
-                    'Исключен из договора'].strip().lower() != 'нет'
+                is_excluded_val = str(
+                    row.get('Исключен из договора') or ''
+                ).strip().lower()
+                is_excluded_from_contract = is_excluded_val not in (
+                    'нет', 'no', ''
+                )
 
                 # Проверка типов
                 if not isinstance(pole_number, str):
@@ -367,10 +379,10 @@ class Api(SocialValidators):
         combinations_bs_to_delete = (
             existing_bs_combinations - new_bs_combinations)
         if combinations_bs_to_delete:
-            BaseStation.objects.filter(
-                pole__pole__in=[comb[0] for comb in combinations_bs_to_delete],
-                bs_name__in=[comb[1] for comb in combinations_bs_to_delete]
-            ).delete()
+            query = Q()
+            for pole_val, bs_val in combinations_bs_to_delete:
+                query |= Q(pole__pole=pole_val, bs_name=bs_val)
+            BaseStation.objects.filter(query).delete()
 
         new_operators_combinations = set(
             zip(
@@ -383,16 +395,13 @@ class Api(SocialValidators):
             )
         )
         combinations_operators_to_delete = (
-            existing_operators_combinations - new_operators_combinations)
+            existing_operators_combinations - new_operators_combinations
+        )
         if combinations_operators_to_delete:
-            BaseStationOperator.objects.filter(
-                operator_name__in=[
-                    comb[0] for comb in combinations_operators_to_delete
-                ],
-                operator_group__in=[
-                    comb[1] for comb in combinations_operators_to_delete
-                ]
-            ).delete()
+            query = Q()
+            for op_name, op_group in combinations_operators_to_delete:
+                query |= Q(operator_name=op_name, operator_group=op_group)
+            BaseStationOperator.objects.filter(query).delete()
 
         # Обновляем актуальные записи:
         # Кешируем все существующие опоры и операторы для быстрого доступа:
