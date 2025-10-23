@@ -32,7 +32,8 @@ from .constants import (
 from .exceptions import YandexTrackerAuthErr
 
 yt_manager_logger = LoggerFactory(
-    __name__, YANDEX_TRACKER_ROTATING_FILE).get_logger
+    __name__, YANDEX_TRACKER_ROTATING_FILE
+).get_logger()
 
 yt_manager_config = {
     'YT_CLIENT_ID': os.getenv('YT_CLIENT_ID'),
@@ -59,8 +60,8 @@ yt_manager_config = {
     'YT_NOTIFIED_OPERATOR_ISSUE_IN_WORK_STATUS_KEY': os.getenv('YT_NOTIFIED_OPERATOR_ISSUE_IN_WORK_STATUS_KEY'),  # noqa: E501
     'YT_NOTIFY_OPERATOR_ISSUE_CLOSED_STATUS_KEY': os.getenv('YT_NOTIFY_OPERATOR_ISSUE_CLOSED_STATUS_KEY'),  # noqa: E501
     'YT_NOTIFIED_OPERATOR_ISSUE_CLOSED_STATUS_KEY': os.getenv('YT_NOTIFIED_OPERATOR_ISSUE_CLOSED_STATUS_KEY'),  # noqa: E501
-    'YT_NOTIFY_AVR_CONTRACTOR_IN_WORK_STATUS_KEY': os.getenv('YT_NOTIFY_AVR_CONTRACTOR_IN_WORK_STATUS_KEY'),  # noqa: E501
-    'YT_NOTIFIED_AVR_CONTRACTOR_IN_WORK_STATUS_KEY': os.getenv('YT_NOTIFIED_AVR_CONTRACTOR_IN_WORK_STATUS_KEY'),  # noqa: E501
+    'YT_NOTIFY_CONTRACTOR_IN_WORK_STATUS_KEY': os.getenv('YT_NOTIFY_CONTRACTOR_IN_WORK_STATUS_KEY'),  # noqa: E501
+    'YT_NOTIFIED_CONTRACTOR_IN_WORK_STATUS_KEY': os.getenv('YT_NOTIFIED_CONTRACTOR_IN_WORK_STATUS_KEY'),  # noqa: E501
 }
 Config.validate_env_variables(yt_manager_config)
 
@@ -120,8 +121,8 @@ class YandexTrackerManager:
         notified_op_issue_in_work_status_key: str,
         notify_op_issue_closed_status_key: str,
         notified_op_issue_closed_status_key: str,
-        notify_avr_in_work_status_key: str,
-        notified_avr_in_work_status_key: str,
+        notify_contractor_in_work_status_key: str,
+        notified_contractor_in_work_status_key: str,
     ):
         self.client_id = cliend_id
         self.client_secret = client_secret
@@ -146,17 +147,23 @@ class YandexTrackerManager:
         self.category_local_field_id = category_local_field_id
 
         self.notify_op_issue_in_work_status_key = (
-            notify_op_issue_in_work_status_key)
+            notify_op_issue_in_work_status_key
+        )
         self.notified_op_issue_in_work_status_key = (
-            notified_op_issue_in_work_status_key)
+            notified_op_issue_in_work_status_key
+        )
         self.notify_op_issue_closed_status_key = (
-            notify_op_issue_closed_status_key)
+            notify_op_issue_closed_status_key
+        )
         self.notified_op_issue_closed_status_key = (
-            notified_op_issue_closed_status_key)
-        self.notify_avr_in_work_status_key = (
-            notify_avr_in_work_status_key)
-        self.notified_avr_in_work_status_key = (
-            notified_avr_in_work_status_key)
+            notified_op_issue_closed_status_key
+        )
+        self.notify_contractor_in_work_status_key = (
+            notify_contractor_in_work_status_key
+        )
+        self.notified_contractor_in_work_status_key = (
+            notified_contractor_in_work_status_key
+        )
 
         self.on_generation_status_key = on_generation_status_key
 
@@ -1334,6 +1341,6 @@ yt_manager = YandexTrackerManager(
     notified_op_issue_in_work_status_key=yt_manager_config['YT_NOTIFIED_OPERATOR_ISSUE_IN_WORK_STATUS_KEY'],  # noqa: E501
     notify_op_issue_closed_status_key=yt_manager_config['YT_NOTIFY_OPERATOR_ISSUE_CLOSED_STATUS_KEY'],  # noqa: E501
     notified_op_issue_closed_status_key=yt_manager_config['YT_NOTIFIED_OPERATOR_ISSUE_CLOSED_STATUS_KEY'],  # noqa: E501
-    notify_avr_in_work_status_key=yt_manager_config['YT_NOTIFY_AVR_CONTRACTOR_IN_WORK_STATUS_KEY'],  # noqa: E501
-    notified_avr_in_work_status_key=yt_manager_config['YT_NOTIFIED_AVR_CONTRACTOR_IN_WORK_STATUS_KEY'],  # noqa: E501
+    notify_contractor_in_work_status_key=yt_manager_config['YT_NOTIFY_CONTRACTOR_IN_WORK_STATUS_KEY'],  # noqa: E501
+    notified_contractor_in_work_status_key=yt_manager_config['YT_NOTIFIED_CONTRACTOR_IN_WORK_STATUS_KEY'],  # noqa: E501
 )

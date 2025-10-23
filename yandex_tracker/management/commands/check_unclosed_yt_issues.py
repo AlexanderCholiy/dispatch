@@ -19,13 +19,13 @@ from core.wraps import min_wait_timer, timer
 from emails.email_parser import email_parser
 from emails.models import EmailMessage
 from incidents.constants import (
-    DEFAULT_AVR_CATEGORY,
-    DEFAULT_ERR_STATUS_NAME,
-    DEFAULT_NOTIFIED_AVR_STATUS_NAME,
-    DEFAULT_NOTIFIED_OP_END_STATUS_NAME,
-    DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_NAME,
-    DEFAULT_NOTIFY_AVR_STATUS_NAME,
-    DEFAULT_WAIT_ACCEPTANCE_STATUS_NAME,
+    ERR_STATUS_NAME,
+    NOTIFIED_CONTRACTOR_STATUS_NAME,
+    NOTIFIED_OP_END_STATUS_NAME,
+    NOTIFIED_OP_IN_WORK_STATUS_NAME,
+    WAIT_ACCEPTANCE_STATUS_NAME,
+    AVR_CATEGORY,
+    RVR_CATEGORY,
 )
 from incidents.models import (
     Incident,
@@ -46,7 +46,8 @@ from yandex_tracker.utils import YandexTrackerManager, yt_manager
 from yandex_tracker.validators import check_yt_incident_data
 
 yt_managment_logger = LoggerFactory(
-    __name__, YANDEX_TRACKER_ROTATING_FILE).get_logger
+    __name__, YANDEX_TRACKER_ROTATING_FILE
+).get_logger()
 
 
 class Command(BaseCommand):
@@ -155,7 +156,6 @@ class Command(BaseCommand):
                 > self.cache_timer
             )
         ):
-            IncidentCategory.objects.get_or_create(name=DEFAULT_AVR_CATEGORY)
             self._valid_names_of_categories_cache = list(
                 IncidentCategory.objects.all().values_list('name', flat=True)
             )
@@ -384,6 +384,7 @@ class Command(BaseCommand):
         ).in_bulk()
 
         validation_tasks = []
+        incidents_2_update = []
 
         for index, issue in enumerate(unclosed_issues):
             PrettyPrint.progress_bar_info(
@@ -397,6 +398,9 @@ class Command(BaseCommand):
 
             status_key: str = issue['status']['key']
             issue_key: str = issue['key']
+
+            category_field_key = category_field['id']
+            categories: Optional[list[str]] = issue.get(category_field_key)
 
             if not database_id:
                 yt_manager.create_incident_from_issue(issue, False)
@@ -465,10 +469,10 @@ class Command(BaseCommand):
                     )
                     check_status_dt = delta >= NOTIFY_SPAM_DELAY
                     timeout = max(
-                        int((NOTIFY_SPAM_DELAY - delta).total_seconds()), 0)
+                        int((NOTIFY_SPAM_DELAY - delta).total_seconds()), 0
+                    )
                 else:
                     IncidentManager.add_default_status(incident)
-                    updated_incidents_counter += 1
                     continue
 
                 yt_emails = AutoEmailsFromYT(
@@ -477,20 +481,17 @@ class Command(BaseCommand):
 
                 if (
                     status_key == yt_manager.error_status_key
-                    and last_status_history.status.name != (
-                        DEFAULT_ERR_STATUS_NAME)
+                    and last_status_history.status.name != (ERR_STATUS_NAME)
                 ):
                     IncidentManager.add_error_status(incident)
-                    updated_incidents_counter += 1
 
                 elif (
                     status_key == yt_manager.need_acceptance_status_key
                     and last_status_history.status.name != (
-                        DEFAULT_WAIT_ACCEPTANCE_STATUS_NAME
+                        WAIT_ACCEPTANCE_STATUS_NAME
                     )
                 ):
                     IncidentManager.add_wait_acceptance_status(incident)
-                    updated_incidents_counter += 1
 
                 elif status_key == yt_manager.in_work_status_key:
                     IncidentManager.add_in_work_status(
@@ -501,29 +502,29 @@ class Command(BaseCommand):
                     status_key == (
                         yt_manager.notified_op_issue_in_work_status_key)
                     and last_status_history.status.name != (
-                        DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_NAME)
+                        NOTIFIED_OP_IN_WORK_STATUS_NAME
+                    )
                 ):
                     IncidentManager.add_notified_op_status(incident)
-                    updated_incidents_counter += 1
 
                 elif (
                     status_key == (
                         yt_manager.notified_op_issue_closed_status_key)
                     and last_status_history.status.name != (
-                        DEFAULT_NOTIFIED_OP_END_STATUS_NAME)
+                        NOTIFIED_OP_END_STATUS_NAME
+                    )
                 ):
                     IncidentManager.add_notified_op_end_status(incident)
-                    updated_incidents_counter += 1
 
                 elif (
                     status_key == (
-                        yt_manager.notified_avr_in_work_status_key)
+                        yt_manager.notified_contractor_in_work_status_key
+                    )
                     and last_status_history.status.name != (
-                        DEFAULT_NOTIFIED_AVR_STATUS_NAME)
+                        NOTIFIED_CONTRACTOR_STATUS_NAME
+                    )
                 ):
-                    IncidentManager.add_notified_avr_status(incident)
-                    updated_incidents_counter += 1
-
+                    IncidentManager.add_notified_contractor_status(incident)
                 elif (
                     status_key == yt_manager.notify_op_issue_in_work_status_key
                 ):
@@ -540,12 +541,12 @@ class Command(BaseCommand):
                                 )
                             )
                         )
-                        updated_incidents_counter += 1
                     elif last_status_history.status.name not in (
-                        DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_NAME,
+                        NOTIFIED_OP_IN_WORK_STATUS_NAME,
                     ):
-                        yt_emails.notify_operator_issue_in_work()
-                        updated_incidents_counter += 1
+                        validation_tasks.append(
+                            partial(yt_emails.notify_operator_issue_in_work)
+                        )
                     elif check_status_dt:
                         validation_tasks.append(
                             partial(
@@ -559,7 +560,6 @@ class Command(BaseCommand):
                                 )
                             )
                         )
-                        updated_incidents_counter += 1
 
                 elif (
                     status_key == yt_manager.notify_op_issue_closed_status_key
@@ -577,43 +577,14 @@ class Command(BaseCommand):
                                 )
                             )
                         )
-                        updated_incidents_counter += 1
                     elif last_status_history.status.name not in (
-                        DEFAULT_NOTIFIED_OP_END_STATUS_NAME,
+                        NOTIFIED_OP_END_STATUS_NAME,
                     ):
-                        yt_emails.notify_operator_issue_close()
-
-                        contractor_emails = IncidentManager.get_avr_emails(
-                            incident
-                        )
-
-                        incident_emails = IncidentManager.all_incident_emails(
-                            incident
-                        )
-
-                        incident_status_names: set[str] = {
-                            st.name for st in incident.statuses.all()
-                        }
-
-                        if (
-                            incident.pole
-                            and incident.pole.avr_contractor
-                            and contractor_emails
-                            and (
-                                any(
-                                    s in incident_status_names for s in (
-                                        DEFAULT_NOTIFIED_AVR_STATUS_NAME,
-                                        DEFAULT_NOTIFY_AVR_STATUS_NAME,
-                                    )
-                                )
-                                or not set(contractor_emails).isdisjoint(
-                                    incident_emails
-                                )
+                        validation_tasks.append(
+                            partial(
+                                yt_emails.notify_contractors, category_field
                             )
-                        ):
-                            yt_emails.notify_avr_issue_close()
-
-                        updated_incidents_counter += 1
+                        )
                     elif check_status_dt:
                         validation_tasks.append(
                             partial(
@@ -627,16 +598,20 @@ class Command(BaseCommand):
                                 )
                             )
                         )
-                        updated_incidents_counter += 1
 
                 elif (
-                    status_key == yt_manager.notify_avr_in_work_status_key
+                    status_key == (
+                        yt_manager.notify_contractor_in_work_status_key
+                    )
                 ):
                     if last_status_history.status.name not in (
-                        DEFAULT_NOTIFIED_AVR_STATUS_NAME,
+                        NOTIFIED_CONTRACTOR_STATUS_NAME,
                     ):
-                        yt_emails.notify_contractors(category_field)
-                        updated_incidents_counter += 1
+                        validation_tasks.append(
+                            partial(
+                                yt_emails.notify_contractors, category_field
+                            )
+                        )
                     elif check_status_dt:
                         validation_tasks.append(
                             partial(
@@ -650,10 +625,50 @@ class Command(BaseCommand):
                                 )
                             )
                         )
-                        updated_incidents_counter += 1
+
+                if (
+                    (
+                        not incident.avr_start_date
+                        and AVR_CATEGORY in categories
+                    )
+                    or (
+                        not incident.rvr_start_date
+                        and RVR_CATEGORY in categories
+                    )
+                ):
+                    last_notified_contractor_status = (
+                        IncidentManager.get_last_status_by_name(
+                            incident, NOTIFIED_CONTRACTOR_STATUS_NAME
+                        )
+                    )
+
+                    if (
+                        AVR_CATEGORY in categories
+                        and not incident.avr_start_date
+                        and last_notified_contractor_status
+                    ):
+                        incident.avr_start_date = (
+                            last_notified_contractor_status.insert_date
+                        )
+                        incidents_2_update.append(incident)
+
+                    if (
+                        RVR_CATEGORY in categories
+                        and not incident.rvr_start_date
+                        and last_notified_contractor_status
+                    ):
+                        incident.rvr_start_date = (
+                            last_notified_contractor_status.insert_date
+                        )
+                        incidents_2_update.append(incident)
 
             except Exception as e:
                 yt_managment_logger.exception(e)
                 error_count += 1
+
+        if incidents_2_update:
+            Incident.objects.bulk_update(
+                incidents_2_update, ['avr_start_date', 'rvr_start_date']
+            )
 
         return total, error_count, updated_incidents_counter, validation_tasks

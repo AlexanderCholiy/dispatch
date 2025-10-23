@@ -6,9 +6,11 @@ from core.loggers import LoggerFactory
 from emails.email_parser import EmailParser
 from emails.models import EmailMessage
 from incidents.constants import (
-    DEFAULT_AVR_CATEGORY,
-    DEFAULT_ERR_STATUS_NAME,
-    DEFAULT_RVR_CATEGORY,
+    AVR_CATEGORY,
+    ERR_STATUS_NAME,
+    RVR_CATEGORY,
+    NOTIFY_CONTRACTOR_STATUS_NAME,
+    NOTIFIED_CONTRACTOR_STATUS_NAME,
 )
 from incidents.models import Incident
 from incidents.utils import IncidentManager
@@ -17,7 +19,8 @@ from .constants import CURRENT_TZ, MAX_PREVIEW_TEXT_LEN
 from .utils import YandexTrackerManager
 
 auto_yt_emails_logger = LoggerFactory(
-    __name__, YANDEX_TRACKER_AUTO_EMAILS_ROTATING_FILE).get_logger
+    __name__, YANDEX_TRACKER_AUTO_EMAILS_ROTATING_FILE
+).get_logger()
 
 
 class AutoEmailsFromYT:
@@ -192,16 +195,13 @@ class AutoEmailsFromYT:
                 self.incident, success_message
             )
         else:
-            if self.incident.prefetched_statuses[0] != DEFAULT_ERR_STATUS_NAME:
+            if self.incident.prefetched_statuses[0] != ERR_STATUS_NAME:
                 IncidentManager.add_error_status(self.incident, error_message)
 
         return result
 
-    def notify_operator_issue_close(self) -> bool:
-        """
-        Уведомляем оператора о закрытии заявки с обработкой ошибок и меняем
-        статус инцидента.
-        """
+    def _notify_operator_issue_close(self) -> bool:
+        """Уведомляем оператора о закрытии заявки."""
         first_email = (
             EmailMessage.objects.filter(
                 email_incident=self.incident, is_first_email=True
@@ -211,12 +211,6 @@ class AutoEmailsFromYT:
             )
         ).first()
         email_to = [] if not first_email else [first_email.email_from]
-
-        notify_before_message = (
-            'Диспетчер отправил автоответ заявителю о закрытии заявки.'
-        )
-        success_message = 'Уведомили оператора о закрытии заявки.'
-        error_message = 'Не удалось уведомить оператора о закрытии заявки.'
 
         to_addresses = list(
             first_email.email_msg_to.values_list('email_to', flat=True)
@@ -229,30 +223,146 @@ class AutoEmailsFromYT:
         all_recipients = set(to_addresses) | set(cc_addresses)
         all_recipients -= set(email_to)
 
-        IncidentManager.add_notify_op_end_status(
-            self.incident, notify_before_message
-        )
-
         result = self.send_auto_reply(
             email_to=email_to,
             email_to_cc=list(all_recipients),
             success_status_key=(
                 self.yt_manager.notified_op_issue_closed_status_key
             ),
-            success_message=success_message,
             text_template=f'Заявка "{self.issue_key}" закрыта.',
-            error_message=error_message,
+            change_status=False,
         )
 
-        if result:
-            IncidentManager.add_notified_op_end_status(
-                self.incident, success_message
-            )
-        else:
-            if self.incident.prefetched_statuses[0] != DEFAULT_ERR_STATUS_NAME:
-                IncidentManager.add_error_status(self.incident, error_message)
+        return result
+
+    @property
+    def _re_cleaned_subject(self) -> str:
+        subject_row: str = self.issue['summary']
+        cleaned_subject = re.sub(
+            r'^(?:\s*Re:\s*)+', '', subject_row, flags=re.IGNORECASE
+        )
+        return f'{self.issue_key}: {cleaned_subject}'
+
+    def _notify_contractor_issue_close(self, email_to: list[str]) -> bool:
+        """Уведомляем подрядчиков о закрытии заявки."""
+        result = self.send_auto_reply(
+            email_to=email_to,
+            email_to_cc=None,
+            success_status_key=(
+                self.yt_manager.notified_op_issue_closed_status_key
+            ),
+            subject_template=self._re_cleaned_subject,
+            text_template=f'Заявка "{self.issue_key}" закрыта.',
+            change_status=False,
+        )
 
         return result
+
+    def notify_issue_close(self, category_field: dict) -> bool:
+        success_results = []
+        failed_results = []
+
+        result = self._notify_operator_issue_close()
+        if result:
+            success_results.append('Заявитель')
+        else:
+            failed_results.append('заявителя')
+
+        category_field_key = category_field['id']
+        categories: Optional[list[str]] = self.issue.get(category_field_key)
+
+        if (
+            not failed_results
+            and categories
+            and any(cat in categories for cat in (AVR_CATEGORY, RVR_CATEGORY))
+        ):
+            incident_emails = IncidentManager.all_incident_emails(
+                self.incident
+            )
+            incident_status_names: set[str] = {
+                st.name for st in self.incident.statuses.all()
+            }
+            avr_contractor_emails = set(
+                IncidentManager.get_avr_emails(self.incident)
+            )
+            rvr_contractor_emails = set(
+                IncidentManager.get_rvr_emails(self.incident)
+            )
+
+            # Условия при которых необходимо также уведомить
+            # подрядчиков о закрытии инцидента:
+            if (
+                avr_contractor_emails
+                and (
+                    AVR_CATEGORY in categories
+                    and (
+                        any(
+                            s in incident_status_names for s in (
+                                NOTIFIED_CONTRACTOR_STATUS_NAME,
+                                NOTIFY_CONTRACTOR_STATUS_NAME,
+                            )
+                        )
+                        or not avr_contractor_emails.isdisjoint(
+                            incident_emails
+                        )
+                    )
+                )
+            ):
+                result = self._notify_contractor_issue_close(
+                    avr_contractor_emails
+                )
+                if result:
+                    success_results.append(f'подрядчик по {AVR_CATEGORY}')
+                else:
+                    failed_results.append(f'подрядчика по {AVR_CATEGORY}')
+
+            if (
+                not failed_results
+                and rvr_contractor_emails
+                and (
+                    RVR_CATEGORY in categories
+                    and (
+                        any(
+                            s in incident_status_names for s in (
+                                NOTIFIED_CONTRACTOR_STATUS_NAME,
+                                NOTIFY_CONTRACTOR_STATUS_NAME,
+                            )
+                        )
+                        or not rvr_contractor_emails.isdisjoint(
+                            incident_emails
+                        )
+                    )
+                )
+            ):
+                result = self._notify_contractor_issue_close(
+                    rvr_contractor_emails
+                )
+                if result:
+                    success_results.append(f'подрядчик по {RVR_CATEGORY}')
+                else:
+                    failed_results.append(f'подрядчика по {RVR_CATEGORY}')
+
+        if failed_results:
+            error_message = (
+                'Не удалось уведомить: '
+                f'{", ".join(failed_results)} о закрытии заявки.'
+            )
+            self._handle_error(error_message)
+            IncidentManager.add_error_status(self.incident, error_message)
+            return False
+
+        success_message = (
+            f'{", ".join(success_results)} уведомлен(ы) о закрытии заявки.'
+        )
+        self.yt_manager.update_issue_status(
+            self.issue_key,
+            self.yt_manager.notified_contractor_in_work_status_key,
+            success_message,
+        )
+        IncidentManager.add_notified_contractor_status(
+            self.incident, success_message
+        )
+        return True
 
     def _notify_avr_contractor(self) -> bool:
         email_to = IncidentManager.get_avr_emails(self.incident)
@@ -262,51 +372,41 @@ class AutoEmailsFromYT:
             self._handle_error(comment)
             return False
 
-        subject_raw: str = self.issue['summary']
-        cleaned_subject = re.sub(
-            r'^(?:\s*Re:\s*)+', '', subject_raw, flags=re.IGNORECASE
-        )
-        subject_template = f'{self.issue_key}: {cleaned_subject}'
+        if not self.incident.incident_type:
+            comment = (
+                'Необходимо выбрать тип проблемы, прежде чем передавать его '
+                'подрядчику.'
+            )
+            self._handle_error(comment)
+            return False
 
         result = self.send_auto_reply(
             email_to=email_to,
             success_status_key=(
-                self.yt_manager.notified_avr_in_work_status_key
+                self.yt_manager.notified_contractor_in_work_status_key
             ),
             text_template=self._prepare_incident_text_for_avr(),
-            subject_template=subject_template,
+            subject_template=self._re_cleaned_subject,
             change_status=False,
         )
 
         return result
 
     def _notify_rvr_contractor(self) -> bool:
-        email_to = None
-        if (
-            self.incident.pole
-            and self.incident.pole.region
-            and self.incident.pole.region.rvr_email
-        ):
-            email_to = [self.incident.pole.region.rvr_email.email]
+        email_to = IncidentManager.get_rvr_emails()
 
         if not email_to:
             comment = 'Не найден email подрядчика РВР для автоответа.'
             self._handle_error(comment)
             return False
 
-        subject_raw: str = self.issue['summary']
-        cleaned_subject = re.sub(
-            r'^(?:\s*Re:\s*)+', '', subject_raw, flags=re.IGNORECASE
-        )
-        subject_template = f'{self.issue_key}: {cleaned_subject}'
-
         result = self.send_auto_reply(
             email_to=email_to,
             success_status_key=(
-                self.yt_manager.notified_avr_in_work_status_key
+                self.yt_manager.notified_contractor_in_work_status_key
             ),
             text_template=self._prepare_incident_text_for_rvr(),
-            subject_template=subject_template,
+            subject_template=self._re_cleaned_subject,
             change_status=False,
         )
 
@@ -321,12 +421,12 @@ class AutoEmailsFromYT:
         categories: Optional[list[str]] = self.issue.get(category_field_key)
 
         target_categories = {
-            DEFAULT_AVR_CATEGORY: self._notify_avr_contractor,
-            DEFAULT_RVR_CATEGORY: self._notify_rvr_contractor,
+            AVR_CATEGORY: self._notify_avr_contractor,
+            RVR_CATEGORY: self._notify_rvr_contractor,
         }
 
         selected_categories = [
-            cat for cat in (DEFAULT_AVR_CATEGORY, DEFAULT_RVR_CATEGORY)
+            cat for cat in (AVR_CATEGORY, RVR_CATEGORY)
             if categories and cat in categories
         ]
 
@@ -346,7 +446,7 @@ class AutoEmailsFromYT:
             self._handle_error(comment)
             return False
 
-        IncidentManager.add_notify_avr_status(
+        IncidentManager.add_notify_contractor_status(
             self.incident,
             f'Диспетчер отправил автоответ подрядчикам по: '
             f'{", ".join(selected_categories)} с информацией по заявке.'
@@ -377,14 +477,98 @@ class AutoEmailsFromYT:
         )
         self.yt_manager.update_issue_status(
             self.issue_key,
-            self.yt_manager.notified_avr_in_work_status_key,
+            self.yt_manager.notified_contractor_in_work_status_key,
             success_message,
         )
-        IncidentManager.add_notified_avr_status(self.incident, success_message)
+        IncidentManager.add_notified_contractor_status(
+            self.incident, success_message
+        )
         return True
 
     def _prepare_incident_text_for_rvr(self) -> str:
-        return 'Новая заявка на РВР'
+        text_parts = ['На вас назначен новый инцидент.\n']
+
+        if self.incident.pole:
+            pole_region = (
+                self.incident.pole.region.region_ru
+                or self.incident.pole.region.region_en
+            ) if self.incident.pole.region else None
+
+            text_parts.append('**ИНФОРМАЦИЯ ОБ ОПОРЕ:**')
+            text_parts.append(f'   • Шифр опоры: {self.incident.pole.pole}')
+
+            if pole_region:
+                text_parts.append(f'   • Регион: {pole_region}')
+
+            if self.incident.pole.address:
+                text_parts.append(f'   • Адрес: {self.incident.pole.address}')
+
+            if (
+                self.incident.pole.pole_latitude
+                and self.incident.pole.pole_longtitude
+            ):
+                text_parts.append(
+                    f'   • Координаты: {self.incident.pole.pole_latitude}, '
+                    f'{self.incident.pole.pole_longtitude}'
+                )
+
+        if self.incident.base_station:
+            text_parts.append('\n**ИНФОРМАЦИЯ О БАЗОВОЙ СТАНЦИИ:**')
+            text_parts.append(
+                f'   • Номер БС: {self.incident.base_station.bs_name}')
+            if self.incident.base_station.operator.exists():
+                operators = ', '.join(
+                    [
+                        op.operator_name
+                        for op in self.incident.base_station.operator.all()
+                    ]
+                )
+                text_parts.append(f'   • Операторы: {operators}')
+
+        text_parts.append('\n**ДЕТАЛИ ИНЦИДЕНТА:**')
+        text_parts.append(
+            '   • Дата регистрации: '
+            f'{self.incident.incident_date.astimezone(CURRENT_TZ):%d.%m.%Y %H:%M}'  # noqa: E501
+        )
+
+        if self.incident.sla_deadline:
+            text_parts.append(
+                f'   • SLA дедлайн: {self.incident.sla_deadline.astimezone(CURRENT_TZ):%d.%m.%Y %H:%M}'  # noqa: E501
+            )
+
+        emails = (
+            EmailMessage.objects.filter(email_incident=self.incident)
+            .order_by(
+                'email_incident_id', 'email_date', '-is_first_email', 'id'
+            )
+        )
+
+        if emails.exists():
+            text_parts.append('\n**ИСТОРИЯ ПЕРЕПИСКИ:**')
+            counter_email = 0
+
+            for email in emails:
+                if email.email_body:
+                    email_text = email.email_body.strip()
+                    if len(email_text) > MAX_PREVIEW_TEXT_LEN:
+                        email_text = email_text[:MAX_PREVIEW_TEXT_LEN] + ' ...'
+
+                    eml_datetime = email.email_date.astimezone(CURRENT_TZ)
+                    counter_email += 1
+
+                    text_parts.append(
+                        f'\n**Сообщение №{counter_email}** '
+                        f'({eml_datetime:%d.%m.%Y %H:%M}):'
+                    )
+
+                    # Тело письма в блоке кода:
+                    email_text = email_text.replace('```', '')
+                    text_parts.append(f'```\n{email_text}\n```')
+                    text_parts.append('---')
+
+        text_parts.append('\n\n**ВАЖНО:** НЕ МЕНЯЙТЕ ТЕМУ ПИСЬМА ПРИ ОТВЕТЕ')
+
+        return '\n'.join(text_parts)
 
     def _prepare_incident_text_for_avr(self) -> str:
         text_parts = ['На вас назначен новый инцидент.\n']
@@ -540,50 +724,7 @@ class AutoEmailsFromYT:
         )
 
         if not result:
-            if incident.prefetched_statuses[0] != DEFAULT_ERR_STATUS_NAME:
+            if incident.prefetched_statuses[0] != ERR_STATUS_NAME:
                 IncidentManager.add_error_status(incident, error_message)
-
-        return result
-
-    def notify_avr_issue_close(self) -> bool:
-        """
-        Уведомляем подрядчика АВР о закрытии заявки.
-        """
-        email_to = IncidentManager.get_avr_emails(self.incident)
-
-        notify_before_message = (
-            'Диспетчер отправил автоответ подрядчику о закрытии заявки.'
-        )
-        success_message = 'Уведомили подрядчика АВР о закрытии заявки.'
-        error_message = (
-            'Не удалось уведомить подрядчика АВР о закрытии заявки.'
-        )
-
-        IncidentManager.add_notify_op_end_status(
-            self.incident, notify_before_message
-        )
-
-        result = self.send_auto_reply(
-            email_to=email_to,
-            email_to_cc=None,
-            success_status_key=(
-                self.yt_manager.notified_op_issue_closed_status_key
-            ),
-            success_message=success_message,
-            text_template=f'Заявка "{self.issue_key}" закрыта.',
-            error_message=error_message,
-        )
-
-        if result:
-            # Т.к. статус будет выставлен до этого, уведомление добавляем
-            # вручную:
-            self.yt_manager.create_comment(
-                issue_key=self.issue_key,
-                comment=success_message,
-            )
-
-        if not result:
-            if self.incident.prefetched_statuses[0] != DEFAULT_ERR_STATUS_NAME:
-                IncidentManager.add_error_status(self.incident, error_message)
 
         return result

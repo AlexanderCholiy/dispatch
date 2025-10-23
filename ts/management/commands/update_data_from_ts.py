@@ -9,7 +9,9 @@ from core.wraps import timer
 from ts.api import Api
 from ts.constants import TS_DATA_DIR
 
-ts_managment_logger = LoggerFactory(__name__, TS_LOG_ROTATING_FILE).get_logger
+ts_managment_logger = LoggerFactory(
+    __name__, TS_LOG_ROTATING_FILE
+).get_logger()
 
 
 class Command(BaseCommand):

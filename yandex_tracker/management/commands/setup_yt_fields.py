@@ -7,7 +7,8 @@ from core.loggers import LoggerFactory
 from yandex_tracker.utils import yt_manager
 
 yt_managment_logger = LoggerFactory(
-    __name__, YANDEX_TRACKER_ROTATING_FILE).get_logger
+    __name__, YANDEX_TRACKER_ROTATING_FILE
+).get_logger()
 
 
 class Command(BaseCommand):

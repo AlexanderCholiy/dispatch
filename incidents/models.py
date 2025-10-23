@@ -10,7 +10,7 @@ from core.models import Detail
 from ts.models import AVRContractor, BaseStation, Pole
 
 from .constants import (
-    DEFAULT_AVR_CATEGORY,
+    AVR_CATEGORY,
     MAX_CODE_LEN,
     MAX_STATUS_COMMENT_LEN,
 )
@@ -106,6 +106,26 @@ class Incident(models.Model):
         related_name='incidents',
         verbose_name='Категории инцидента',
     )
+    avr_start_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Дата и время передачи на АВР',
+    )
+    avr_end_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Дата и время закрытия АВР',
+    )
+    rvr_start_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Дата и время передачи на РВР',
+    )
+    rvr_end_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Дата и время закрытия РВР',
+    )
 
     class Meta:
         verbose_name = 'инцидент'
@@ -126,7 +146,7 @@ class Incident(models.Model):
 
         if is_new and not self.categories.exists():
             avr_category, _ = IncidentCategory.objects.get_or_create(
-                name=DEFAULT_AVR_CATEGORY
+                name=AVR_CATEGORY
             )
             IncidentCategoryRelation.objects.get_or_create(
                 incident=self,

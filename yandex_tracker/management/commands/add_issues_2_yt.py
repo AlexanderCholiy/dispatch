@@ -17,7 +17,8 @@ from incidents.utils import IncidentManager
 from yandex_tracker.utils import YandexTrackerManager, yt_manager
 
 yt_managment_logger = LoggerFactory(
-    __name__, YANDEX_TRACKER_ROTATING_FILE).get_logger
+    __name__, YANDEX_TRACKER_ROTATING_FILE
+).get_logger()
 
 
 class Command(BaseCommand):

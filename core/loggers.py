@@ -97,6 +97,5 @@ class LoggerFactory:
         else:
             raise LoggerError('Неверный режим логгера (mode). Допустимо 0–4.')
 
-    @property
     def get_logger(self) -> logging.Logger:
         return self.logger

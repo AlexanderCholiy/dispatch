@@ -19,7 +19,8 @@ from emails.models import EmailAttachment, EmailInTextAttachment, EmailMessage
 from emails.utils import EmailManager
 
 email_managment_logger = LoggerFactory(
-    __name__, EMAIL_LOG_ROTATING_FILE).get_logger
+    __name__, EMAIL_LOG_ROTATING_FILE
+).get_logger()
 
 
 class Command(BaseCommand):

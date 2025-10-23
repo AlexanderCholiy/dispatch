@@ -7,7 +7,7 @@ from typing import Callable, Optional, TypedDict
 from dateutil import parser
 from django.db import models, transaction
 
-from incidents.constants import DEFAULT_AVR_CATEGORY
+from incidents.constants import AVR_CATEGORY
 from incidents.models import (
     Incident,
     IncidentCategory,
@@ -673,7 +673,7 @@ def check_yt_incident_data(
         else:
             # Выставляем значение по умолчанию:
             inc_cat, _ = IncidentCategory.objects.get_or_create(
-                name=DEFAULT_AVR_CATEGORY
+                name=AVR_CATEGORY
             )
             IncidentCategoryRelation.objects.get_or_create(
                 incident=incident,
@@ -685,7 +685,7 @@ def check_yt_incident_data(
                 type_of_incident_field=type_of_incident_field,
                 types_of_incident=type_of_incident,
                 category_field=category_field,
-                category=[DEFAULT_AVR_CATEGORY],
+                category=[AVR_CATEGORY],
                 email_datetime=incident.incident_date,
                 sla_deadline=incident.sla_deadline,
                 is_sla_expired=yt_manager.get_sla_status(incident),
@@ -942,7 +942,7 @@ def check_yt_incident_data(
                 incident.incident_type.name
             ) if incident.incident_type else None,
             category_field=category_field,
-            category=category if is_valid_category else [DEFAULT_AVR_CATEGORY],
+            category=category if is_valid_category else [AVR_CATEGORY],
             email_datetime=incident.incident_date,
             sla_deadline=incident.sla_deadline,
             is_sla_expired=yt_manager.get_sla_status(incident),

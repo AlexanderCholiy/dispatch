@@ -32,7 +32,8 @@ from .models import (
 )
 
 incident_manager_logger = LoggerFactory(
-    __name__, INCIDENTS_LOG_ROTATING_FILE).get_logger
+    __name__, INCIDENTS_LOG_ROTATING_FILE
+).get_logger()
 
 
 class EmailManager:

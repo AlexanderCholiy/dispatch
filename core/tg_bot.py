@@ -18,7 +18,9 @@ Config.validate_env_variables(tg_manager_config)
 
 class TelegramNotifier:
 
-    logger = LoggerFactory(__name__, TG_NOTIFICATIONS_ROTATING_FILE).get_logger
+    logger = LoggerFactory(
+        __name__, TG_NOTIFICATIONS_ROTATING_FILE
+    ).get_logger()
     max_msg_len = 4096
 
     def __init__(self, token: str, default_chat_id: str):

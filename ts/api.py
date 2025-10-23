@@ -41,7 +41,7 @@ from .models import (
 )
 from .validators import SocialValidators
 
-ts_api_logger = LoggerFactory(__name__, TS_LOG_ROTATING_FILE).get_logger
+ts_api_logger = LoggerFactory(__name__, TS_LOG_ROTATING_FILE).get_logger()
 
 
 class Api(SocialValidators):

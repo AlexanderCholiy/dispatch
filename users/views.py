@@ -36,7 +36,7 @@ from .utils import (
     send_confirm_email,
 )
 
-email_logger = LoggerFactory(__name__, EMAIL_LOG_ROTATING_FILE).get_logger
+email_logger = LoggerFactory(__name__, EMAIL_LOG_ROTATING_FILE).get_logger()
 
 
 @method_decorator(

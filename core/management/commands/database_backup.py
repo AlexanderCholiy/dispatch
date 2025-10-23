@@ -12,7 +12,7 @@ from core.constants import (
 )
 from core.loggers import LoggerFactory
 
-bakup_manager_logger = LoggerFactory(__name__).get_logger
+bakup_manager_logger = LoggerFactory(__name__).get_logger()
 
 
 class Command(BaseCommand):

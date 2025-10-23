@@ -13,18 +13,21 @@ from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
 from core.tg_bot import tg_manager
 from core.wraps import min_wait_timer, timer
+from incidents.utils import IncidentManager
 from incidents.constants import (
-    DEFAULT_END_STATUS_DESC,
-    DEFAULT_END_STATUS_NAME,
-    DEFAULT_GENERATION_STATUS_DESC,
-    DEFAULT_GENERATION_STATUS_NAME,
+    END_STATUS_NAME,
+    GENERATION_STATUS_NAME,
+    RVR_CATEGORY,
+    AVR_CATEGORY,
+    NOTIFIED_CONTRACTOR_STATUS_NAME,
 )
 from incidents.models import Incident, IncidentStatus, IncidentStatusHistory
 from yandex_tracker.constants import YT_ISSUES_DAYS_AGO_FILTER
 from yandex_tracker.utils import YandexTrackerManager, yt_manager
 
 yt_managment_logger = LoggerFactory(
-    __name__, YANDEX_TRACKER_ROTATING_FILE).get_logger
+    __name__, YANDEX_TRACKER_ROTATING_FILE
+).get_logger()
 
 
 class Command(BaseCommand):
@@ -81,12 +84,10 @@ class Command(BaseCommand):
     @timer(yt_managment_logger)
     def check_closed_issues(self) -> tuple[int, int, int]:
         default_end_status, _ = IncidentStatus.objects.get_or_create(
-            name=DEFAULT_END_STATUS_NAME,
-            defaults={'description': DEFAULT_END_STATUS_DESC}
+            name=END_STATUS_NAME,
         )
         default_generation_status, _ = IncidentStatus.objects.get_or_create(
-            name=DEFAULT_GENERATION_STATUS_NAME,
-            defaults={'description': DEFAULT_GENERATION_STATUS_DESC}
+            name=GENERATION_STATUS_NAME,
         )
 
         total_processed = 0
@@ -162,7 +163,7 @@ class Command(BaseCommand):
         incidents_queryset = (
             Incident.objects.filter(id__in=incident_ids_to_update)
             .select_related('incident_type')
-            .prefetch_related('statuses')
+            .prefetch_related('statuses', 'categories')
             .annotate(last_status_id=Subquery(latest_status_id_subquery))
         )
 
@@ -173,7 +174,7 @@ class Command(BaseCommand):
         incidents_to_mark_finished = set()
         incidents_to_add_end_status: set[Incident] = set()
         incidents_to_add_generation_status: set[Incident] = set()
-        incidents_to_update_code: list[Incident] = []
+        incidents_2_update: list[Incident] = []
 
         for database_id, issue in database_ids_with_issues:
             incident = incidents_dict.get(database_id)
@@ -188,7 +189,7 @@ class Command(BaseCommand):
             # Проверка и обновление кода:
             if incident.code != issue_key:
                 incident.code = issue_key
-                incidents_to_update_code.append(incident)
+                incidents_2_update.append(incident)
 
             # Проверка SLA:
             is_sla_expired = issue.get(
@@ -212,9 +213,52 @@ class Command(BaseCommand):
                 if last_status_id != default_end_status.pk:
                     incidents_to_add_end_status.add(incident)
 
+            # Проверка выставления даты начала SLA для АВР и РВР:
+            categories = list(
+                incident.categories.all().values_list('name', flat=True)
+            )
+            if (
+                (
+                    not incident.avr_start_date
+                    and AVR_CATEGORY in categories
+                )
+                or (
+                    not incident.rvr_start_date
+                    and RVR_CATEGORY in categories
+                )
+            ):
+                last_notified_contractor_status = (
+                    IncidentManager.get_last_status_by_name(
+                        incident, NOTIFIED_CONTRACTOR_STATUS_NAME
+                    )
+                )
+
+                if (
+                    AVR_CATEGORY in categories
+                    and not incident.avr_start_date
+                    and last_notified_contractor_status
+                ):
+                    incident.avr_start_date = (
+                        last_notified_contractor_status.insert_date
+                    )
+                    incidents_2_update.append(incident)
+
+                if (
+                    RVR_CATEGORY in categories
+                    and not incident.rvr_start_date
+                    and last_notified_contractor_status
+                ):
+                    incident.rvr_start_date = (
+                        last_notified_contractor_status.insert_date
+                    )
+                    incidents_2_update.append(incident)
+
         # Массовое обновление code:
-        if incidents_to_update_code:
-            Incident.objects.bulk_update(incidents_to_update_code, ['code'])
+        if incidents_2_update:
+            Incident.objects.bulk_update(
+                incidents_2_update,
+                ['code', 'avr_start_date', 'rvr_start_date']
+            )
 
         if incidents_to_mark_finished:
             now = timezone.now()

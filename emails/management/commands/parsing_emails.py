@@ -17,7 +17,8 @@ from core.utils import run_with_timeout_process
 from emails.email_parser import email_parser
 
 email_managment_logger = LoggerFactory(
-    __name__, EMAIL_LOG_ROTATING_FILE).get_logger
+    __name__, EMAIL_LOG_ROTATING_FILE
+).get_logger()
 
 
 class Command(BaseCommand):

@@ -5,10 +5,11 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from incidents.constants import (
-    DEFAULT_END_STATUS_NAME,
-    DEFAULT_GENERATION_STATUS_NAME,
-    DEFAULT_NOTIFIED_AVR_STATUS_NAME,
-    DEFAULT_NOTIFIED_OP_END_STATUS_NAME,
+    END_STATUS_NAME,
+    GENERATION_STATUS_NAME,
+    NOTIFIED_CONTRACTOR_STATUS_NAME,
+    NOTIFY_CONTRACTOR_STATUS_NAME,
+    NOTIFIED_OP_END_STATUS_NAME,
 )
 from incidents.models import Incident
 from ts.models import PoleContractorEmail
@@ -176,15 +177,18 @@ class IncidentReportSerializer(serializers.ModelSerializer):
 
         for status_history in obj.prefetched_statuses:
             if (
-                status_history.status.name == DEFAULT_NOTIFIED_AVR_STATUS_NAME
+                status_history.status.name in (
+                    NOTIFIED_CONTRACTOR_STATUS_NAME,
+                    NOTIFY_CONTRACTOR_STATUS_NAME,
+                )
                 and not start_timestamp
             ):
                 start_timestamp = status_history.insert_date
             elif (
                 status_history.status.name in (
-                    DEFAULT_NOTIFIED_OP_END_STATUS_NAME,
-                    DEFAULT_GENERATION_STATUS_NAME,
-                    DEFAULT_END_STATUS_NAME,
+                    NOTIFIED_OP_END_STATUS_NAME,
+                    GENERATION_STATUS_NAME,
+                    END_STATUS_NAME,
                 )
                 and not finish_timestamp
             ):

@@ -12,28 +12,28 @@ from users.models import Roles, User
 from yandex_tracker.utils import YandexTrackerManager
 
 from .constants import (
-    DEFAULT_ERR_STATUS_DESC,
-    DEFAULT_ERR_STATUS_NAME,
-    DEFAULT_GENERATION_STATUS_DESC,
-    DEFAULT_GENERATION_STATUS_NAME,
-    DEFAULT_IN_WORK_STATUS_DESC,
-    DEFAULT_IN_WORK_STATUS_NAME,
-    DEFAULT_NOTIFIED_AVR_STATUS_DESC,
-    DEFAULT_NOTIFIED_AVR_STATUS_NAME,
-    DEFAULT_NOTIFIED_OP_END_STATUS_DESC,
-    DEFAULT_NOTIFIED_OP_END_STATUS_NAME,
-    DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_DESC,
-    DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_NAME,
-    DEFAULT_NOTIFY_AVR_STATUS_DESC,
-    DEFAULT_NOTIFY_AVR_STATUS_NAME,
-    DEFAULT_NOTIFY_OP_END_STATUS_DESC,
-    DEFAULT_NOTIFY_OP_END_STATUS_NAME,
-    DEFAULT_NOTIFY_OP_IN_WORK_STATUS_DESC,
-    DEFAULT_NOTIFY_OP_IN_WORK_STATUS_NAME,
+    ERR_STATUS_DESC,
+    ERR_STATUS_NAME,
+    GENERATION_STATUS_DESC,
+    GENERATION_STATUS_NAME,
+    IN_WORK_STATUS_DESC,
+    IN_WORK_STATUS_NAME,
+    NOTIFIED_CONTRACTOR_STATUS_DESC,
+    NOTIFIED_CONTRACTOR_STATUS_NAME,
+    NOTIFIED_OP_END_STATUS_DESC,
+    NOTIFIED_OP_END_STATUS_NAME,
+    NOTIFIED_OP_IN_WORK_STATUS_DESC,
+    NOTIFIED_OP_IN_WORK_STATUS_NAME,
+    NOTIFY_CONTRACTOR_STATUS_DESC,
+    NOTIFY_CONTRACTOR_STATUS_NAME,
+    NOTIFY_OP_END_STATUS_DESC,
+    NOTIFY_OP_END_STATUS_NAME,
+    NOTIFY_OP_IN_WORK_STATUS_DESC,
+    NOTIFY_OP_IN_WORK_STATUS_NAME,
     DEFAULT_STATUS_DESC,
     DEFAULT_STATUS_NAME,
-    DEFAULT_WAIT_ACCEPTANCE_STATUS_DESC,
-    DEFAULT_WAIT_ACCEPTANCE_STATUS_NAME,
+    WAIT_ACCEPTANCE_STATUS_DESC,
+    WAIT_ACCEPTANCE_STATUS_NAME,
 )
 from .models import Incident, IncidentStatus, IncidentStatusHistory
 from .validators import IncidentValidator
@@ -272,8 +272,8 @@ class IncidentManager(IncidentValidator):
         incident: Incident, comment: Optional[str] = None
     ) -> None:
         status, _ = IncidentStatus.objects.get_or_create(
-            name=DEFAULT_ERR_STATUS_NAME,
-            defaults={'description': DEFAULT_ERR_STATUS_DESC}
+            name=ERR_STATUS_NAME,
+            defaults={'description': ERR_STATUS_DESC}
         )
         IncidentStatusHistory.objects.create(
             incident=incident,
@@ -287,8 +287,8 @@ class IncidentManager(IncidentValidator):
         incident: Incident, comment: Optional[str] = None
     ) -> None:
         status, _ = IncidentStatus.objects.get_or_create(
-            name=DEFAULT_WAIT_ACCEPTANCE_STATUS_NAME,
-            defaults={'description': DEFAULT_WAIT_ACCEPTANCE_STATUS_DESC}
+            name=WAIT_ACCEPTANCE_STATUS_NAME,
+            defaults={'description': WAIT_ACCEPTANCE_STATUS_DESC}
         )
         IncidentStatusHistory.objects.create(
             incident=incident,
@@ -302,8 +302,8 @@ class IncidentManager(IncidentValidator):
         incident: Incident, comment: Optional[str] = None
     ) -> None:
         status, _ = IncidentStatus.objects.get_or_create(
-            name=DEFAULT_GENERATION_STATUS_NAME,
-            defaults={'description': DEFAULT_GENERATION_STATUS_DESC}
+            name=GENERATION_STATUS_NAME,
+            defaults={'description': GENERATION_STATUS_DESC}
         )
         IncidentStatusHistory.objects.create(
             incident=incident,
@@ -317,8 +317,8 @@ class IncidentManager(IncidentValidator):
         incident: Incident, comment: Optional[str] = None
     ) -> None:
         status, _ = IncidentStatus.objects.get_or_create(
-            name=DEFAULT_IN_WORK_STATUS_NAME,
-            defaults={'description': DEFAULT_IN_WORK_STATUS_DESC}
+            name=IN_WORK_STATUS_NAME,
+            defaults={'description': IN_WORK_STATUS_DESC}
         )
         if not incident.statuses.filter(pk=status.pk).exists():
             IncidentStatusHistory.objects.create(
@@ -333,8 +333,8 @@ class IncidentManager(IncidentValidator):
         incident: Incident, comment: Optional[str] = None
     ) -> None:
         status, _ = IncidentStatus.objects.get_or_create(
-            name=DEFAULT_NOTIFY_OP_IN_WORK_STATUS_NAME,
-            defaults={'description': DEFAULT_NOTIFY_OP_IN_WORK_STATUS_DESC}
+            name=NOTIFY_OP_IN_WORK_STATUS_NAME,
+            defaults={'description': NOTIFY_OP_IN_WORK_STATUS_DESC}
         )
         IncidentStatusHistory.objects.create(
             incident=incident,
@@ -348,8 +348,8 @@ class IncidentManager(IncidentValidator):
         incident: Incident, comment: Optional[str] = None
     ) -> None:
         status, _ = IncidentStatus.objects.get_or_create(
-            name=DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_NAME,
-            defaults={'description': DEFAULT_NOTIFIED_OP_IN_WORK_STATUS_DESC}
+            name=NOTIFIED_OP_IN_WORK_STATUS_NAME,
+            defaults={'description': NOTIFIED_OP_IN_WORK_STATUS_DESC}
         )
         IncidentStatusHistory.objects.create(
             incident=incident,
@@ -363,8 +363,8 @@ class IncidentManager(IncidentValidator):
         incident: Incident, comment: Optional[str] = None
     ) -> None:
         status, _ = IncidentStatus.objects.get_or_create(
-            name=DEFAULT_NOTIFY_OP_END_STATUS_NAME,
-            defaults={'description': DEFAULT_NOTIFY_OP_END_STATUS_DESC}
+            name=NOTIFY_OP_END_STATUS_NAME,
+            defaults={'description': NOTIFY_OP_END_STATUS_DESC}
         )
         IncidentStatusHistory.objects.create(
             incident=incident,
@@ -378,8 +378,8 @@ class IncidentManager(IncidentValidator):
         incident: Incident, comment: Optional[str] = None
     ) -> None:
         status, _ = IncidentStatus.objects.get_or_create(
-            name=DEFAULT_NOTIFIED_OP_END_STATUS_NAME,
-            defaults={'description': DEFAULT_NOTIFIED_OP_END_STATUS_DESC}
+            name=NOTIFIED_OP_END_STATUS_NAME,
+            defaults={'description': NOTIFIED_OP_END_STATUS_DESC}
         )
         IncidentStatusHistory.objects.create(
             incident=incident,
@@ -389,12 +389,12 @@ class IncidentManager(IncidentValidator):
         incident.statuses.add(status)
 
     @staticmethod
-    def add_notify_avr_status(
+    def add_notify_contractor_status(
         incident: Incident, comment: Optional[str] = None
     ) -> None:
         status, _ = IncidentStatus.objects.get_or_create(
-            name=DEFAULT_NOTIFY_AVR_STATUS_NAME,
-            defaults={'description': DEFAULT_NOTIFY_AVR_STATUS_DESC}
+            name=NOTIFY_CONTRACTOR_STATUS_NAME,
+            defaults={'description': NOTIFY_CONTRACTOR_STATUS_DESC}
         )
         IncidentStatusHistory.objects.create(
             incident=incident,
@@ -404,12 +404,12 @@ class IncidentManager(IncidentValidator):
         incident.statuses.add(status)
 
     @staticmethod
-    def add_notified_avr_status(
+    def add_notified_contractor_status(
         incident: Incident, comment: Optional[str] = None
     ) -> None:
         status, _ = IncidentStatus.objects.get_or_create(
-            name=DEFAULT_NOTIFIED_AVR_STATUS_NAME,
-            defaults={'description': DEFAULT_NOTIFIED_AVR_STATUS_DESC}
+            name=NOTIFIED_CONTRACTOR_STATUS_NAME,
+            defaults={'description': NOTIFIED_CONTRACTOR_STATUS_DESC}
         )
         IncidentStatusHistory.objects.create(
             incident=incident,
@@ -631,3 +631,33 @@ class IncidentManager(IncidentValidator):
                     email_to.append(pole_email.email.email)
 
         return email_to
+
+    @staticmethod
+    def get_rvr_emails(incident: Incident) -> list[str]:
+        email_to = []
+        if (
+            incident.pole
+            and incident.pole.region
+            and incident.pole.region.rvr_email
+        ):
+            email_to.append(incident.pole.region.rvr_email.email)
+
+        return email_to
+
+    @staticmethod
+    def get_last_status_by_name(
+        incident, name: str
+    ) -> Optional[IncidentStatusHistory]:
+        """
+        Возвращает последнее вхождение определенного статуса по его названию
+        для данного инцидента или None, если такого статуса не было.
+        """
+        return (
+            IncidentStatusHistory.objects
+            .filter(
+                incident=incident,
+                status__name=name
+            )
+            .order_by('-insert_date')
+            .first()
+        )

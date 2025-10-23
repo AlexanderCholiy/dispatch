@@ -30,7 +30,8 @@ from .utils import EmailManager
 from .validators import EmailValidator
 
 email_parser_logger = LoggerFactory(
-    __name__, EMAIL_LOG_ROTATING_FILE).get_logger
+    __name__, EMAIL_LOG_ROTATING_FILE
+).get_logger()
 
 
 email_parser_config = {

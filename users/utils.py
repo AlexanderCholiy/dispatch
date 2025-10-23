@@ -17,7 +17,7 @@ from core.loggers import LoggerFactory
 
 from .models import PendingUser, Roles, User
 
-email_logger = LoggerFactory(__name__, EMAIL_LOG_ROTATING_FILE).get_logger
+email_logger = LoggerFactory(__name__, EMAIL_LOG_ROTATING_FILE).get_logger()
 
 
 def role_required(

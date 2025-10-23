@@ -8,11 +8,35 @@ from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
 from core.wraps import timer
 from incidents.constants import (
-    DEFAULT_AVR_CATEGORY,
-    DEFAULT_RVR_CATEGORY,
+    AVR_CATEGORY,
+    RVR_CATEGORY,
     INCIDENT_CATEGORIES_FILE,
     INCIDENT_STATUSES_FILE,
     INCIDENT_TYPES_FILE,
+    DEFAULT_STATUS_NAME,
+    DEFAULT_STATUS_DESC,
+    END_STATUS_NAME,
+    END_STATUS_DESC,
+    ERR_STATUS_NAME,
+    ERR_STATUS_DESC,
+    WAIT_ACCEPTANCE_STATUS_NAME,
+    WAIT_ACCEPTANCE_STATUS_DESC,
+    GENERATION_STATUS_NAME,
+    GENERATION_STATUS_DESC,
+    IN_WORK_STATUS_NAME,
+    IN_WORK_STATUS_DESC,
+    NOTIFY_OP_IN_WORK_STATUS_NAME,
+    NOTIFY_OP_IN_WORK_STATUS_DESC,
+    NOTIFIED_OP_IN_WORK_STATUS_NAME,
+    NOTIFIED_OP_IN_WORK_STATUS_DESC,
+    NOTIFY_OP_END_STATUS_NAME,
+    NOTIFY_OP_END_STATUS_DESC,
+    NOTIFIED_OP_END_STATUS_NAME,
+    NOTIFIED_OP_END_STATUS_DESC,
+    NOTIFY_CONTRACTOR_STATUS_NAME,
+    NOTIFY_CONTRACTOR_STATUS_DESC,
+    NOTIFIED_CONTRACTOR_STATUS_NAME,
+    NOTIFIED_CONTRACTOR_STATUS_DESC,
 )
 from incidents.models import (
     IncidentCategory,
@@ -23,7 +47,8 @@ from incidents.models import (
 )
 
 incident_managment_logger = LoggerFactory(
-    __name__, INCIDENTS_LOG_ROTATING_FILE).get_logger
+    __name__, INCIDENTS_LOG_ROTATING_FILE
+).get_logger()
 
 
 class Command(BaseCommand):
@@ -69,6 +94,33 @@ class Command(BaseCommand):
     @timer(incident_managment_logger)
     @transaction.atomic()
     def update_incident_statuses(self):
+        default_statuses = [
+            (DEFAULT_STATUS_NAME, DEFAULT_STATUS_DESC),
+            (END_STATUS_NAME, END_STATUS_DESC),
+            (ERR_STATUS_NAME, ERR_STATUS_DESC),
+            (WAIT_ACCEPTANCE_STATUS_NAME, WAIT_ACCEPTANCE_STATUS_DESC),
+            (GENERATION_STATUS_NAME, GENERATION_STATUS_DESC),
+            (IN_WORK_STATUS_NAME, IN_WORK_STATUS_DESC),
+            (NOTIFY_OP_IN_WORK_STATUS_NAME, NOTIFY_OP_IN_WORK_STATUS_DESC),
+            (NOTIFIED_OP_IN_WORK_STATUS_NAME, NOTIFIED_OP_IN_WORK_STATUS_DESC),
+            (NOTIFY_OP_END_STATUS_NAME, NOTIFY_OP_END_STATUS_DESC),
+            (NOTIFIED_OP_END_STATUS_NAME, NOTIFIED_OP_END_STATUS_DESC),
+            (NOTIFY_CONTRACTOR_STATUS_NAME, NOTIFY_CONTRACTOR_STATUS_DESC),
+            (NOTIFIED_CONTRACTOR_STATUS_NAME, NOTIFIED_CONTRACTOR_STATUS_DESC),
+        ]
+
+        total = len(default_statuses)
+
+        for index, name, description in enumerate(default_statuses):
+            PrettyPrint.progress_bar_info(
+                index, total,
+                'Обновление значений по умолчанию в IncidentStatus:'
+            )
+            IncidentStatus.objects.get_or_create(
+                name=name,
+                defaults={'description': description},
+            )
+
         incident_statuses = pd.read_excel(INCIDENT_STATUSES_FILE)
         incident_statuses.replace('', None, inplace=True)
         incident_statuses.replace(nan, None, inplace=True)
@@ -90,11 +142,10 @@ class Command(BaseCommand):
             if not name:
                 continue
 
-            if not IncidentStatus.objects.filter(name=name).exists():
-                IncidentStatus.objects.create(
-                    name=name,
-                    description=description,
-                )
+            IncidentStatus.objects.get_or_create(
+                name=name,
+                defaults={'description': description},
+            )
 
         valid_status_ids = set(
             IncidentStatus.objects.values_list('id', flat=True)
@@ -139,7 +190,7 @@ class Command(BaseCommand):
                     description=description,
                 )
 
-        for category_name in (DEFAULT_AVR_CATEGORY, DEFAULT_RVR_CATEGORY):
+        for category_name in (AVR_CATEGORY, RVR_CATEGORY):
             IncidentCategory.objects.get_or_create(name=category_name)
 
         valid_category_ids = set(
