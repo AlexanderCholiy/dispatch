@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
+from django.db.models import Q, F, CheckConstraint
 
 from core.models import Detail
 from ts.models import AVRContractor, BaseStation, Pole
@@ -130,11 +131,31 @@ class Incident(models.Model):
     class Meta:
         verbose_name = 'инцидент'
         verbose_name_plural = 'Инциденты'
+        constraints = [
+            CheckConstraint(
+                check=(
+                    Q(avr_end_date__gte=F('avr_start_date'))
+                    | Q(avr_end_date__isnull=True)
+                    | Q(avr_start_date__isnull=True)
+                ),
+                name='avr_end_after_start',
+            ),
+            CheckConstraint(
+                check=(
+                    Q(rvr_end_date__gte=F('rvr_start_date'))
+                    | Q(rvr_end_date__isnull=True)
+                    | Q(rvr_start_date__isnull=True)
+                ),
+                name='rvr_end_after_start',
+            )
+        ]
 
     def __str__(self):
         return self.code or f'Внутренний номер {self.pk}'
 
     def save(self, *args, **kwargs):
+        self.full_clean()
+
         if self.is_incident_finish and not self.incident_finish_date:
             self.incident_finish_date = timezone.now()
         elif not self.is_incident_finish:
@@ -152,6 +173,24 @@ class Incident(models.Model):
                 incident=self,
                 category=avr_category
             )
+
+    def clean(self):
+        errors = {}
+
+        if self.avr_start_date and self.avr_end_date:
+            if self.avr_end_date < self.avr_start_date:
+                errors['avr_end_date'] = (
+                    'Дата закрытия АВР не может быть раньше даты начала.'
+                )
+
+        if self.rvr_start_date and self.rvr_end_date:
+            if self.rvr_end_date < self.rvr_start_date:
+                errors['rvr_end_date'] = (
+                    'Дата закрытия РВР не может быть раньше даты начала.'
+                )
+
+        if errors:
+            raise ValidationError(errors)
 
     @property
     def is_sla_expired(self) -> Optional[bool]:

@@ -12,12 +12,12 @@ from django.urls import reverse
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
-from core.constants import EMAIL_LOG_ROTATING_FILE
+from core.constants import DJANGO_LOG_ROTATING_FILE
 from core.loggers import LoggerFactory
 
 from .models import PendingUser, Roles, User
 
-email_logger = LoggerFactory(__name__, EMAIL_LOG_ROTATING_FILE).get_logger()
+django_logger = LoggerFactory(__name__, DJANGO_LOG_ROTATING_FILE).get_logger()
 
 
 def role_required(
@@ -168,7 +168,7 @@ def send_activation_email(
             request,
             'Не удалось отправить письмо с подтверждением. Попробуйте позже.'
         )
-        email_logger.exception(e)
+        django_logger.exception(e)
     return False
 
 
@@ -208,5 +208,5 @@ def send_confirm_email(user: PendingUser, request: HttpRequest) -> bool:
             request,
             'Не удалось отправить письмо с подтверждением. Попробуйте позже.'
         )
-        email_logger.exception(e)
+        django_logger.exception(e)
     return False

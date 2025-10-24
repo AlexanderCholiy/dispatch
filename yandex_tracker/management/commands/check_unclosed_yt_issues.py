@@ -400,7 +400,9 @@ class Command(BaseCommand):
             issue_key: str = issue['key']
 
             category_field_key = category_field['id']
-            categories: Optional[list[str]] = issue.get(category_field_key)
+            categories: list[str] = (
+                issue.get(category_field_key) or [AVR_CATEGORY]
+            )
 
             if not database_id:
                 yt_manager.create_incident_from_issue(issue, False)
@@ -626,41 +628,12 @@ class Command(BaseCommand):
                             )
                         )
 
-                if (
-                    (
-                        not incident.avr_start_date
-                        and AVR_CATEGORY in categories
-                    )
-                    or (
-                        not incident.rvr_start_date
-                        and RVR_CATEGORY in categories
-                    )
-                ):
-                    last_notified_contractor_status = (
-                        IncidentManager.get_last_status_by_name(
-                            incident, NOTIFIED_CONTRACTOR_STATUS_NAME
-                        )
-                    )
+                updated_avr_rvr_date = self._update_avr_rvr_dates(
+                    incident, categories
+                )
 
-                    if (
-                        AVR_CATEGORY in categories
-                        and not incident.avr_start_date
-                        and last_notified_contractor_status
-                    ):
-                        incident.avr_start_date = (
-                            last_notified_contractor_status.insert_date
-                        )
-                        incidents_2_update.append(incident)
-
-                    if (
-                        RVR_CATEGORY in categories
-                        and not incident.rvr_start_date
-                        and last_notified_contractor_status
-                    ):
-                        incident.rvr_start_date = (
-                            last_notified_contractor_status.insert_date
-                        )
-                        incidents_2_update.append(incident)
+                if updated_avr_rvr_date:
+                    incidents_2_update.append(incident)
 
             except Exception as e:
                 yt_managment_logger.exception(e)
@@ -668,7 +641,105 @@ class Command(BaseCommand):
 
         if incidents_2_update:
             Incident.objects.bulk_update(
-                incidents_2_update, ['avr_start_date', 'rvr_start_date']
+                incidents_2_update,
+                [
+                    'avr_start_date',
+                    'avr_end_date',
+                    'rvr_start_date',
+                    'rvr_end_date',
+                ]
             )
 
         return total, error_count, updated_incidents_counter, validation_tasks
+
+    def _update_avr_rvr_dates(
+        self, incident: Incident, categories: list[str]
+    ) -> bool:
+        """Обновляет даты начала и окончания АВР и РВР"""
+        updated = False
+
+        if (
+            (
+                not incident.avr_start_date
+                and AVR_CATEGORY in categories
+            )
+            or (
+                not incident.rvr_start_date
+                and RVR_CATEGORY in categories
+            )
+        ):
+            last_notified_contractor_status = (
+                IncidentManager.get_last_status_by_name(
+                    incident, NOTIFIED_CONTRACTOR_STATUS_NAME
+                )
+            )
+
+            if (
+                AVR_CATEGORY in categories
+                and not incident.avr_start_date
+                and last_notified_contractor_status
+            ):
+                incident.avr_start_date = (
+                    last_notified_contractor_status.insert_date
+                )
+                updated = True
+
+            if (
+                RVR_CATEGORY in categories
+                and not incident.rvr_start_date
+                and last_notified_contractor_status
+            ):
+                incident.rvr_start_date = (
+                    last_notified_contractor_status.insert_date
+                )
+                updated = True
+
+        if (
+            (
+                not incident.avr_end_date
+                and incident.avr_start_date
+                and AVR_CATEGORY in categories
+            )
+            or (
+                not incident.rvr_end_date
+                and incident.rvr_start_date
+                and RVR_CATEGORY in categories
+            )
+        ):
+            last_notified_op_end_status = (
+                IncidentManager.get_last_status_by_name(
+                    incident, NOTIFIED_OP_END_STATUS_NAME
+                )
+            )
+
+            if (
+                not incident.avr_end_date
+                and incident.avr_start_date
+                and AVR_CATEGORY in categories
+                and last_notified_op_end_status
+                and (
+                    last_notified_op_end_status.insert_date
+                    >= incident.avr_start_date
+                )
+            ):
+                incident.avr_end_date = (
+                    last_notified_op_end_status.insert_date
+                )
+                updated = True
+
+            if (
+                not incident.rvr_end_date
+                and incident.rvr_start_date
+                and RVR_CATEGORY in categories
+                and last_notified_op_end_status
+                and (
+                    last_notified_op_end_status.insert_date
+                    >= incident.rvr_start_date
+                )
+            ):
+                incident.rvr_end_date = (
+                    last_notified_op_end_status.insert_date
+                )
+                updated = True
+
+        return updated

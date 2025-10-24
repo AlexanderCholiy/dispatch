@@ -587,6 +587,12 @@ class IncidentManager(IncidentValidator):
             if new_incident:
                 IncidentManager.add_default_status(actual_email_incident)
 
+            # Корректировка incident_date относительно insert_date:
+            insert_date = actual_email_incident.insert_date or timezone.now()
+            if actual_email_incident.incident_date > insert_date:
+                actual_email_incident.incident_date -= timedelta(hours=3)
+                actual_email_incident.save(update_fields=['incident_date'])
+
             return actual_email_incident, new_incident
 
     @staticmethod
