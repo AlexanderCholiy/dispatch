@@ -375,7 +375,7 @@ class AutoEmailsFromYT:
         if not self.incident.incident_type:
             comment = (
                 'Необходимо выбрать тип проблемы, прежде чем передавать его '
-                'подрядчику.'
+                'подрядчику по АВР.'
             )
             self._handle_error(comment)
             return False
@@ -393,7 +393,7 @@ class AutoEmailsFromYT:
         return result
 
     def _notify_rvr_contractor(self) -> bool:
-        email_to = IncidentManager.get_rvr_emails()
+        email_to = IncidentManager.get_rvr_emails(self.incident)
 
         if not email_to:
             comment = 'Не найден email подрядчика РВР для автоответа.'
@@ -448,7 +448,7 @@ class AutoEmailsFromYT:
 
         IncidentManager.add_notify_contractor_status(
             self.incident,
-            f'Диспетчер отправил автоответ подрядчикам по: '
+            'Диспетчер отправил автоответ подрядчикам по: '
             f'{", ".join(selected_categories)} с информацией по заявке.'
         )
 
@@ -461,6 +461,8 @@ class AutoEmailsFromYT:
             (
                 success_categories if result else failed_categories
             ).append(category)
+            if failed_categories:
+                break
 
         if failed_categories:
             error_message = (

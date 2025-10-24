@@ -20,12 +20,16 @@ from emails.email_parser import email_parser
 from emails.models import EmailMessage
 from incidents.constants import (
     ERR_STATUS_NAME,
+    IN_WORK_STATUS_NAME,
     NOTIFIED_CONTRACTOR_STATUS_NAME,
     NOTIFIED_OP_END_STATUS_NAME,
     NOTIFIED_OP_IN_WORK_STATUS_NAME,
     WAIT_ACCEPTANCE_STATUS_NAME,
     AVR_CATEGORY,
     RVR_CATEGORY,
+    NOTIFY_OP_IN_WORK_STATUS_NAME,
+    NOTIFY_CONTRACTOR_STATUS_NAME,
+    NOTIFY_OP_END_STATUS_NAME,
 )
 from incidents.models import (
     Incident,
@@ -462,19 +466,114 @@ class Command(BaseCommand):
                     updated_incidents_counter += 1
                     continue
 
-                # Обработка автоответов (данные автоматически синхронизируются)
-                # добавлена дополнительная ошибка от спама, если нарушат
-                # переходы в рабочем процессе:
-                if last_status_history:
-                    delta: timedelta = (
-                        timezone.now() - last_status_history.insert_date
-                    )
-                    check_status_dt = delta >= NOTIFY_SPAM_DELAY
-                    timeout = max(
-                        int((NOTIFY_SPAM_DELAY - delta).total_seconds()), 0
-                    )
-                else:
+                if not last_status_history:
                     IncidentManager.add_default_status(incident)
+                    continue
+
+                can_send, timeout_send = self._anti_spam_check(
+                    last_status_history,
+                    NOTIFY_SPAM_DELAY,
+                    (
+                        NOTIFY_OP_IN_WORK_STATUS_NAME,
+                        NOTIFY_CONTRACTOR_STATUS_NAME,
+                        NOTIFY_OP_END_STATUS_NAME,
+
+                    )
+                )
+
+                # Проверка запрещенных статусов для заявок созданных вручную:
+                if not incident.is_auto_incident and status_key in (
+                    yt_manager.notify_op_issue_in_work_status_key,
+                    yt_manager.notify_op_issue_closed_status_key,
+                ):
+                    if status_key == (
+                        yt_manager.notify_op_issue_in_work_status_key
+                    ):
+                        validation_tasks.append(
+                            partial(
+                                yt_manager.update_issue_status,
+                                issue_key,
+                                yt_manager.error_status_key,
+                                (
+                                    'Нельзя отправить автоматическое '
+                                    'уведомление заявителю о принятии заявки '
+                                    'в работу, т.к. она была создана вручную.'
+                                )
+                            )
+                        )
+                    elif status_key == (
+                        yt_manager.notify_op_issue_closed_status_key
+                    ):
+                        validation_tasks.append(
+                            partial(
+                                yt_manager.update_issue_status,
+                                issue_key,
+                                yt_manager.error_status_key,
+                                (
+                                    'Нельзя отправить автоматическое '
+                                    'уведомление заявителю о закрытии заявки, '
+                                    'т.к. она была создана вручную.'
+                                )
+                            )
+                        )
+
+                    continue
+
+                # Проверка от частого перехода между статусами:
+                if not can_send and status_key in (
+                    yt_manager.notify_op_issue_in_work_status_key,
+                    yt_manager.notify_op_issue_closed_status_key,
+                    yt_manager.notify_contractor_in_work_status_key,
+                ):
+                    if status_key == (
+                        yt_manager.notify_op_issue_in_work_status_key
+                    ):
+                        validation_tasks.append(
+                            partial(
+                                yt_manager.update_issue_status,
+                                issue_key,
+                                yt_manager.error_status_key,
+                                (
+                                    'Уведомление о принятии работ недавно '
+                                    'было отправлено заявителю. '
+                                    f'Попробуйте снова через {timeout_send} '
+                                    'секунд.'
+                                )
+                            )
+                        )
+                    elif status_key == (
+                        yt_manager.notify_op_issue_closed_status_key
+                    ):
+                        validation_tasks.append(
+                            partial(
+                                yt_manager.update_issue_status,
+                                issue_key,
+                                yt_manager.error_status_key,
+                                (
+                                    'Уведомление о закрытии работ уже было '
+                                    'отправлено заявителю.'
+                                    f'Попробуйте снова через {timeout_send} '
+                                    'секунд.'
+                                )
+                            )
+                        )
+                    elif status_key == (
+                        yt_manager.notify_contractor_in_work_status_key
+                    ):
+                        validation_tasks.append(
+                            partial(
+                                yt_manager.update_issue_status,
+                                issue_key,
+                                yt_manager.error_status_key,
+                                (
+                                    'Информация об инциденте уже была '
+                                    'передана в работу подрядчику. '
+                                    f'Попробуйте снова через {timeout_send} '
+                                    'секунд.'
+                                )
+                            )
+                        )
+
                     continue
 
                 yt_emails = AutoEmailsFromYT(
@@ -483,10 +582,9 @@ class Command(BaseCommand):
 
                 if (
                     status_key == yt_manager.error_status_key
-                    and last_status_history.status.name != (ERR_STATUS_NAME)
+                    and last_status_history.status.name != ERR_STATUS_NAME
                 ):
                     IncidentManager.add_error_status(incident)
-
                 elif (
                     status_key == yt_manager.need_acceptance_status_key
                     and last_status_history.status.name != (
@@ -494,24 +592,26 @@ class Command(BaseCommand):
                     )
                 ):
                     IncidentManager.add_wait_acceptance_status(incident)
-
-                elif status_key == yt_manager.in_work_status_key:
+                elif (
+                    status_key == yt_manager.in_work_status_key
+                    and last_status_history.status.name != IN_WORK_STATUS_NAME
+                ):
                     IncidentManager.add_in_work_status(
                         incident, 'Диспетчер принял работы в YandexTracker'
                     )
-
                 elif (
                     status_key == (
-                        yt_manager.notified_op_issue_in_work_status_key)
+                        yt_manager.notified_op_issue_in_work_status_key
+                    )
                     and last_status_history.status.name != (
                         NOTIFIED_OP_IN_WORK_STATUS_NAME
                     )
                 ):
                     IncidentManager.add_notified_op_status(incident)
-
                 elif (
                     status_key == (
-                        yt_manager.notified_op_issue_closed_status_key)
+                        yt_manager.notified_op_issue_closed_status_key
+                    )
                     and last_status_history.status.name != (
                         NOTIFIED_OP_END_STATUS_NAME
                     )
@@ -527,104 +627,64 @@ class Command(BaseCommand):
                     )
                 ):
                     IncidentManager.add_notified_contractor_status(incident)
-                elif (
-                    status_key == yt_manager.notify_op_issue_in_work_status_key
+                elif status_key == (
+                    yt_manager.notify_op_issue_in_work_status_key
                 ):
-                    if not incident.is_auto_incident:
-                        validation_tasks.append(
-                            partial(
-                                yt_manager.update_issue_status,
-                                issue_key,
-                                yt_manager.error_status_key,
-                                (
-                                    'Нельзя отправить автоматическое '
-                                    'уведомление заявителю для заявки, '
-                                    'созданной вручную.'
-                                )
-                            )
-                        )
-                    elif last_status_history.status.name not in (
-                        NOTIFIED_OP_IN_WORK_STATUS_NAME,
+                    if last_status_history.status.name != (
+                        NOTIFIED_OP_IN_WORK_STATUS_NAME
                     ):
                         validation_tasks.append(
                             partial(yt_emails.notify_operator_issue_in_work)
                         )
-                    elif check_status_dt:
+                    else:
                         validation_tasks.append(
                             partial(
                                 yt_manager.update_issue_status,
                                 issue_key,
-                                yt_manager.error_status_key,
-                                (
-                                    'Уведомление о принятии работ недавно '
-                                    'было отправлено заявителю. '
-                                    f'Попробуйте снова через {timeout} секунд.'
-                                )
+                                yt_manager.notified_op_issue_in_work_status_key,  # noqa: E501
+                                ''
                             )
                         )
 
-                elif (
-                    status_key == yt_manager.notify_op_issue_closed_status_key
+                elif status_key == (
+                    yt_manager.notify_op_issue_closed_status_key
                 ):
-                    if not incident.is_auto_incident:
-                        validation_tasks.append(
-                            partial(
-                                yt_manager.update_issue_status,
-                                issue_key,
-                                yt_manager.error_status_key,
-                                (
-                                    'Нельзя отправить автоматическое '
-                                    'уведомление заявителю для заявки, '
-                                    'созданной вручную.'
-                                )
-                            )
-                        )
-                    elif last_status_history.status.name not in (
-                        NOTIFIED_OP_END_STATUS_NAME,
+                    if last_status_history.status.name != (
+                        NOTIFIED_OP_END_STATUS_NAME
                     ):
                         validation_tasks.append(
                             partial(
                                 yt_emails.notify_contractors, category_field
                             )
                         )
-                    elif check_status_dt:
+                    else:
                         validation_tasks.append(
                             partial(
                                 yt_manager.update_issue_status,
                                 issue_key,
-                                yt_manager.error_status_key,
-                                (
-                                    'Уведомление о закрытии работ уже было '
-                                    'отправлено заявителю.'
-                                    f'Попробуйте снова через {timeout} секунд.'
-                                )
+                                yt_manager.notified_op_issue_closed_status_key,  # noqa: E501
+                                ''
                             )
                         )
 
-                elif (
-                    status_key == (
-                        yt_manager.notify_contractor_in_work_status_key
-                    )
+                elif status_key == (
+                    yt_manager.notify_contractor_in_work_status_key
                 ):
-                    if last_status_history.status.name not in (
-                        NOTIFIED_CONTRACTOR_STATUS_NAME,
+                    if last_status_history.status.name != (
+                        NOTIFIED_CONTRACTOR_STATUS_NAME
                     ):
                         validation_tasks.append(
                             partial(
                                 yt_emails.notify_contractors, category_field
                             )
                         )
-                    elif check_status_dt:
+                    else:
                         validation_tasks.append(
                             partial(
                                 yt_manager.update_issue_status,
                                 issue_key,
-                                yt_manager.error_status_key,
-                                (
-                                    'Информация об инциденте уже была '
-                                    'передана в работу подрядчику. '
-                                    f'Попробуйте снова через {timeout} секунд.'
-                                )
+                                yt_manager.notified_contractor_in_work_status_key,  # noqa: E501
+                                ''
                             )
                         )
 
@@ -743,3 +803,33 @@ class Command(BaseCommand):
                 updated = True
 
         return updated
+
+    def _anti_spam_check(
+        self,
+        last_status_history: IncidentStatusHistory,
+        delay: timedelta,
+        allowed_status_names: tuple[str]
+    ) -> tuple[bool, int]:
+        """
+        Проверяет, можно ли повторно отправлять автоуведомление,
+        чтобы избежать спама при частых переходах между статусами.
+
+        Args:
+            last_status_history (IncidentStatusHistory):
+                Последняя запись истории статусов для инцидента.
+            delay (timedelta):
+                Минимальный интервал между отправками автоуведомлений.
+
+        Returns:
+            tuple[bool, int]:
+                - bool — можно ли отправлять уведомление;
+                - int — количество секунд, через сколько можно будет
+                отправить автоответ (0, если уже можно).
+        """
+        if last_status_history.status.name not in allowed_status_names:
+            return True, 0
+
+        delta: timedelta = timezone.now() - last_status_history.insert_date
+        timeout = max(int((delay - delta).total_seconds()), 0)
+
+        return delta > delay, timeout

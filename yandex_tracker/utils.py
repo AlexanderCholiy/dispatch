@@ -2,6 +2,7 @@ import inspect
 import os
 import re
 import time
+import tempfile
 from datetime import datetime, timedelta
 from http import HTTPMethod, HTTPStatus
 from typing import Generator, Optional
@@ -1192,6 +1193,8 @@ class YandexTrackerManager:
         name_ru: Optional[str] = None,
         description: Optional[str] = None,
         category_id: Optional[str] = None,
+        wait_if_busy: bool = True,
+        timeout: int = 30,
     ) -> dict:
         """
         Обновляет пользовательское поле в Яндекс.Трекере.
@@ -1213,47 +1216,77 @@ class YandexTrackerManager:
         Raises:
             KeyError: Если не верно указан category_id.
 
+        Особенности:
+            При попытки сделать readonly=True, которое бллокирует
+            редактирование метод ждет пока предыдущее состояние закончится.
+
         """
-        field_info = self.select_custom_field(field_id)
-        version: int = field_info['version']
-        url = f'{self.custom_field_url}/{field_id}?version={version}'
+        tmp_dir = tempfile.gettempdir()
+        lock_file = os.path.join(tmp_dir, f'yt_field_{field_id}.lock')
 
-        valid_categories = {
-            'system': self.system_category_field_id,
-            'timestamp': self.timestamp_category_field_id,
-            'agile': self.agile_category_field_id,
-            'email': self.email_category_field_id,
-            'sla': self.sla_category_field_id,
-        }
+        start_time = time.time()
+        if wait_if_busy:
+            while os.path.exists(lock_file):
+                elapsed = time.time() - start_time
+                if elapsed > timeout:
+                    raise TimeoutError(
+                        f'Поле {field_id} занято более {timeout} секунд'
+                    )
+                yt_manager_logger.debug(
+                    f'Поле {field_id} занято, lock {elapsed:.1f}s'
+                )
+                time.sleep(0.5)
 
-        if category_id and category_id not in valid_categories.values():
-            raise KeyError(
-                f'Укажите один из доступных вариантов id: {valid_categories}'
+        try:
+            with open(lock_file, 'w') as f:
+                f.write(str(time.time()))
+
+            field_info = self.select_custom_field(field_id)
+            version: int = field_info['version']
+            url = f'{self.custom_field_url}/{field_id}?version={version}'
+
+            valid_categories = {
+                'system': self.system_category_field_id,
+                'timestamp': self.timestamp_category_field_id,
+                'agile': self.agile_category_field_id,
+                'email': self.email_category_field_id,
+                'sla': self.sla_category_field_id,
+            }
+
+            if category_id and category_id not in valid_categories.values():
+                raise KeyError(
+                    'Укажите один из доступных вариантов id: '
+                    f'{valid_categories}'
+                )
+
+            payload = {}
+
+            name_payload = {}
+            if name_en is not None:
+                name_payload['en'] = name_en
+            if name_ru is not None:
+                name_payload['ru'] = name_ru
+            if name_payload:
+                payload['name'] = name_payload
+
+            if description is not None:
+                payload['description'] = description
+
+            payload['readonly'] = readonly
+            payload['hidden'] = hidden
+            payload['visible'] = visible
+
+            return self._make_request(
+                HTTPMethod.PATCH,
+                url,
+                json=payload,
+                sub_func_name=inspect.currentframe().f_code.co_name,
             )
 
-        payload = {}
-
-        name_payload = {}
-        if name_en is not None:
-            name_payload['en'] = name_en
-        if name_ru is not None:
-            name_payload['ru'] = name_ru
-        if name_payload:
-            payload['name'] = name_payload
-
-        if description is not None:
-            payload['description'] = description
-
-        payload['readonly'] = readonly
-        payload['hidden'] = hidden
-        payload['visible'] = visible
-
-        return self._make_request(
-            HTTPMethod.PATCH,
-            url,
-            json=payload,
-            sub_func_name=inspect.currentframe().f_code.co_name,
-        )
+        finally:
+            if os.path.exists(lock_file):
+                os.remove(lock_file)
+                yt_manager_logger.debug(f'Lock для поля {field_id} снят')
 
     @property
     def field_categories(self):

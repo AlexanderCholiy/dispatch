@@ -142,6 +142,10 @@ class IncidentAdmin(admin.ModelAdmin):
                 'is_incident_finish',
                 'is_auto_incident',
                 'code',
+                'avr_start_date',
+                'avr_end_date',
+                'rvr_start_date',
+                'rvr_end_date',
             ),
         }),
     )
