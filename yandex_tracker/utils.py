@@ -1,8 +1,8 @@
 import inspect
 import os
 import re
-import time
 import tempfile
+import time
 from datetime import datetime, timedelta
 from http import HTTPMethod, HTTPStatus
 from typing import Generator, Optional
@@ -22,6 +22,7 @@ from incidents.constants import (
     DEFAULT_STATUS_DESC,
     DEFAULT_STATUS_NAME,
     MAX_EMAILS_ON_CLOSED_INCIDENTS,
+    RVR_SLA_DEADLINE_IN_HOURS,
 )
 from incidents.models import Incident, IncidentStatus, IncidentStatusHistory
 
@@ -49,8 +50,10 @@ yt_manager_config = {
     'YT_BASE_STATION_GLOBAL_FIELD_ID': os.getenv('YT_BASE_STATION_GLOBAL_FIELD_ID'),  # noqa: E501
     'YT_EMAIL_DATETIME_GLOBAL_FIELD_ID': os.getenv('YT_EMAIL_DATETIME_GLOBAL_FIELD_ID'),  # noqa: E501
     'YT_IS_NEW_MSG_GLOBAL_FIELD_ID': os.getenv('YT_IS_NEW_MSG_GLOBAL_FIELD_ID'),  # noqa: E501
-    'YT_SLA_DEADLINE_GLOBAL_FIELD_ID': os.getenv('YT_SLA_DEADLINE_GLOBAL_FIELD_ID'),  # noqa: E501
-    'YT_IS_SLA_EXPIRED_GLOBAL_FIELD_ID': os.getenv('YT_IS_SLA_EXPIRED_GLOBAL_FIELD_ID'),  # noqa: E501
+    'YT_SLA_AVR_DEADLINE_GLOBAL_FIELD_ID': os.getenv('YT_SLA_AVR_DEADLINE_GLOBAL_FIELD_ID'),  # noqa: E501
+    'YT_IS_SLA_AVR_EXPIRED_GLOBAL_FIELD_ID': os.getenv('YT_IS_SLA_AVR_EXPIRED_GLOBAL_FIELD_ID'),  # noqa: E501
+    'YT_SLA_RVR_DEADLINE_GLOBAL_FIELD_ID': os.getenv('YT_SLA_RVR_DEADLINE_GLOBAL_FIELD_ID'),  # noqa: E501
+    'YT_IS_SLA_RVR_EXPIRED_GLOBAL_FIELD_ID': os.getenv('YT_IS_SLA_RVR_EXPIRED_GLOBAL_FIELD_ID'),  # noqa: E501
     'YT_OPERATOR_NAME_GLOBAL_FIELD_NAME': os.getenv('YT_OPERATOR_NAME_GLOBAL_FIELD_NAME'),  # noqa: E501
     'YT_AVR_NAME_GLOBAL_FIELD_ID': os.getenv('YT_AVR_NAME_GLOBAL_FIELD_ID'),  # noqa: E501
     'YT_MONITORING_GLOBAL_FIELD_ID': os.getenv('YT_MONITORING_GLOBAL_FIELD_ID'),  # noqa: E501
@@ -63,6 +66,10 @@ yt_manager_config = {
     'YT_NOTIFIED_OPERATOR_ISSUE_CLOSED_STATUS_KEY': os.getenv('YT_NOTIFIED_OPERATOR_ISSUE_CLOSED_STATUS_KEY'),  # noqa: E501
     'YT_NOTIFY_CONTRACTOR_IN_WORK_STATUS_KEY': os.getenv('YT_NOTIFY_CONTRACTOR_IN_WORK_STATUS_KEY'),  # noqa: E501
     'YT_NOTIFIED_CONTRACTOR_IN_WORK_STATUS_KEY': os.getenv('YT_NOTIFIED_CONTRACTOR_IN_WORK_STATUS_KEY'),  # noqa: E501
+    'YT_AVR_START_DATE_FIELD_ID': os.getenv('YT_AVR_START_DATE_FIELD_ID'),  # noqa: E501
+    'YT_AVR_END_DATE_FIELD_ID': os.getenv('YT_AVR_END_DATE_FIELD_ID'),  # noqa: E501
+    'YT_RVR_START_DATE_FIELD_ID': os.getenv('YT_RVR_START_DATE_FIELD_ID'),  # noqa: E501
+    'YT_RVR_END_DATE_FIELD_ID': os.getenv('YT_RVR_END_DATE_FIELD_ID'),  # noqa: E501
 }
 Config.validate_env_variables(yt_manager_config)
 
@@ -110,8 +117,14 @@ class YandexTrackerManager:
         base_station_global_field_id: str,
         email_datetime_global_field_id: str,
         is_new_msg_global_field_id: str,
-        sla_deadline_global_field_id: str,
-        is_sla_expired_global_field_id: str,
+        sla_avr_deadline_global_field_id: str,
+        is_sla_avr_expired_global_field_id: str,
+        sla_rvr_deadline_global_field_id: str,
+        is_sla_rvr_expired_global_field_id: str,
+        avr_start_date_global_field_id: str,
+        avr_end_date_global_field_id: str,
+        rvr_start_date_global_field_id: str,
+        rvr_end_date_global_field_id: str,
         operator_name_global_field_name: str,
         avr_name_global_field_id: str,
         monitoring_global_field_id: str,
@@ -138,11 +151,26 @@ class YandexTrackerManager:
         self.base_station_global_field_id = base_station_global_field_id
         self.email_datetime_global_field_id = email_datetime_global_field_id
         self.is_new_msg_global_field_id = is_new_msg_global_field_id
-        self.sla_deadline_global_field_id = sla_deadline_global_field_id
-        self.is_sla_expired_global_field_id = is_sla_expired_global_field_id
         self.operator_name_global_field_name = operator_name_global_field_name
         self.avr_name_global_field_id = avr_name_global_field_id
         self.monitoring_global_field_id = monitoring_global_field_id
+
+        self.sla_avr_deadline_global_field_id = (
+            sla_avr_deadline_global_field_id
+        )
+        self.is_sla_avr_expired_global_field_id = (
+            is_sla_avr_expired_global_field_id
+        )
+        self.sla_rvr_deadline_global_field_id = (
+            sla_rvr_deadline_global_field_id
+        )
+        self.is_sla_rvr_expired_global_field_id = (
+            is_sla_rvr_expired_global_field_id
+        )
+        self.avr_start_date_global_field_id = avr_start_date_global_field_id
+        self.avr_end_date_global_field_id = avr_end_date_global_field_id
+        self.rvr_start_date_global_field_id = rvr_start_date_global_field_id
+        self.rvr_end_date_global_field_id = rvr_end_date_global_field_id
 
         self.type_of_incident_local_field_id = type_of_incident_local_field_id
         self.category_local_field_id = category_local_field_id
@@ -252,22 +280,44 @@ class YandexTrackerManager:
         return emails
 
     @staticmethod
-    def get_sla_status(incident: Optional[Incident]) -> str:
-        """Определяет статус SLA на основе дедлайна статуса инцидента."""
-        if not incident or not incident.sla_deadline:
+    def get_sla_avr_status(incident: Optional[Incident]) -> str:
+        """Определяет статус SLA АВР."""
+        if not incident or not incident.sla_avr_deadline:
             return IsExpiredSLA.unknown
 
-        check_date = incident.sla_check_date
-        deadline = incident.sla_deadline
+        check_date = incident.avr_end_date or timezone.now()
+        deadline = incident.avr_start_date + timedelta(
+            minutes=incident.incident_type.sla_deadline
+        )
 
         if deadline < check_date:
             return IsExpiredSLA.is_expired
-        elif deadline - check_date <= timedelta(hours=1):
+        if deadline - check_date <= timedelta(hours=1):
             return IsExpiredSLA.one_hour
-        elif incident.is_incident_finish:
+        if incident.is_incident_finish:
             return IsExpiredSLA.not_expired
-        else:
-            return IsExpiredSLA.in_work
+
+        return IsExpiredSLA.in_work
+
+    @staticmethod
+    def get_sla_rvr_status(incident: Optional[Incident]) -> str:
+        """Определяет статус SLA РВР."""
+        if not incident or not incident.sla_rvr_deadline:
+            return IsExpiredSLA.unknown
+
+        check_date = incident.rvr_end_date or timezone.now()
+        deadline = incident.rvr_start_date + timedelta(
+            hours=RVR_SLA_DEADLINE_IN_HOURS
+        )
+
+        if deadline < check_date:
+            return IsExpiredSLA.is_expired
+        if deadline - check_date <= timedelta(hours=1):
+            return IsExpiredSLA.one_hour
+        if incident.is_incident_finish:
+            return IsExpiredSLA.not_expired
+
+        return IsExpiredSLA.in_work
 
     @safe_request(yt_manager_logger, retries=retries, timeout=timeout)
     def _make_request(
@@ -565,7 +615,9 @@ class YandexTrackerManager:
             'type': issue_type,
             'author': author,
             'assignee': assignee,
-            self.is_sla_expired_global_field_id: self.get_sla_status(None),
+            self.is_sla_avr_expired_global_field_id: (
+                self.get_sla_avr_status(None)
+            ),
         } if not key else {}
 
         payload.update(add_payload)
@@ -590,10 +642,15 @@ class YandexTrackerManager:
         )
 
     def update_issue_sla_status(self, issue: dict, incident: Incident) -> dict:
-        """Обновление статуса SLA."""
+        """Обновление статусов SLA"""
         key = issue['key']
         payload = {
-            self.is_sla_expired_global_field_id: self.get_sla_status(incident)
+            self.is_sla_avr_expired_global_field_id: (
+                self.get_sla_avr_status(incident)
+            ),
+            self.is_sla_rvr_expired_global_field_id: (
+                self.get_sla_rvr_status(incident)
+            )
         }
         url = f'{self.create_issue_url}{key}'
         return self._make_request(
@@ -1101,8 +1158,14 @@ class YandexTrackerManager:
         category_field: dict,
         category: Optional[list[str]],
         email_datetime: Optional[datetime],
-        sla_deadline: Optional[datetime],
-        is_sla_expired: Optional[str],
+        sla_avr_deadline: Optional[datetime],
+        is_sla_avr_expired: Optional[str],
+        sla_rvr_deadline: Optional[datetime],
+        is_sla_rvr_expired: Optional[str],
+        avr_start_date: Optional[datetime],
+        avr_end_date: Optional[datetime],
+        rvr_start_date: Optional[datetime],
+        rvr_end_date: Optional[datetime],
         pole_number: Optional[str],
         base_station_number: Optional[str],
         avr_name: Optional[str],
@@ -1116,14 +1179,31 @@ class YandexTrackerManager:
 
         valid_email_datetime = email_datetime.isoformat() if isinstance(
             email_datetime, datetime) else None
-        valid_sla_deadline = sla_deadline.isoformat() if isinstance(
-            sla_deadline, datetime) else None
+        valid_sla_avr_deadline = sla_avr_deadline.isoformat() if isinstance(
+            sla_avr_deadline, datetime) else None
+        valid_sla_rvr_deadline = sla_rvr_deadline.isoformat() if isinstance(
+            sla_rvr_deadline, datetime) else None
+
+        valid_avr_start_date = avr_start_date.isoformat() if isinstance(
+            avr_start_date, datetime) else None
+        valid_avr_end_date = avr_end_date.isoformat() if isinstance(
+            avr_end_date, datetime) else None
+        valid_rvr_start_date = rvr_start_date.isoformat() if isinstance(
+            rvr_start_date, datetime) else None
+        valid_rvr_end_date = rvr_end_date.isoformat() if isinstance(
+            rvr_end_date, datetime) else None
 
         payload = {
             type_of_incident_field_key: types_of_incident,
             category_filed_key: category,
-            self.sla_deadline_global_field_id: valid_sla_deadline,
-            self.is_sla_expired_global_field_id: is_sla_expired,
+            self.sla_avr_deadline_global_field_id: valid_sla_avr_deadline,
+            self.is_sla_avr_expired_global_field_id: is_sla_avr_expired,
+            self.sla_rvr_deadline_global_field_id: valid_sla_rvr_deadline,
+            self.is_sla_rvr_expired_global_field_id: is_sla_rvr_expired,
+            self.avr_start_date_global_field_id: valid_avr_start_date,
+            self.avr_end_date_global_field_id: valid_avr_end_date,
+            self.rvr_start_date_global_field_id: valid_rvr_start_date,
+            self.rvr_end_date_global_field_id: valid_rvr_end_date,
             self.email_datetime_global_field_id: valid_email_datetime,
             self.pole_number_global_field_id: pole_number,
             self.base_station_global_field_id: base_station_number,
@@ -1144,19 +1224,18 @@ class YandexTrackerManager:
         self,
         issue_key: str,
         new_status_key: str,
-        comment: str,
+        comment: str = '',
     ) -> Optional[dict]:
         """Выставление нового статуса задаче, согласно рабочему процессу."""
         transitions = self.get_available_transitions(issue_key)
 
-        target_transition = None
-        for transition in transitions:
-            if transition['to']['key'] == new_status_key:
-                target_transition = transition
-                break
+        target_transition = next(
+            (t for t in transitions if t['to']['key'] == new_status_key),
+            None
+        )
 
         if not target_transition:
-            yt_manager_logger.debug(
+            yt_manager_logger.warning(
                 f'Для {issue_key} не возможен переход в статус '
                 f'{new_status_key}'
             )
@@ -1362,8 +1441,14 @@ yt_manager = YandexTrackerManager(
     base_station_global_field_id=yt_manager_config['YT_BASE_STATION_GLOBAL_FIELD_ID'],  # noqa: E501
     email_datetime_global_field_id=yt_manager_config['YT_EMAIL_DATETIME_GLOBAL_FIELD_ID'],  # noqa: E501
     is_new_msg_global_field_id=yt_manager_config['YT_IS_NEW_MSG_GLOBAL_FIELD_ID'],  # noqa: E501
-    sla_deadline_global_field_id=yt_manager_config['YT_SLA_DEADLINE_GLOBAL_FIELD_ID'],  # noqa: E501
-    is_sla_expired_global_field_id=yt_manager_config['YT_IS_SLA_EXPIRED_GLOBAL_FIELD_ID'],  # noqa: E501
+    sla_avr_deadline_global_field_id=yt_manager_config['YT_SLA_AVR_DEADLINE_GLOBAL_FIELD_ID'],  # noqa: E501
+    is_sla_avr_expired_global_field_id=yt_manager_config['YT_IS_SLA_AVR_EXPIRED_GLOBAL_FIELD_ID'],  # noqa: E501
+    sla_rvr_deadline_global_field_id=yt_manager_config['YT_SLA_RVR_DEADLINE_GLOBAL_FIELD_ID'],  # noqa: E501
+    is_sla_rvr_expired_global_field_id=yt_manager_config['YT_IS_SLA_RVR_EXPIRED_GLOBAL_FIELD_ID'],  # noqa: E501
+    avr_start_date_global_field_id=yt_manager_config['YT_AVR_START_DATE_FIELD_ID'],  # noqa: E501
+    avr_end_date_global_field_id=yt_manager_config['YT_AVR_END_DATE_FIELD_ID'],  # noqa: E501
+    rvr_start_date_global_field_id=yt_manager_config['YT_RVR_START_DATE_FIELD_ID'],  # noqa: E501
+    rvr_end_date_global_field_id=yt_manager_config['YT_RVR_END_DATE_FIELD_ID'],  # noqa: E501
     operator_name_global_field_name=yt_manager_config['YT_OPERATOR_NAME_GLOBAL_FIELD_NAME'],  # noqa: E501
     avr_name_global_field_id=yt_manager_config['YT_AVR_NAME_GLOBAL_FIELD_ID'],  # noqa: E501
     monitoring_global_field_id=yt_manager_config['YT_MONITORING_GLOBAL_FIELD_ID'],  # noqa: E501

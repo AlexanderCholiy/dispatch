@@ -121,7 +121,13 @@ class IncidentAdmin(admin.ModelAdmin):
             'incident_type',
         ).prefetch_related('statuses', 'categories')
 
-    readonly_fields = ('avr_contractor', 'sla_deadline', 'is_sla_expired')
+    readonly_fields = (
+        'avr_contractor',
+        'sla_avr_deadline',
+        'is_sla_avr_expired',
+        'sla_rvr_deadline',
+        'is_sla_rvr_expired',
+    )
 
     fieldsets = (
         (None, {
@@ -132,8 +138,10 @@ class IncidentAdmin(admin.ModelAdmin):
                 'incident_type',
                 'responsible_user',
                 'avr_contractor',
-                'sla_deadline',
-                'is_sla_expired',
+                'sla_avr_deadline',
+                'is_sla_avr_expired',
+                'sla_rvr_deadline',
+                'is_sla_rvr_expired',
             ),
         }),
         ('Мета', {

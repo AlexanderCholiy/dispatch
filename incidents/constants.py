@@ -78,3 +78,6 @@ NOTIFIED_CONTRACTOR_STATUS_DESC = (
 # В Трекере должно быть также:
 AVR_CATEGORY = 'АВР'
 RVR_CATEGORY = 'РВР'
+
+# Дедлайн SLA РВР:
+RVR_SLA_DEADLINE_IN_HOURS = 72

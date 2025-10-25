@@ -111,7 +111,7 @@ class Command(BaseCommand):
 
         total = len(default_statuses)
 
-        for index, name, description in enumerate(default_statuses):
+        for index, (name, description) in enumerate(default_statuses):
             PrettyPrint.progress_bar_info(
                 index, total,
                 'Обновление значений по умолчанию в IncidentStatus:'

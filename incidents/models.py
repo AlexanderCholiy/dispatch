@@ -14,6 +14,7 @@ from .constants import (
     AVR_CATEGORY,
     MAX_CODE_LEN,
     MAX_STATUS_COMMENT_LEN,
+    RVR_SLA_DEADLINE_IN_HOURS,
 )
 
 User = get_user_model()
@@ -193,34 +194,59 @@ class Incident(models.Model):
             raise ValidationError(errors)
 
     @property
-    def is_sla_expired(self) -> Optional[bool]:
+    def is_sla_avr_expired(self) -> Optional[bool]:
         is_expired = None
-        if self.incident_type and self.incident_type.sla_deadline:
-            check_date = self.sla_check_date
-            sla_deadline = self.incident_date + timedelta(
-                minutes=self.incident_type.sla_deadline)
+        if (
+            self.incident_type
+            and self.incident_type.sla_deadline
+            and self.avr_start_date
+        ):
+            check_date = self.avr_end_date or timezone.now()
+            sla_deadline = self.avr_start_date + timedelta(
+                minutes=self.incident_type.sla_deadline
+            )
             is_expired = sla_deadline < check_date
         return is_expired
-    is_sla_expired.fget.short_description = 'Просрочен ли SLA'
+    is_sla_avr_expired.fget.short_description = 'Просрочен ли SLA (АВР)'
 
     @property
-    def sla_check_date(self) -> datetime:
-        if self.is_incident_finish and self.incident_finish_date:
-            return self.incident_finish_date
-        return timezone.now()
-
-    @property
-    def sla_deadline(self) -> Optional[datetime]:
-        if self.incident_type and self.incident_type.sla_deadline:
-            return self.incident_date + timedelta(
-                minutes=self.incident_type.sla_deadline)
-        return None
-    sla_deadline.fget.short_description = 'Срок устранения'
+    def is_sla_rvr_expired(self) -> Optional[bool]:
+        is_expired = None
+        if self.rvr_start_date:
+            check_date = self.rvr_end_date or timezone.now()
+            sla_deadline = self.rvr_start_date + timedelta(
+                hours=RVR_SLA_DEADLINE_IN_HOURS
+            )
+            is_expired = sla_deadline < check_date
+        return is_expired
+    is_sla_rvr_expired.fget.short_description = 'Просрочен ли SLA (РВР)'
 
     @property
     def avr_contractor(self) -> Optional[AVRContractor]:
         return self.pole.avr_contractor if self.pole else None
     avr_contractor.fget.short_description = 'Подрядчик по АВР'
+
+    @property
+    def sla_avr_deadline(self) -> Optional[datetime]:
+        if (
+            self.incident_type
+            and self.incident_type.sla_deadline
+            and self.avr_start_date
+        ):
+            return self.avr_start_date + timedelta(
+                minutes=self.incident_type.sla_deadline
+            )
+        return None
+    sla_avr_deadline.fget.short_description = 'Срок устранения АВР'
+
+    @property
+    def sla_rvr_deadline(self) -> Optional[datetime]:
+        if self.rvr_start_date:
+            return self.rvr_start_date + timedelta(
+                hours=RVR_SLA_DEADLINE_IN_HOURS
+            )
+        return None
+    sla_rvr_deadline.fget.short_description = 'Срок устранения РВР'
 
 
 class IncidentCategory(Detail):

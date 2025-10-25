@@ -403,11 +403,6 @@ class Command(BaseCommand):
             status_key: str = issue['status']['key']
             issue_key: str = issue['key']
 
-            category_field_key = category_field['id']
-            categories: list[str] = (
-                issue.get(category_field_key) or [AVR_CATEGORY]
-            )
-
             if not database_id:
                 yt_manager.create_incident_from_issue(issue, False)
                 continue
@@ -519,7 +514,7 @@ class Command(BaseCommand):
 
                     continue
 
-                # Проверка от частого перехода между статусами:
+                # Защита от частого перехода между статусами:
                 if not can_send and status_key in (
                     yt_manager.notify_op_issue_in_work_status_key,
                     yt_manager.notify_op_issue_closed_status_key,
@@ -534,8 +529,8 @@ class Command(BaseCommand):
                                 issue_key,
                                 yt_manager.error_status_key,
                                 (
-                                    'Уведомление о принятии работ недавно '
-                                    'было отправлено заявителю. '
+                                    'Информация о принятии работ недавно '
+                                    'была отправлено заявителю. '
                                     f'Попробуйте снова через {timeout_send} '
                                     'секунд.'
                                 )
@@ -550,8 +545,8 @@ class Command(BaseCommand):
                                 issue_key,
                                 yt_manager.error_status_key,
                                 (
-                                    'Уведомление о закрытии работ уже было '
-                                    'отправлено заявителю.'
+                                    'Информация о закрытии работ уже была '
+                                    'отправлена заявителю.'
                                     f'Попробуйте снова через {timeout_send} '
                                     'секунд.'
                                 )
@@ -576,7 +571,9 @@ class Command(BaseCommand):
 
                     continue
 
-                yt_emails = AutoEmailsFromYT(
+                # Задачи необходимо выполнять в едином цикле, т.к. методы
+                # класса AutoEmailsFromYT необходимо вызывать сразу.
+                yt_auto_emails = AutoEmailsFromYT(
                     yt_manager, email_parser, issue, incident
                 )
 
@@ -630,66 +627,70 @@ class Command(BaseCommand):
                 elif status_key == (
                     yt_manager.notify_op_issue_in_work_status_key
                 ):
-                    if last_status_history.status.name != (
-                        NOTIFIED_OP_IN_WORK_STATUS_NAME
+                    if last_status_history.status.name not in (
+                        NOTIFIED_OP_IN_WORK_STATUS_NAME,
+                        NOTIFY_OP_IN_WORK_STATUS_NAME,
                     ):
-                        validation_tasks.append(
-                            partial(yt_emails.notify_operator_issue_in_work)
-                        )
+                        yt_auto_emails.notify_operator_issue_in_work()
                     else:
                         validation_tasks.append(
                             partial(
                                 yt_manager.update_issue_status,
                                 issue_key,
-                                yt_manager.notified_op_issue_in_work_status_key,  # noqa: E501
-                                ''
+                                yt_manager.error_status_key,
+                                (
+                                    'Автоматическое уведомление о принятии '
+                                    'заявки в работу недавно было отправлено '
+                                    'заявителю.'
+                                )
                             )
                         )
 
                 elif status_key == (
                     yt_manager.notify_op_issue_closed_status_key
                 ):
-                    if last_status_history.status.name != (
-                        NOTIFIED_OP_END_STATUS_NAME
+                    if last_status_history.status.name not in (
+                        NOTIFIED_OP_END_STATUS_NAME,
+                        NOTIFY_OP_END_STATUS_NAME,
                     ):
-                        validation_tasks.append(
-                            partial(
-                                yt_emails.notify_contractors, category_field
-                            )
-                        )
+                        yt_auto_emails.notify_issue_close(category_field)
                     else:
                         validation_tasks.append(
                             partial(
                                 yt_manager.update_issue_status,
                                 issue_key,
-                                yt_manager.notified_op_issue_closed_status_key,  # noqa: E501
-                                ''
+                                yt_manager.error_status_key,
+                                (
+                                    'Автоматическое уведомление о закрытии '
+                                    'заявки недавно было отправлено.'
+                                )
                             )
                         )
 
                 elif status_key == (
                     yt_manager.notify_contractor_in_work_status_key
                 ):
-                    if last_status_history.status.name != (
-                        NOTIFIED_CONTRACTOR_STATUS_NAME
+                    if last_status_history.status.name not in (
+                        NOTIFIED_CONTRACTOR_STATUS_NAME,
+                        NOTIFY_CONTRACTOR_STATUS_NAME,
                     ):
-                        validation_tasks.append(
-                            partial(
-                                yt_emails.notify_contractors, category_field
-                            )
-                        )
+                        yt_auto_emails.notify_contractors(category_field)
                     else:
                         validation_tasks.append(
                             partial(
                                 yt_manager.update_issue_status,
                                 issue_key,
-                                yt_manager.notified_contractor_in_work_status_key,  # noqa: E501
-                                ''
+                                yt_manager.error_status_key,
+                                (
+                                    'Автоматическое уведомление о передаче '
+                                    'заявки подрядчику недавно было '
+                                    'отправлено.'
+                                )
                             )
                         )
 
-                updated_avr_rvr_date = self._update_avr_rvr_dates(
-                    incident, categories
+                updated_avr_rvr_date = (
+                    IncidentManager.auto_update_avr_rvr_dates(incident)
                 )
 
                 if updated_avr_rvr_date:
@@ -711,98 +712,6 @@ class Command(BaseCommand):
             )
 
         return total, error_count, updated_incidents_counter, validation_tasks
-
-    def _update_avr_rvr_dates(
-        self, incident: Incident, categories: list[str]
-    ) -> bool:
-        """Обновляет даты начала и окончания АВР и РВР"""
-        updated = False
-
-        if (
-            (
-                not incident.avr_start_date
-                and AVR_CATEGORY in categories
-            )
-            or (
-                not incident.rvr_start_date
-                and RVR_CATEGORY in categories
-            )
-        ):
-            last_notified_contractor_status = (
-                IncidentManager.get_last_status_by_name(
-                    incident, NOTIFIED_CONTRACTOR_STATUS_NAME
-                )
-            )
-
-            if (
-                AVR_CATEGORY in categories
-                and not incident.avr_start_date
-                and last_notified_contractor_status
-            ):
-                incident.avr_start_date = (
-                    last_notified_contractor_status.insert_date
-                )
-                updated = True
-
-            if (
-                RVR_CATEGORY in categories
-                and not incident.rvr_start_date
-                and last_notified_contractor_status
-            ):
-                incident.rvr_start_date = (
-                    last_notified_contractor_status.insert_date
-                )
-                updated = True
-
-        if (
-            (
-                not incident.avr_end_date
-                and incident.avr_start_date
-                and AVR_CATEGORY in categories
-            )
-            or (
-                not incident.rvr_end_date
-                and incident.rvr_start_date
-                and RVR_CATEGORY in categories
-            )
-        ):
-            last_notified_op_end_status = (
-                IncidentManager.get_last_status_by_name(
-                    incident, NOTIFIED_OP_END_STATUS_NAME
-                )
-            )
-
-            if (
-                not incident.avr_end_date
-                and incident.avr_start_date
-                and AVR_CATEGORY in categories
-                and last_notified_op_end_status
-                and (
-                    last_notified_op_end_status.insert_date
-                    >= incident.avr_start_date
-                )
-            ):
-                incident.avr_end_date = (
-                    last_notified_op_end_status.insert_date
-                )
-                updated = True
-
-            if (
-                not incident.rvr_end_date
-                and incident.rvr_start_date
-                and RVR_CATEGORY in categories
-                and last_notified_op_end_status
-                and (
-                    last_notified_op_end_status.insert_date
-                    >= incident.rvr_start_date
-                )
-            ):
-                incident.rvr_end_date = (
-                    last_notified_op_end_status.insert_date
-                )
-                updated = True
-
-        return updated
 
     def _anti_spam_check(
         self,

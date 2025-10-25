@@ -143,7 +143,7 @@ class AutoEmailsFromYT:
 
     def notify_operator_issue_in_work(self) -> bool:
         """
-        Уведомляем оператора о закрытии заявки с обработкой ошибок и
+        Уведомляем оператора о принятии заявки с обработкой ошибок и
         меняем статус инцидента.
         """
         first_email = (
@@ -243,8 +243,12 @@ class AutoEmailsFromYT:
         )
         return f'{self.issue_key}: {cleaned_subject}'
 
-    def _notify_contractor_issue_close(self, email_to: list[str]) -> bool:
+    def _notify_contractor_issue_close(
+        self, email_to: list[str], text_tmp: str = ''
+    ) -> bool:
         """Уведомляем подрядчиков о закрытии заявки."""
+        text_tmp = text_tmp or f'Заявка "{self.issue_key}" закрыта.'
+
         result = self.send_auto_reply(
             email_to=email_to,
             email_to_cc=None,
@@ -252,7 +256,7 @@ class AutoEmailsFromYT:
                 self.yt_manager.notified_op_issue_closed_status_key
             ),
             subject_template=self._re_cleaned_subject,
-            text_template=f'Заявка "{self.issue_key}" закрыта.',
+            text_template=text_tmp,
             change_status=False,
         )
 
@@ -308,8 +312,9 @@ class AutoEmailsFromYT:
                     )
                 )
             ):
+                text_tmp = f'Заявка "{self.issue_key}" (АВР) закрыта.'
                 result = self._notify_contractor_issue_close(
-                    avr_contractor_emails
+                    avr_contractor_emails, text_tmp
                 )
                 if result:
                     success_results.append(f'подрядчик по {AVR_CATEGORY}')
@@ -334,8 +339,9 @@ class AutoEmailsFromYT:
                     )
                 )
             ):
+                text_tmp = f'Заявка "{self.issue_key}" (РВР) закрыта.'
                 result = self._notify_contractor_issue_close(
-                    rvr_contractor_emails
+                    rvr_contractor_emails, text_tmp
                 )
                 if result:
                     success_results.append(f'подрядчик по {RVR_CATEGORY}')
@@ -356,10 +362,10 @@ class AutoEmailsFromYT:
         )
         self.yt_manager.update_issue_status(
             self.issue_key,
-            self.yt_manager.notified_contractor_in_work_status_key,
+            self.yt_manager.notified_op_issue_closed_status_key,
             success_message,
         )
-        IncidentManager.add_notified_contractor_status(
+        IncidentManager.add_notified_op_end_status(
             self.incident, success_message
         )
         return True
@@ -488,7 +494,7 @@ class AutoEmailsFromYT:
         return True
 
     def _prepare_incident_text_for_rvr(self) -> str:
-        text_parts = ['На вас назначен новый инцидент.\n']
+        text_parts = ['На вас назначен новый инцидент (РВР).\n']
 
         if self.incident.pole:
             pole_region = (
@@ -573,7 +579,7 @@ class AutoEmailsFromYT:
         return '\n'.join(text_parts)
 
     def _prepare_incident_text_for_avr(self) -> str:
-        text_parts = ['На вас назначен новый инцидент.\n']
+        text_parts = ['На вас назначен новый инцидент (АВР).\n']
 
         if self.incident.pole:
             pole_region = (
@@ -714,6 +720,7 @@ class AutoEmailsFromYT:
             text_parts.append('\n\nДля справки, фрагмент вашего письма:\n')
             text_parts.append(f'```\n{preview}\n```')
 
+        # Отправка уведомления без изменения статуса:
         result = self.send_auto_reply(
             email_to=email_to,
             email_to_cc=list(all_recipients),
@@ -723,6 +730,7 @@ class AutoEmailsFromYT:
             success_message=success_message,
             text_template='\n'.join(text_parts),
             error_message=error_message,
+            change_status=False
         )
 
         if not result:
