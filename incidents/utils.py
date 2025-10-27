@@ -12,6 +12,10 @@ from users.models import Roles, User
 from yandex_tracker.utils import YandexTrackerManager
 
 from .constants import (
+    AVR_CATEGORY,
+    DEFAULT_STATUS_DESC,
+    DEFAULT_STATUS_NAME,
+    DGU_CATEGORY,
     ERR_STATUS_DESC,
     ERR_STATUS_NAME,
     GENERATION_STATUS_DESC,
@@ -30,19 +34,15 @@ from .constants import (
     NOTIFY_OP_END_STATUS_NAME,
     NOTIFY_OP_IN_WORK_STATUS_DESC,
     NOTIFY_OP_IN_WORK_STATUS_NAME,
-    DEFAULT_STATUS_DESC,
-    DEFAULT_STATUS_NAME,
+    RVR_CATEGORY,
     WAIT_ACCEPTANCE_STATUS_DESC,
     WAIT_ACCEPTANCE_STATUS_NAME,
-    AVR_CATEGORY,
-    RVR_CATEGORY,
-    DGU_CATEGORY,
 )
 from .models import (
     Incident,
+    IncidentCategory,
     IncidentStatus,
     IncidentStatusHistory,
-    IncidentCategory,
 )
 from .validators import IncidentValidator
 
@@ -759,19 +759,40 @@ class IncidentManager(IncidentValidator):
         """
         updated = False
 
-        category_names = set(
-            incident.categories.values_list('name', flat=True)
-        )
+        category_names: set[IncidentCategory] = {
+            c.name for c in incident.categories.all()
+        }
 
-        statuses_queryset = IncidentStatusHistory.objects.filter(
-            models.Q(is_avr_category=True) | models.Q(is_rvr_category=True),
-            incident=incident,
-            status__name__in=[
-                NOTIFIED_CONTRACTOR_STATUS_NAME, NOTIFIED_OP_END_STATUS_NAME
-            ],
-        ).select_related('status').order_by('-insert_date') if (
-            incident.is_incident_finish is False
-        ) else IncidentStatusHistory.objects.none()
+        if not hasattr(incident, 'prefetched_statuses'):
+            relevant_statuses = list(
+                IncidentStatusHistory.objects.filter(
+                    (
+                        models.Q(is_avr_category=True)
+                        | models.Q(is_rvr_category=True)
+                    ),
+                    incident=incident,
+                    status__name__in=[
+                        NOTIFIED_CONTRACTOR_STATUS_NAME,
+                        NOTIFIED_OP_END_STATUS_NAME,
+                    ],
+                )
+                .select_related('status').order_by('-insert_date')
+            ) if (
+                not incident.is_incident_finish
+            ) else []
+        else:
+            relevant_statuses: list[IncidentStatusHistory] = [
+                s for s in incident.prefetched_statuses
+                if (
+                    (s.is_avr_category or s.is_rvr_category)
+                    and s.status.name in [
+                        NOTIFIED_CONTRACTOR_STATUS_NAME,
+                        NOTIFIED_OP_END_STATUS_NAME,
+                    ],
+                )
+            ] if (
+                not incident.is_incident_finish
+            ) else []
 
         last_statuses = {
             'avr_start': None,
@@ -782,7 +803,7 @@ class IncidentManager(IncidentValidator):
 
         # Перебираем статусы (в порядке убывания даты) и заполняем словарь
         # первыми (последними) встреченными:
-        for status in statuses_queryset:
+        for status in relevant_statuses:
             if status.status.name == NOTIFIED_CONTRACTOR_STATUS_NAME:
                 if (
                     status.is_avr_category

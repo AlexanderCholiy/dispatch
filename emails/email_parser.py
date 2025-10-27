@@ -4,17 +4,18 @@ import imaplib
 import json
 import os
 import re
-from datetime import datetime, time, timedelta, timezone as dt_timezone
+from datetime import datetime, time, timedelta
+from datetime import timezone as dt_timezone
 from email import header, message
 from imaplib import IMAP4
 from typing import Any, List, Optional, Tuple, Union
 from zoneinfo import ZoneInfo
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 from requests.exceptions import RequestException
-from django.conf import settings
 
 from core.constants import API_STATUS_EXCEPTIONS, EMAIL_LOG_ROTATING_FILE
 from core.exceptions import ApiServerError, ApiTooManyRequests

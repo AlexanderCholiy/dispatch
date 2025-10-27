@@ -10,9 +10,9 @@ from emails.models import EmailMessage
 from incidents.constants import (
     AVR_CATEGORY,
     ERR_STATUS_NAME,
-    RVR_CATEGORY,
-    NOTIFY_CONTRACTOR_STATUS_NAME,
     NOTIFIED_CONTRACTOR_STATUS_NAME,
+    NOTIFY_CONTRACTOR_STATUS_NAME,
+    RVR_CATEGORY,
 )
 from incidents.models import Incident
 from incidents.utils import IncidentManager

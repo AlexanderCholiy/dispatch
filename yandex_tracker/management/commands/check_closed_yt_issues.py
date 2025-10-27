@@ -13,19 +13,19 @@ from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
 from core.tg_bot import tg_manager
 from core.wraps import min_wait_timer, timer
-from incidents.utils import IncidentManager
 from incidents.constants import (
+    AVR_CATEGORY,
     END_STATUS_NAME,
     GENERATION_STATUS_NAME,
-    AVR_CATEGORY,
 )
 from incidents.models import (
     Incident,
-    IncidentStatus,
-    IncidentStatusHistory,
     IncidentCategory,
     IncidentCategoryRelation,
+    IncidentStatus,
+    IncidentStatusHistory,
 )
+from incidents.utils import IncidentManager
 from yandex_tracker.constants import YT_ISSUES_DAYS_AGO_FILTER
 from yandex_tracker.utils import YandexTrackerManager, yt_manager
 

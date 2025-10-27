@@ -8,8 +8,8 @@ from incidents.constants import (
     END_STATUS_NAME,
     GENERATION_STATUS_NAME,
     NOTIFIED_CONTRACTOR_STATUS_NAME,
-    NOTIFY_CONTRACTOR_STATUS_NAME,
     NOTIFIED_OP_END_STATUS_NAME,
+    NOTIFY_CONTRACTOR_STATUS_NAME,
 )
 from incidents.models import Incident
 from ts.models import PoleContractorEmail

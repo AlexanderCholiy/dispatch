@@ -4,20 +4,20 @@ from typing import Optional
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils import timezone
-from django.db.models import Q, F, CheckConstraint
+from django.db.models import CheckConstraint, F, Q
 from django.db.models.functions import Least
+from django.utils import timezone
 
-from core.models import Detail
 from core.constants import DATETIME_FORMAT
+from core.models import Detail
 from ts.models import AVRContractor, BaseStation, Pole
 
 from .constants import (
     AVR_CATEGORY,
     MAX_CODE_LEN,
+    MAX_FUTURE_END_DELTA,
     MAX_STATUS_COMMENT_LEN,
     RVR_SLA_DEADLINE_IN_HOURS,
-    MAX_FUTURE_END_DELTA,
 )
 
 User = get_user_model()
@@ -390,18 +390,15 @@ class IncidentStatusHistory(models.Model):
         max_length=MAX_STATUS_COMMENT_LEN,
     )
     is_avr_category = models.BooleanField(
-        null=True,
-        blank=True,
+        default=True,
         verbose_name='Категория АВР'
     )
     is_rvr_category = models.BooleanField(
-        null=True,
-        blank=True,
+        default=False,
         verbose_name='Категория РВР'
     )
     is_dgu_category = models.BooleanField(
-        null=True,
-        blank=True,
+        default=False,
         verbose_name='Категория ДГУ'
     )
 

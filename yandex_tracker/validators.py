@@ -1,12 +1,12 @@
 import bisect
+from datetime import datetime
 from functools import partial
 from logging import Logger
 from typing import Callable, Optional, TypedDict
-from datetime import datetime
 
 from dateutil import parser
-from django.utils import timezone
 from django.db import models, transaction
+from django.utils import timezone
 
 from incidents.constants import AVR_CATEGORY, MAX_FUTURE_END_DELTA
 from incidents.models import (

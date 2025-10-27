@@ -19,17 +19,17 @@ from core.wraps import min_wait_timer, timer
 from emails.email_parser import email_parser
 from emails.models import EmailMessage
 from incidents.constants import (
+    AVR_CATEGORY,
     ERR_STATUS_NAME,
     IN_WORK_STATUS_NAME,
     NOTIFIED_CONTRACTOR_STATUS_NAME,
     NOTIFIED_OP_END_STATUS_NAME,
     NOTIFIED_OP_IN_WORK_STATUS_NAME,
-    WAIT_ACCEPTANCE_STATUS_NAME,
-    AVR_CATEGORY,
-    RVR_CATEGORY,
-    NOTIFY_OP_IN_WORK_STATUS_NAME,
     NOTIFY_CONTRACTOR_STATUS_NAME,
     NOTIFY_OP_END_STATUS_NAME,
+    NOTIFY_OP_IN_WORK_STATUS_NAME,
+    RVR_CATEGORY,
+    WAIT_ACCEPTANCE_STATUS_NAME,
 )
 from incidents.models import (
     Incident,
