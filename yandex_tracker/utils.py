@@ -285,17 +285,18 @@ class YandexTrackerManager:
         if not incident or not incident.sla_avr_deadline:
             return IsExpiredSLA.unknown
 
-        check_date = incident.avr_end_date or timezone.now()
-        deadline = incident.avr_start_date + timedelta(
-            minutes=incident.incident_type.sla_deadline
-        )
+        if incident.avr_end_date:
+            if incident.avr_end_date <= incident.sla_avr_deadline:
+                return IsExpiredSLA.not_expired
+            else:
+                return IsExpiredSLA.is_expired
 
-        if deadline < check_date:
+        if timezone.now() > incident.sla_avr_deadline:
             return IsExpiredSLA.is_expired
-        if deadline - check_date <= timedelta(hours=1):
+
+        time_remaining = incident.sla_avr_deadline - timezone.now()
+        if time_remaining <= timedelta(hours=1):
             return IsExpiredSLA.one_hour
-        if incident.is_incident_finish:
-            return IsExpiredSLA.not_expired
 
         return IsExpiredSLA.in_work
 
@@ -305,17 +306,18 @@ class YandexTrackerManager:
         if not incident or not incident.sla_rvr_deadline:
             return IsExpiredSLA.unknown
 
-        check_date = incident.rvr_end_date or timezone.now()
-        deadline = incident.rvr_start_date + timedelta(
-            hours=RVR_SLA_DEADLINE_IN_HOURS
-        )
+        if incident.rvr_end_date:
+            if incident.rvr_end_date <= incident.sla_rvr_deadline:
+                return IsExpiredSLA.not_expired
+            else:
+                return IsExpiredSLA.is_expired
 
-        if deadline < check_date:
+        if timezone.now() > incident.sla_rvr_deadline:
             return IsExpiredSLA.is_expired
-        if deadline - check_date <= timedelta(hours=1):
+
+        time_remaining = incident.sla_rvr_deadline - timezone.now()
+        if time_remaining <= timedelta(hours=1):
             return IsExpiredSLA.one_hour
-        if incident.is_incident_finish:
-            return IsExpiredSLA.not_expired
 
         return IsExpiredSLA.in_work
 

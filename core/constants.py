@@ -75,3 +75,4 @@ DB_BACK_FOLDER_DIR = os.path.join(DATA_DIR, 'backup_db')
 os.makedirs(DB_BACK_FOLDER_DIR, exist_ok=True)
 
 MAX_DAYS_DB_BACK = 7
+DATETIME_FORMAT = '%d.%m.%Y %H:%M:%S'

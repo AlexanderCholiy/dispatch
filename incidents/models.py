@@ -6,8 +6,10 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 from django.db.models import Q, F, CheckConstraint
+from django.db.models.functions import Least
 
 from core.models import Detail
+from core.constants import DATETIME_FORMAT
 from ts.models import AVRContractor, BaseStation, Pole
 
 from .constants import (
@@ -15,6 +17,7 @@ from .constants import (
     MAX_CODE_LEN,
     MAX_STATUS_COMMENT_LEN,
     RVR_SLA_DEADLINE_IN_HOURS,
+    MAX_FUTURE_END_DELTA,
 )
 
 User = get_user_model()
@@ -148,6 +151,28 @@ class Incident(models.Model):
                     | Q(rvr_start_date__isnull=True)
                 ),
                 name='rvr_end_after_start',
+            ),
+            CheckConstraint(
+                check=(
+                    Q(
+                        avr_start_date__gte=Least(
+                            F('insert_date'), F('incident_date')
+                        )
+                    )
+                    | Q(avr_start_date__isnull=True)
+                ),
+                name='avr_start_after_min_date',
+            ),
+            CheckConstraint(
+                check=(
+                    Q(
+                        rvr_start_date__gte=Least(
+                            F('insert_date'), F('incident_date')
+                        )
+                    )
+                    | Q(rvr_start_date__isnull=True)
+                ),
+                name='rvr_start_after_min_date',
             )
         ]
 
@@ -177,6 +202,9 @@ class Incident(models.Model):
 
     def clean(self):
         errors = {}
+        now = timezone.now()
+        min_date = min(self.insert_date, self.incident_date)
+        max_future_date = now + MAX_FUTURE_END_DELTA
 
         if self.avr_start_date and self.avr_end_date:
             if self.avr_end_date < self.avr_start_date:
@@ -189,6 +217,30 @@ class Incident(models.Model):
                 errors['rvr_end_date'] = (
                     'Дата закрытия РВР не может быть раньше даты начала.'
                 )
+
+        if self.avr_start_date and self.avr_start_date < min_date:
+            errors['avr_start_date'] = (
+                'Дата начала АВР не может быть раньше '
+                f'{min_date.strftime(DATETIME_FORMAT)}'
+            )
+
+        if self.rvr_start_date and self.rvr_start_date < min_date:
+            errors['rvr_start_date'] = (
+                'Дата начала РВР не может быть раньше '
+                f'{min_date.strftime(DATETIME_FORMAT)}'
+            )
+
+        if self.avr_end_date and self.avr_end_date > max_future_date:
+            errors['avr_end_date'] = (
+                'Дата закрытия АВР не может быть позже '
+                f'{max_future_date.strftime(DATETIME_FORMAT)}'
+            )
+
+        if self.rvr_end_date and self.rvr_end_date > max_future_date:
+            errors['rvr_end_date'] = (
+                'Дата закрытия РВР не может быть позже '
+                f'{max_future_date.strftime(DATETIME_FORMAT)}'
+            )
 
         if errors:
             raise ValidationError(errors)

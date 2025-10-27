@@ -564,7 +564,7 @@ class AutoEmailsFromYT:
         if incident_type == 'avr':
             if not self.incident.avr_start_date:
                 self.incident.avr_start_date = timezone.now()
-                self.incident.save()
+                # save будет потом автоматически
             if self.incident.sla_avr_deadline:
                 sla_avr_deadline = (
                     self.incident.sla_avr_deadline
@@ -574,7 +574,7 @@ class AutoEmailsFromYT:
         elif incident_type == 'rvr':
             if not self.incident.rvr_start_date:
                 self.incident.rvr_start_date = timezone.now()
-                self.incident.save()
+                # save будет потом автоматически
             if self.incident.sla_rvr_deadline:
                 sla_rvr_deadline = (
                     self.incident.sla_rvr_deadline
@@ -595,13 +595,13 @@ class AutoEmailsFromYT:
                 email_incident=self.incident,
                 email_body__isnull=False
             )
+            .exclude(email_body='')
             .order_by(
                 'email_incident_id', 'email_date', '-is_first_email', 'id'
             )
         )
 
         if emails.exists():
-            text_parts.append('\n**ИСТОРИЯ ПЕРЕПИСКИ:**')
             counter_email = 0
             seen_texts = set()
 
@@ -615,9 +615,19 @@ class AutoEmailsFromYT:
                 )
 
                 if text_fingerprint not in seen_texts:
-                    counter_email += 1
-
                     seen_texts.add(text_fingerprint)
+
+                    starts_with_title = any(
+                        text_fingerprint.startswith(title.lower().strip())
+                        for title in type_titles.values()
+                    )
+                    if not text_fingerprint or starts_with_title:
+                        continue
+
+                    if not counter_email:
+                        text_parts.append('\n**ИСТОРИЯ ПЕРЕПИСКИ:**')
+
+                    counter_email += 1
 
                     if len(email_text) > MAX_PREVIEW_TEXT_LEN:
                         email_text = email_text[:MAX_PREVIEW_TEXT_LEN] + ' ...'

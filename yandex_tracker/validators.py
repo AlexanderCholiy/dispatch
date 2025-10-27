@@ -5,9 +5,10 @@ from typing import Callable, Optional, TypedDict
 from datetime import datetime
 
 from dateutil import parser
+from django.utils import timezone
 from django.db import models, transaction
 
-from incidents.constants import AVR_CATEGORY
+from incidents.constants import AVR_CATEGORY, MAX_FUTURE_END_DELTA
 from incidents.models import (
     Incident,
     IncidentCategory,
@@ -354,6 +355,7 @@ def check_yt_datetime_incident(
 
 
 def _check_dates_consistency(
+    incident: Incident,
     tracker_start_date: Optional[str],
     tracker_end_date: Optional[str],
     db_start_date: Optional[datetime],
@@ -402,6 +404,16 @@ def _check_dates_consistency(
     ):
         return False
 
+    now = timezone.now()
+    max_future_date = now + MAX_FUTURE_END_DELTA
+    min_allowed_date = min(incident.insert_date, incident.incident_date)
+
+    if parsed_start and min_allowed_date and parsed_start < min_allowed_date:
+        return False
+
+    if parsed_end and parsed_end > max_future_date:
+        return False
+
     # Защита от автоматического перезаписывания - если в БД есть дата,
     # а в трекере нет:
     if (
@@ -419,6 +431,7 @@ def check_avr_dates(
     incident: Incident,
 ) -> bool:
     return _check_dates_consistency(
+        incident=incident,
         tracker_start_date=issue.get(
             yt_manager.avr_start_date_global_field_id
         ),
@@ -434,6 +447,7 @@ def check_rvr_dates(
     incident: Incident,
 ) -> bool:
     return _check_dates_consistency(
+        incident=incident,
         tracker_start_date=issue.get(
             yt_manager.rvr_start_date_global_field_id
         ),
@@ -451,7 +465,8 @@ def check_yt_avr_deadline_incident(
     valid_names_of_types: list[str],
 ) -> bool:
     avr_incident_deadline: Optional[str] = issue.get(
-        yt_manager.sla_avr_deadline_global_field_id)
+        yt_manager.sla_avr_deadline_global_field_id
+    )
 
     try:
         avr_incident_deadline = parser.parse(

@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 from django.conf import settings
 
@@ -82,3 +83,6 @@ DGU_CATEGORY = 'ДГУ'
 
 # Дедлайн SLA РВР:
 RVR_SLA_DEADLINE_IN_HOURS = 72
+
+# Ограничение для закрытия SLA в будущем:
+MAX_FUTURE_END_DELTA = timedelta(minutes=5)
