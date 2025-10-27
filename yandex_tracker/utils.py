@@ -1177,34 +1177,34 @@ class YandexTrackerManager:
         type_of_incident_field_key = type_of_incident_field['id']
         category_filed_key = category_field['id']
 
-        valid_email_datetime = email_datetime.isoformat() if isinstance(
+        email_datetime = email_datetime.isoformat() if isinstance(
             email_datetime, datetime) else None
-        valid_sla_avr_deadline = sla_avr_deadline.isoformat() if isinstance(
+        sla_avr_deadline = sla_avr_deadline.isoformat() if isinstance(
             sla_avr_deadline, datetime) else None
-        valid_sla_rvr_deadline = sla_rvr_deadline.isoformat() if isinstance(
+        sla_rvr_deadline = sla_rvr_deadline.isoformat() if isinstance(
             sla_rvr_deadline, datetime) else None
 
-        valid_avr_start_date = avr_start_date.isoformat() if isinstance(
+        avr_start_date = avr_start_date.isoformat() if isinstance(
             avr_start_date, datetime) else None
-        valid_avr_end_date = avr_end_date.isoformat() if isinstance(
+        avr_end_date = avr_end_date.isoformat() if isinstance(
             avr_end_date, datetime) else None
-        valid_rvr_start_date = rvr_start_date.isoformat() if isinstance(
+        rvr_start_date = rvr_start_date.isoformat() if isinstance(
             rvr_start_date, datetime) else None
-        valid_rvr_end_date = rvr_end_date.isoformat() if isinstance(
+        rvr_end_date = rvr_end_date.isoformat() if isinstance(
             rvr_end_date, datetime) else None
 
         payload = {
             type_of_incident_field_key: types_of_incident,
             category_filed_key: category,
-            self.sla_avr_deadline_global_field_id: valid_sla_avr_deadline,
+            self.sla_avr_deadline_global_field_id: sla_avr_deadline,
             self.is_sla_avr_expired_global_field_id: is_sla_avr_expired,
-            self.sla_rvr_deadline_global_field_id: valid_sla_rvr_deadline,
+            self.sla_rvr_deadline_global_field_id: sla_rvr_deadline,
             self.is_sla_rvr_expired_global_field_id: is_sla_rvr_expired,
-            self.avr_start_date_global_field_id: valid_avr_start_date,
-            self.avr_end_date_global_field_id: valid_avr_end_date,
-            self.rvr_start_date_global_field_id: valid_rvr_start_date,
-            self.rvr_end_date_global_field_id: valid_rvr_end_date,
-            self.email_datetime_global_field_id: valid_email_datetime,
+            self.avr_start_date_global_field_id: avr_start_date,
+            self.avr_end_date_global_field_id: avr_end_date,
+            self.rvr_start_date_global_field_id: rvr_start_date,
+            self.rvr_end_date_global_field_id: rvr_end_date,
+            self.email_datetime_global_field_id: email_datetime,
             self.pole_number_global_field_id: pole_number,
             self.base_station_global_field_id: base_station_number,
             self.avr_name_global_field_id: avr_name,

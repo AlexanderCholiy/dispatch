@@ -1,6 +1,8 @@
 import re
 from typing import Callable, Optional
 
+from django.utils import timezone
+
 from core.constants import YANDEX_TRACKER_AUTO_EMAILS_ROTATING_FILE
 from core.loggers import LoggerFactory
 from emails.email_parser import EmailParser
@@ -493,9 +495,21 @@ class AutoEmailsFromYT:
         )
         return True
 
-    def _prepare_incident_text_for_rvr(self) -> str:
-        text_parts = ['На вас назначен новый инцидент (РВР).\n']
+    def _prepare_incident_text(self, incident_type: str) -> str:
+        """
+        Подготавливает текст инцидента.
 
+        Args:
+            incident_type: 'avr' или 'rvr'
+        """
+        type_titles = {
+            'avr': 'На вас назначен новый инцидент (АВР).',
+            'rvr': 'На вас назначен новый инцидент (РВР).'
+        }
+
+        text_parts = [f'{type_titles[incident_type]}\n']
+
+        # Общая информация
         if self.incident.pole:
             pole_region = (
                 self.incident.pole.region.region_ru
@@ -523,29 +537,64 @@ class AutoEmailsFromYT:
         if self.incident.base_station:
             text_parts.append('\n**ИНФОРМАЦИЯ О БАЗОВОЙ СТАНЦИИ:**')
             text_parts.append(
-                f'   • Номер БС: {self.incident.base_station.bs_name}')
+                f'   • Номер БС: {self.incident.base_station.bs_name}'
+            )
             if self.incident.base_station.operator.exists():
-                operators = ', '.join(
-                    [
-                        op.operator_name
-                        for op in self.incident.base_station.operator.all()
-                    ]
-                )
+                operators = ', '.join([
+                    op.operator_name
+                    for op in self.incident.base_station.operator.all()
+                ])
                 text_parts.append(f'   • Операторы: {operators}')
 
+        # Детали инцидента
         text_parts.append('\n**ДЕТАЛИ ИНЦИДЕНТА:**')
-        text_parts.append(
-            '   • Дата регистрации: '
-            f'{self.incident.incident_date.astimezone(CURRENT_TZ):%d.%m.%Y %H:%M}'  # noqa: E501
-        )
 
-        if self.incident.sla_deadline:
+        if incident_type == 'avr' and self.incident.avr_contractor:
             text_parts.append(
-                f'   • SLA дедлайн: {self.incident.sla_deadline.astimezone(CURRENT_TZ):%d.%m.%Y %H:%M}'  # noqa: E501
+                '   • Подрядчик по АВР: '
+                f'{self.incident.avr_contractor.contractor_name}'
             )
 
+        incident_date = (
+            self.incident.incident_date
+            .astimezone(CURRENT_TZ).strftime('%d.%m.%Y %H:%M')
+        )
+        text_parts.append(f'   • Дата регистрации: {incident_date}')
+
+        if incident_type == 'avr':
+            if not self.incident.avr_start_date:
+                self.incident.avr_start_date = timezone.now()
+                self.incident.save()
+            if self.incident.sla_avr_deadline:
+                sla_avr_deadline = (
+                    self.incident.sla_avr_deadline
+                    .astimezone(CURRENT_TZ).strftime('%d.%m.%Y %H:%M')
+                )
+                text_parts.append(f'   • SLA дедлайн: {sla_avr_deadline}')
+        elif incident_type == 'rvr':
+            if not self.incident.rvr_start_date:
+                self.incident.rvr_start_date = timezone.now()
+                self.incident.save()
+            if self.incident.sla_rvr_deadline:
+                sla_rvr_deadline = (
+                    self.incident.sla_rvr_deadline
+                    .astimezone(CURRENT_TZ).strftime('%d.%m.%Y %H:%M')
+                )
+                text_parts.append(f'   • SLA дедлайн: {sla_rvr_deadline}')
+
+        if incident_type == 'avr' and self.incident.incident_type:
+            incident_type_name = self.incident.incident_type.name
+            text_parts.append(f'   • Тип инцидента: {incident_type_name}')
+            if self.incident.incident_type.description:
+                description = self.incident.incident_type.description
+                text_parts.append(f'   • Описание типа: {description}')
+
+        # История переписки
         emails = (
-            EmailMessage.objects.filter(email_incident=self.incident)
+            EmailMessage.objects.filter(
+                email_incident=self.incident,
+                email_body__isnull=False
+            )
             .order_by(
                 'email_incident_id', 'email_date', '-is_first_email', 'id'
             )
@@ -554,22 +603,28 @@ class AutoEmailsFromYT:
         if emails.exists():
             text_parts.append('\n**ИСТОРИЯ ПЕРЕПИСКИ:**')
             counter_email = 0
+            seen_texts = set()
 
             for email in emails:
-                if email.email_body:
-                    email_text = email.email_body.strip()
+                email_text = email.email_body.strip()
+                text_fingerprint = email_text[:128].lower().strip()
+
+                eml_datetime = (
+                    email.email_date
+                    .astimezone(CURRENT_TZ).strftime('%d.%m.%Y %H:%M')
+                )
+
+                if text_fingerprint not in seen_texts:
+                    counter_email += 1
+
+                    seen_texts.add(text_fingerprint)
+
                     if len(email_text) > MAX_PREVIEW_TEXT_LEN:
                         email_text = email_text[:MAX_PREVIEW_TEXT_LEN] + ' ...'
 
-                    eml_datetime = email.email_date.astimezone(CURRENT_TZ)
-                    counter_email += 1
-
                     text_parts.append(
-                        f'\n**Сообщение №{counter_email}** '
-                        f'({eml_datetime:%d.%m.%Y %H:%M}):'
+                        f'\n**Сообщение №{counter_email}** ({eml_datetime}):'
                     )
-
-                    # Тело письма в блоке кода:
                     email_text = email_text.replace('```', '')
                     text_parts.append(f'```\n{email_text}\n```')
                     text_parts.append('---')
@@ -577,104 +632,12 @@ class AutoEmailsFromYT:
         text_parts.append('\n\n**ВАЖНО:** НЕ МЕНЯЙТЕ ТЕМУ ПИСЬМА ПРИ ОТВЕТЕ')
 
         return '\n'.join(text_parts)
+
+    def _prepare_incident_text_for_rvr(self) -> str:
+        return self._prepare_incident_text('rvr')
 
     def _prepare_incident_text_for_avr(self) -> str:
-        text_parts = ['На вас назначен новый инцидент (АВР).\n']
-
-        if self.incident.pole:
-            pole_region = (
-                self.incident.pole.region.region_ru
-                or self.incident.pole.region.region_en
-            ) if self.incident.pole.region else None
-
-            text_parts.append('**ИНФОРМАЦИЯ ОБ ОПОРЕ:**')
-            text_parts.append(f'   • Шифр опоры: {self.incident.pole.pole}')
-
-            if pole_region:
-                text_parts.append(f'   • Регион: {pole_region}')
-
-            if self.incident.pole.address:
-                text_parts.append(f'   • Адрес: {self.incident.pole.address}')
-
-            if (
-                self.incident.pole.pole_latitude
-                and self.incident.pole.pole_longtitude
-            ):
-                text_parts.append(
-                    f'   • Координаты: {self.incident.pole.pole_latitude}, '
-                    f'{self.incident.pole.pole_longtitude}'
-                )
-
-        if self.incident.base_station:
-            text_parts.append('\n**ИНФОРМАЦИЯ О БАЗОВОЙ СТАНЦИИ:**')
-            text_parts.append(
-                f'   • Номер БС: {self.incident.base_station.bs_name}')
-            if self.incident.base_station.operator.exists():
-                operators = ', '.join(
-                    [
-                        op.operator_name
-                        for op in self.incident.base_station.operator.all()
-                    ]
-                )
-                text_parts.append(f'   • Операторы: {operators}')
-
-        text_parts.append('\n**ДЕТАЛИ ИНЦИДЕНТА:**')
-        text_parts.append(
-            '   • Подрядчик по АВР: '
-            f'{self.incident.avr_contractor.contractor_name}'
-        )
-        text_parts.append(
-            '   • Дата регистрации: '
-            f'{self.incident.incident_date.astimezone(CURRENT_TZ):%d.%m.%Y %H:%M}'  # noqa: E501
-        )
-
-        if self.incident.sla_deadline:
-            text_parts.append(
-                f'   • SLA дедлайн: {self.incident.sla_deadline.astimezone(CURRENT_TZ):%d.%m.%Y %H:%M}'  # noqa: E501
-            )
-
-        if self.incident.incident_type:
-            text_parts.append(
-                f'   • Тип инцидента: {self.incident.incident_type.name}')
-            if self.incident.incident_type.description:
-                text_parts.append(
-                    '   • Описание типа: '
-                    f'{self.incident.incident_type.description}'
-                )
-
-        emails = (
-            EmailMessage.objects.filter(email_incident=self.incident)
-            .order_by(
-                'email_incident_id', 'email_date', '-is_first_email', 'id'
-            )
-        )
-
-        if emails.exists():
-            text_parts.append('\n**ИСТОРИЯ ПЕРЕПИСКИ:**')
-            counter_email = 0
-
-            for email in emails:
-                if email.email_body:
-                    email_text = email.email_body.strip()
-                    if len(email_text) > MAX_PREVIEW_TEXT_LEN:
-                        email_text = email_text[:MAX_PREVIEW_TEXT_LEN] + ' ...'
-
-                    eml_datetime = email.email_date.astimezone(CURRENT_TZ)
-                    counter_email += 1
-
-                    text_parts.append(
-                        f'\n**Сообщение №{counter_email}** '
-                        f'({eml_datetime:%d.%m.%Y %H:%M}):'
-                    )
-
-                    # Тело письма в блоке кода:
-                    email_text = email_text.replace('```', '')
-                    text_parts.append(f'```\n{email_text}\n```')
-                    text_parts.append('---')
-
-        text_parts.append('\n\n**ВАЖНО:** НЕ МЕНЯЙТЕ ТЕМУ ПИСЬМА ПРИ ОТВЕТЕ')
-
-        return '\n'.join(text_parts)
+        return self._prepare_incident_text('avr')
 
     def auto_reply_incident_is_closed(self, email: EmailMessage) -> bool:
         """

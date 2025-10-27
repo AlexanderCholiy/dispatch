@@ -75,9 +75,10 @@ NOTIFIED_CONTRACTOR_STATUS_DESC = (
     'Отправили письмо с инцидентом подрядчику.'
 )
 
-# В Трекере должно быть также:
+# В Трекере должно быть также, также есть связь в истории статусов:
 AVR_CATEGORY = 'АВР'
 RVR_CATEGORY = 'РВР'
+DGU_CATEGORY = 'ДГУ'
 
 # Дедлайн SLA РВР:
 RVR_SLA_DEADLINE_IN_HOURS = 72

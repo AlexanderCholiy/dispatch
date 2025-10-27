@@ -337,6 +337,21 @@ class IncidentStatusHistory(models.Model):
         blank=True,
         max_length=MAX_STATUS_COMMENT_LEN,
     )
+    is_avr_category = models.BooleanField(
+        null=True,
+        blank=True,
+        verbose_name='Категория АВР'
+    )
+    is_rvr_category = models.BooleanField(
+        null=True,
+        blank=True,
+        verbose_name='Категория РВР'
+    )
+    is_dgu_category = models.BooleanField(
+        null=True,
+        blank=True,
+        verbose_name='Категория ДГУ'
+    )
 
     class Meta:
         verbose_name = 'история статусов инцидента'

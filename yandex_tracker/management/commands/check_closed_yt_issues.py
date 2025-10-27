@@ -17,10 +17,7 @@ from incidents.utils import IncidentManager
 from incidents.constants import (
     END_STATUS_NAME,
     GENERATION_STATUS_NAME,
-    RVR_CATEGORY,
     AVR_CATEGORY,
-    NOTIFIED_CONTRACTOR_STATUS_NAME,
-    NOTIFIED_OP_END_STATUS_NAME,
 )
 from incidents.models import (
     Incident,
@@ -203,11 +200,19 @@ class Command(BaseCommand):
                 incidents_2_update.append(incident)
 
             # Проверка SLA:
-            is_sla_expired = issue.get(
-                yt_manager.is_sla_expired_global_field_id)
-            valid_is_sla_expired = yt_manager.get_sla_status(incident)
+            is_sla_avr_expired = issue.get(
+                yt_manager.is_sla_avr_expired_global_field_id
+            )
+            is_sla_rvr_expired = issue.get(
+                yt_manager.is_sla_rvr_expired_global_field_id
+            )
+            valid_is_sla_avr_expired = yt_manager.get_sla_avr_status(incident)
+            valid_is_sla_rvr_expired = yt_manager.get_sla_rvr_status(incident)
 
-            if is_sla_expired != valid_is_sla_expired:
+            if (
+                is_sla_avr_expired != valid_is_sla_avr_expired
+                or is_sla_rvr_expired != valid_is_sla_rvr_expired
+            ):
                 yt_manager.update_issue_sla_status(issue, incident)
 
             # Проверка признака завершённости:

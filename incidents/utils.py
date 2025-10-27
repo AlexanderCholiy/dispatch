@@ -36,6 +36,7 @@ from .constants import (
     WAIT_ACCEPTANCE_STATUS_NAME,
     AVR_CATEGORY,
     RVR_CATEGORY,
+    DGU_CATEGORY,
 )
 from .models import (
     Incident,
@@ -267,10 +268,16 @@ class IncidentManager(IncidentValidator):
             name=DEFAULT_STATUS_NAME,
             defaults={'description': DEFAULT_STATUS_DESC}
         )
+        category_names = set(
+            incident.categories.all().values_list('name', flat=True)
+        )
         IncidentStatusHistory.objects.create(
             incident=incident,
             status=status,
-            comments=comment
+            comments=comment,
+            is_avr_category=AVR_CATEGORY in category_names,
+            is_rvr_category=RVR_CATEGORY in category_names,
+            is_dgu_category=DGU_CATEGORY in category_names,
         )
         incident.statuses.add(status)
 
@@ -282,10 +289,16 @@ class IncidentManager(IncidentValidator):
             name=ERR_STATUS_NAME,
             defaults={'description': ERR_STATUS_DESC}
         )
+        category_names = set(
+            incident.categories.all().values_list('name', flat=True)
+        )
         IncidentStatusHistory.objects.create(
             incident=incident,
             status=status,
-            comments=comment
+            comments=comment,
+            is_avr_category=AVR_CATEGORY in category_names,
+            is_rvr_category=RVR_CATEGORY in category_names,
+            is_dgu_category=DGU_CATEGORY in category_names,
         )
         incident.statuses.add(status)
 
@@ -297,10 +310,16 @@ class IncidentManager(IncidentValidator):
             name=WAIT_ACCEPTANCE_STATUS_NAME,
             defaults={'description': WAIT_ACCEPTANCE_STATUS_DESC}
         )
+        category_names = set(
+            incident.categories.all().values_list('name', flat=True)
+        )
         IncidentStatusHistory.objects.create(
             incident=incident,
             status=status,
-            comments=comment
+            comments=comment,
+            is_avr_category=AVR_CATEGORY in category_names,
+            is_rvr_category=RVR_CATEGORY in category_names,
+            is_dgu_category=DGU_CATEGORY in category_names,
         )
         incident.statuses.add(status)
 
@@ -312,10 +331,16 @@ class IncidentManager(IncidentValidator):
             name=GENERATION_STATUS_NAME,
             defaults={'description': GENERATION_STATUS_DESC}
         )
+        category_names = set(
+            incident.categories.all().values_list('name', flat=True)
+        )
         IncidentStatusHistory.objects.create(
             incident=incident,
             status=status,
-            comments=comment
+            comments=comment,
+            is_avr_category=AVR_CATEGORY in category_names,
+            is_rvr_category=RVR_CATEGORY in category_names,
+            is_dgu_category=DGU_CATEGORY in category_names,
         )
         incident.statuses.add(status)
 
@@ -327,13 +352,18 @@ class IncidentManager(IncidentValidator):
             name=IN_WORK_STATUS_NAME,
             defaults={'description': IN_WORK_STATUS_DESC}
         )
-        if not incident.statuses.filter(pk=status.pk).exists():
-            IncidentStatusHistory.objects.create(
-                incident=incident,
-                status=status,
-                comments=comment
-            )
-            incident.statuses.add(status)
+        category_names = set(
+            incident.categories.all().values_list('name', flat=True)
+        )
+        IncidentStatusHistory.objects.create(
+            incident=incident,
+            status=status,
+            comments=comment,
+            is_avr_category=AVR_CATEGORY in category_names,
+            is_rvr_category=RVR_CATEGORY in category_names,
+            is_dgu_category=DGU_CATEGORY in category_names,
+        )
+        incident.statuses.add(status)
 
     @staticmethod
     def add_notify_op_status(
@@ -343,10 +373,16 @@ class IncidentManager(IncidentValidator):
             name=NOTIFY_OP_IN_WORK_STATUS_NAME,
             defaults={'description': NOTIFY_OP_IN_WORK_STATUS_DESC}
         )
+        category_names = set(
+            incident.categories.all().values_list('name', flat=True)
+        )
         IncidentStatusHistory.objects.create(
             incident=incident,
             status=status,
-            comments=comment
+            comments=comment,
+            is_avr_category=AVR_CATEGORY in category_names,
+            is_rvr_category=RVR_CATEGORY in category_names,
+            is_dgu_category=DGU_CATEGORY in category_names,
         )
         incident.statuses.add(status)
 
@@ -358,10 +394,16 @@ class IncidentManager(IncidentValidator):
             name=NOTIFIED_OP_IN_WORK_STATUS_NAME,
             defaults={'description': NOTIFIED_OP_IN_WORK_STATUS_DESC}
         )
+        category_names = set(
+            incident.categories.all().values_list('name', flat=True)
+        )
         IncidentStatusHistory.objects.create(
             incident=incident,
             status=status,
-            comments=comment
+            comments=comment,
+            is_avr_category=AVR_CATEGORY in category_names,
+            is_rvr_category=RVR_CATEGORY in category_names,
+            is_dgu_category=DGU_CATEGORY in category_names,
         )
         incident.statuses.add(status)
 
@@ -373,10 +415,16 @@ class IncidentManager(IncidentValidator):
             name=NOTIFY_OP_END_STATUS_NAME,
             defaults={'description': NOTIFY_OP_END_STATUS_DESC}
         )
+        category_names = set(
+            incident.categories.all().values_list('name', flat=True)
+        )
         IncidentStatusHistory.objects.create(
             incident=incident,
             status=status,
-            comments=comment
+            comments=comment,
+            is_avr_category=AVR_CATEGORY in category_names,
+            is_rvr_category=RVR_CATEGORY in category_names,
+            is_dgu_category=DGU_CATEGORY in category_names,
         )
         incident.statuses.add(status)
 
@@ -388,10 +436,16 @@ class IncidentManager(IncidentValidator):
             name=NOTIFIED_OP_END_STATUS_NAME,
             defaults={'description': NOTIFIED_OP_END_STATUS_DESC}
         )
+        category_names = set(
+            incident.categories.all().values_list('name', flat=True)
+        )
         IncidentStatusHistory.objects.create(
             incident=incident,
             status=status,
-            comments=comment
+            comments=comment,
+            is_avr_category=AVR_CATEGORY in category_names,
+            is_rvr_category=RVR_CATEGORY in category_names,
+            is_dgu_category=DGU_CATEGORY in category_names,
         )
         incident.statuses.add(status)
 
@@ -403,10 +457,16 @@ class IncidentManager(IncidentValidator):
             name=NOTIFY_CONTRACTOR_STATUS_NAME,
             defaults={'description': NOTIFY_CONTRACTOR_STATUS_DESC}
         )
+        category_names = set(
+            incident.categories.all().values_list('name', flat=True)
+        )
         IncidentStatusHistory.objects.create(
             incident=incident,
             status=status,
-            comments=comment
+            comments=comment,
+            is_avr_category=AVR_CATEGORY in category_names,
+            is_rvr_category=RVR_CATEGORY in category_names,
+            is_dgu_category=DGU_CATEGORY in category_names,
         )
         incident.statuses.add(status)
 
@@ -418,10 +478,16 @@ class IncidentManager(IncidentValidator):
             name=NOTIFIED_CONTRACTOR_STATUS_NAME,
             defaults={'description': NOTIFIED_CONTRACTOR_STATUS_DESC}
         )
+        category_names = set(
+            incident.categories.all().values_list('name', flat=True)
+        )
         IncidentStatusHistory.objects.create(
             incident=incident,
             status=status,
-            comments=comment
+            comments=comment,
+            is_avr_category=AVR_CATEGORY in category_names,
+            is_rvr_category=RVR_CATEGORY in category_names,
+            is_dgu_category=DGU_CATEGORY in category_names,
         )
         incident.statuses.add(status)
 
@@ -659,21 +725,31 @@ class IncidentManager(IncidentValidator):
 
     @staticmethod
     def get_last_status_by_name(
-        incident: Incident, name: str
+        incident: Incident,
+        name: str,
+        is_avr_category: Optional[bool] = None,
+        is_rvr_category: Optional[bool] = None,
+        is_dgu_category: Optional[bool] = None,
     ) -> Optional[IncidentStatusHistory]:
         """
         Возвращает последнее вхождение определенного статуса по его названию
         для данного инцидента или None, если такого статуса не было.
         """
-        return (
-            IncidentStatusHistory.objects
-            .filter(
-                incident=incident,
-                status__name=name
-            )
-            .order_by('-insert_date')
-            .first()
+        queryset = IncidentStatusHistory.objects.filter(
+            incident=incident,
+            status__name=name
         )
+
+        if is_avr_category is not None:
+            queryset = queryset.filter(is_avr_category=is_avr_category)
+
+        if is_rvr_category is not None:
+            queryset = queryset.filter(is_rvr_category=is_rvr_category)
+
+        if is_dgu_category is not None:
+            queryset = queryset.filter(is_dgu_category=is_dgu_category)
+
+        return queryset.order_by('-insert_date').first()
 
     @staticmethod
     def auto_update_avr_rvr_dates(incident: Incident) -> bool:
@@ -683,136 +759,144 @@ class IncidentManager(IncidentValidator):
         """
         updated = False
 
-        last_notified_op_end_status = None
-        was_found_last_notified_op_end_status = False
-
-        avr_category, _ = IncidentCategory.objects.get_or_create(
-            name=AVR_CATEGORY
-        )
-        rvr_category, _ = IncidentCategory.objects.get_or_create(
-            name=RVR_CATEGORY
+        category_names = set(
+            incident.categories.values_list('name', flat=True)
         )
 
-        categories = incident.categories.all()
+        statuses_queryset = IncidentStatusHistory.objects.filter(
+            models.Q(is_avr_category=True) | models.Q(is_rvr_category=True),
+            incident=incident,
+            status__name__in=[
+                NOTIFIED_CONTRACTOR_STATUS_NAME, NOTIFIED_OP_END_STATUS_NAME
+            ],
+        ).select_related('status').order_by('-insert_date') if (
+            incident.is_incident_finish is False
+        ) else IncidentStatusHistory.objects.none()
+
+        last_statuses = {
+            'avr_start': None,
+            'avr_end': None,
+            'rvr_start': None,
+            'rvr_end': None,
+        }
+
+        # Перебираем статусы (в порядке убывания даты) и заполняем словарь
+        # первыми (последними) встреченными:
+        for status in statuses_queryset:
+            if status.status.name == NOTIFIED_CONTRACTOR_STATUS_NAME:
+                if (
+                    status.is_avr_category
+                    and last_statuses['avr_start'] is None
+                ):
+                    last_statuses['avr_start'] = status
+                elif (
+                    status.is_rvr_category
+                    and last_statuses['rvr_start'] is None
+                ):
+                    last_statuses['rvr_start'] = status
+            elif status.status.name == NOTIFIED_OP_END_STATUS_NAME:
+                if (
+                    status.is_avr_category
+                    and last_statuses['avr_end'] is None
+                ):
+                    last_statuses['avr_end'] = status
+                elif (
+                    status.is_rvr_category
+                    and last_statuses['rvr_end'] is None
+                ):
+                    last_statuses['rvr_end'] = status
+
+        last_notified_avr_start_status = last_statuses['avr_start']
+        last_notified_avr_end_status = last_statuses['avr_end']
+        last_notified_rvr_start_status = last_statuses['rvr_start']
+        last_notified_rvr_end_status = last_statuses['rvr_end']
+
+        # Обновляем дату начала принятия работ подрядчиком:
+        if (
+            AVR_CATEGORY in category_names
+            and not incident.avr_start_date
+            and last_notified_avr_start_status
+            and (
+                not last_notified_avr_end_status
+                or last_notified_avr_start_status.insert_date
+                <= last_notified_avr_end_status.insert_date
+            )
+        ):
+            incident.avr_start_date = (
+                last_notified_avr_start_status.insert_date
+            )
+            updated = True
 
         if (
-            (not incident.avr_start_date and avr_category in categories)
-            or (not incident.rvr_start_date and rvr_category in categories)
+            RVR_CATEGORY in category_names
+            and not incident.rvr_start_date
+            and last_notified_rvr_start_status
+            and (
+                not last_notified_rvr_end_status
+                or last_notified_rvr_start_status.insert_date
+                <= last_notified_rvr_end_status.insert_date
+            )
         ):
-            last_notified_contractor_status = (
-                IncidentManager.get_last_status_by_name(
-                    incident, NOTIFIED_CONTRACTOR_STATUS_NAME
-                )
+            incident.rvr_start_date = (
+                last_notified_rvr_start_status.insert_date
             )
-            last_notified_op_end_status = (
-                IncidentManager.get_last_status_by_name(
-                    incident, NOTIFIED_OP_END_STATUS_NAME
-                )
-            )
-            was_found_last_notified_op_end_status = True
+            updated = True
 
-            if (
-                avr_category in categories
-                and not incident.avr_start_date
-                and last_notified_contractor_status
-                and (
-                    not last_notified_op_end_status
-                    or last_notified_contractor_status.insert_date
-                    <= last_notified_op_end_status.insert_date
-                )
-            ):
-                incident.avr_start_date = (
-                    last_notified_contractor_status.insert_date
-                )
-                updated = True
-
-            if (
-                rvr_category in categories
-                and not incident.rvr_start_date
-                and last_notified_contractor_status
-                and (
-                    not last_notified_op_end_status
-                    or last_notified_contractor_status.insert_date
-                    <= last_notified_op_end_status.insert_date
-                )
-            ):
-                incident.rvr_start_date = (
-                    last_notified_contractor_status.insert_date
-                )
-                updated = True
-
+        # Обновляем дату завершения работ подрядчика:
         if (
-            (
-                not incident.avr_end_date
-                and incident.avr_start_date
-                and avr_category in categories
-            )
-            or (
-                not incident.rvr_end_date
-                and incident.rvr_start_date
-                and rvr_category in categories
-            )
-        ):
-            if not was_found_last_notified_op_end_status:
-                last_notified_op_end_status = (
-                    IncidentManager.get_last_status_by_name(
-                        incident, NOTIFIED_OP_END_STATUS_NAME
+            not incident.avr_end_date
+            and incident.avr_start_date
+            and AVR_CATEGORY in category_names
+            and (
+                (
+                    last_notified_avr_end_status
+                    and (
+                        last_notified_avr_end_status.insert_date
+                        >= incident.avr_start_date
                     )
                 )
-
-            if (
-                not incident.avr_end_date
-                and incident.avr_start_date
-                and avr_category in categories
-                and (
-                    (
-                        last_notified_op_end_status
-                        and (
-                            last_notified_op_end_status.insert_date
-                            >= incident.avr_start_date
-                        )
-                    )
-                    or (
+                or (
+                    incident.incident_finish_date
+                    and (
                         incident.incident_finish_date
-                        and (
-                            incident.incident_finish_date
-                            >= incident.avr_start_date
-                        )
+                        >= incident.avr_start_date
                     )
                 )
-            ):
-                incident.avr_end_date = (
-                    last_notified_op_end_status.insert_date
-                ) if last_notified_op_end_status else (
-                    incident.incident_finish_date
-                )
-                updated = True
+            )
+        ):
+            incident.avr_end_date = (
+                last_notified_avr_end_status.insert_date
+            ) if last_notified_avr_end_status else (
+                incident.incident_finish_date
+            )
+            updated = True
 
-            if (
-                not incident.rvr_end_date
-                and incident.rvr_start_date
-                and rvr_category in categories
-                and (
-                    (
-                        last_notified_op_end_status
-                        and (
-                            last_notified_op_end_status.insert_date
-                            >= incident.rvr_start_date
-                        )
-                    )
-                    or (
-                        (
-                            incident.incident_finish_date
-                            >= incident.rvr_start_date
-                        )
+        if (
+            not incident.rvr_end_date
+            and incident.rvr_start_date
+            and RVR_CATEGORY in category_names
+            and (
+                (
+                    last_notified_rvr_end_status
+                    and (
+                        last_notified_rvr_end_status.insert_date
+                        >= incident.rvr_start_date
                     )
                 )
-            ):
-                incident.rvr_end_date = (
-                    last_notified_op_end_status.insert_date
-                ) if last_notified_op_end_status else (
+                or (
                     incident.incident_finish_date
+                    and (
+                        incident.incident_finish_date
+                        >= incident.rvr_start_date
+                    )
                 )
-                updated = True
+            )
+        ):
+            incident.rvr_end_date = (
+                last_notified_rvr_end_status.insert_date
+            ) if last_notified_rvr_end_status else (
+                incident.incident_finish_date
+            )
+            updated = True
 
         return updated

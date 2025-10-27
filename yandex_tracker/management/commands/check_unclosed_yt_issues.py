@@ -515,11 +515,7 @@ class Command(BaseCommand):
                     continue
 
                 # Защита от частого перехода между статусами:
-                if not can_send and status_key in (
-                    yt_manager.notify_op_issue_in_work_status_key,
-                    yt_manager.notify_op_issue_closed_status_key,
-                    yt_manager.notify_contractor_in_work_status_key,
-                ):
+                if not can_send:
                     if status_key == (
                         yt_manager.notify_op_issue_in_work_status_key
                     ):

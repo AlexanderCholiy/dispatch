@@ -2,6 +2,7 @@ import bisect
 from functools import partial
 from logging import Logger
 from typing import Callable, Optional, TypedDict
+from datetime import datetime
 
 from dateutil import parser
 from django.db import models, transaction
@@ -352,44 +353,79 @@ def check_yt_datetime_incident(
     return incident_datetime_is_valid
 
 
+def _check_dates_consistency(
+    tracker_start_date: Optional[str],
+    tracker_end_date: Optional[str],
+    db_start_date: Optional[datetime],
+    db_end_date: Optional[datetime],
+) -> bool:
+    """
+    Проверка согласованности дат между трекером и БД.
+
+    Args:
+        tracker_start_date: Дата начала из трекера (строка)
+        tracker_end_date: Дата окончания из трекера (строка)
+        db_start_date: Дата начала из БД
+        db_end_date: Дата окончания из БД
+
+    Returns:
+        bool: True если даты согласованы
+    """
+    try:
+        parsed_start = parser.parse(
+            tracker_start_date
+        ) if tracker_start_date else None
+    except (ValueError, TypeError):
+        parsed_start = None
+
+    try:
+        parsed_end = parser.parse(
+            tracker_end_date
+        ) if tracker_end_date else None
+    except (ValueError, TypeError):
+        parsed_end = None
+
+    if (
+        (parsed_start and parsed_end and parsed_start > parsed_end)
+        or (
+            parsed_start
+            and not parsed_end
+            and db_end_date
+            and parsed_start > db_end_date
+        )
+        or (
+            parsed_end
+            and not parsed_start
+            and db_start_date
+            and parsed_end < db_start_date
+        )
+    ):
+        return False
+
+    # Защита от автоматического перезаписывания - если в БД есть дата,
+    # а в трекере нет:
+    if (
+        (not parsed_start and db_start_date)
+        or (not parsed_end and db_end_date)
+    ):
+        return False
+
+    return True
+
+
 def check_avr_dates(
     yt_manager: YandexTrackerManager,
     issue: dict,
     incident: Incident,
 ) -> bool:
-    start_date: Optional[str] = issue.get(
-        yt_manager.avr_start_date_global_field_id)
-    end_date: Optional[str] = issue.get(
-        yt_manager.avr_end_date_global_field_id)
-
-    try:
-        start_date = parser.parse(start_date) if start_date else None
-    except ValueError:
-        start_date = None
-
-    try:
-        end_date = parser.parse(end_date) if end_date else None
-    except ValueError:
-        end_date = None
-
-    if (
-        (not start_date and incident.avr_start_date)
-        or (not end_date and incident.avr_end_date)
-        or (start_date and end_date and start_date > end_date)
-        or (
-            start_date
-            and incident.avr_end_date
-            and start_date > incident.avr_end_date
-        )
-        or (
-            end_date
-            and incident.avr_start_date
-            and end_date < incident.avr_start_date
-        )
-    ):
-        return False
-
-    return True
+    return _check_dates_consistency(
+        tracker_start_date=issue.get(
+            yt_manager.avr_start_date_global_field_id
+        ),
+        tracker_end_date=issue.get(yt_manager.avr_end_date_global_field_id),
+        db_start_date=incident.avr_start_date,
+        db_end_date=incident.avr_end_date
+    )
 
 
 def check_rvr_dates(
@@ -397,39 +433,14 @@ def check_rvr_dates(
     issue: dict,
     incident: Incident,
 ) -> bool:
-    start_date: Optional[str] = issue.get(
-        yt_manager.rvr_start_date_global_field_id)
-    end_date: Optional[str] = issue.get(
-        yt_manager.rvr_end_date_global_field_id)
-
-    try:
-        start_date = parser.parse(start_date) if start_date else None
-    except ValueError:
-        start_date = None
-
-    try:
-        end_date = parser.parse(end_date) if end_date else None
-    except ValueError:
-        end_date = None
-
-    if (
-        (not start_date and incident.rvr_start_date)
-        or (not end_date and incident.rvr_end_date)
-        or (start_date and end_date and start_date > end_date)
-        or (
-            start_date
-            and incident.rvr_end_date
-            and start_date > incident.rvr_end_date
-        )
-        or (
-            end_date
-            and incident.rvr_start_date
-            and end_date < incident.rvr_start_date
-        )
-    ):
-        return False
-
-    return True
+    return _check_dates_consistency(
+        tracker_start_date=issue.get(
+            yt_manager.rvr_start_date_global_field_id
+        ),
+        tracker_end_date=issue.get(yt_manager.rvr_end_date_global_field_id),
+        db_start_date=incident.rvr_start_date,
+        db_end_date=incident.rvr_end_date
+    )
 
 
 def check_yt_avr_deadline_incident(
@@ -439,8 +450,6 @@ def check_yt_avr_deadline_incident(
     incident: Incident,
     valid_names_of_types: list[str],
 ) -> bool:
-    is_valid_avr_deadline_incident = True
-
     avr_incident_deadline: Optional[str] = issue.get(
         yt_manager.sla_avr_deadline_global_field_id)
 
@@ -458,13 +467,12 @@ def check_yt_avr_deadline_incident(
     )
 
     if not is_valid_type_of_incident:
-        is_valid_avr_deadline_incident = False
-    else:
-        is_valid_avr_deadline_incident = True if (
-            avr_incident_deadline == incident.sla_avr_deadline
-        ) else False
+        return False
 
-    return is_valid_avr_deadline_incident
+    if avr_incident_deadline != incident.sla_avr_deadline:
+        return False
+
+    return True
 
 
 def check_yt_rvr_deadline_incident(
@@ -805,10 +813,10 @@ def check_yt_incident_data(
                 email_datetime=incident.incident_date,
                 sla_avr_deadline=incident.sla_avr_deadline,
                 is_sla_avr_expired=yt_manager.get_sla_avr_status(incident),
-                sla_rvr_deadline=incident.sla_avr_deadline,
-                is_sla_rvr_expired=yt_manager.get_sla_avr_status(incident),
                 avr_start_date=incident.avr_start_date,
                 avr_end_date=incident.avr_end_date,
+                sla_rvr_deadline=incident.sla_rvr_deadline,
+                is_sla_rvr_expired=yt_manager.get_sla_rvr_status(incident),
                 rvr_start_date=incident.rvr_start_date,
                 rvr_end_date=incident.rvr_end_date,
                 pole_number=pole_number,
@@ -954,10 +962,10 @@ def check_yt_incident_data(
             email_datetime=incident.incident_date,
             sla_avr_deadline=incident.sla_avr_deadline,
             is_sla_avr_expired=yt_manager.get_sla_avr_status(incident),
-            sla_rvr_deadline=incident.sla_avr_deadline,
-            is_sla_rvr_expired=yt_manager.get_sla_avr_status(incident),
             avr_start_date=incident.avr_start_date,
             avr_end_date=incident.avr_end_date,
+            sla_rvr_deadline=incident.sla_rvr_deadline,
+            is_sla_rvr_expired=yt_manager.get_sla_rvr_status(incident),
             rvr_start_date=incident.rvr_start_date,
             rvr_end_date=incident.rvr_end_date,
             pole_number=pole_number,
@@ -1036,10 +1044,10 @@ def check_yt_incident_data(
             email_datetime=incident.incident_date,
             sla_avr_deadline=incident.sla_avr_deadline,
             is_sla_avr_expired=yt_manager.get_sla_avr_status(incident),
-            sla_rvr_deadline=incident.sla_avr_deadline,
-            is_sla_rvr_expired=yt_manager.get_sla_avr_status(incident),
             avr_start_date=incident.avr_start_date,
             avr_end_date=incident.avr_end_date,
+            sla_rvr_deadline=incident.sla_rvr_deadline,
+            is_sla_rvr_expired=yt_manager.get_sla_rvr_status(incident),
             rvr_start_date=incident.rvr_start_date,
             rvr_end_date=incident.rvr_end_date,
             pole_number=None,
@@ -1166,10 +1174,10 @@ def check_yt_incident_data(
             email_datetime=incident.incident_date,
             sla_avr_deadline=incident.sla_avr_deadline,
             is_sla_avr_expired=yt_manager.get_sla_avr_status(incident),
-            sla_rvr_deadline=incident.sla_avr_deadline,
-            is_sla_rvr_expired=yt_manager.get_sla_avr_status(incident),
             avr_start_date=incident.avr_start_date,
             avr_end_date=incident.avr_end_date,
+            sla_rvr_deadline=incident.sla_rvr_deadline,
+            is_sla_rvr_expired=yt_manager.get_sla_rvr_status(incident),
             rvr_start_date=incident.rvr_start_date,
             rvr_end_date=incident.rvr_end_date,
             pole_number=incident.pole.pole if incident.pole else None,
