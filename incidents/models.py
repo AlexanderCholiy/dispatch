@@ -203,7 +203,9 @@ class Incident(models.Model):
     def clean(self):
         errors = {}
         now = timezone.now()
-        min_date = min(self.insert_date, self.incident_date)
+        insert_date = self.insert_date or now
+        incident_date = self.incident_date or insert_date
+        min_date = min(insert_date, incident_date)
         max_future_date = now + MAX_FUTURE_END_DELTA
 
         if self.avr_start_date and self.avr_end_date:
