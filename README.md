@@ -96,39 +96,54 @@
 Проект предоставляет REST API для работы с инцидентами.
 1. Эндпоинт:
    ```
-   GET /api/v1/incidents/
+   GET /api/v1/report/incidents/
    ```
-   > Возвращает подробную информацию по инцидентам.
+   > Возвращает подробную информацию по инцидентам с пагинацией.
+   ```
+   GET /api/v1/report/incidents/?all=true
+   ```
+   > Возвращает подробную информацию по инцидентам без пагинации.
   **Особенности**:
    - Доступна фильтрация по дате инцидента:
     ```
-    GET /api/v1/incidents/?last_month=true
+    GET /api/v1/report/incidents/?incident_date_after=2025-10-12&incident_date_before=2025-10-15
     ```
-    > Получить инциденты с первого числа предыдущего месяца по текущее число.
+    > Получить инциденты за определенный период
+    ```
+    GET /api/v1/report/incidents/?last_month=true
+    ```
+    > Получить инциденты с первого числа предыдущего месяца по текущее число.    
    - Чтение доступно всем пользователям.
   **Возвращаемые поля**:
     - `id` — ID инцидента
     - `code` — код инцидента, который добавляется в тему ответных писем 
-    - `incident_datetime` — дата и время регистрации
-    - `incident_type` — тип инцидента
-    - `is_vendor_sla_expired` — просрочен ли SLA для подрядчика
-    - `vendor_deadline` — дедлайн SLA для подрядчика
-    - `is_incident_finish` — флаг завершения инцидента
-    - `incident_finish_datetime` — дата и время завершения
     - `last_status` — последний статус инцидента
-    - `is_transfer_to_avr` — передан ли инцидент подрядчику
-    - `transfer_timestamp_to_avr` — дата передачи инцидента подрядчику
+    - `incident_type` — тип инцидента
+    - `categories` - категории инцидента
+    - `is_auto_incident` — способ регистрации (автоматически через почту или вручную через диспетчера)
+    - `is_incident_finish` — завершен ли инцидент
+    - `incident_datetime` — дата и время регистрации
+    - `incident_finish_datetime` — дата и время завершения
+    - `is_transfer_to_avr` — передано ли в АВР
+    - `avr_start_datetime' — дата и время передачи АВР
+    - `avr_end_datetime` — дата и время завершения АВР
+    - `is_vendor_sla_avr_expired` — просрочен ли SLA АВР
+    - `vendor_avr_deadline` — дедлайн АВР
+    - `avr_vendor` — имя подрядчика по АВР
+    - `avr_vendor_emails` — email подрядичика по АВР
+    - `is_transfer_to_rvr` — передано ли в РВР
+    - `rvr_start_datetime` — дата и время передачи РВР
+    - `rvr_end_datetime` — дата и время завершения РВР
+    - `is_vendor_sla_rvr_expired` — просрочен ли SLA РВР
+    - `vendor_rvr_deadline` — дата и время завершения РВР
+    - `pole` — шифр опоры
+    - `region_ru` — регион
+    - `address` — адрес
+    - `pole_latitude` — широта опоры
+    - `pole_longtitude` — долгота опоры
     - `base_station` — номер базовой станции
     - `operator_group` — группа операторов
     - `operators` — операторы
-    - `pole` — шифр опоры
-    - `region_ru` — регион
-    - `address` — адрес  
-    - `pole_latitude` — широта опоры
-    - `pole_longtitude` — долгота опоры
-    - `vendor` — имя подрядчика
-    - `vendor_emails` — email адреса подрядчиков
-    - `registration_method` — способ регистрации (автоматически через почту или вручную через диспетчера)
 
 ---
 

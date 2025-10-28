@@ -2,6 +2,6 @@ from rest_framework.pagination import LimitOffsetPagination
 
 
 class IncidentReportPagination(LimitOffsetPagination):
-    default_limit = 100
+    default_limit = 10
     max_limit = 10_000
     min_limit = 1

@@ -22,7 +22,6 @@ from incidents.constants import (
     DEFAULT_STATUS_DESC,
     DEFAULT_STATUS_NAME,
     MAX_EMAILS_ON_CLOSED_INCIDENTS,
-    RVR_SLA_DEADLINE_IN_HOURS,
 )
 from incidents.models import Incident, IncidentStatus, IncidentStatusHistory
 
