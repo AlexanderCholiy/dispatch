@@ -1,9 +1,12 @@
 import time
+from typing import Callable
+from functools import partial
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import OuterRef, Subquery
 from django.utils import timezone
+from django.db.models import Prefetch
 
 from core.constants import (
     MIN_WAIT_SEC_WITH_CRITICAL_EXC,
@@ -13,6 +16,7 @@ from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
 from core.tg_bot import tg_manager
 from core.wraps import min_wait_timer, timer
+from core.threads import tasks_in_threads
 from incidents.constants import (
     AVR_CATEGORY,
     END_STATUS_NAME,
@@ -97,12 +101,13 @@ class Command(BaseCommand):
         total_processed = 0
         total_errors = 0
         total_updated = 0
+        all_tasks: list[Callable] = []
 
         closed_issues_batches = yt_manager.closed_issues(
             YT_ISSUES_DAYS_AGO_FILTER)
 
         for i, closed_issues in enumerate(closed_issues_batches, 1):
-            batch_total, batch_errors, batch_updated = (
+            batch_total, batch_errors, batch_updated, tasks = (
                 self.check_closed_batch_issues(
                     batch_number=i,
                     yt_manager=yt_manager,
@@ -114,6 +119,10 @@ class Command(BaseCommand):
             total_processed += batch_total
             total_errors += batch_errors
             total_updated += batch_updated
+
+            all_tasks.extend(tasks)
+
+        tasks_in_threads(all_tasks, yt_managment_logger)
 
         return total_processed, total_errors, total_updated
 
@@ -135,6 +144,8 @@ class Command(BaseCommand):
         total = len(closed_issues)
         error_count = 0
         updated_count = 0
+
+        validation_tasks = []
 
         incident_ids_to_update = set()
         database_ids_with_issues: list[tuple[int, dict]] = []
@@ -167,7 +178,17 @@ class Command(BaseCommand):
         incidents_queryset = (
             Incident.objects.filter(id__in=incident_ids_to_update)
             .select_related('incident_type')
-            .prefetch_related('statuses', 'categories')
+            .prefetch_related(
+                'categories',
+                Prefetch(
+                    'status_history',
+                    queryset=(
+                        IncidentStatusHistory.objects.select_related('status')
+                        .order_by('-insert_date')
+                    ),
+                    to_attr='prefetched_statuses'
+                ),
+            )
             .annotate(last_status_id=Subquery(latest_status_id_subquery))
         )
 
@@ -213,7 +234,13 @@ class Command(BaseCommand):
                 is_sla_avr_expired != valid_is_sla_avr_expired
                 or is_sla_rvr_expired != valid_is_sla_rvr_expired
             ):
-                yt_manager.update_issue_sla_status(issue, incident)
+                validation_tasks.append(
+                    partial(
+                        yt_manager.update_issue_sla_status,
+                        issue,
+                        incident,
+                    )
+                )
 
             # Проверка признака завершённости:
             if not incident.is_incident_finish:
@@ -278,4 +305,4 @@ class Command(BaseCommand):
                 for incident in incidents_to_add_generation_status:
                     incident.statuses.add(default_generation_status)
 
-        return total, error_count, updated_count
+        return total, error_count, updated_count, validation_tasks

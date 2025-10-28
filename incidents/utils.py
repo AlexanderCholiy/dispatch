@@ -777,9 +777,7 @@ class IncidentManager(IncidentValidator):
                     ],
                 )
                 .select_related('status').order_by('-insert_date')
-            ) if (
-                not incident.is_incident_finish
-            ) else []
+            )
         else:
             relevant_statuses: list[IncidentStatusHistory] = [
                 s for s in incident.prefetched_statuses
@@ -790,9 +788,7 @@ class IncidentManager(IncidentValidator):
                         NOTIFIED_OP_END_STATUS_NAME,
                     ],
                 )
-            ] if (
-                not incident.is_incident_finish
-            ) else []
+            ]
 
         last_statuses = {
             'avr_start': None,
