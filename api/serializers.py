@@ -10,13 +10,6 @@ class IncidentReportSerializer(serializers.ModelSerializer):
         source='base_station.bs_name', read_only=True
     )
     pole = serializers.CharField(source='pole.pole', read_only=True)
-    pole_latitude = serializers.FloatField(
-        source='pole.pole_latitude', read_only=True
-    )
-    pole_longtitude = serializers.FloatField(
-        source='pole.pole_latitude', read_only=True
-    )
-    address = serializers.CharField(source='pole.address', read_only=True)
     incident_type = serializers.CharField(
         source='incident_type.name', read_only=True
     )
@@ -28,16 +21,13 @@ class IncidentReportSerializer(serializers.ModelSerializer):
     )
 
     last_status = serializers.SerializerMethodField()
-    is_transfer_to_avr = serializers.SerializerMethodField()
     avr_start_datetime = serializers.SerializerMethodField()
     avr_end_datetime = serializers.SerializerMethodField()
     avr_deadline = serializers.SerializerMethodField()
     avr_emails = serializers.SerializerMethodField()
-    is_transfer_to_rvr = serializers.SerializerMethodField()
     rvr_start_datetime = serializers.SerializerMethodField()
     rvr_end_datetime = serializers.SerializerMethodField()
     rvr_deadline = serializers.SerializerMethodField()
-    operators = serializers.SerializerMethodField()
     incident_datetime = serializers.SerializerMethodField()
     incident_finish_datetime = serializers.SerializerMethodField()
     operator_group = serializers.SerializerMethodField()
@@ -46,35 +36,26 @@ class IncidentReportSerializer(serializers.ModelSerializer):
     class Meta:
         model = Incident
         fields = (
-            'id',
             'code',
             'last_status',
             'incident_type',
             'categories',
-            'is_auto_incident',
-            'is_incident_finish',
             'incident_datetime',
             'incident_finish_datetime',
-            'is_transfer_to_avr',
             'avr_start_datetime',
             'avr_end_datetime',
             'is_sla_avr_expired',
             'avr_deadline',
             'avr_names',
             'avr_emails',
-            'is_transfer_to_rvr',
             'rvr_start_datetime',
             'rvr_end_datetime',
             'is_sla_rvr_expired',
             'rvr_deadline',
             'pole',
             'region_ru',
-            'address',
-            'pole_latitude',
-            'pole_longtitude',
             'base_station',
             'operator_group',
-            'operators',
         )
 
     def get_last_status(self, obj: Incident):
@@ -84,12 +65,6 @@ class IncidentReportSerializer(serializers.ModelSerializer):
         ):
             return
         return obj.prefetched_statuses[-1].status.name
-
-    def get_is_transfer_to_avr(self, obj: Incident):
-        return obj.avr_start_date is not None
-
-    def get_is_transfer_to_rvr(self, obj: Incident):
-        return obj.rvr_start_date is not None
 
     def get_avr_start_datetime(self, obj: Incident):
         if not obj.avr_start_date:
@@ -127,13 +102,6 @@ class IncidentReportSerializer(serializers.ModelSerializer):
             return None
         return ', '.join({
             op.operator_group for op in obj.base_station.operator.all()
-        })
-
-    def get_operators(self, obj: Incident):
-        if not obj.base_station:
-            return None
-        return ', '.join({
-            op.operator_name for op in obj.base_station.operator.all()
         })
 
     def get_avr_deadline(self, obj: Incident):

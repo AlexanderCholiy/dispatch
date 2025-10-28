@@ -240,6 +240,8 @@ class Command(BaseCommand):
                         incident,
                     )
                 )
+                if incident.is_incident_finish:
+                    updated_count += 1
 
             # Проверка признака завершённости:
             if not incident.is_incident_finish:
