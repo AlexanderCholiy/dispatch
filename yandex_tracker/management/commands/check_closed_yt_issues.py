@@ -1,12 +1,11 @@
 import time
-from typing import Callable
 from functools import partial
+from typing import Callable
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from django.db.models import OuterRef, Subquery
+from django.db.models import OuterRef, Prefetch, Subquery
 from django.utils import timezone
-from django.db.models import Prefetch
 
 from core.constants import (
     MIN_WAIT_SEC_WITH_CRITICAL_EXC,
@@ -15,8 +14,8 @@ from core.constants import (
 from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
 from core.tg_bot import tg_manager
-from core.wraps import min_wait_timer, timer
 from core.threads import tasks_in_threads
+from core.wraps import min_wait_timer, timer
 from incidents.constants import (
     AVR_CATEGORY,
     END_STATUS_NAME,
