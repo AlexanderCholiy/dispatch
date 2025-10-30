@@ -48,6 +48,11 @@ os.makedirs(
 )
 os.makedirs(os.path.dirname(DJANGO_LOG_ROTATING_FILE), exist_ok=True)
 
+UPDATE_DATA_FROM_TS_LOCK_FILE = os.path.join(
+    DATA_DIR, 'lock', 'update_data_from_ts.lock')
+
+os.makedirs(os.path.dirname(UPDATE_DATA_FROM_TS_LOCK_FILE), exist_ok=True)
+
 MAX_FILE_URL_LEN = 512
 MAX_ST_DESCRIPTION = 256
 MAX_LG_DESCRIPTION = 1024

@@ -30,15 +30,15 @@ admin.site.empty_value_display = EMPTY_VALUE
 class PoleEmailsInline(admin.TabularInline):
     model = PoleContractorEmail
     extra = 0
-    readonly_fields = ('contractor', 'email')
-    can_delete = False
+    # readonly_fields = ('contractor', 'email')
+    # can_delete = False
 
 
 class PolePhonesInline(admin.TabularInline):
     model = PoleContractorPhone
     extra = 0
-    readonly_fields = ('contractor', 'phone')
-    can_delete = False
+    # readonly_fields = ('contractor', 'phone')
+    # can_delete = False
 
 
 @admin.register(Pole)
@@ -47,12 +47,12 @@ class PoleAdmin(admin.ModelAdmin):
     list_display = (
         'pole',
         'bs_name',
-        'address',
+        'avr_contractor',
         'infrastructure_company',
         'region',
     )
-    search_fields = ('pole', 'bs_name', 'address',)
-    list_filter = ('infrastructure_company', 'region')
+    search_fields = ('pole', 'bs_name',)
+    list_filter = ('infrastructure_company', 'avr_contractor', 'region')
     inlines = [PoleEmailsInline, PolePhonesInline]
     ordering = ('pole', 'bs_name',)
     autocomplete_fields = ('region',)

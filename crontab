@@ -3,5 +3,5 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 CRON_TZ=Europe/Moscow
 
 0 1 * * * /usr/local/bin/python /app/manage.py delete_unknown_files >> /app/logs/cron/cron.log 2>&1
-0 */2 * * * /usr/local/bin/python /app/manage.py update_data_from_ts >> /app/logs/cron/cron.log 2>&1
+*/20 * * * * /usr/local/bin/python /app/manage.py update_data_from_ts >> /app/logs/cron/cron.log 2>&1
 0 */3 * * * /usr/local/bin/python /app/manage.py database_backup >> /app/logs/cron/cron.log 2>&1

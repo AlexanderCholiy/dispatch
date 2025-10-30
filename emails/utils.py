@@ -2,9 +2,10 @@ import html
 import json
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.core.files import File
@@ -387,3 +388,40 @@ class EmailManager:
             result = '\n'.join(trimmed_lines)
 
         return result
+
+    @staticmethod
+    def normalize_email_datetime(
+        email_date: datetime, msg_id: str
+    ) -> datetime:
+        """
+        Приводит дату письма к локальной TZ и исправляет неверную зону,
+        если результат попадает в будущее.
+        """
+        now_local = timezone.now()
+        local_tz = ZoneInfo(settings.TIME_ZONE)
+        time_diff_threshold = timedelta(minutes=30)
+
+        # Если в письме нет TZ — считаем UTC
+        if email_date.tzinfo is None:
+            email_date = email_date.replace(tzinfo=timezone.utc)
+
+        # Преобразовали дату в текущую TZ проекта
+        email_local = email_date.astimezone(local_tz)
+
+        if email_local <= now_local:
+            return email_local
+
+        # Если попали в будущее — пробуем заменить на временную зону проекта:
+        candidate_time = email_date.replace(tzinfo=local_tz)
+        candidate_local = candidate_time.astimezone(local_tz)
+
+        if abs(candidate_local - now_local) <= time_diff_threshold:
+            incident_manager_logger.warning(
+                f'Письмо {msg_id}: дата {email_date.astimezone(local_tz)} '
+                'была в будущем. Исправлено на '
+                f'{candidate_local.astimezone(local_tz)} с использованием '
+                f'локальной TZ {settings.TIME_ZONE}.'
+            )
+            return candidate_local
+
+        return email_local

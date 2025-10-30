@@ -5,13 +5,11 @@ import json
 import os
 import re
 from datetime import datetime, time, timedelta
-from datetime import timezone as dt_timezone
 from email import header, message
 from imaplib import IMAP4
 from typing import Any, List, Optional, Tuple, Union
 from zoneinfo import ZoneInfo
 
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.utils import timezone
@@ -488,14 +486,8 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                             cleaned_date_string, '%d %b %Y %H:%M:%S %z'
                         )
 
-                    # Если timezone нет, считаем UTC
-                    if email_date.tzinfo is None:
-                        email_date = email_date.replace(
-                            tzinfo=dt_timezone.utc
-                        )
-
-                    email_date = email_date.astimezone(
-                        ZoneInfo(settings.TIME_ZONE)
+                    email_date = self.normalize_email_datetime(
+                        email_date, email_msg_id
                     )
 
                     email_msg_reply_id: Optional[str] = self.prepare_msg_id(

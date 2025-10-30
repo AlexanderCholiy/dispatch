@@ -56,3 +56,5 @@ COLUMNS_TO_KEEP_BS_OPERATORS_REPORT: list[str] = [
     'Оператор',
     'Группа операторов',
 ]
+
+DB_CHUNK_UPDATE = 500
