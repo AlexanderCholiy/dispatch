@@ -315,15 +315,22 @@ def user_detail(request: HttpRequest, user_id):
     ).count()
 
     if closed_incidents:
-        closed_qs = incidents.filter(
+        closed_recent = incidents.filter(
             is_incident_finish=True,
             insert_date__gte=last_week,
-            incident_type__isnull=False,
-            incident_type__sla_deadline__isnull=False,
         ).select_related('incident_type')
-        sla_closed = sum(1 for i in closed_qs if i.is_sla_expired is False)
-        if closed_qs:
-            sla_percentage = round(sla_closed / len(closed_qs) * 100, 1)
+
+        total = len(closed_recent)
+        sla_ok_count = 0
+
+        sla_ok_count = sum(
+            1
+            for i in closed_recent
+            if not i.is_sla_avr_expired and not i.is_sla_rvr_expired
+        )
+
+        if total:
+            sla_percentage = round(sla_ok_count / total * 100, 1)
             sla_percentage = int(
                 sla_percentage
             ) if sla_percentage.is_integer() else sla_percentage
