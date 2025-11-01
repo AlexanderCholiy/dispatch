@@ -129,16 +129,24 @@ class AVRContractorAdmin(admin.ModelAdmin):
             'phone__phone',
             'pole__region__region_ru',
             'pole',
-        )
+        ).distinct().order_by('pole__region__region_ru', 'phone__phone')
 
         if not phones:
             return EMPTY_VALUE
 
-        formatted = [
-            f'{phone} ({region})' if region else f'{phone} ({EMPTY_VALUE})'
-            for phone, region, _ in phones
-        ]
-        return ', '.join(formatted)
+        # Группируем phone по региону
+        region_map = defaultdict(set)
+        for phone, region, _ in phones:
+            region_key = region if region else EMPTY_VALUE
+            region_map[region_key].add(phone)
+
+        # Форматируем красиво
+        formatted = []
+        for region in sorted(region_map.keys()):
+            phone_list = sorted(region_map[region])
+            formatted.append(f'{region}: {phone_list}')
+
+        return '\n'.join(formatted)
 
     all_phones.short_description = 'Телефоны подрядчика'
 
