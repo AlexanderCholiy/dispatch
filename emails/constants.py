@@ -83,5 +83,5 @@ ALLOWED_EXTENSIONS = {
     '.mp4', '.mov', '.avi', '.mkv', '.webm',  # Видео
 
     # Картинки
-    '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg',
+    '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.jfif',
 }
