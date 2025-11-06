@@ -613,11 +613,13 @@ class IncidentManager(IncidentValidator):
                 and email_msg.email_subject.lower().endswith('(закрыто)')
             ):
                 subject_2_find = email_msg.email_subject.lower().replace(
-                    '(закрыто)', '').strip()
+                    '(закрыто)', ''
+                ).strip()
 
                 old_email_msg = (
                     EmailMessage.objects.filter(
-                        email_subject__icontains=subject_2_find,
+                        email_from='noc.rostov@info.t2.ru',
+                        email_subject__istartswith=subject_2_find,
                         email_incident__isnull=False,
                         email_incident__is_incident_finish=False,
                     )

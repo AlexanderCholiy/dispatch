@@ -82,6 +82,6 @@ REMOTE_DB_BACK_FOLDER_DIR = os.path.join(DATA_DIR, 'remote_backup_db')
 os.makedirs(DB_BACK_FOLDER_DIR, exist_ok=True)
 os.makedirs(REMOTE_DB_BACK_FOLDER_DIR, exist_ok=True)
 
-MAX_DB_BACK = timedelta(days=7)
+MAX_DB_BACK = timedelta(days=3)
 MAX_REMOTE_DB_BACK = timedelta(days=30)
 DATETIME_FORMAT = '%d.%m.%Y %H:%M:%S'
