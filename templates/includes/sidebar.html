@@ -4,10 +4,10 @@
       {% with request.resolver_match.view_name as view_name %}
         {% if user.is_authenticated %}
           <li>
-            <a href="{% url 'emails:index' %}" 
-              class="nav-link {% if view_name == 'emails:index' %}active{% endif %}">
+            <a href="{% url 'incidents:index' %}" 
+              class="nav-link {% if view_name == 'incidents:index' %}active{% endif %}">
               <i class='bx  bx-folder'></i> 
-              <span class="link-text">Задачи</span>
+              <span class="link-text">Инциденты</span>
             </a>
           </li>
           <li>

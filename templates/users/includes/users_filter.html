@@ -4,15 +4,22 @@
   <link rel="stylesheet" href="{% static 'css/users/includes/users_filter.css' %}">
 {% endblock %}
 
-<form method="get" class="user-filter-form">
+<form method="get" class="user-filter-form" id="filter-form">
   <div class="filter-wrapper">
     <div class="select-wrapper">
-      <select name="role" class="select">
+      <select name="role" class="select" id="role-select">
         <option value="">Все роли</option>
         <option value="user" {% if selected_role == 'user' %}selected{% endif %}>Пользователь</option>
         <option value="dispatch" {% if selected_role == 'dispatch' %}selected{% endif %}>Диспетчер</option>
       </select>
     </div>
+
+    <input type="hidden" name="q" value="{{ search_query }}" id="filter-hidden-q">
+
     <button type="submit" class="btn btn-primary">Фильтр</button>
   </div>
 </form>
+
+{% block extra_js %}
+  <script src="{% static 'js/users/search_filter.js' %}"></script>
+{% endblock %}

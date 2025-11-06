@@ -1,23 +1,29 @@
 {% with request.resolver_match.view_name as view_name %}
   {% if view_name in 'users:users_list users:user_detail users:work_schedule' %}
-    <form method="get" action="{% url 'users:users_list' %}" class="header-search">
+    <form method="get" action="{% url 'users:users_list' %}" class="header-search" id="search-form">
       <input
         type="text"
         name="q"
         value="{{ search_query|default:'' }}"
         placeholder="Поиск пользователя"
         aria-label="Поиск"
+        id="search-input"
       >
+
+    <input type="hidden" name="role" value="{{ selected_role }}" id="search-hidden-role">
+
     <button type="submit" class="tooltip" data-title="Поиск по имени, фамилии или email"><i class="bx bx-search"></i></button>
   {% else %}
-    <form method="get" action="{% url 'emails:index' %}" class="header-search">
+    <form method="get" action="{% url 'incidents:index' %}" class="header-search" id="search-form">
       <input
         type="text"
         name="q"
         value="{{ search_query|default:'' }}"
-        placeholder="Поиск задачи"
+        placeholder="Поиск инцидента"
+        aria-label="Поиск"
+        id="search-input"
       >
-    <button type="submit" class="tooltip" data-title="Поиск по коду или названию задачи"><i class="bx bx-search"></i></button>
+    <button type="submit" class="tooltip" data-title="Поиск по коду или названию инцидента"><i class="bx bx-search"></i></button>
   {% endif %}
     </form>
 {% endwith %}

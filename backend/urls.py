@@ -91,7 +91,7 @@ auth_urlpatterns = [
 ]
 
 app_urls = [
-    path('', include('emails.urls')),
+    path('', include('incidents.urls')),
     path('users/', include('users.urls')),
     path('admin/', admin.site.urls),
     path('pages/', include('pages.urls')),

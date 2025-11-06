@@ -3,9 +3,9 @@
     {% with request.resolver_match.view_name as view_name %}
       {% if user.is_authenticated %}
       <li>
-        <a href="{% url 'emails:index' %}" 
-            class="{% if view_name == 'emails:index' %}active{% endif %}">
-          <span>Задачи</span>
+        <a href="{% url 'incidents:index' %}" 
+            class="{% if view_name == 'incidents:index' %}active{% endif %}">
+          <span>Инциденты</span>
         </a>
       </li>
       <li>

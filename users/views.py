@@ -252,14 +252,19 @@ def users_list(request: HttpRequest) -> HttpResponse:
     query = request.GET.get('q', '').strip()
     role_filter = request.GET.get('role', '').strip().lower()
 
-    base_qs = (
+    role_filter = role_filter if (
+        role_filter
+        and role_filter in {Roles.DISPATCH.value, Roles.USER.value}
+    ) else ''
+
+    users = (
         User.objects
         .exclude(role=Roles.GUEST).exclude(is_active=False)
         .order_by('username')
     )
 
     if role_filter:
-        base_qs = base_qs.filter(role=role_filter)
+        users = users.filter(role=role_filter)
 
     if query:
         words = {w.strip().lower() for w in query.split(' ') if w.strip()}
@@ -273,9 +278,7 @@ def users_list(request: HttpRequest) -> HttpResponse:
         if any(word in words for word in new_user_keywords):
             q_filter |= Q(first_name__exact='') & Q(last_name__exact='')
 
-        users = base_qs.filter(q_filter)
-    else:
-        users = base_qs
+        users = users.filter(q_filter)
 
     paginator = Paginator(users, MAX_USERS_PER_PAGE)
     page_number = request.GET.get('page')
