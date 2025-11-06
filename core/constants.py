@@ -1,6 +1,7 @@
 import os
 from http import HTTPStatus
 from logging import DEBUG, INFO
+from datetime import timedelta
 
 from django.conf import settings
 
@@ -76,8 +77,11 @@ MIN_WAIT_SEC_WITH_CRITICAL_EXC = 60
 
 DB_BACK_FILENAME_DATETIME_FORMAT = '%Y-%m-%d_%H-%M'
 DB_BACK_FOLDER_DIR = os.path.join(DATA_DIR, 'backup_db')
+REMOTE_DB_BACK_FOLDER_DIR = os.path.join(DATA_DIR, 'remote_backup_db')
 
 os.makedirs(DB_BACK_FOLDER_DIR, exist_ok=True)
+os.makedirs(REMOTE_DB_BACK_FOLDER_DIR, exist_ok=True)
 
-MAX_DAYS_DB_BACK = 7
+MAX_DB_BACK = timedelta(days=7)
+MAX_REMOTE_DB_BACK = timedelta(days=30)
 DATETIME_FORMAT = '%d.%m.%Y %H:%M:%S'
