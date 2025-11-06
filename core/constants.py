@@ -1,7 +1,7 @@
 import os
+from datetime import timedelta
 from http import HTTPStatus
 from logging import DEBUG, INFO
-from datetime import timedelta
 
 from django.conf import settings
 
