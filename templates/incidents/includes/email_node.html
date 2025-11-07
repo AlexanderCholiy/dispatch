@@ -1,0 +1,21 @@
+<div class="email-node" style="margin-left: {{ level|default:0 }}rem;">
+  <div class="email-header">
+    <strong>{{ node.email.email_from }}</strong>
+    <span class="email-date">{{ node.email.email_date|date:"d.m.Y H:i" }}</span>
+    {% if node.references %}
+      <small class="text-muted">
+        Ответ на: {{ node.references|join:", " }}
+      </small>
+    {% endif %}
+  </div>
+  <div class="email-subject">
+    {{ node.email.email_subject|default:"(без темы)" }}
+  </div>
+  <div class="email-body">
+    {{ node.email.email_body|linebreaks }}
+  </div>
+
+  {% for child in node.children %}
+    {% include "incidents/includes/email_node.html" with node=child level=level|add:2 %}
+  {% endfor %}
+</div>

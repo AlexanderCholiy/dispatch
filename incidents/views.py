@@ -1,12 +1,15 @@
+from typing import TypedDict
+
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.http import HttpRequest, HttpResponse
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django_ratelimit.decorators import ratelimit
 from django.db.models import Q, OuterRef, Subquery
 from django.core.cache import cache
 
 from users.utils import role_required
+from emails.models import EmailMessage
 
 from .constants import (
     INCIDENTS_PER_PAGE,
@@ -15,6 +18,12 @@ from .constants import (
 )
 from .models import Incident, IncidentStatusHistory, IncidentStatus
 from emails.models import EmailMessage
+
+
+class EmailNode(TypedDict):
+    email: EmailMessage
+    children: list['EmailNode']
+    references: list[str]
 
 
 @login_required
@@ -46,7 +55,7 @@ def index(request: HttpRequest) -> HttpResponse:
         email_incident=OuterRef('pk')
     ).order_by('-is_first_email', 'email_date').values('email_from')[:1]
 
-    incidents = Incident.objects.filter(code__isnull=False).select_related(
+    incidents = Incident.objects.all().select_related(
         'incident_type',
         'responsible_user',
         'pole',
@@ -119,3 +128,44 @@ def index(request: HttpRequest) -> HttpResponse:
         'page_size_choices': PAGE_SIZE_INCIDENTS_CHOICES,
     }
     return render(request, 'incidents/index.html', context)
+
+
+@login_required
+@role_required()
+@ratelimit(key='user_or_ip', rate='20/m', block=True)
+def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
+    incident = get_object_or_404(Incident, pk=incident_id)
+
+    emails = (
+        EmailMessage.objects.filter(email_incident=incident)
+        .select_related('folder')
+        .prefetch_related('email_references')
+        .order_by('email_date')
+    )
+
+    email_dict: dict[str, EmailNode] = {
+        email.email_msg_id: {'email': email, 'children': [], 'references': []}
+        for email in emails
+    }
+
+    email_roots: list[EmailNode] = []
+
+    for email in emails:
+        email_dict[email.email_msg_id]['references'] = [
+            ref.email_msg_references for ref in email.email_references.all()
+        ]
+
+        parent_id = email.email_msg_reply_id
+        if parent_id and parent_id in email_dict:
+            email_dict[parent_id]['children'].append(
+                email_dict[email.email_msg_id]
+            )
+        else:
+            email_roots.append(email_dict[email.email_msg_id])
+
+    context = {
+        'incident': incident,
+        'email_roots': email_roots,
+    }
+
+    return render(request, 'incidents/incident_detail.html', context)

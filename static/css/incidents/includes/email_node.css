@@ -1,0 +1,22 @@
+.email-node {
+  border-left: 2px solid var(--extra-color);
+  padding-left: 1rem;
+  margin-bottom: 1rem;
+}
+
+.email-header {
+  font-size: var(--font-sm);
+  color: var(--add-color);
+  margin-bottom: 0.25rem;
+}
+
+.email-subject {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.email-body {
+  font-size: var(--font-sm);
+  color: var(--color);
+  padding-left: 0.25rem;
+}

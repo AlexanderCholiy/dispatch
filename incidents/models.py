@@ -177,7 +177,7 @@ class Incident(models.Model):
         ]
 
     def __str__(self):
-        return self.code or f'Внутренний номер {self.pk}'
+        return self.code or f'ID-{self.pk}'
 
     def save(self, *args, **kwargs):
         self.full_clean()

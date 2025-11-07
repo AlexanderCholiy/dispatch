@@ -29,8 +29,8 @@
               <tr>
                 <td class="tooltip"
                     data-title="{{ incident.incident_type.name|default:'' }}">
-                  <a href="" class="incident-link">
-                    {{ incident.code }}
+                  <a href="{% url 'incidents:incident_detail' incident.id %}" class="incident-link">
+                    {{ incident }}
                   </a>
                 </td>
                 <td class="tooltip"
@@ -79,7 +79,7 @@
                 <td>{{ incident.incident_date|date:"d.m.Y H:i" }}</td>
               </tr>
             {% empty %}
-              <tr><td colspan="8" class="empty-row">Нет данных</td></tr>
+              <tr><td colspan="8" class="empty">Нет данных</td></tr>
             {% endfor %}
           </tbody>
         </table>

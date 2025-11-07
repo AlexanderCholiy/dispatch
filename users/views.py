@@ -299,7 +299,7 @@ def users_list(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
-def user_detail(request: HttpRequest, user_id):
+def user_detail(request: HttpRequest, user_id: int):
     """Подробная информация о пользователе со статистикой."""
     user = get_object_or_404(User, pk=user_id, is_active=True)
 

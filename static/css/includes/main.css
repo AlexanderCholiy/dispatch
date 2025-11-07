@@ -82,3 +82,7 @@ code {
   font-family: monospace;
   color: var(--blue-color);
 }
+
+.empty {
+  text-align: center;
+}
