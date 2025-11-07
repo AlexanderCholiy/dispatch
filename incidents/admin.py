@@ -19,6 +19,7 @@ from .models import (
     IncidentStatus,
     IncidentStatusHistory,
     IncidentType,
+    StatusType,
 )
 
 admin.site.empty_value_display = EMPTY_VALUE
@@ -167,11 +168,21 @@ class IncidentTypeAdmin(admin.ModelAdmin):
     search_fields = ('name',)
 
 
+@admin.register(StatusType)
+class StatusTypeAdmin(admin.ModelAdmin):
+    list_per_page = INCIDENT_STATUSES_PER_PAGE
+    list_display = ('name', 'description', 'css_class')
+    list_editable = ('description', 'css_class')
+    search_fields = ('name', 'description',)
+    ordering = ('name',)
+
+
 @admin.register(IncidentStatus)
 class IncidentStatusAdmin(admin.ModelAdmin):
     list_per_page = INCIDENT_STATUSES_PER_PAGE
-    list_display = ('name', 'description',)
-    list_editable = ('description',)
+    list_display = ('name', 'description', 'status_type',)
+    list_editable = ('description', 'status_type')
+    list_filter = ('status_type',)
     search_fields = ('name', 'description',)
     ordering = ('name',)
 

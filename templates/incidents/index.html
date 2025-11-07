@@ -10,72 +10,80 @@
     {% include "incidents/includes/incidents_filter.html" %}
 
     <div class="card">
-      <table class="incidents-table">
-        <thead>
-          <tr>
-            <th>Код</th>
-            <th>Инцидент</th>
-            <th>Исполнитель</th>
-            <th>Статус</th>
-            <th>Обновлено</th>
-            <th>Шифр опоры</th>
-            <th>Номер БС</th>
-            <th>Дата регистрации</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for incident in page_obj %}
+      <div class="table-wrapper">
+        <table class="incidents-table">
+          <thead>
             <tr>
-              <td class="tooltip"
-                  data-title="{{ incident.incident_type.name|default:'' }}">
-                <a href="" class="incident-link">
-                  {{ incident.code }}
-                </a>
-              </td>
-              <td class="tooltip"
-                  data-title="Заявитель {{ incident.first_email_from|default:'—' }}">
-                {% if incident.first_email_subject %}
-                  {{ incident.first_email_subject|truncatechars:50|default:"—" }}
-                {% else %}
-                  —
-                {% endif %}
-              </td>
-              <td class="tooltip" data-title="{{ incident.responsible_user.email|default:'' }}">
-                {% if incident.responsible_user %}
-                  <a href="{% url 'users:user_detail' incident.responsible_user.id %}" class="incident-link">
-                    {{ incident.responsible_user.get_full_name|default:"Новый пользователь" }}
-                  </a>
-                {% else %}
-                  —
-                {% endif %}
-              </td>
-              <td class="tooltip"
-                  data-title="{{ incident.latest_status_date|date:'d.m.Y H:i'|default:'—' }}">
-                {{ incident.latest_status_name|default:"—" }}
-              </td>
-              <td>{{ incident.update_date|date:"d.m.Y H:i" }}</td>
-              <td class="tooltip" data-title="{{ incident.pole.region.region_ru|default_if_none:'' }}">
-                {% if incident.pole %}
-                  <span class="copy-text" data-text="{{ incident.pole.pole }}">{{ incident.pole.pole|default:"—" }}</span>
-                {% else %}
-                  —
-                {% endif %}
-              </td>
-              <td class="tooltip"
-                  data-title="{% if incident.base_station %}{% for op in incident.base_station.operator.all %}{{ op.operator_name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}">
-                {% if incident.base_station %}
-                  <span class="copy-text" data-text="{{ incident.base_station.bs_name }}">{{ incident.base_station.bs_name|default:"—" }}</span>
-                {% else %}
-                  —
-                {% endif %}
-              </td>
-              <td>{{ incident.incident_date|date:"d.m.Y H:i" }}</td>
+              <th>Код</th>
+              <th>Инцидент</th>
+              <th>Исполнитель</th>
+              <th>Статус</th>
+              <th>Обновлено</th>
+              <th>Шифр опоры</th>
+              <th>Номер БС</th>
+              <th>Дата регистрации</th>
             </tr>
-          {% empty %}
-            <tr><td colspan="8" class="empty-row">Нет данных</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {% for incident in page_obj %}
+              <tr>
+                <td class="tooltip"
+                    data-title="{{ incident.incident_type.name|default:'' }}">
+                  <a href="" class="incident-link">
+                    {{ incident.code }}
+                  </a>
+                </td>
+                <td class="tooltip"
+                    data-title="Заявитель {{ incident.first_email_from|default:'—' }}">
+                  {% if incident.first_email_subject %}
+                    {{ incident.first_email_subject|truncatechars:50|default:"—" }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td class="tooltip" data-title="{{ incident.responsible_user.email|default:'' }}">
+                  {% if incident.responsible_user %}
+                    <a href="{% url 'users:user_detail' incident.responsible_user.id %}" class="incident-link">
+                      {{ incident.responsible_user.get_full_name|default:"Новый пользователь" }}
+                    </a>
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td class="tooltip"
+                    data-title="{{ incident.latest_status_date|date:'d.m.Y H:i'|default:'—' }}">
+                  {% if incident.latest_status_name %}
+                    <span class="status-badge {{ incident.latest_status_class|default:'status-unknown' }}">
+                      {{ incident.latest_status_name }}
+                    </span>
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td>{{ incident.update_date|date:"d.m.Y H:i" }}</td>
+                <td class="tooltip" data-title="{{ incident.pole.region.region_ru|default_if_none:'' }}">
+                  {% if incident.pole %}
+                    <span class="copy-text" data-text="{{ incident.pole.pole }}">{{ incident.pole.pole|default:"—" }}</span>
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td class="tooltip"
+                    data-title="{% if incident.base_station %}{% for op in incident.base_station.operator.all %}{{ op.operator_name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}">
+                  {% if incident.base_station %}
+                    <span class="copy-text" data-text="{{ incident.base_station.bs_name }}">{{ incident.base_station.bs_name|default:"—" }}</span>
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td>{{ incident.incident_date|date:"d.m.Y H:i" }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="8" class="empty-row">Нет данных</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
 
     {% if page_obj.has_other_pages %}

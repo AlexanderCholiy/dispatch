@@ -1,0 +1,68 @@
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background-color: var(--background-color);
+}
+
+.incidents-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.incidents-table thead {
+  color: var(--color);
+  text-align: left;
+}
+
+.incidents-table th {
+  padding: var(--space-xs) var(--space-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  border-bottom: 1.5px solid var(--extra-color);
+  user-select: none;
+}
+
+.incidents-table td {
+  padding: var(--space-xs) var(--space-sm);
+  border-bottom: 1px solid var(--add-background-color);
+  vertical-align: middle;
+  color: var(--add-color);
+  transition: color var(--transition-value);
+}
+
+.incidents-table td:hover {
+  color: var(--color);
+}
+
+.incidents-table tbody tr:hover {
+  background-color: var(--background-color);
+  transition: background-color var(--transition-value);
+}
+
+.incidents-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.incident-link {
+  color: var(--add-color);
+  text-decoration: none;
+}
+
+.incident-link:hover {
+  text-decoration: underline;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-sm);
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  color: var(--background-color);
+  text-align: center;
+  align-items: center;
+  width: 95%;
+  max-width: 200px;
+  transition: background-color var(--transition-value), color var(--transition-value);
+}

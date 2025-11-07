@@ -36,6 +36,7 @@
   transition: width var(--transition-value);
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
   transition: background-color var(--transition-value), width var(--transition-value);
 }
 

@@ -11,7 +11,7 @@
 .user-card {
   display: flex;
   justify-content: space-between;
-  background: var(--add-background-color);
+  background: var(--background-color);
   border-radius: var(--radius-lg);
   padding: var(--space-md);
   box-shadow: 0 0 var(--space-sm) var(--extra-color);

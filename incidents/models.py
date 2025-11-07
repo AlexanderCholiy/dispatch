@@ -8,7 +8,7 @@ from django.db.models import CheckConstraint, F, Q
 from django.db.models.functions import Least
 from django.utils import timezone
 
-from core.constants import DATETIME_FORMAT
+from core.constants import DATETIME_FORMAT, MAX_ST_DESCRIPTION
 from core.models import Detail
 from ts.models import AVRContractor, BaseStation, Pole
 
@@ -364,12 +364,40 @@ class IncidentType(Detail):
         super().save(*args, **kwargs)
 
 
+class StatusType(Detail):
+    css_class = models.CharField(
+        max_length=MAX_ST_DESCRIPTION,
+        verbose_name='CSS-класс',
+        null=True,
+        blank=True,
+        help_text=(
+            'Используется для визуального отображения статуса в интерфейсе.'
+        )
+    )
+
+    class Meta:
+        verbose_name = 'тип статуса'
+        verbose_name_plural = 'Типы статусов'
+
+    def __str__(self):
+        return self.name
+
+
 class IncidentStatus(Detail):
     """Таблица статусов"""
 
     class Meta:
         verbose_name = 'статус инцидента'
         verbose_name_plural = 'Статусы инцидентов'
+
+    status_type = models.ForeignKey(
+        StatusType,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='status_types',
+        verbose_name='Тип статуса'
+    )
 
 
 class IncidentStatusHistory(models.Model):
