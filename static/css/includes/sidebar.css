@@ -42,7 +42,7 @@
 .sidebar-content {
   margin-top: 0;
   margin-bottom: var(--footer-height);
-  transition: margin-top var(--transition-value);
+  transition: margin-top 0.15s linear;
 }
 
 .sidebar.collapsed {

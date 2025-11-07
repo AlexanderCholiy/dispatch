@@ -3,20 +3,98 @@ from django.core.paginator import Paginator
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 from django_ratelimit.decorators import ratelimit
+from django.db.models import Q, OuterRef, Subquery
+from django.core.cache import cache
 
 from users.utils import role_required
 
-from .constants import INCIDENTS_PER_PAGE
+from .constants import (
+    INCIDENTS_PER_PAGE,
+    PAGE_SIZE_INCIDENTS_CHOICES,
+    MAX_INCIDENTS_INFO_CACHE_SEC
+)
+from .models import Incident, IncidentStatusHistory, IncidentStatus
+from emails.models import EmailMessage
 
 
 @login_required
 @role_required()
 @ratelimit(key='user_or_ip', rate='20/m', block=True)
 def index(request: HttpRequest) -> HttpResponse:
-    template_name = 'incidents/index.html'
-
     query = request.GET.get('q', '').strip()
-    paginator = Paginator([], INCIDENTS_PER_PAGE)
+    pole = request.GET.get('pole', '').strip()
+    base_station = request.GET.get('base_station', '').strip()
+    status_name = request.GET.get('status', '').strip()
+    per_page = int(
+        request.GET.get('per_page')
+        or request.COOKIES.get('per_page')
+        or INCIDENTS_PER_PAGE
+    )
+
+    if per_page not in PAGE_SIZE_INCIDENTS_CHOICES:
+        per_page = INCIDENTS_PER_PAGE
+
+    latest_status_subquery = IncidentStatusHistory.objects.filter(
+        incident=OuterRef('pk')
+    ).order_by('-insert_date')
+
+    first_email_subject_subquery = EmailMessage.objects.filter(
+        email_incident=OuterRef('pk')
+    ).order_by('-is_first_email', 'email_date').values('email_subject')[:1]
+
+    first_email_from_subquery = EmailMessage.objects.filter(
+        email_incident=OuterRef('pk')
+    ).order_by('-is_first_email', 'email_date').values('email_from')[:1]
+
+    incidents = Incident.objects.filter(code__isnull=False).select_related(
+        'incident_type',
+        'responsible_user',
+        'pole',
+        'pole__region',
+        'base_station',
+    ).prefetch_related(
+        'statuses',
+        'email_messages',
+        'base_station__operator',
+    ).annotate(
+        latest_status_name=Subquery(
+            latest_status_subquery.values('status__name')[:1]
+        ),
+        latest_status_date=Subquery(
+            latest_status_subquery.values('insert_date')[:1]
+        ),
+        first_email_subject=Subquery(first_email_subject_subquery),
+        first_email_from=Subquery(first_email_from_subquery),
+    ).order_by('-incident_date')
+
+    if query:
+        incidents = incidents.filter(
+            Q(code__icontains=query)
+            | Q(email_messages__email_subject__icontains=query)
+        ).distinct()
+
+    if pole:
+        incidents = incidents.filter(pole__pole__startswith=pole)
+
+    if base_station:
+        incidents = incidents.filter(
+            base_station__bs_name__startswith=base_station
+        )
+
+    if status_name:
+        incidents = incidents.filter(latest_status_name=status_name)
+
+    statuses = cache.get_or_set(
+        'incident_filter_statuses',
+        lambda: list(
+            IncidentStatus.objects.values_list('name', flat=True)
+            .distinct()
+            .order_by('name')
+        ),
+        MAX_INCIDENTS_INFO_CACHE_SEC,
+    )
+
+    paginator = Paginator(incidents, per_page)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
@@ -28,5 +106,13 @@ def index(request: HttpRequest) -> HttpResponse:
         'page_obj': page_obj,
         'search_query': query,
         'page_url_base': page_url_base,
+        'statuses': statuses,
+        'selected': {
+            'pole': pole,
+            'base_station': base_station,
+            'status': status_name,
+            'per_page': per_page,
+        },
+        'page_size_choices': PAGE_SIZE_INCIDENTS_CHOICES,
     }
-    return render(request, template_name, context)
+    return render(request, 'incidents/index.html', context)

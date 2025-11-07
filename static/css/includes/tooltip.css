@@ -5,7 +5,7 @@
 .tooltip-text {
   position: fixed;
   background-color: var(--add-background-color);
-  color: var(--blue-color);
+  color: var(--gray-color);
   padding: var(--space-xs);
   border-radius: var(--radius-sm);
   font-size: var(--font-xs);

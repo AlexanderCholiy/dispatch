@@ -60,7 +60,7 @@
 }
 
 .alert-info {
-  background-color: var(--blue-color);
+  background-color: var(--add-background-color);
 }
 
 .alert-warning {

@@ -6,7 +6,8 @@
 }
 
 .container,
-.container-sm {
+.container-sm,
+.container-xl {
   width: 100%;
   margin: var(--space-lg) auto;
   box-sizing: border-box;
@@ -18,6 +19,10 @@
 
 .container-sm {
   max-width: 800px;
+}
+
+.container-xl {
+    max-width: 100%;
 }
 
 .card {

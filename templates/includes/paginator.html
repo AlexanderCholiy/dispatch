@@ -6,7 +6,7 @@
 
 <div class="pagination-wrapper">
   <div class="pagination-summary">
-    Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}
+    Всего {{ page_obj.paginator.count }} записей
   </div>
 
   <ul class="pagination">
@@ -26,14 +26,32 @@
     {% endif %}
 
     {% for i in page_obj.paginator.page_range %}
-      {% if page_obj.number == i %}
-        <li class="page-item active">
-          <span class="page-link">{{ i }}</span>
+      {% if i >= page_obj.number|add:'-2' and i <= page_obj.number|add:'2' %}
+        {# Текущая страница и ±2 соседние #}
+        {% if page_obj.number == i %}
+          <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+        {% else %}
+          <li class="page-item">
+            <a class="page-link" href="{{ page_url_base }}page={{ i }}">{{ i }}</a>
+          </li>
+        {% endif %}
+
+      {% elif i == 1 %}
+        {# Первая страница #}
+        <li class="page-item">
+          <a class="page-link" href="{{ page_url_base }}page=1">1</a>
         </li>
-      {% else %}
+        {% if page_obj.number > 4 %}
+          <li class="page-item disabled"><span class="page-link">...</span></li>
+        {% endif %}
+
+      {% elif i == page_obj.paginator.num_pages %}
+        {# Последняя страница #}
+        {% if page_obj.number < page_obj.paginator.num_pages|add:'-3' %}
+          <li class="page-item disabled"><span class="page-link">...</span></li>
+        {% endif %}
         <li class="page-item">
           <a class="page-link" href="{{ page_url_base }}page={{ i }}">{{ i }}</a>
-          {% comment %} <a class="page-link" href="?page={{ i }}">{{ i }}</a> {% endcomment %}
         </li>
       {% endif %}
     {% endfor %}

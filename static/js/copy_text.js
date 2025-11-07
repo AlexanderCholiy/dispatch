@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
       navigator.clipboard.writeText(text)
         .then(() => {
           const message = document.createElement('div');
-          message.className = 'message alert-warning';
+          message.className = 'message alert-info';
           message.innerText = `${text} скопирован в буфер`;
 
           messagesContainer.appendChild(message);

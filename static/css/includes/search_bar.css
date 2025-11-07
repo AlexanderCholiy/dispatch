@@ -32,6 +32,7 @@
   font-size: var(--font-md);
   color: var(--color);
   min-width: 0;
+  z-index: 2;
   transition: color var(--transition-value);
 }
 
@@ -44,6 +45,8 @@
 }
 
 .header-search button {
+  position: relative;
+  z-index: 1;
   background: none;
   border: none;
   font-size: var(--font-lg);
@@ -53,12 +56,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform var(--transition-value), opacity var(--transition-value);
 }
 
 .header-search button:hover {
   opacity: 0.85;
-  transform: scale(1.1);
+  transform: scale(1.05);
 }
+
+.header-search i {
+  pointer-events: none; /* чтобы клик не попадал на иконку */
+}
+
 
 @media (max-width: 768px) {
   #search-bar {
