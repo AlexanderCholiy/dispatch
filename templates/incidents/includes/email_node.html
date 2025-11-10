@@ -5,17 +5,17 @@
       <div class="email-meta">
         <strong>ID письма:</strong> {{ node.email.id }}
         {% if node.references %}
-          <small class="text-muted">
-            [ ответ на:
+          <small class="email-links">
+            [ответ на:
             {% for ref in node.references %}
-              <a href="#email-{{ ref.id }}">{{ ref.id }}</a>{% if not forloop.last %}, {% endif %}
-            {% endfor %}]
+              <a class="email-link" href="#email-{{ ref.id }}">{{ ref.id }}</a>{% if not forloop.last %}, {% else %}]{% endif %}
+            {% endfor %}
           </small>
         {% endif %}
       </div>
   
       <div class="email-from">
-        <strong>От:</strong> {{ node.email.email_from }}
+        <strong>От:</strong> <span class="copy-text" data-text="{{ node.email.email_from }}">{{ node.email.email_from }}</span>
       </div>
     
       <div class="email-to">
@@ -39,33 +39,61 @@
     </div>
   
     <div class="email-subject">
-      <strong>{{ node.email.email_subject|default:"без темы" }}</strong>
+      {% if node.email.email_subject %}
+        <strong class="copy-text" data-text="{{ node.email.email_subject }}">{{ node.email.email_subject }}</strong>
+      {% else %}
+        <strong>Без темы</strong>
+      {% endif %}
     </div>
   
     <div class="email-body">
       {{ node.email.email_body|linebreaks }}
     </div>
   
-    {% if node.email.email_attachments.exists %}
-      <div class="email-attachments">
-        <strong>Вложения:</strong>
+    {% if node.email.email_attachments.exists or node.email.email_intext_attachments.exists %}
+    <div class="email-attachments-wrapper">
+      <button type="button" class="toggle-attachments-btn" onclick="this.nextElementSibling.classList.toggle('hidden'); this.textContent = this.nextElementSibling.classList.contains('hidden') ? 'Показать вложения' : 'Скрыть вложения';">
+        Показать вложения
+      </button>
+      <div class="email-attachments hidden">
         <ul>
           {% for att in node.email.email_attachments.all %}
-            <li><a href="{{ att.file_url.url }}" target="_blank" class="link-text">{{ att.file_name }}</a></li>
+            <li class="attachment-item">
+              <a href="{{ att.file_url.url }}" target="_blank" class="attachment-file">
+                {% if att.file_name|lower|slice:"-4:" in ".jpg.png.gif" or att.file_name|lower|slice:"-5:" == ".jpeg" %}
+                  <span class="attachment-preview" style="background-image: url('{{ att.file_url.url }}');"></span>
+                {% else %}
+                  <span class="attachment-icon
+                    {% if att.file_name|lower|slice:"-4:" == ".pdf" %}pdf
+                    {% elif att.file_name|lower|slice:"-5:" == ".xlsx" %}xlsx
+                    {% elif att.file_name|lower|slice:"-5:" == ".docx" %}docx
+                    {% elif att.file_name|lower|slice:"-4:" == ".txt" %}txt
+                    {% else %}file{% endif %}"></span>
+                {% endif %}
+                  <p class="attachment-name">{{ att.file_name }}</p>
+              </a>
+            </li>
           {% endfor %}
-        </ul>
-      </div>
-    {% endif %}
-  
-    {% if node.email.email_intext_attachments.exists %}
-      <div class="email-intext-attachments">
-        <strong>Вложения в тексте:</strong>
-        <ul>
           {% for att in node.email.email_intext_attachments.all %}
-            <li><a href="{{ att.file_url.url }}" target="_blank" class="link-text">{{ att.file_name }}</a></li>
+            <li class="attachment-item">
+              <a href="{{ att.file_url.url }}" target="_blank" class="attachment-file">
+                {% if att.file_name|lower|slice:"-4:" in ".jpg.png.gif" or att.file_name|lower|slice:"-5:" == ".jpeg" %}
+                  <span class="attachment-preview" style="background-image: url('{{ att.file_url.url }}');"></span>
+                {% else %}
+                  <span class="attachment-icon
+                    {% if att.file_name|lower|slice:"-4:" == ".pdf" %}pdf
+                    {% elif att.file_name|lower|slice:"-5:" == ".xlsx" %}xlsx
+                    {% elif att.file_name|lower|slice:"-5:" == ".docx" %}docx
+                    {% elif att.file_name|lower|slice:"-4:" == ".txt" %}txt
+                    {% else %}file{% endif %}"></span>
+                {% endif %}
+                  <p class="attachment-name">{{ att.file_name }}</p>
+              </a>
+            </li>
           {% endfor %}
         </ul>
       </div>
+    </div>
     {% endif %}
   </div>
 

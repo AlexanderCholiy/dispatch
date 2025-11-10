@@ -2,7 +2,9 @@
 {% load static %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/incidents/includes/incident_detail.css' %}">
 <link rel="stylesheet" href="{% static 'css/incidents/includes/email_node.css' %}">
+<link rel="stylesheet" href="{% static 'css/incidents/includes/files_preview.css' %}">
 {% endblock %}
 
 {% block title %}{{ incident }}{% endblock %}
@@ -11,23 +13,29 @@
 <div class="container">
   <div class="card">
     <div class="card-header">
-      <p class="incident-title">
-        {% if incident.first_email_subject %}
-          <strong>{{ incident }}:</strong> {{ incident.first_email_subject|default:"—" }}
-        {% else %}
-          <strong>{{ incident }}</strong>
+      <div class="card-header-top">
+        <p class="incident-title">
+          {% if incident.first_email_subject %}
+            <strong class="incident-code copy-text" data-text="{{ incident.code|default:incident.id }}">{{ incident }}:</strong> {{ incident.first_email_subject|default:"—" }}
+          {% else %}
+            <strong class="incident-code copy-text" data-text="{{ incident.code|default:incident.id }}">{{ incident }}</strong>
+          {% endif %}
+        </p>
+        {% if incident.latest_status_name %}
+          <span class="status-tag {{ incident.latest_status_class }} tooltip" data-title="{{ incident.latest_status_date|date:'d.m.Y H:i'|default:'—' }}">
+            {{ incident.latest_status_name }}
+          </span>
         {% endif %}
-      </p>
-      {% if incident.latest_status_name %}
-        <span class="status-tag {{ incident.latest_status_class }}">
-          {{ incident.latest_status_name }}
-        </span>
-      {% endif %}
-      <p class="text-muted">
+      </div>
+
+      <p class="incident-date">
         {% if incident.incident_finish_date %}
-          Зарегестрировано {{ incident.incident_date|date:"d.m.Y H:i" }}, закрыто {{ incident.incident_finish_date|date:"d.m.Y H:i" }}, обновлено {{ incident.update_date|date:"d.m.Y H:i" }}
+          зарегистрировано {{ incident.incident_date|date:"d.m.Y H:i" }},
+          закрыто {{ incident.incident_finish_date|date:"d.m.Y H:i" }},
+          обновлено {{ incident.update_date|date:"d.m.Y H:i" }}
         {% else %}
-          Зарегестрировано {{ incident.incident_date|date:"d.m.Y H:i" }}, обновлено {{ incident.update_date|date:"d.m.Y H:i" }}
+          зарегистрировано {{ incident.incident_date|date:"d.m.Y H:i" }},
+          обновлено {{ incident.update_date|date:"d.m.Y H:i" }}
         {% endif %}
       </p>
     </div>
@@ -35,10 +43,10 @@
     <div class="card-body">
       <div class="incident-meta">
         {% if incident.pole %}
-          <p><strong>Опора:</strong> {{ incident.pole.pole }} ({{ incident.pole.region.region_ru|default:incident.pole.region.region_en }})</p>
+          <p><strong>Опора:</strong> <span class="copy-text" data-text="{{ incident.pole }}">{{ incident.pole.pole }}</span> ({{ incident.pole.region.region_ru|default:incident.pole.region.region_en }})</p>
         {% endif %}
         {% if incident.base_station %}
-          <p><strong>Базовая станция:</strong> {{ incident.base_station.bs_name }}</p>
+          <p><strong>Базовая станция:</strong> <span class="copy-text" data-text="{{ incident.base_station.bs_name }}">{{ incident.base_station.bs_name }}</span></p>
         {% endif %}
         {% if incident.responsible_user %}
           <p><strong>Ответственный:</strong> {{ incident.responsible_user.get_full_name|default:incident.responsible_user.email }}</p>
@@ -54,24 +62,28 @@
         {% endif %}
       </div>
   
-      <div class="incident-sla">
-        {% if incident.sla_avr_deadline %}
-          <p>
-            <strong>SLA АВР: </strong>{{ incident.avr_start_date|date:"d.m.Y H:i" }} — {{ incident.sla_avr_deadline|date:"d.m.Y H:i" }}
-            {% if incident.is_sla_avr_expired %}
-              <span class="sla-expired">(просрочено)</span>
-            {% endif %}
-          </p>
-        {% endif %}
-        {% if incident.sla_rvr_deadline %}
-          <p>
-            <strong>SLA РВР: </strong>{{ incident.rvr_start_date|date:"d.m.Y H:i" }} — {{ incident.sla_rvr_deadline|date:"d.m.Y H:i" }}
-            {% if incident.is_sla_rvr_expired %}
-              <span class="sla-expired">(просрочено)</span>
-            {% endif %}
-          </p>
-        {% endif %}
-      </div>
+      {% if incident.sla_avr_deadline or incident.sla_rvr_deadline %}
+        <div class="incident-sla">
+          {% if incident.sla_avr_deadline %}
+            <p>
+              <strong>SLA АВР: </strong>{{ incident.avr_start_date|date:"d.m.Y H:i" }} — {{ incident.sla_avr_deadline|date:"d.m.Y H:i" }}
+              {% if incident.is_sla_avr_expired %}
+                <span class="sla-expired">(просрочено)</span>
+              {% endif %}
+            </p>
+          {% endif %}
+          {% if incident.sla_rvr_deadline %}
+            <p>
+              <strong>SLA РВР: </strong>{{ incident.rvr_start_date|date:"d.m.Y H:i" }} — {{ incident.sla_rvr_deadline|date:"d.m.Y H:i" }}
+              {% if incident.is_sla_rvr_expired %}
+                <span class="sla-expired">(просрочено)</span>
+              {% endif %}
+            </p>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      <button class="toggle-email-three">Показать письма</button>
   
       <div class="email-three">
         {% if email_three %}
@@ -79,14 +91,28 @@
             {% include "incidents/includes/email_node.html" with node=root level=0 %}
           {% endfor %}
         {% else %}
-          <p>Писем пока нет.</p>
+          <p class="empty">Писем пока нет</p>
         {% endif %}
       </div>
-    </div>
+
+    <button class="toggle-status-history">Показать историю статусов</button>
+
+    <ul class="status-history">
+      {% for history in incident.status_history.all|dictsortreversed:"insert_date" %}
+        <li class="status-item">
+          <span class="status-name {{ history.status.status_type.css_class }}">{{ history.status.name }}</span>
+          <span class="status-date">{{ history.insert_date|date:"d.m.Y H:i" }}</span>
+        </li>
+      {% empty %}
+        <p class="empty">История отсутствует</p>
+      {% endfor %}
+    </ul>
+
   </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/incidents/hide_sections.js' %}"></script>
 <script src="{% static 'js/incidents/email_root.js' %}"></script>
 {% endblock %}

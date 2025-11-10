@@ -1,0 +1,128 @@
+.card-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.card-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.incident-title {
+  margin: 0;
+  font-weight: 500;
+  font-size: var(--font-md);
+  color: var(--add-color);
+}
+
+.incident-code {
+  color: var(--color);
+  font-weight: 600;
+}
+
+.status-name,
+.status-tag {
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-sm);
+  font-weight: 500;
+  text-transform: capitalize;
+  white-space: nowrap;
+  color: var(--background-color);
+}
+
+.incident-date {
+  margin: 0;
+  font-weight: 500;
+  margin-top: var(--space-sm);
+  text-align: right;
+  font-size: var(--font-sm);
+  color: var(--gray-color);
+}
+
+.card-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  font-size: var(--font-sm);
+}
+
+.incident-meta p,
+.incident-sla p {
+  margin: var(--space-xs) 0;
+  line-height: 1.4;
+}
+
+.sla-expired {
+  color: var(--red-color);
+  font-weight: 600;
+  margin-left: var(--space-xs);
+}
+
+.toggle-status-history,
+.toggle-email-three {
+  margin-top: var(--space-sm);
+  margin-bottom: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-sm);
+  border: 1px solid var(--extra-color);
+  border-radius: var(--radius-sm);
+  background-color: var(--add-background-color);
+  color: var(--color);
+  cursor: pointer;
+  transition: all var(--transition-value);
+}
+
+.toggle-status-history:hover,
+.toggle-email-three:hover {
+  background-color: var(--extra-color);
+}
+
+.card-body {
+  gap: var(--space-xs);
+}
+
+.email-three,
+.status-history {
+  padding: 0;
+  margin: 0;
+  display: none;
+  overflow-x: auto;
+}
+
+.status-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-xs) 0;
+  border-bottom: 1px dashed var(--extra-color);
+}
+
+.status-name {
+  font-size: var(--font-xs);
+}
+
+.status-date {
+  font-size: var(--font-xs);
+  color: var(--add-color);
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .card-header-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .status-tag {
+    align-self: flex-start;
+    margin-top: var(--space-md);
+  }
+
+  .incident-date {
+    text-align: left;
+  }
+}
