@@ -3,6 +3,7 @@
   overflow-x: auto;
   overflow-y: hidden;
   background-color: var(--background-color);
+  transition: background-color var(--transition-value);
 }
 
 .incidents-table {
@@ -13,6 +14,7 @@
 .incidents-table thead {
   color: var(--color);
   text-align: left;
+  transition: color var(--transition-value);
 }
 
 .incidents-table th {
@@ -21,6 +23,7 @@
   white-space: nowrap;
   border-bottom: 1.5px solid var(--extra-color);
   user-select: none;
+  transition: border-color var(--transition-value);
 }
 
 .incidents-table td {
@@ -28,7 +31,7 @@
   border-bottom: 1px solid var(--add-background-color);
   vertical-align: middle;
   color: var(--add-color);
-  transition: color var(--transition-value);
+  transition: color var(--transition-value) border-color var(--transition-value);
 }
 
 .incidents-table td:hover {

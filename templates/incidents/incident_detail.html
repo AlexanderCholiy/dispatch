@@ -10,15 +10,83 @@
 {% block content %}
 <div class="container">
   <div class="card">
-    <div class="card-body">
-      {% if email_roots %}
-        {% for root in email_roots %}
-          {% include "incidents/includes/email_node.html" with node=root level=0 %}
-        {% endfor %}
-      {% else %}
-        <p>Писем пока нет.</p>
+    <div class="card-header">
+      <p class="incident-title">
+        {% if incident.first_email_subject %}
+          <strong>{{ incident }}:</strong> {{ incident.first_email_subject|default:"—" }}
+        {% else %}
+          <strong>{{ incident }}</strong>
+        {% endif %}
+      </p>
+      {% if incident.latest_status_name %}
+        <span class="status-tag {{ incident.latest_status_class }}">
+          {{ incident.latest_status_name }}
+        </span>
       {% endif %}
+      <p class="text-muted">
+        {% if incident.incident_finish_date %}
+          Зарегестрировано {{ incident.incident_date|date:"d.m.Y H:i" }}, закрыто {{ incident.incident_finish_date|date:"d.m.Y H:i" }}, обновлено {{ incident.update_date|date:"d.m.Y H:i" }}
+        {% else %}
+          Зарегестрировано {{ incident.incident_date|date:"d.m.Y H:i" }}, обновлено {{ incident.update_date|date:"d.m.Y H:i" }}
+        {% endif %}
+      </p>
+    </div>
+
+    <div class="card-body">
+      <div class="incident-meta">
+        {% if incident.pole %}
+          <p><strong>Опора:</strong> {{ incident.pole.pole }} ({{ incident.pole.region.region_ru|default:incident.pole.region.region_en }})</p>
+        {% endif %}
+        {% if incident.base_station %}
+          <p><strong>Базовая станция:</strong> {{ incident.base_station.bs_name }}</p>
+        {% endif %}
+        {% if incident.responsible_user %}
+          <p><strong>Ответственный:</strong> {{ incident.responsible_user.get_full_name|default:incident.responsible_user.email }}</p>
+        {% endif %}
+        {% if incident.incident_type  %}
+          <p><strong>Тип:</strong> {{ incident.incident_type }}</p>
+        {% endif %}
+        {% if incident.categories.exists  %}
+          <p><strong>Категории:</strong> {{ incident.categories.all|join:', ' }}</p>
+        {% endif %}
+        {% if incident.avr_contractor %}
+          <p><strong>Подрядчик по АВР:</strong> {{ incident.avr_contractor }}</p>
+        {% endif %}
+      </div>
+  
+      <div class="incident-sla">
+        {% if incident.sla_avr_deadline %}
+          <p>
+            <strong>SLA АВР: </strong>{{ incident.avr_start_date|date:"d.m.Y H:i" }} — {{ incident.sla_avr_deadline|date:"d.m.Y H:i" }}
+            {% if incident.is_sla_avr_expired %}
+              <span class="sla-expired">(просрочено)</span>
+            {% endif %}
+          </p>
+        {% endif %}
+        {% if incident.sla_rvr_deadline %}
+          <p>
+            <strong>SLA РВР: </strong>{{ incident.rvr_start_date|date:"d.m.Y H:i" }} — {{ incident.sla_rvr_deadline|date:"d.m.Y H:i" }}
+            {% if incident.is_sla_rvr_expired %}
+              <span class="sla-expired">(просрочено)</span>
+            {% endif %}
+          </p>
+        {% endif %}
+      </div>
+  
+      <div class="email-three">
+        {% if email_three %}
+          {% for root in email_three %}
+            {% include "incidents/includes/email_node.html" with node=root level=0 %}
+          {% endfor %}
+        {% else %}
+          <p>Писем пока нет.</p>
+        {% endif %}
+      </div>
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/incidents/email_root.js' %}"></script>
 {% endblock %}

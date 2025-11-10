@@ -25,9 +25,9 @@ header .logo-img {
 header .logo-light {
   display: block;
 }
-body.dark header .logo-light {
+html.dark header .logo-light {
   display: none;
 }
-body.dark header .logo-dark {
+html.dark header .logo-dark {
   display: block;
 }

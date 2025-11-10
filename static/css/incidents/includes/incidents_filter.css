@@ -37,7 +37,7 @@
   border: 0.5px solid var(--extra-color);
   box-sizing: border-box;
   cursor: pointer;
-  transition: box-shadow var(--transition-value);
+  transition: box-shadow var(--transition-value) color var(--transition-value) background-color var(--transition-value);
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;

@@ -1,15 +1,14 @@
-from typing import TypedDict
-
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.http import HttpRequest, HttpResponse
-from django.shortcuts import render, get_object_or_404
+from django.http import HttpRequest, HttpResponse, Http404
+from django.shortcuts import render
 from django_ratelimit.decorators import ratelimit
-from django.db.models import Q, OuterRef, Subquery
+from django.db.models import Q, OuterRef, Subquery, Prefetch
 from django.core.cache import cache
 
 from users.utils import role_required
-from emails.models import EmailMessage
+from emails.models import EmailMessage, EmailReference
+from .utils import IncidentManager
 
 from .constants import (
     INCIDENTS_PER_PAGE,
@@ -18,12 +17,6 @@ from .constants import (
 )
 from .models import Incident, IncidentStatusHistory, IncidentStatus
 from emails.models import EmailMessage
-
-
-class EmailNode(TypedDict):
-    email: EmailMessage
-    children: list['EmailNode']
-    references: list[str]
 
 
 @login_required
@@ -49,7 +42,7 @@ def index(request: HttpRequest) -> HttpResponse:
 
     first_email_subject_subquery = EmailMessage.objects.filter(
         email_incident=OuterRef('pk')
-    ).order_by('-is_first_email', 'email_date').values('email_subject')[:1]
+    ).order_by('email_date', '-is_first_email').values('email_subject')[:1]
 
     first_email_from_subquery = EmailMessage.objects.filter(
         email_incident=OuterRef('pk')
@@ -134,38 +127,78 @@ def index(request: HttpRequest) -> HttpResponse:
 @role_required()
 @ratelimit(key='user_or_ip', rate='20/m', block=True)
 def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
-    incident = get_object_or_404(Incident, pk=incident_id)
+    incident = (
+        Incident.objects
+        .select_related(
+            'incident_type',
+            'responsible_user',
+            'pole',
+            'pole__region',
+            'base_station',
+        )
+        .prefetch_related(
+            'statuses',
+            'base_station__operator',
+        )
+        .filter(pk=incident_id)
+        .first()
+    )
+
+    if not incident:
+        raise Http404('Инцидент не найден')
 
     emails = (
         EmailMessage.objects.filter(email_incident=incident)
         .select_related('folder')
-        .prefetch_related('email_references')
-        .order_by('email_date')
+        .prefetch_related(
+            Prefetch(
+                'email_references',
+                queryset=(
+                    EmailReference.objects
+                    .select_related('email_msg')
+                    .order_by('id')
+                )
+            ),
+            'email_attachments',
+            'email_intext_attachments',
+            'email_msg_to',
+            'email_msg_cc',
+        )
+        .order_by('email_date', '-is_first_email')
     )
 
-    email_dict: dict[str, EmailNode] = {
-        email.email_msg_id: {'email': email, 'children': [], 'references': []}
-        for email in emails
-    }
+    if emails.exists():
+        first_email = emails.first()
+        incident.first_email_subject = first_email.email_subject
+        incident.first_email_from = first_email.email_from
+    else:
+        incident.first_email_subject = None
+        incident.first_email_from = None
 
-    email_roots: list[EmailNode] = []
+    latest_status = (
+        IncidentStatusHistory.objects
+        .filter(incident=incident)
+        .order_by('-insert_date')
+        .select_related('status__status_type')
+        .first()
+    )
 
-    for email in emails:
-        email_dict[email.email_msg_id]['references'] = [
-            ref.email_msg_references for ref in email.email_references.all()
-        ]
+    if latest_status:
+        incident.latest_status_name = latest_status.status.name
+        incident.latest_status_date = latest_status.insert_date
+        incident.latest_status_class = (
+            latest_status.status.status_type.css_class
+        )
+    else:
+        incident.latest_status_name = None
+        incident.latest_status_date = None
+        incident.latest_status_class = None
 
-        parent_id = email.email_msg_reply_id
-        if parent_id and parent_id in email_dict:
-            email_dict[parent_id]['children'].append(
-                email_dict[email.email_msg_id]
-            )
-        else:
-            email_roots.append(email_dict[email.email_msg_id])
+    email_three = IncidentManager.build_email_tree(emails)
 
     context = {
         'incident': incident,
-        'email_roots': email_roots,
+        'email_three': email_three,
     }
 
     return render(request, 'incidents/incident_detail.html', context)

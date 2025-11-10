@@ -1,65 +1,61 @@
 ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-    background-color: var(--add-background-color);
+  background-color: var(--add-background-color);
 }
 
 ::-webkit-scrollbar-thumb {
-    background-color: var(--gray-color);
-    border-radius: var(--radius-xs);
+  background-color: var(--extra-color);
+  border-radius: var(--radius-xs);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background-color: var(--extra-color);
+  background-color: var(--gray-color)
 }
 
 /* Стрелки в начале и конце */
 ::-webkit-scrollbar-button {
-    width: 10px;
-    height: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--add-background-color);
-    background-size: 6px;
-    background-repeat: no-repeat;
-    background-position: center;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--add-background-color);
+  background-size: 12px; /* Размер стрелки */
+  background-repeat: no-repeat;
+  background-position: center;
 }
 
-/* Левая стрелка */
-::-webkit-scrollbar-button:single-button:horizontal:decrement {
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'><polygon points='6,1 2,4 6,7' fill='dark'/></svg>");
+/* Горизонтальные стрелки */
+html.light ::-webkit-scrollbar-button:horizontal:start:decrement {
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%23000000' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M14 7l-5 5 5 5z'/></svg>");
 }
-
-/* Правая стрелка */
-::-webkit-scrollbar-button:single-button:horizontal:increment {
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'><polygon points='2,1 6,4 2,7' fill='dark'/></svg>");
+html.light ::-webkit-scrollbar-button:horizontal:end:increment {
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%23000000' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M10 7l5 5-5 5z'/></svg>");
 }
 
 /* Вертикальные стрелки */
-::-webkit-scrollbar-button:single-button:vertical:decrement {
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'><polygon points='1,6 4,2 7,6' fill='dark'/></svg>");
+html.light ::-webkit-scrollbar-button:vertical:start:decrement {
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%23000000' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7 14l5-5 5 5z'/></svg>");
+}
+html.light ::-webkit-scrollbar-button:vertical:end:increment {
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%23000000' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7 10l5 5 5-5z'/></svg>");
 }
 
-::-webkit-scrollbar-button:single-button:vertical:increment {
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'><polygon points='1,2 4,6 7,2' fill='dark'/></svg>");
+/* Тёмная тема — стрелки белые */
+html.dark ::-webkit-scrollbar-button:horizontal:start:decrement {
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%23ffffff' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M14 7l-5 5 5 5z'/></svg>");
+}
+html.dark ::-webkit-scrollbar-button:horizontal:end:increment {
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%23ffffff' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M10 7l5 5-5 5z'/></svg>");
 }
 
-body.dark::-webkit-scrollbar-button:single-button:horizontal:decrement {
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'><polygon points='6,1 2,4 6,7' fill='white'/></svg>");
+html.dark ::-webkit-scrollbar-button:vertical:start:decrement {
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%23ffffff' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7 14l5-5 5 5z'/></svg>");
 }
-
-body.dark::-webkit-scrollbar-button:single-button:horizontal:increment {
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'><polygon points='2,1 6,4 2,7' fill='white'/></svg>");
-}
-
-body.dark::-webkit-scrollbar-button:single-button:vertical:decrement {
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'><polygon points='1,6 4,2 7,6' fill='white'/></svg>");
-}
-
-body.dark::-webkit-scrollbar-button:single-button:vertical:increment {
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'><polygon points='1,2 4,6 7,2' fill='white'/></svg>");
+html.dark ::-webkit-scrollbar-button:vertical:end:increment {
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%23ffffff' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7 10l5 5 5-5z'/></svg>");
 }

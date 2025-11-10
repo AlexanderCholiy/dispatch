@@ -64,6 +64,19 @@ class Attachment(models.Model):
             )
         return None
 
+    @property
+    def file_name(self) -> str:
+        """Возвращает только имя файла без пути."""
+        if (
+            self.file_url
+            and hasattr(self.file_url, 'name')
+            and self.file_url.name
+        ):
+            base = os.path.basename(self.file_url.name)
+            parts = base.split('__')
+            return parts[-1] if parts else base
+        return 'unknown'
+
 
 class Detail(models.Model):
     """Подробное описание к основной модели"""

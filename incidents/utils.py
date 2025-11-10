@@ -1,13 +1,13 @@
 import random
 from datetime import timedelta
-from typing import Optional
+from typing import Optional, TypedDict
 
 from django.db import connection, models
-from django.db.models import Count, Min, Q
+from django.db.models import Count, Min, Q, QuerySet, Prefetch
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
-from emails.models import EmailFolder, EmailMessage
+from emails.models import EmailFolder, EmailMessage, EmailReference
 from users.models import Roles, User
 from yandex_tracker.utils import YandexTrackerManager
 
@@ -45,6 +45,12 @@ from .models import (
     IncidentStatusHistory,
 )
 from .validators import IncidentValidator
+
+
+class EmailNode(TypedDict):
+    email: EmailMessage
+    children: list['EmailNode']
+    references: list[EmailMessage]
 
 
 class IncidentManager(IncidentValidator):
@@ -913,3 +919,56 @@ class IncidentManager(IncidentValidator):
             updated = True
 
         return updated
+
+    @staticmethod
+    def build_email_tree(emails: QuerySet[EmailMessage]) -> list[EmailNode]:
+        """
+        Строит дерево цепочки писем, включая references как объекты
+        EmailMessage.
+
+        Args:
+            emails (QuerySet[EmailMessage]): Письма, отсортированные по дате.
+        """
+        email_dict: dict[str, EmailNode] = {}
+        email_roots: list[EmailNode] = []
+
+        all_emails_by_id = {e.email_msg_id: e for e in emails}
+
+        for email in emails:
+            refs = []
+
+            # 1. Добавляем все ссылки из EmailReference (уникальные)
+            for ref in email.email_references.all().order_by('id'):
+                if (
+                    ref.email_msg_id != email.email_msg_id
+                    and ref.email_msg not in refs
+                ):
+                    refs.append(ref.email_msg)
+
+            # 2. Добавляем родителя, если есть и его ещё нет
+            parent_email = all_emails_by_id.get(email.email_msg_reply_id)
+            if parent_email and parent_email not in refs:
+                refs.insert(0, parent_email)
+
+            # 3. Удаляем возможные дубликаты и самого себя
+            refs = [
+                r for i, r in enumerate(refs)
+                if r.id != email.id and r not in refs[:i]
+            ]
+
+            email_dict[email.email_msg_id] = {
+                'email': email,
+                'children': [],
+                'references': refs
+            }
+
+        # 4. Строим дерево
+        for email in emails:
+            node = email_dict[email.email_msg_id]
+            parent_id = email.email_msg_reply_id
+            if parent_id and parent_id in email_dict:
+                email_dict[parent_id]['children'].append(node)
+            else:
+                email_roots.append(node)
+
+        return email_roots

@@ -1,21 +1,79 @@
-<div class="email-node" style="margin-left: {{ level|default:0 }}rem;">
-  <div class="email-header">
-    <strong>{{ node.email.email_from }}</strong>
-    <span class="email-date">{{ node.email.email_date|date:"d.m.Y H:i" }}</span>
-    {% if node.references %}
-      <small class="text-muted">
-        Ответ на: {{ node.references|join:", " }}
-      </small>
+<div class="email-wrapper" style="margin-left: {% if level > 0 %}{{ level }}rem{% else %}0{% endif %};">
+
+  <div id="email-{{ node.email.id }}" class="email-section">
+    <div class="email-header">
+      <div class="email-meta">
+        <strong>ID письма:</strong> {{ node.email.id }}
+        {% if node.references %}
+          <small class="text-muted">
+            [ ответ на:
+            {% for ref in node.references %}
+              <a href="#email-{{ ref.id }}">{{ ref.id }}</a>{% if not forloop.last %}, {% endif %}
+            {% endfor %}]
+          </small>
+        {% endif %}
+      </div>
+  
+      <div class="email-from">
+        <strong>От:</strong> {{ node.email.email_from }}
+      </div>
+    
+      <div class="email-to">
+        <strong>Кому:</strong>
+        {% for to in node.email.email_msg_to.all %}
+          {{ to.email_to }}{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+      </div>
+  
+      {% if node.email.email_msg_cc.exists %}
+        <div class="email-to-cc">
+          <strong>Копия:</strong>
+          {% for cc in node.email.email_msg_cc.all %}
+            {{ cc.email_to }}{% if not forloop.last %}, {% endif %}
+          {% endfor %}
+        </div>
+      {% endif %}
+  
+      <div class="email-date"><strong>Дата:</strong> {{ node.email.email_date|date:"d.m.Y H:i" }}</div>
+  
+    </div>
+  
+    <div class="email-subject">
+      <strong>{{ node.email.email_subject|default:"без темы" }}</strong>
+    </div>
+  
+    <div class="email-body">
+      {{ node.email.email_body|linebreaks }}
+    </div>
+  
+    {% if node.email.email_attachments.exists %}
+      <div class="email-attachments">
+        <strong>Вложения:</strong>
+        <ul>
+          {% for att in node.email.email_attachments.all %}
+            <li><a href="{{ att.file_url.url }}" target="_blank" class="link-text">{{ att.file_name }}</a></li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+  
+    {% if node.email.email_intext_attachments.exists %}
+      <div class="email-intext-attachments">
+        <strong>Вложения в тексте:</strong>
+        <ul>
+          {% for att in node.email.email_intext_attachments.all %}
+            <li><a href="{{ att.file_url.url }}" target="_blank" class="link-text">{{ att.file_name }}</a></li>
+          {% endfor %}
+        </ul>
+      </div>
     {% endif %}
   </div>
-  <div class="email-subject">
-    {{ node.email.email_subject|default:"(без темы)" }}
-  </div>
-  <div class="email-body">
-    {{ node.email.email_body|linebreaks }}
-  </div>
 
-  {% for child in node.children %}
-    {% include "incidents/includes/email_node.html" with node=child level=level|add:2 %}
-  {% endfor %}
+  {% if node.children %}
+    <div class="email-children">
+      {% for child in node.children %}
+        {% include "incidents/includes/email_node.html" with node=child level=level|add:2 %}
+      {% endfor %}
+    </div>
+  {% endif %}
 </div>

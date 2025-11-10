@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const themes = ['light', 'dark', 'auto'];
   const themeIcon = document.getElementById('theme-icon');
   const themeToggle = document.getElementById('theme-toggle');
-  const body = document.body;
+  const root = document.documentElement;
 
   const themeIcons = {
     light: 'bx-sun',
@@ -17,18 +17,23 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   function applyTheme(theme) {
-    body.classList.remove('light', 'dark');
+    root.classList.remove('light', 'dark');
+
     if (theme === 'light') {
-      body.classList.add('light');
+      root.classList.add('light');
     } else if (theme === 'dark') {
-      body.classList.add('dark');
+      root.classList.add('dark');
     } else if (theme === 'auto') {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      body.classList.add(prefersDark ? 'dark' : 'light');
+      root.classList.add(prefersDark ? 'dark' : 'light');
     }
 
-    themeIcon.className = 'bx ' + themeIcons[theme];
-    themeToggle.setAttribute('data-title', themeTitles[theme]);
+    if (themeIcon) {
+      themeIcon.className = 'bx ' + themeIcons[theme];
+    }
+    if (themeToggle) {
+      themeToggle.setAttribute('data-title', themeTitles[theme]);
+    }
   }
 
   function nextTheme(current) {
@@ -45,12 +50,15 @@ document.addEventListener('DOMContentLoaded', () => {
     applyTheme(theme);
   }
 
-  themeToggle.addEventListener('click', () => {
-    const currentTheme = getSavedTheme();
-    const newTheme = nextTheme(currentTheme);
-    setTheme(newTheme);
-  });
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      const currentTheme = getSavedTheme();
+      const newTheme = nextTheme(currentTheme);
+      setTheme(newTheme);
+    });
+  }
 
+  // Отслеживаем системную смену темы
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
     if (getSavedTheme() === 'auto') {
       applyTheme('auto');

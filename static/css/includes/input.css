@@ -4,7 +4,7 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   opacity: 0.9;
 }
 
-body.dark input[type="time"]::-webkit-calendar-picker-indicator {
+html.dark input[type="time"]::-webkit-calendar-picker-indicator {
   filter: invert(1);
 }
 

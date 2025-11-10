@@ -88,11 +88,6 @@
   transition: transform var(--transition-value), box-shadow var(--transition-value);
 }
 
-body.dark .stat-card {
-  background: var(--add-background-color);
-  color: var(--color);
-}
-
 .stat-title {
   font-size: var(--font-sm);
   margin-bottom: var(--space-sm);

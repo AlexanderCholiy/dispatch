@@ -1,22 +1,13 @@
-.email-node {
-  border-left: 2px solid var(--extra-color);
-  padding-left: 1rem;
-  margin-bottom: 1rem;
+.email-highlight {
+  animation: highlightFade var(--long-transition-value);
+  border-radius: var(--radius-sm);
 }
 
-.email-header {
-  font-size: var(--font-sm);
-  color: var(--add-color);
-  margin-bottom: 0.25rem;
-}
-
-.email-subject {
-  font-weight: 500;
-  margin-bottom: 0.25rem;
-}
-
-.email-body {
-  font-size: var(--font-sm);
-  color: var(--color);
-  padding-left: 0.25rem;
+@keyframes highlightFade {
+  0% {
+    box-shadow: 0 0 var(--space-sm) var(--add-color);
+  }
+  100% {
+    box-shadow: 0 0 0 transparent;
+  }
 }
