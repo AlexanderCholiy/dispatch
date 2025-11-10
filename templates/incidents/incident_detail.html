@@ -3,6 +3,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/incidents/includes/incident_detail.css' %}">
+<link rel="stylesheet" href="{% static 'css/incidents/includes/email_three.css' %}">
 <link rel="stylesheet" href="{% static 'css/incidents/includes/email_node.css' %}">
 <link rel="stylesheet" href="{% static 'css/incidents/includes/files_preview.css' %}">
 {% endblock %}
@@ -83,31 +84,52 @@
         </div>
       {% endif %}
 
-      <button class="toggle-email-three">Показать письма</button>
+      <!-- <button class="toggle-email-three">Показать письма</button> -->
   
       <div class="email-three">
         {% if email_three %}
           {% for root in email_three %}
-            {% include "incidents/includes/email_node.html" with node=root level=0 %}
+            <div class="email-tree" id="email-tree-{{ forloop.counter }}">
+              <div class="email-tree-header">
+                <button
+                  class="toggle-tree-btn"
+                  type="button"
+                  data-tree-id="email-tree-{{ forloop.counter }}"
+                >
+                  Показать переписку
+                </button>
+
+                <div class="email-tree-ids">
+                  <strong>ID писем:</strong>
+                  {% for node in root.branch_ids %}
+                    <span>{{ node }}</span>{% if not forloop.last %}, {% endif %}
+                  {% endfor %}
+                </div>
+              </div>
+
+              <div class="email-tree-body hidden">
+                {% include "incidents/includes/email_node.html" with node=root level=0 %}
+              </div>
+            </div>
           {% endfor %}
         {% else %}
           <p class="empty">Писем пока нет</p>
         {% endif %}
       </div>
 
-    <button class="toggle-status-history">Показать историю статусов</button>
+      <button class="toggle-status-history">Показать историю статусов</button>
 
-    <ul class="status-history">
-      {% for history in incident.status_history.all|dictsortreversed:"insert_date" %}
-        <li class="status-item">
-          <span class="status-name {{ history.status.status_type.css_class }}">{{ history.status.name }}</span>
-          <span class="status-date">{{ history.insert_date|date:"d.m.Y H:i" }}</span>
-        </li>
-      {% empty %}
-        <p class="empty">История отсутствует</p>
-      {% endfor %}
-    </ul>
-
+      <ul class="status-history">
+        {% for history in incident.status_history.all|dictsortreversed:"insert_date" %}
+          <li class="status-item">
+            <span class="status-name {{ history.status.status_type.css_class }}">{{ history.status.name }}</span>
+            <span class="status-date">{{ history.insert_date|date:"d.m.Y H:i" }}</span>
+          </li>
+        {% empty %}
+          <p class="empty">История отсутствует</p>
+        {% endfor %}
+      </ul>
+    </div>
   </div>
 </div>
 {% endblock %}

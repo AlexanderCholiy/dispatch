@@ -6,8 +6,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const target = document.getElementById(targetId);
 
       if (target) {
-        // Плавный скролл
-        target.scrollIntoView({ behavior: 'smooth'});
+        // Скроллим немного выше письма
+        const yOffset = -10;
+        const y = target.getBoundingClientRect().top + window.scrollY + yOffset;
+
+        window.scrollTo({ top: y, behavior: 'smooth' });
 
         // Эффект подсветки
         target.classList.add('email-highlight');

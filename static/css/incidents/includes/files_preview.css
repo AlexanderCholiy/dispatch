@@ -1,5 +1,6 @@
 .email-attachments-wrapper {
-  padding-top: var(--space-sm);
+  margin-top: auto;
+  padding-top: var(--space-xs);
   border-top: 1px dashed var(--extra-color);
 }
 

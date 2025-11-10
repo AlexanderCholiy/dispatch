@@ -1,0 +1,70 @@
+.email-three {
+  margin-top: var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.email-tree {
+  border-radius: var(--radius-sm);
+  background-color: var(--add-background-color);
+}
+
+.email-tree-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--priority-color);
+  border-bottom: 1px solid red;
+  flex-wrap: wrap;
+}
+
+/* .toggle-tree-btn {
+  background: var(--add-color, #4a90e2);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm, 6px);
+  padding: 0.4rem 0.8rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+} */
+
+/* .toggle-tree-btn:hover {
+  background: var(--add-hover-color, #367ac8);
+} */
+
+/* .email-tree-ids {
+  color: var(--gray-color, #ccc);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow-x: auto;
+  max-width: 100%;
+} */
+
+/* .email-tree-ids strong {
+  margin-right: 0.4rem;
+  color: var(--brand-text-color, gold);
+} */
+
+/* .email-tree-body {
+  padding: 1rem;
+} */
+
+.email-tree-body.hidden {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .email-tree-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .email-tree-ids {
+    width: 100%;
+    padding-bottom: 0.3rem;
+  }
+}

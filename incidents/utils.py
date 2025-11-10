@@ -931,7 +931,6 @@ class IncidentManager(IncidentValidator):
         """
         email_dict: dict[str, EmailNode] = {}
         email_roots: list[EmailNode] = []
-
         all_emails_by_id = {e.email_msg_id: e for e in emails}
 
         for email in emails:
@@ -959,7 +958,8 @@ class IncidentManager(IncidentValidator):
             email_dict[email.email_msg_id] = {
                 'email': email,
                 'children': [],
-                'references': refs
+                'references': refs,
+                'branch_ids': [],
             }
 
         # 4. Строим дерево
@@ -970,5 +970,15 @@ class IncidentManager(IncidentValidator):
                 email_dict[parent_id]['children'].append(node)
             else:
                 email_roots.append(node)
+
+        def collect_ids(node: dict):
+            ids = [node['email'].id]
+            for child in node['children']:
+                ids.extend(collect_ids(child))
+            node['branch_ids'] = ids
+            return ids
+
+        for root in email_roots:
+            collect_ids(root)
 
         return email_roots

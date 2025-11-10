@@ -1,6 +1,5 @@
 :root {
     --transition-value: 0.3s ease;
-    --long-transition-value: 1.5s linear;
 
     --sidebar-width: 220px;
     --sidebar-collapsed-width: 60px;
