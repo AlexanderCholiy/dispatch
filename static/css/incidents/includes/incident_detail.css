@@ -2,6 +2,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
+  box-shadow: none;
+}
+
+.card {
+  border: 1px solid var(--extra-color);
 }
 
 .card-header-top {
@@ -39,7 +44,7 @@
   font-weight: 500;
   margin-top: var(--space-sm);
   text-align: right;
-  font-size: var(--font-sm);
+  font-size: var(--font-xs);
   color: var(--gray-color);
 }
 
@@ -52,14 +57,21 @@
 
 .incident-meta p,
 .incident-sla p {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-sm);
   margin: var(--space-xs) 0;
   line-height: 1.4;
 }
 
-.sla-expired {
-  color: var(--red-color);
-  font-weight: 600;
-  margin-left: var(--space-xs);
+.incident-sla strong,
+.incident-meta strong {
+  white-space: nowrap;
+}
+
+.incident-sla span,
+.incident-meta span {
+  color: var(--add-color);
 }
 
 .toggle-status-history,
@@ -101,14 +113,25 @@
   border-bottom: 1px dashed var(--extra-color);
 }
 
+.status-item:not(:first-child) {
+  margin-top: var(--space-sm);
+}
+
 .status-name {
   font-size: var(--font-xs);
+  text-align: center;
+  min-width: 160px;
 }
 
 .status-date {
   font-size: var(--font-xs);
   color: var(--add-color);
   white-space: nowrap;
+}
+
+.incident-sla p,
+.incident-meta p {
+  border-bottom: 1px dashed var(--extra-color);
 }
 
 @media (max-width: 768px) {

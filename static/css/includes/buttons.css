@@ -35,9 +35,9 @@
   outline: none;
 }
 
-html.dark .btn{
+/* html.dark .btn{
   color: var(--add-color);
-}
+} */
 
 .btn:hover {
   box-shadow: 0 0 var(--space-xs) var(--extra-color);
@@ -61,6 +61,16 @@ html.dark .btn:hover {
 .btn-danger {
   border: var(--space-xs) solid var(--red-color);
   background-color: var(--red-color);
+}
+
+.btn-warning {
+  border: var(--space-xs) solid var(--yellow-color);
+  background-color: var(--yellow-color);
+}
+
+.btn-success {
+  border: var(--space-xs) solid var(--green-color);
+  background-color: var(--green-color);
 }
 
 .btn-secondary {

@@ -164,7 +164,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
             'email_msg_to',
             'email_msg_cc',
         )
-        .order_by('email_date', '-is_first_email')
+        .order_by('-email_date', 'is_first_email')  # От новых к старым
     )
 
     if emails.exists():

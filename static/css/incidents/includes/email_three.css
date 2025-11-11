@@ -6,8 +6,9 @@
 }
 
 .email-tree {
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background-color: var(--add-background-color);
+  transition: background-color var(--transition-value);
 }
 
 .email-tree-header {
@@ -15,39 +16,31 @@
   justify-content: space-between;
   align-items: center;
   gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
-  background-color: var(--priority-color);
-  border-bottom: 1px solid red;
+  padding: var(--space-sm) var(--space-sm);
+  background-color: var(--add-background-color);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
   flex-wrap: wrap;
+  border-bottom: 1px solid var(--extra-color);
+  transition: bacground-color var(--transition-value) border-color var(--transition-value);
 }
 
-/* .toggle-tree-btn {
-  background: var(--add-color, #4a90e2);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-sm, 6px);
-  padding: 0.4rem 0.8rem;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-} */
+.toggle-tree-btn {
+  padding: var(--space-xs);
+  font-size: var(--font-xs);
+  min-width: 140px;
+}
 
-/* .toggle-tree-btn:hover {
-  background: var(--add-hover-color, #367ac8);
-} */
-
-/* .email-tree-ids {
-  color: var(--gray-color, #ccc);
-  font-size: 0.9rem;
+.email-tree-ids {
+  color: var(--gray-color);
+  font-size: var(--font-xs);
   white-space: nowrap;
-  overflow-x: auto;
   max-width: 100%;
-} */
+  transition: color var(--transition-value);
+}
 
-/* .email-tree-ids strong {
-  margin-right: 0.4rem;
-  color: var(--brand-text-color, gold);
-} */
+.email-tree-ids strong {
+  color: var(--add-color);
+}
 
 /* .email-tree-body {
   padding: 1rem;

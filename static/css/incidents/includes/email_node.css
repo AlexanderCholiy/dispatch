@@ -15,7 +15,7 @@
 }
 
 .email-content.email-highlight {
-  border-color: var(--red-color);
+  border-color: var(--priority-color);
 }
 
 .email-left {
@@ -84,10 +84,12 @@
 .email-link {
   color: var(--gray-color);
   transition: color var(--transition-value);
+  text-decoration: none;
 }
 
 .email-link:hover {
-  color: var(--red-color);
+  color: var(--priority-color);
+  text-decoration: underline;
 }
 
 /* .email-meta-id {

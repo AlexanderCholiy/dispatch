@@ -44,22 +44,22 @@
     <div class="card-body">
       <div class="incident-meta">
         {% if incident.pole %}
-          <p><strong>Опора:</strong> <span class="copy-text" data-text="{{ incident.pole }}">{{ incident.pole.pole }}</span> ({{ incident.pole.region.region_ru|default:incident.pole.region.region_en }})</p>
+          <p><strong>Опора:</strong> <span class="copy-text" data-text="{{ incident.pole }}">{{ incident.pole.pole }} ({{ incident.pole.region.region_ru|default:incident.pole.region.region_en }})</span></p>
         {% endif %}
         {% if incident.base_station %}
-          <p><strong>Базовая станция:</strong> <span class="copy-text" data-text="{{ incident.base_station.bs_name }}">{{ incident.base_station.bs_name }}</span></p>
+          <p><strong>Базовая станция:</strong><span class="copy-text" data-text="{{ incident.base_station.bs_name }}">{{ incident.base_station.bs_name }}</span></p>
         {% endif %}
         {% if incident.responsible_user %}
-          <p><strong>Ответственный:</strong> {{ incident.responsible_user.get_full_name|default:incident.responsible_user.email }}</p>
+          <p><strong>Ответственный:</strong><span>{{ incident.responsible_user.get_full_name|default:incident.responsible_user.email }}</span></p>
         {% endif %}
         {% if incident.incident_type  %}
-          <p><strong>Тип:</strong> {{ incident.incident_type }}</p>
+          <p><strong>Тип:</strong><span>{{ incident.incident_type }}</span></p>
         {% endif %}
         {% if incident.categories.exists  %}
-          <p><strong>Категории:</strong> {{ incident.categories.all|join:', ' }}</p>
+          <p><strong>Категории:</strong><span>{{ incident.categories.all|join:', ' }}</span></p>
         {% endif %}
         {% if incident.avr_contractor %}
-          <p><strong>Подрядчик по АВР:</strong> {{ incident.avr_contractor }}</p>
+          <p><strong>Подрядчик по АВР:</strong><span>{{ incident.avr_contractor }}</span></p>
         {% endif %}
       </div>
   
@@ -67,18 +67,24 @@
         <div class="incident-sla">
           {% if incident.sla_avr_deadline %}
             <p>
-              <strong>SLA АВР: </strong>{{ incident.avr_start_date|date:"d.m.Y H:i" }} — {{ incident.sla_avr_deadline|date:"d.m.Y H:i" }}
-              {% if incident.is_sla_avr_expired %}
-                <span class="sla-expired">(просрочено)</span>
-              {% endif %}
+              <strong>SLA АВР: </strong>
+              <span>
+                {{ incident.avr_start_date|date:"d.m.Y H:i" }} — {{ incident.sla_avr_deadline|date:"d.m.Y H:i" }}
+                {% if incident.is_sla_avr_expired %}
+                  (просрочено)
+                {% endif %}
+              </span>
             </p>
           {% endif %}
           {% if incident.sla_rvr_deadline %}
             <p>
-              <strong>SLA РВР: </strong>{{ incident.rvr_start_date|date:"d.m.Y H:i" }} — {{ incident.sla_rvr_deadline|date:"d.m.Y H:i" }}
-              {% if incident.is_sla_rvr_expired %}
-                <span class="sla-expired">(просрочено)</span>
-              {% endif %}
+              <strong>SLA РВР: </strong>
+              <span>
+                {{ incident.rvr_start_date|date:"d.m.Y H:i" }} — {{ incident.sla_rvr_deadline|date:"d.m.Y H:i" }}
+                {% if incident.is_sla_rvr_expired %}
+                  (просрочено)
+                {% endif %}
+              </span>
             </p>
           {% endif %}
         </div>
@@ -92,7 +98,7 @@
             <div class="email-tree" id="email-tree-{{ forloop.counter }}">
               <div class="email-tree-header">
                 <button
-                  class="toggle-tree-btn"
+                  class="btn btn-secondary toggle-tree-btn"
                   type="button"
                   data-tree-id="email-tree-{{ forloop.counter }}"
                 >
@@ -102,7 +108,7 @@
                 <div class="email-tree-ids">
                   <strong>ID писем:</strong>
                   {% for node in root.branch_ids %}
-                    <span>{{ node }}</span>{% if not forloop.last %}, {% endif %}
+                    <a class="email-link" href="#email-{{ node }}">{{ node }}</a>{% if not forloop.last %}, {% endif %}
                   {% endfor %}
                 </div>
               </div>

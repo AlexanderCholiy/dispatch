@@ -39,7 +39,7 @@
 
 .card-header {
   padding: var(--space-md);
-  background-color: var(--add-background-color);
+  background-color: color-mix(in srgb, var(--add-background-color) 85%, transparent);
   border-bottom: 1px solid var(--extra-color);
   font-weight: 600;
   font-size: var(--font-md);
