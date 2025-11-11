@@ -1,7 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.http import HttpRequest, HttpResponse, Http404
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django_ratelimit.decorators import ratelimit
 from django.db.models import Q, OuterRef, Subquery, Prefetch
 from django.core.cache import cache
@@ -34,7 +34,9 @@ def index(request: HttpRequest) -> HttpResponse:
     )
 
     if per_page not in PAGE_SIZE_INCIDENTS_CHOICES:
-        per_page = INCIDENTS_PER_PAGE
+        params = request.GET.copy()
+        params['per_page'] = INCIDENTS_PER_PAGE
+        return redirect(f"{request.path}?{params.urlencode()}")
 
     latest_status_subquery = IncidentStatusHistory.objects.filter(
         incident=OuterRef('pk')
@@ -147,6 +149,22 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
     if not incident:
         raise Http404('Инцидент не найден')
 
+    sort_order = (
+        request.GET.get('email_sort')
+        or request.COOKIES.get('per_page')
+        or 'asc'
+    )
+    if sort_order not in ('asc', 'desc'):
+        params = request.GET.copy()
+        params['email_sort'] = 'asc'
+        return redirect(f"{request.path}?{params.urlencode()}")
+
+    sort_reverse = sort_order == 'asc'
+
+    order = ('-email_date', 'is_first_email') if (
+        sort_reverse
+    ) else ('email_date', '-is_first_email')
+
     emails = (
         EmailMessage.objects.filter(email_incident=incident)
         .select_related('folder')
@@ -164,11 +182,11 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
             'email_msg_to',
             'email_msg_cc',
         )
-        .order_by('-email_date', 'is_first_email')  # От новых к старым
+        .order_by(*order)
     )
 
     if emails.exists():
-        first_email = emails.first()
+        first_email = emails.first() if not sort_reverse else emails.last()
         incident.first_email_subject = first_email.email_subject
         incident.first_email_from = first_email.email_from
     else:

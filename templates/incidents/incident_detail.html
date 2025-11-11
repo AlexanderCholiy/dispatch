@@ -91,6 +91,13 @@
       {% endif %}
 
       <!-- <button class="toggle-email-three">Показать письма</button> -->
+      <div class="email-controls">
+        <button class="sort-emails-btn tooltip" data-sort="asc" data-title="Сначала новые"><i class='bx bx-chevrons-down'></i></button>
+        <button class="sort-emails-btn tooltip" data-sort="desc" data-title="Сначала старые"><i class='bx  bx-chevrons-up'></i></button>
+        <input type="text" id="target-incident-code" placeholder="Код инцидента">
+        <button id="move-emails-btn" disabled>Переместить письма</button>
+        <button id="confirm-move-btn">Подтвердить перенос</button>
+      </div>
   
       <div class="email-three">
         {% if email_three %}
@@ -143,4 +150,5 @@
 {% block extra_js %}
 <script src="{% static 'js/incidents/hide_sections.js' %}"></script>
 <script src="{% static 'js/incidents/email_root.js' %}"></script>
+<script src="{% static 'js/incidents/sort_emails.js' %}"></script>
 {% endblock %}
