@@ -1,5 +1,8 @@
+import json
+
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.contrib import messages
 from django.http import HttpRequest, HttpResponse, Http404
 from django.shortcuts import render, redirect
 from django_ratelimit.decorators import ratelimit
@@ -17,6 +20,7 @@ from .constants import (
 )
 from .models import Incident, IncidentStatusHistory, IncidentStatus
 from emails.models import EmailMessage
+from .forms import MoveEmailsForm
 
 
 @login_required
@@ -214,9 +218,34 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
 
     email_three = IncidentManager.build_email_tree(emails)
 
+    move_email_form = MoveEmailsForm(
+        email_tree=email_three, current_incident=incident
+    )
+    if request.method == 'POST':
+        move_email_form = MoveEmailsForm(
+            data=request.POST,
+            email_tree=email_three,
+            current_incident=incident
+        )
+        if move_email_form.is_valid():
+            target_incident: Incident = (
+                move_email_form.cleaned_data['target_incident_code']
+            )
+            email_ids_groups: list[list[int]] = (
+                move_email_form.cleaned_data['email_ids']
+            )
+            return redirect(
+                'incidents:incident_detail', incident_id=target_incident.id
+            )
+        else:
+            for _, errors in move_email_form.errors.items():
+                for error in errors:
+                    messages.error(request, error)
+
     context = {
         'incident': incident,
         'email_three': email_three,
+        'move_email_form': move_email_form,
     }
 
     return render(request, 'incidents/incident_detail.html', context)

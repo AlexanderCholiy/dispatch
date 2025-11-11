@@ -65,6 +65,7 @@
 
 .alert-warning {
   background-color: var(--yellow-color);
+  color: var(--add-background-color)
 }
 
 .alert-error,

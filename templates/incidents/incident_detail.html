@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="{% static 'css/incidents/includes/email_three.css' %}">
 <link rel="stylesheet" href="{% static 'css/incidents/includes/email_node.css' %}">
 <link rel="stylesheet" href="{% static 'css/incidents/includes/files_preview.css' %}">
+<link rel="stylesheet" href="{% static 'css/incidents/includes/email_checkbox.css' %}">
 {% endblock %}
 
 {% block title %}{{ incident }}{% endblock %}
@@ -91,44 +92,66 @@
       {% endif %}
 
       <!-- <button class="toggle-email-three">Показать письма</button> -->
-      <div class="email-controls">
-        <button class="sort-emails-btn tooltip" data-sort="asc" data-title="Сначала новые"><i class='bx bx-chevrons-down'></i></button>
-        <button class="sort-emails-btn tooltip" data-sort="desc" data-title="Сначала старые"><i class='bx  bx-chevrons-up'></i></button>
-        <input type="text" id="target-incident-code" placeholder="Код инцидента">
-        <button id="move-emails-btn" disabled>Переместить письма</button>
-        <button id="confirm-move-btn">Подтвердить перенос</button>
-      </div>
-  
-      <div class="email-three">
-        {% if email_three %}
-          {% for root in email_three %}
-            <div class="email-tree" id="email-tree-{{ forloop.counter }}">
-              <div class="email-tree-header">
-                <button
-                  class="btn btn-secondary toggle-tree-btn"
-                  type="button"
-                  data-tree-id="email-tree-{{ forloop.counter }}"
-                >
-                  Показать переписку
-                </button>
 
-                <div class="email-tree-ids">
-                  <strong>ID писем:</strong>
-                  {% for node in root.branch_ids %}
-                    <a class="email-link" href="#email-{{ node }}">{{ node }}</a>{% if not forloop.last %}, {% endif %}
-                  {% endfor %}
+      <form id="move-emails-form" method="post">
+        {% csrf_token %}
+        <div class="form-controls">
+          <button type="button" class="sort-emails-btn tooltip" data-sort="asc" data-title="Сначала новые"><i class='bx bx-chevrons-down'></i></button>
+          <button type="button" class="sort-emails-btn tooltip" data-sort="desc" data-title="Сначала старые"><i class='bx bx-chevrons-up'></i></button>
+
+          <input type="hidden"
+                name="{{ move_email_form.email_ids.html_name }}"
+                id="{{ move_email_form.email_ids.id_for_label }}"
+                value='{{ move_email_form.email_ids.value|default:"[]" }}'>
+
+          <input type="text"
+                name="{{ move_email_form.target_incident_code.html_name }}"
+                id="{{ move_email_form.target_incident_code.id_for_label }}"
+                placeholder="Код инцидента"
+                class="tooltip"
+                maxlength="32"
+                required
+                pattern="[A-Za-z0-9-]+"
+                data-title="Целевой код инцидента для переноса писем"
+                value="{{ move_email_form.target_incident_code.value|default_if_none:'' }}">
+
+          <button id="move-emails-btn" type="submit" disabled>Переместить письма</button>
+        </div>
+
+        <div class="email-three">
+          {% if email_three %}
+            {% for root in email_three %}
+              <div class="email-tree" id="email-tree-{{ forloop.counter }}">
+                <div class="email-tree-header">
+                  <button class="btn btn-secondary toggle-tree-btn" type="button"
+                          data-tree-id="email-tree-{{ forloop.counter }}">
+                    Показать переписку
+                  </button>
+
+                  <div class="email-tree-ids">
+                    <strong>ID писем:</strong>
+                    {% for node in root.branch_ids %}
+                      <a class="email-link" href="#email-{{ node }}">{{ node }}</a>{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                    <label class="custom-checkbox-wrapper">
+                      <input type="checkbox"
+                            class="email-tree-checkbox"
+                            data-ids='{{ root.branch_ids|safe }}'>
+                      <i class="bx bx-check check-icon"></i>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="email-tree-body hidden">
+                  {% include "incidents/includes/email_node.html" with node=root level=0 %}
                 </div>
               </div>
-
-              <div class="email-tree-body hidden">
-                {% include "incidents/includes/email_node.html" with node=root level=0 %}
-              </div>
-            </div>
-          {% endfor %}
-        {% else %}
-          <p class="empty">Писем пока нет</p>
-        {% endif %}
-      </div>
+            {% endfor %}
+          {% else %}
+            <p class="empty">Писем пока нет</p>
+          {% endif %}
+        </div>
+      </form>
 
       <button class="toggle-status-history">Показать историю статусов</button>
 
@@ -151,4 +174,11 @@
 <script src="{% static 'js/incidents/hide_sections.js' %}"></script>
 <script src="{% static 'js/incidents/email_root.js' %}"></script>
 <script src="{% static 'js/incidents/sort_emails.js' %}"></script>
+<script>
+  window.MOVE_EMAILS_CONFIG = {
+    targetIncidentInputId: "{{ move_email_form.target_incident_code.id_for_label }}",
+    idEmailIds: "{{ move_email_form.email_ids.id_for_label }}"
+  };
+</script>
+<script src="{% static 'js/incidents/move_emails.js' %}"></script>
 {% endblock %}
