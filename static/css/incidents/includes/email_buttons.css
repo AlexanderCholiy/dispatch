@@ -1,0 +1,37 @@
+.form-controls {
+display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  padding: var(--space-sm) 0;
+}
+
+.form-controls-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.form-controls-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+@media (max-width: 768px) {
+  .form-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-sm);
+  }
+
+  .form-controls-left,
+  .form-controls-right {
+    justify-content: right;
+  }
+
+  #move-emails-btn {
+    width: 100%;
+  }
+}

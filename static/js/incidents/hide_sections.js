@@ -74,4 +74,54 @@ document.addEventListener("DOMContentLoaded", function() {
       localStorage.setItem(storageKey, String(!nowHidden));
     });
   });
+
+  // --- обработка кастомных чекбоксов
+  document.querySelectorAll(".custom-checkbox-wrapper input[type='checkbox']").forEach(checkbox => {
+    const wrapper = checkbox.closest(".custom-checkbox-wrapper");
+
+    // начальное состояние
+    if (checkbox.checked) wrapper.classList.add("checked");
+
+    checkbox.addEventListener("change", () => {
+      wrapper.classList.toggle("checked", checkbox.checked);
+    });
+  });
+
+  // --- обработка кликов по ссылкам на письма
+  document.querySelectorAll(".email-link").forEach(link => {
+    link.addEventListener("click", event => {
+      event.preventDefault();
+
+      const targetId = link.getAttribute("href").replace("#", "");
+      const targetElement = document.getElementById(targetId);
+      if (!targetElement) return;
+
+      // если письмо находится в скрытом дереве — раскрываем его
+      const treeBody = targetElement.closest(".email-tree-body");
+      if (treeBody && treeBody.classList.contains("hidden")) {
+        const toggleBtn = treeBody
+          .closest(".email-tree")
+          .querySelector(".toggle-tree-btn");
+
+        treeBody.classList.remove("hidden");
+        if (toggleBtn) {
+          toggleBtn.textContent = "Скрыть переписку";
+        }
+
+        // сохраняем состояние
+        const treeId = treeBody.closest(".email-tree")?.id;
+        if (treeId) localStorage.setItem(`treeVisible_${treeId}`, "true");
+      }
+
+      // плавный скролл к письму
+      targetElement.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+
+      // подсветка письма (анимация)
+      targetElement.classList.add("email-highlight");
+      setTimeout(() => targetElement.classList.remove("email-highlight"), 2000);
+    });
+  });
 });

@@ -10,6 +10,7 @@
   transition: background-color var(--transition-value), border-color var(--transition-value);
   display: grid;
   grid-template-columns: 4fr 1fr;
+  grid-template-areas: "left right";
   gap: var(--space-lg);
   align-items: start;
 }
@@ -23,12 +24,14 @@
 }
 
 .email-left {
+  grid-area: left;
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
 }
 
 .email-right {
+  grid-area: right;
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
@@ -103,6 +106,9 @@
 @media (max-width: 768px) {
   .email-content {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "right"
+      "left";
     gap: var(--space-md);
   }
 

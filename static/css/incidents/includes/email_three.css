@@ -42,22 +42,11 @@
   color: var(--add-color);
 }
 
-/* .email-tree-body {
-  padding: 1rem;
-} */
 
 .email-tree-body.hidden {
   display: none;
 }
 
-@media (max-width: 768px) {
-  .email-tree-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .email-tree-ids {
-    width: 100%;
-    padding-bottom: 0.3rem;
-  }
+.email-tree-checkbox-label {
+  margin-left: var(--space-md);
 }
