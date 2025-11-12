@@ -1,0 +1,17 @@
+{% if incident.history.all|length %}
+  <button class="toggle-incident-history">Показать историю</button>
+
+  <ul class="incident-history">
+    {% for history in incident.history.all %}
+      <li class="history-item">
+        <div class="history-item-header">
+          <span class="history-user tooltip" data-title="{{ history.performed_by.email }}">{{ history.performed_by.get_full_name|default:history.performed_by.email }}</span>
+          <span class="history-date">{{ history.insert_date|date:"d.m.Y H:i" }}</span>
+        </div>
+        <span class="history-action">{{ history.action }}</span>
+      </li>
+    {% empty %}
+      <p class="empty">Пусто</p>
+    {% endfor %}
+  </ul>
+{% endif %}

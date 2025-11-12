@@ -129,7 +129,7 @@ class IncidentAdmin(admin.ModelAdmin):
             'base_station',
             'responsible_user',
             'incident_type',
-        ).prefetch_related('statuses', 'categories')
+        ).prefetch_related('statuses', 'categories', 'history')
 
     readonly_fields = (
         'avr_contractor',

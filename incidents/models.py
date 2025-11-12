@@ -338,7 +338,7 @@ class IncidentHistory(models.Model):
         ordering = ['-insert_date']
 
     def __str__(self):
-        return f'{self.action[:50]}'
+        return f'{self.action[:MAX_ST_DESCRIPTION]}'
 
 
 class IncidentCategory(Detail):

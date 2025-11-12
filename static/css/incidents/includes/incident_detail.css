@@ -73,7 +73,7 @@
 }
 
 .toggle-status-history,
-.toggle-email-three {
+.toggle-incident-history {
   margin-top: var(--space-sm);
   margin-bottom: var(--space-xs);
   padding: var(--space-xs) var(--space-sm);
@@ -86,7 +86,7 @@
   transition: all var(--transition-value);
 }
 
-.toggle-status-history:hover,
+.toggle-incident-history:hover,
 .toggle-email-three:hover {
   background-color: var(--extra-color);
 }

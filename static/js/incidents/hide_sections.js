@@ -13,6 +13,13 @@ document.addEventListener("DOMContentLoaded", function() {
       cookieName: "statusHistoryVisible",
       showText: "Показать историю статусов",
       hideText: "Скрыть историю статусов"
+    },
+    {
+      btnSelector: ".toggle-incident-history",
+      blockSelector: ".incident-history",
+      cookieName: "incidentHistoryVisible",
+      showText: "Показать историю",
+      hideText: "Скрыть историю"
     }
   ];
 

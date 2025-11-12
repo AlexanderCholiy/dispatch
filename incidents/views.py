@@ -149,6 +149,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         .prefetch_related(
             'statuses',
             'base_station__operator',
+            'history',
         )
         .filter(pk=incident_id)
         .first()
@@ -251,6 +252,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
                 .prefetch_related(
                     'statuses',
                     'base_station__operator',
+                    'history',
                 )
                 .get(pk=target_incident.pk)
             )
@@ -372,14 +374,16 @@ def confirm_move_emails(request: HttpRequest) -> HttpResponse:
         IncidentHistory.objects.create(
             incident=source_incident,
             action=(
-                f'Письма с ID {email_ids} перенесены в инцидент {target_name}'
+                f'Письма с ID {', '.join(email_ids)} перенесены в инцидент '
+                f'{target_name}'
             ),
             performed_by=request.user,
         )
         IncidentHistory.objects.create(
             incident=target_incident,
             action=(
-                f'Письма с ID {email_ids} добавлены из инцидента {source_name}'
+                f'Письма с ID {', '.join(email_ids)} добавлены из инцидента '
+                f'{source_name}'
             ),
             performed_by=request.user,
         )
