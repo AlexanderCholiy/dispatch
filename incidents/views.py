@@ -1,12 +1,12 @@
-import json
-
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.contrib import messages
 from django.http import HttpRequest, HttpResponse, Http404
 from django.shortcuts import render, redirect
 from django_ratelimit.decorators import ratelimit
+from django.views.decorators.http import require_POST
 from django.db.models import Q, OuterRef, Subquery, Prefetch
+from django.db import transaction
 from django.core.cache import cache
 
 from users.utils import role_required
@@ -18,9 +18,11 @@ from .constants import (
     PAGE_SIZE_INCIDENTS_CHOICES,
     MAX_INCIDENTS_INFO_CACHE_SEC
 )
-from .models import Incident, IncidentStatusHistory, IncidentStatus
+from .models import (
+    Incident, IncidentStatusHistory, IncidentStatus, IncidentHistory
+)
 from emails.models import EmailMessage
-from .forms import MoveEmailsForm
+from .forms import MoveEmailsForm, ConfirmMoveEmailsForm
 
 
 @login_required
@@ -133,6 +135,8 @@ def index(request: HttpRequest) -> HttpResponse:
 @role_required()
 @ratelimit(key='user_or_ip', rate='20/m', block=True)
 def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
+    template_name = 'incidents/incident_detail.html'
+
     incident = (
         Incident.objects
         .select_related(
@@ -217,26 +221,98 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         incident.latest_status_class = None
 
     email_three = IncidentManager.build_email_tree(emails)
-
     move_email_form = MoveEmailsForm(
         email_tree=email_three, current_incident=incident
     )
+
+    confirm_stage = False
+
     if request.method == 'POST':
         move_email_form = MoveEmailsForm(
             data=request.POST,
             email_tree=email_three,
             current_incident=incident
         )
+
         if move_email_form.is_valid():
             target_incident: Incident = (
                 move_email_form.cleaned_data['target_incident_code']
             )
-            email_ids_groups: list[list[int]] = (
-                move_email_form.cleaned_data['email_ids']
+
+            target_incident = (
+                Incident.objects
+                .select_related(
+                    'incident_type',
+                    'responsible_user',
+                    'pole',
+                    'pole__region',
+                    'base_station',
+                )
+                .prefetch_related(
+                    'statuses',
+                    'base_station__operator',
+                )
+                .get(pk=target_incident.pk)
             )
-            return redirect(
-                'incidents:incident_detail', incident_id=target_incident.id
+
+            latest_status = (
+                IncidentStatusHistory.objects
+                .filter(incident=target_incident)
+                .order_by('-insert_date')
+                .select_related('status__status_type')
+                .first()
             )
+            if latest_status:
+                target_incident.latest_status_name = latest_status.status.name
+                target_incident.latest_status_date = latest_status.insert_date
+                target_incident.latest_status_class = (
+                    latest_status.status.status_type.css_class
+                )
+            else:
+                target_incident.latest_status_name = None
+                target_incident.latest_status_date = None
+                target_incident.latest_status_class = None
+
+            email_ids_groups = move_email_form.cleaned_data['email_ids']
+
+            # Получаем объекты писем для нового дерева:
+            email_ids_flat = [i for group in email_ids_groups for i in group]
+            new_emails = EmailMessage.objects.filter(
+                Q(email_incident=target_incident) | Q(id__in=email_ids_flat)
+            ).select_related('folder').prefetch_related(
+                Prefetch(
+                    'email_references',
+                    queryset=(
+                        EmailReference.objects
+                        .select_related('email_msg')
+                        .order_by('id')
+                    )
+                ),
+                'email_attachments',
+                'email_intext_attachments',
+                'email_msg_to',
+                'email_msg_cc',
+            ).order_by(*order)
+            new_email_tree = IncidentManager.build_email_tree(new_emails)
+
+            confirm_form = ConfirmMoveEmailsForm(
+                data={
+                    'source_incident_id': incident.pk,
+                    'target_incident_code': target_incident.code,
+                    'email_ids': email_ids_groups,
+                }
+            )
+
+            context = {
+                'incident': target_incident,
+                'source_incident': incident,
+                'email_three': new_email_tree,
+                'move_email_form': confirm_form,
+                'selected_email_ids': email_ids_groups,
+                'confirm_stage': True,
+            }
+            return render(request, template_name, context)
+
         else:
             for _, errors in move_email_form.errors.items():
                 for error in errors:
@@ -251,6 +327,67 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         'email_three': email_three,
         'move_email_form': move_email_form,
         'selected_email_ids': selected_email_ids,
+        'confirm_stage': confirm_stage,
     }
 
-    return render(request, 'incidents/incident_detail.html', context)
+    return render(request, template_name, context)
+
+
+@login_required
+@role_required()
+@ratelimit(key='user_or_ip', rate='20/m', block=True)
+@require_POST
+def confirm_move_emails(request: HttpRequest) -> HttpResponse:
+    """Обработка подтверждения переноса писем."""
+    form = ConfirmMoveEmailsForm(data=request.POST)
+
+    if not form.is_valid():
+        for _, errors in form.errors.items():
+            for error in errors:
+                messages.error(request, error)
+        return redirect(request.META.get('HTTP_REFERER', 'incidents:index'))
+
+    source_incident: Incident = form.cleaned_data['source_incident_id']
+    target_incident: Incident = form.cleaned_data['target_incident_code']
+    email_ids_groups: list[list[int]] = form.cleaned_data['email_ids']
+
+    email_ids = [email_id for group in email_ids_groups for email_id in group]
+    emails_to_move = EmailMessage.objects.filter(
+        pk__in=email_ids,
+        email_incident=source_incident,
+    )
+
+    with transaction.atomic():
+        emails_to_move.update(
+            email_incident=target_incident, was_added_2_yandex_tracker=False
+        )
+
+        source_name = source_incident.code if (
+            source_incident.code
+        ) else f'ID-{source_incident.pk}'
+        target_name = target_incident.code if (
+            target_incident.code
+        ) else f'ID-{target_incident.pk}'
+
+        IncidentHistory.objects.create(
+            incident=source_incident,
+            action=(
+                f'Письма с ID {email_ids} перенесены в инцидент {target_name}'
+            ),
+            performed_by=request.user,
+        )
+        IncidentHistory.objects.create(
+            incident=target_incident,
+            action=(
+                f'Письма с ID {email_ids} добавлены из инцидента {source_name}'
+            ),
+            performed_by=request.user,
+        )
+
+    messages.success(
+        request,
+        f'Письма успешно перенесены в инцидент {target_incident.code}.'
+    )
+    return redirect(
+        'incidents:incident_detail', incident_id=source_incident.id
+    )

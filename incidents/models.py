@@ -8,7 +8,11 @@ from django.db.models import CheckConstraint, F, Q
 from django.db.models.functions import Least
 from django.utils import timezone
 
-from core.constants import DATETIME_FORMAT, MAX_ST_DESCRIPTION
+from core.constants import (
+    DATETIME_FORMAT,
+    MAX_ST_DESCRIPTION,
+    MAX_LG_DESCRIPTION,
+)
 from core.models import Detail
 from ts.models import AVRContractor, BaseStation, Pole
 
@@ -301,6 +305,40 @@ class Incident(models.Model):
             )
         return None
     sla_rvr_deadline.fget.short_description = 'Срок устранения РВР'
+
+
+class IncidentHistory(models.Model):
+    incident = models.ForeignKey(
+        'Incident',
+        on_delete=models.CASCADE,
+        related_name='history',
+        verbose_name='Инцидент'
+    )
+    action = models.CharField(
+        verbose_name='Действие',
+        help_text='Описание действия, совершённого с инцидентом',
+        max_length=MAX_LG_DESCRIPTION
+    )
+    performed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Пользователь',
+    )
+    insert_date = models.DateTimeField(
+        default=timezone.now,
+        verbose_name='Дата и время добавления',
+        db_index=True
+    )
+
+    class Meta:
+        verbose_name = 'История инцидента'
+        verbose_name_plural = 'История инцидентов'
+        ordering = ['-insert_date']
+
+    def __str__(self):
+        return f'{self.action[:50]}'
 
 
 class IncidentCategory(Detail):

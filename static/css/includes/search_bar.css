@@ -29,7 +29,7 @@
 .header-search input[type="text"] {
   flex: 1;
   border: none;
-  padding: 0;
+  padding: 0 var(--space-xs);
   margin: 0;
   border-radius: 0;
   font-size: var(--font-md);

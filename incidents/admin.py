@@ -20,6 +20,7 @@ from .models import (
     IncidentStatusHistory,
     IncidentType,
     StatusType,
+    IncidentHistory,
 )
 
 admin.site.empty_value_display = EMPTY_VALUE
@@ -80,6 +81,13 @@ class IncidentCategoryFilter(admin.SimpleListFilter):
         return queryset
 
 
+class IncidentHistoryInline(admin.TabularInline):
+    model = IncidentHistory
+    extra = 0
+    readonly_fields = ('action', 'performed_by', 'insert_date')
+    ordering = ('-insert_date',)
+
+
 @admin.register(Incident)
 class IncidentAdmin(admin.ModelAdmin):
     list_per_page = INCIDENTS_PER_PAGE
@@ -106,6 +114,7 @@ class IncidentAdmin(admin.ModelAdmin):
         IncidentCategoryRelationInline,
         IncidentStatusHistoryInline,
         EmailMessageInline,
+        IncidentHistoryInline,
     ]
 
     def get_last_status(self, obj):

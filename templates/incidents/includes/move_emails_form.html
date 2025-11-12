@@ -1,0 +1,44 @@
+{% if confirm_stage and email_three %}
+  <form id="confirm-move-emails-form" method="post" action="{% url 'incidents:confirm_move_emails' %}">
+    {% csrf_token %}
+    <p>Вы уверены, что хотите перенести выбранные письма в инцидент {{ incident }}?</p>
+    <input type="hidden" name="email_tree" value='{{ email_three|json_script:"email_tree" }}'>
+    <input type="hidden" name="source_incident_id" value="{{ incident.id }}">
+    <input type="hidden" name="target_incident_code" value="{{ move_email_form.target_incident_code.value }}">
+    <input type="hidden" name="email_ids" value='{{ selected_email_ids|safe }}'>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-success">Подтвердить перенос</button>
+      <a href="{% url 'incidents:incident_detail' incident.id %}" class="btn btn-secondary">Отмена</a>
+    </div>
+  </form>
+{% elif not confirm_stage and email_three %}
+  <form id="move-emails-form" method="post">
+    {% csrf_token %}
+    <div class="form-controls">
+      <div class="form-controls-left">
+        <button type="button" class="btn btn-secondary sort-emails-btn tooltip" data-sort="asc" data-title="Сначала новые">
+          <i class='bx bx-chevrons-down'></i>
+        </button>
+        <button type="button" class="btn btn-secondary sort-emails-btn tooltip" data-sort="desc" data-title="Сначала старые">
+          <i class='bx bx-chevrons-up'></i>
+        </button>
+      </div>
+      <div class="form-controls-right">
+        <input type="hidden" name="{{ move_email_form.email_ids.html_name }}"
+                id="{{ move_email_form.email_ids.id_for_label }}"
+                value='{{ move_email_form.email_ids.value|default:"[]" }}'>
+        <input type="text"
+                name="{{ move_email_form.target_incident_code.html_name }}"
+                id="{{ move_email_form.target_incident_code.id_for_label }}"
+                placeholder="Код инцидента"
+                class="code-input tooltip"
+                maxlength="32"
+                required
+                pattern="[A-Za-z0-9-]+"
+                data-title="Целевой код инцидента для переноса писем"
+                value="{{ move_email_form.target_incident_code.value|default_if_none:'' }}">
+        <button id="move-emails-btn" class="btn btn-success" type="submit" disabled>Переместить письма</button>
+      </div>
+    </div>
+  </form>
+{% endif %}

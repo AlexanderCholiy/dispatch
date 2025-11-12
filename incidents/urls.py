@@ -11,4 +11,9 @@ urlpatterns = [
         views.incident_detail,
         name='incident_detail'
     ),
+    path(
+        'incident/move-emails/',
+        views.confirm_move_emails,
+        name='confirm_move_emails'
+    )
 ]

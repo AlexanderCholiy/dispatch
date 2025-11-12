@@ -1,0 +1,27 @@
+<div class="card-header">
+  <div class="card-header-top">
+    <p class="incident-title">
+      {% if incident.first_email_subject %}
+        <strong class="incident-code copy-text" data-text="{{ incident.code|default:incident.id }}">{{ incident }}:</strong> {{ incident.first_email_subject|default:"—" }}
+      {% else %}
+        <strong class="incident-code copy-text" data-text="{{ incident.code|default:incident.id }}">{{ incident }}</strong>
+      {% endif %}
+    </p>
+    {% if incident.latest_status_name %}
+      <span class="status-tag {{ incident.latest_status_class }} tooltip" data-title="{{ incident.latest_status_date|date:'d.m.Y H:i'|default:'—' }}">
+        {{ incident.latest_status_name }}
+      </span>
+    {% endif %}
+  </div>
+
+  <p class="incident-date">
+    {% if incident.incident_finish_date %}
+      зарегистрировано {{ incident.incident_date|date:"d.m.Y H:i" }},
+      закрыто {{ incident.incident_finish_date|date:"d.m.Y H:i" }},
+      обновлено {{ incident.update_date|date:"d.m.Y H:i" }}
+    {% else %}
+      зарегистрировано {{ incident.incident_date|date:"d.m.Y H:i" }},
+      обновлено {{ incident.update_date|date:"d.m.Y H:i" }}
+    {% endif %}
+  </p>
+</div>

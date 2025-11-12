@@ -19,6 +19,8 @@ display: flex;
   gap: var(--space-sm);
 }
 
+.cancel-move-email,
+.submit-move-email,
 #move-emails-btn,
 .sort-emails-btn {
   padding: 0.16rem;
