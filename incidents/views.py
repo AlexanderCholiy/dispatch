@@ -374,16 +374,16 @@ def confirm_move_emails(request: HttpRequest) -> HttpResponse:
         IncidentHistory.objects.create(
             incident=source_incident,
             action=(
-                f'Письма с ID {', '.join(email_ids)} перенесены в инцидент '
-                f'{target_name}'
+                f'Письма с ID {", ".join(map(str, email_ids))} '
+                f'перенесены в инцидент {target_name}'
             ),
             performed_by=request.user,
         )
         IncidentHistory.objects.create(
             incident=target_incident,
             action=(
-                f'Письма с ID {', '.join(email_ids)} добавлены из инцидента '
-                f'{source_name}'
+                f'Письма с ID {", ".join(map(str, email_ids))} '
+                f'добавлены из инцидента {source_name}'
             ),
             performed_by=request.user,
         )
