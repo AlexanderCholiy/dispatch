@@ -83,7 +83,7 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 ROOT_URLCONF = 'backend.urls'
-LOGIN_REDIRECT_URL = 'emails:index'
+LOGIN_REDIRECT_URL = 'incidents:index'
 LOGIN_URL = 'login'
 
 TEMPLATES_DIR = os.path.join(BASE_DIR, 'templates')

@@ -35,10 +35,6 @@
   outline: none;
 }
 
-/* html.dark .btn{
-  color: var(--add-color);
-} */
-
 .btn:hover {
   box-shadow: 0 0 var(--space-xs) var(--extra-color);
   transform: translateY(-1px);
@@ -51,6 +47,21 @@ html.dark .btn:hover {
 
 .btn:active {
   transform: scale(0.97);
+}
+
+.btn:disabled,
+.btn[disabled] {
+  box-shadow: none;
+  transform: none;
+  pointer-events: none;
+  background-color: var(--gray-color);
+  border-color: var(--gray-color);
+}
+
+html.dark .btn:disabled:hover,
+.btn:disabled:hover {
+  opacity: 0.5;
+  color: var(--background-color);
 }
 
 .btn-primary {

@@ -21,8 +21,8 @@
 
 .custom-checkbox-wrapper .check-icon {
   position: absolute;
-  top: 55%;
-  left: 55%;
+  top: 57%;
+  left: 52%;
   transform: translate(-50%, -50%) scale(0);
   transition: transform var(--transition-value);
   color: var(--green-color);

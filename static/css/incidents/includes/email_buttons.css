@@ -19,6 +19,12 @@ display: flex;
   gap: var(--space-sm);
 }
 
+#move-emails-btn,
+.sort-emails-btn {
+  padding: 0.16rem;
+  font-size: var(--font-xs);
+}
+
 @media (max-width: 768px) {
   .form-controls {
     flex-direction: column;

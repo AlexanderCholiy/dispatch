@@ -242,10 +242,15 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
                 for error in errors:
                     messages.error(request, error)
 
+            selected_email_ids = move_email_form.data.get('email_ids', [])
+    else:
+        selected_email_ids = move_email_form.initial.get('email_ids', [])
+
     context = {
         'incident': incident,
         'email_three': email_three,
         'move_email_form': move_email_form,
+        'selected_email_ids': selected_email_ids,
     }
 
     return render(request, 'incidents/incident_detail.html', context)

@@ -11,7 +11,6 @@ from core.constants import (
     DB_BACK_FOLDER_DIR,
     MAX_DB_BACK,
     MAX_REMOTE_DB_BACK,
-    REMOTE_DB_BACK_FOLDER_DIR,
 )
 from core.loggers import LoggerFactory
 from core.wraps import timer
@@ -34,6 +33,7 @@ class Command(BaseCommand):
     reserve_port = int(os.getenv('RESERVE_SERVER_PORT', 22))
     reserve_username = os.getenv('RESERVE_SERVER_USERNAME')
     reserve_password = os.getenv('RESERVE_SERVER_PASSWORD')
+    remote_db_back_folder_dir = os.getenv('REMOTE_DB_BACK_FOLDER_DIR')
 
     missing_reserve_params = [
         name for name, value in {
@@ -41,15 +41,16 @@ class Command(BaseCommand):
             'RESERVE_SERVER_PORT': reserve_port,
             'RESERVE_SERVER_USERNAME': reserve_username,
             'RESERVE_SERVER_PASSWORD': reserve_password,
+            'REMOTE_DB_BACK_FOLDER_DIR': remote_db_back_folder_dir,
         }.items() if value is None
     ]
 
     @timer(bakup_manager_logger)
     def handle(self, *args, **options):
         self.backup_db()
-        self.send_backup_on_reserve_server(REMOTE_DB_BACK_FOLDER_DIR)
+        self.send_backup_on_reserve_server(self.remote_db_back_folder_dir)
         self.cleanup_remote_backups(
-            MAX_REMOTE_DB_BACK, REMOTE_DB_BACK_FOLDER_DIR
+            MAX_REMOTE_DB_BACK, self.remote_db_back_folder_dir
         )
         self.cleanup_old_backups(MAX_DB_BACK)
         # self.restore_database(
@@ -218,9 +219,20 @@ class Command(BaseCommand):
             if transport:
                 transport.close()
 
+    def sftp_mkdirs(self, sftp: paramiko.SFTPClient, path: str):
+        dirs = path.strip('/').split('/')
+        current = ''
+        for d in dirs:
+            current += '/' + d
+            try:
+                sftp.stat(current)
+            except FileNotFoundError:
+                sftp.mkdir(current)
+
     def send_backup_on_reserve_server(self, remote_path: str):
         """Сохраняет дампы базы данных на резервный сервер."""
         files_2_send = []
+        remote_files = []
 
         for filename in os.listdir(DB_BACK_FOLDER_DIR):
             if (
@@ -272,7 +284,7 @@ class Command(BaseCommand):
                     f'Не удалось прочитать удалённую директорию '
                     f'{remote_path}. '
                 )
-                sftp.mkdir(remote_path)
+                self.sftp_mkdirs(sftp, remote_path)
                 remote_files = []
         except Exception as e:
             bakup_manager_logger.exception(

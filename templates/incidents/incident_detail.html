@@ -97,10 +97,10 @@
         {% csrf_token %}
         <div class="form-controls">
           <div class="form-controls-left">
-            <button type="button" class="sort-emails-btn tooltip" data-sort="asc" data-title="Сначала новые">
+            <button type="button" class="btn btn-secondary sort-emails-btn tooltip" data-sort="asc" data-title="Сначала новые">
               <i class='bx bx-chevrons-down'></i>
             </button>
-            <button type="button" class="sort-emails-btn tooltip" data-sort="desc" data-title="Сначала старые">
+            <button type="button" class="btn btn-secondary sort-emails-btn tooltip" data-sort="desc" data-title="Сначала старые">
               <i class='bx bx-chevrons-up'></i>
             </button>
           </div>
@@ -115,14 +115,14 @@
                   name="{{ move_email_form.target_incident_code.html_name }}"
                   id="{{ move_email_form.target_incident_code.id_for_label }}"
                   placeholder="Код инцидента"
-                  class="tooltip"
+                  class="code-input tooltip"
                   maxlength="32"
                   required
                   pattern="[A-Za-z0-9-]+"
                   data-title="Целевой код инцидента для переноса писем"
                   value="{{ move_email_form.target_incident_code.value|default_if_none:'' }}">
 
-            <button id="move-emails-btn" type="submit" disabled>Переместить письма</button>
+            <button id="move-emails-btn" class="btn btn-success" type="submit" disabled>Переместить письма</button>
           </div>
         </div>
 
@@ -144,7 +144,10 @@
                     <label class="custom-checkbox-wrapper email-tree-checkbox-label">
                       <input type="checkbox"
                             class="email-tree-checkbox"
-                            data-ids='{{ root.branch_ids|safe }}'>
+                            data-ids='{{ root.branch_ids|safe }}'
+                            {% for node_id in root.branch_ids %}
+                                {% if node_id|safe in selected_email_ids %}checked{% endif %}
+                            {% endfor %}>
                       <i class="bx bx-check check-icon"></i>
                     </label>
                   </div>

@@ -8,6 +8,43 @@ html.dark input[type="time"]::-webkit-calendar-picker-indicator {
   filter: invert(1);
 }
 
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="number"] {
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background-color: var(--add-background-color);
+  font-size: var(--font-sm);
+  color: var(--add-color);
+  transition: all var(--transition-value);
+  outline: none;
+  box-shadow: 0 0 var(--space-xs) var(--extra-color);
+  cursor: text;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="search"]:focus,
+input[type="number"]:focus {
+  border-color: var(--extra-color);
+  box-shadow: 0 0 var(--space-sm) var(--extra-color);
+}
+
+input[type="text"]:disabled,
+input[type="email"]:disabled,
+input[type="password"]:disabled,
+input[type="search"]:disabled,
+input[type="number"]:disabled {
+  background-color: var(--background-color);
+  color: var(--gray-color);
+  border-color: var(--gray-color);
+  box-shadow: none;
+}
+
 .select-wrapper {
   position: relative;
   width: 100%;
