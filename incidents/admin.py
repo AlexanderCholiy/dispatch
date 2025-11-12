@@ -16,11 +16,11 @@ from .models import (
     Incident,
     IncidentCategory,
     IncidentCategoryRelation,
+    IncidentHistory,
     IncidentStatus,
     IncidentStatusHistory,
     IncidentType,
     StatusType,
-    IncidentHistory,
 )
 
 admin.site.empty_value_display = EMPTY_VALUE

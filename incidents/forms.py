@@ -2,9 +2,10 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.db.models import Prefetch
 
-from .models import Incident
 from emails.models import EmailMessage, EmailReference
+
 from .constants import MAX_CODE_LEN
+from .models import Incident
 from .utils import EmailNode, IncidentManager
 
 

@@ -10,8 +10,8 @@ from django.utils import timezone
 
 from core.constants import (
     DATETIME_FORMAT,
-    MAX_ST_DESCRIPTION,
     MAX_LG_DESCRIPTION,
+    MAX_ST_DESCRIPTION,
 )
 from core.models import Detail
 from ts.models import AVRContractor, BaseStation, Pole

@@ -1,28 +1,30 @@
-from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
 from django.contrib import messages
-from django.http import HttpRequest, HttpResponse, Http404
-from django.shortcuts import render, redirect
-from django_ratelimit.decorators import ratelimit
-from django.views.decorators.http import require_POST
-from django.db.models import Q, OuterRef, Subquery, Prefetch
-from django.db import transaction
+from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
+from django.core.paginator import Paginator
+from django.db import transaction
+from django.db.models import OuterRef, Prefetch, Q, Subquery
+from django.http import Http404, HttpRequest, HttpResponse
+from django.shortcuts import redirect, render
+from django.views.decorators.http import require_POST
+from django_ratelimit.decorators import ratelimit
 
-from users.utils import role_required
 from emails.models import EmailMessage, EmailReference
-from .utils import IncidentManager
+from users.utils import role_required
 
 from .constants import (
     INCIDENTS_PER_PAGE,
-    PAGE_SIZE_INCIDENTS_CHOICES,
-    MAX_INCIDENTS_INFO_CACHE_SEC
+    MAX_INCIDENTS_INFO_CACHE_SEC,
+    PAGE_SIZE_INCIDENTS_CHOICES
 )
+from .forms import ConfirmMoveEmailsForm, MoveEmailsForm
 from .models import (
-    Incident, IncidentStatusHistory, IncidentStatus, IncidentHistory
+    Incident,
+    IncidentHistory,
+    IncidentStatus,
+    IncidentStatusHistory,
 )
-from emails.models import EmailMessage
-from .forms import MoveEmailsForm, ConfirmMoveEmailsForm
+from .utils import IncidentManager
 
 
 @login_required

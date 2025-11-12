@@ -3,11 +3,11 @@ from datetime import timedelta
 from typing import Optional, TypedDict
 
 from django.db import connection, models
-from django.db.models import Count, Min, Q, QuerySet, Prefetch
+from django.db.models import Count, Min, Q, QuerySet
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
-from emails.models import EmailFolder, EmailMessage, EmailReference
+from emails.models import EmailFolder, EmailMessage
 from users.models import Roles, User
 from yandex_tracker.utils import YandexTrackerManager
 
