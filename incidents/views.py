@@ -158,7 +158,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
     )
 
     if not incident:
-        raise Http404('Инцидент не найден')
+        raise Http404(f'Инцидент с ID: {incident_id} не найден')
 
     sort_order = (
         request.GET.get('email_sort')

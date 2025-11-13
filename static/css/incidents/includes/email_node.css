@@ -15,10 +15,6 @@
   align-items: start;
 }
 
-.email-tree.chosen .email-content {
-  border-color: var(--gray-color);
-}
-
 .email-content.email-highlight {
   border-color: var(--priority-color) !important;
 }

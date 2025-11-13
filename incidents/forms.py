@@ -44,7 +44,11 @@ class MoveEmailsForm(forms.Form):
         branch_ids = [set(root['branch_ids']) for root in self.email_tree]
         for group in email_ids_groups:
             if not any(set(group) <= b_set for b_set in branch_ids):
-                raise ValidationError(f'Цепочка {group} некорректна.')
+                raise ValidationError(
+                    f'Цепочка {group} некорректна. '
+                    f'Возможно, данные были изменены. Проверьте историю '
+                    f'инцидента {self.current_incident}.'
+                )
 
         return email_ids_groups
 
@@ -132,8 +136,10 @@ class ConfirmMoveEmailsForm(forms.Form):
         for group in email_ids_groups:
             if not any(set(group) <= b_set for b_set in branch_ids):
                 raise ValidationError(
-                    f'Цепочка писем {group} больше не относится к исходному '
-                    'инциденту. Возможно, данные были изменены.'
+                    f'Цепочка писем {group} больше не связана с исходным '
+                    'инцидентом. '
+                    f'Возможно, данные были изменены. Проверьте историю '
+                    f'инцидента {source_incident}.'
                 )
 
         return email_ids_groups

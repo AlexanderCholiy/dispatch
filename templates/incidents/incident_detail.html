@@ -39,7 +39,7 @@
             </div>
             <div class="form-controls-right">
               <div class="form-actions">
-                <a href="{% url 'incidents:incident_detail' incident.id %}" class="btn btn-secondary cancel-move-email">Отмена</a>
+                <a href="{% url 'incidents:incident_detail' source_incident.id %}" class="btn btn-secondary cancel-move-email">Отмена</a>
                 <button type="submit" class="btn btn-success submit-move-email">Подтвердить перенос</button>
               </div>
             </div>
@@ -71,7 +71,7 @@
                       pattern="[A-Za-z0-9-]+"
                       data-title="Целевой код инцидента для переноса писем"
                       value="{{ move_email_form.target_incident_code.value|default_if_none:'' }}">
-              <button id="move-emails-btn" class="btn btn-success" type="submit" disabled>Переместить письма</button>
+              <button id="move-emails-btn" class="btn btn-warning" type="submit" disabled>Переместить письма</button>
             </div>
           </div>
         </form>
