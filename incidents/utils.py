@@ -3,11 +3,11 @@ from datetime import timedelta
 from typing import Optional, TypedDict
 
 from django.db import connection, models
-from django.db.models import Count, Min, Q, QuerySet
+from django.db.models import Count, Min, Q, QuerySet, Prefetch
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
-from emails.models import EmailFolder, EmailMessage
+from emails.models import EmailFolder, EmailMessage, EmailReference
 from users.models import Roles, User
 from yandex_tracker.utils import YandexTrackerManager
 
@@ -937,7 +937,7 @@ class IncidentManager(IncidentValidator):
             refs = []
 
             # 1. Добавляем все ссылки из EmailReference (уникальные)
-            for ref in email.email_references.all().order_by('id'):
+            for ref in getattr(email, 'prefetched_references', []):
                 if (
                     ref.email_msg_id != email.email_msg_id
                     and ref.email_msg not in refs
@@ -982,3 +982,68 @@ class IncidentManager(IncidentValidator):
             collect_ids(root)
 
         return email_roots
+
+    @staticmethod
+    def prepare_incident_info(incident_id: int) -> Optional[Incident]:
+        """
+        Запрос для подготовки информации об инциденте со всей перепиской.
+        """
+        incident = (
+            Incident.objects
+            .select_related(
+                'incident_type',
+                'responsible_user',
+                'pole',
+                'pole__region',
+                'base_station'
+            )
+            .prefetch_related(
+                'statuses',
+                'history',
+                'base_station__operator',
+                'categories',
+                Prefetch(
+                    'status_history',
+                    queryset=IncidentStatusHistory.objects.select_related(
+                        'status__status_type'
+                    ).order_by('-insert_date'),
+                    to_attr='prefetched_status_history'
+                ),
+                Prefetch(
+                    'email_messages',
+                    queryset=EmailMessage.objects.select_related('folder')
+                    .prefetch_related(
+                        Prefetch(
+                            'email_references',
+                            queryset=EmailReference.objects.select_related(
+                                'email_msg'
+                            ).order_by('id'),
+                            to_attr='prefetched_references'
+                        ),
+                        'email_attachments',
+                        'email_intext_attachments',
+                        'email_msg_to',
+                        'email_msg_cc',
+                    ),
+                ),
+            )
+            .filter(pk=incident_id, code__isnull=False)
+            .first()
+        )
+
+        if not incident:
+            return
+
+        if getattr(incident, 'latest_statuses', None):
+            latest_status = incident.latest_statuses[0]
+            incident.latest_status_name = latest_status.status.name
+            incident.latest_status_date = latest_status.insert_date
+            incident.latest_status_class = (
+                latest_status.status.status_type.css_class
+            )
+        else:
+            incident.latest_status_name = None
+            incident.latest_status_date = None
+            incident.latest_status_class = None
+
+        return incident

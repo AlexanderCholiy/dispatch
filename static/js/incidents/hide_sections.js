@@ -63,9 +63,9 @@ document.addEventListener("DOMContentLoaded", function() {
     const treeBody = document.querySelector(`#${treeId} .email-tree-body`);
     const storageKey = `treeVisible_${treeId}`;
 
-    // если нет состояния — по умолчанию показываем
+    // если нет состояния — по умолчанию скрываем
     const savedState = localStorage.getItem(storageKey);
-    const isVisible = savedState === null ? true : savedState === "true";
+    const isVisible = savedState === null ? false : savedState === "true";
 
     if (isVisible) {
       treeBody.classList.remove("hidden");

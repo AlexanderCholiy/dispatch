@@ -27,6 +27,14 @@ from .constants import (
 User = get_user_model()
 
 
+def get_default_status_type():
+    contractor, _ = StatusType.objects.get_or_create(
+        name='По умолчанию',
+        defaults={'css_class': 'default'}
+    )
+    return contractor.pk
+
+
 class Incident(models.Model):
     """Таблица инцидентов"""
     insert_date = models.DateTimeField(
@@ -406,8 +414,9 @@ class StatusType(Detail):
     css_class = models.CharField(
         max_length=MAX_ST_DESCRIPTION,
         verbose_name='CSS-класс',
-        null=True,
-        blank=True,
+        null=False,
+        blank=False,
+        default='default',
         help_text=(
             'Используется для визуального отображения статуса в интерфейсе.'
         )
@@ -430,9 +439,8 @@ class IncidentStatus(Detail):
 
     status_type = models.ForeignKey(
         StatusType,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        on_delete=models.SET_DEFAULT,
+        default=get_default_status_type,
         related_name='status_types',
         verbose_name='Тип статуса'
     )

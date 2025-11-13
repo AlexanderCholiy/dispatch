@@ -139,24 +139,7 @@ def index(request: HttpRequest) -> HttpResponse:
 @ratelimit(key='user_or_ip', rate='20/m', block=True)
 def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
     template_name = 'incidents/incident_detail.html'
-
-    incident = (
-        Incident.objects
-        .select_related(
-            'incident_type',
-            'responsible_user',
-            'pole',
-            'pole__region',
-            'base_station',
-        )
-        .prefetch_related(
-            'statuses',
-            'base_station__operator',
-            'history',
-        )
-        .filter(pk=incident_id, code__isnull=False)
-        .first()
-    )
+    incident = IncidentManager.prepare_incident_info(incident_id)
 
     if not incident:
         raise Http404(f'Инцидент с ID: {incident_id} не найден')
@@ -191,52 +174,19 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         sort_reverse
     ) else ('email_date', '-is_first_email')
 
-    emails = (
-        EmailMessage.objects.filter(email_incident=incident)
-        .select_related('folder')
-        .prefetch_related(
-            Prefetch(
-                'email_references',
-                queryset=(
-                    EmailReference.objects
-                    .select_related('email_msg')
-                    .order_by('id')
-                )
-            ),
-            'email_attachments',
-            'email_intext_attachments',
-            'email_msg_to',
-            'email_msg_cc',
-        )
-        .order_by(*order)
+    emails = sorted(
+        incident.email_messages.all(),
+        key=lambda e: getattr(e, 'email_date'),
+        reverse=sort_reverse
     )
 
-    if emails.exists():
-        first_email = emails.first() if not sort_reverse else emails.last()
+    if emails:
+        first_email = emails[0] if not sort_reverse else emails[-1]
         incident.first_email_subject = first_email.email_subject
         incident.first_email_from = first_email.email_from
     else:
         incident.first_email_subject = None
         incident.first_email_from = None
-
-    latest_status = (
-        IncidentStatusHistory.objects
-        .filter(incident=incident)
-        .order_by('-insert_date')
-        .select_related('status__status_type')
-        .first()
-    )
-
-    if latest_status:
-        incident.latest_status_name = latest_status.status.name
-        incident.latest_status_date = latest_status.insert_date
-        incident.latest_status_class = (
-            latest_status.status.status_type.css_class
-        )
-    else:
-        incident.latest_status_name = None
-        incident.latest_status_date = None
-        incident.latest_status_class = None
 
     email_three = IncidentManager.build_email_tree(emails)
     move_email_form = MoveEmailsForm(
@@ -257,40 +207,9 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
                 move_email_form.cleaned_data['target_incident_code']
             )
 
-            target_incident = (
-                Incident.objects
-                .select_related(
-                    'incident_type',
-                    'responsible_user',
-                    'pole',
-                    'pole__region',
-                    'base_station',
-                )
-                .prefetch_related(
-                    'statuses',
-                    'base_station__operator',
-                    'history',
-                )
-                .get(pk=target_incident.pk)
+            target_incident = IncidentManager.prepare_incident_info(
+                target_incident.id
             )
-
-            latest_status = (
-                IncidentStatusHistory.objects
-                .filter(incident=target_incident)
-                .order_by('-insert_date')
-                .select_related('status__status_type')
-                .first()
-            )
-            if latest_status:
-                target_incident.latest_status_name = latest_status.status.name
-                target_incident.latest_status_date = latest_status.insert_date
-                target_incident.latest_status_class = (
-                    latest_status.status.status_type.css_class
-                )
-            else:
-                target_incident.latest_status_name = None
-                target_incident.latest_status_date = None
-                target_incident.latest_status_class = None
 
             email_ids_groups = move_email_form.cleaned_data['email_ids']
 
@@ -312,7 +231,23 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
                 'email_msg_to',
                 'email_msg_cc',
             ).order_by(*order)
+
             new_email_tree = IncidentManager.build_email_tree(new_emails)
+
+            target_emails = [
+                e for e in new_emails
+                if e.email_incident_id == target_incident.id
+            ]
+
+            if new_emails:
+                first_email = target_emails[0] if not (
+                    sort_reverse
+                ) else target_emails[-1]
+                incident.first_email_subject = first_email.email_subject
+                incident.first_email_from = first_email.email_from
+            else:
+                incident.first_email_subject = None
+                incident.first_email_from = None
 
             confirm_form = ConfirmMoveEmailsForm(
                 data={

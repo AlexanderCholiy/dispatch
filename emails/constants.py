@@ -50,6 +50,9 @@ ALLOWED_MIME_PREFIXES = {
     # Специфические офисные форматы
     'application/vnd.ms-project',  # .mpp
     'application/vnd.ms-access',   # .mdb
+
+    # Универсальный бинарный тип для файлов вроде .sor
+    'application/octet-stream',
 }
 
 ALLOWED_EXTENSIONS = {
@@ -64,6 +67,7 @@ ALLOWED_EXTENSIONS = {
     '.odp',  # OpenDocument Presentation
     '.epub',  # eBook
     '.json',  # JSON
+    '.sor',  # GIS
 
     # Google Workspace (расширения, которые часто встречаются при экспорте)
     '.gsheet', '.gdoc', '.gslides', '.gdraw', '.gform',

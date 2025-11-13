@@ -54,7 +54,10 @@ class Command(BaseCommand):
         )
         self.cleanup_old_backups(MAX_DB_BACK)
         # self.restore_database(
-        #     'backup_dispatch_backend_2025-09-10_15-16.sql',
+        #     (
+        #         '/home/a.choliy/dispatch/data/backup_db/'
+        #         + 'backup_dispatch_2025-11-13_20-24.sql'
+        #     ),
         #     f'dump_{self.db_name}'
         # )
 
@@ -86,14 +89,24 @@ class Command(BaseCommand):
             bakup_manager_logger.exception(e)
             raise
 
-    def restore_database(self, dump_filename: str, new_db_name: str) -> None:
+    def restore_database(self, dump_file: str, new_db_name: str) -> None:
         """
         Восстанавливает базу данных из дампа в новую БД.
 
         Args:
-            dump_file(str): Название .sql файла с резервной копией базы.
+            dump_file(str): Путь к .sql файлу с резервной копией базы.
             new_db_name (str): Имя новой базы данных, куда восстановить
         """
+        if not os.path.exists(dump_file):
+            bakup_manager_logger.error(
+                f'Дамп файл "{dump_file}" отсутствует. Проверьте путь к файлу.'
+            )
+            return
+
+        env = {
+            'PGPASSWORD': self.db_pswd
+        }
+
         create_db_cmd = [
             'psql',
             f'--host={self.db_host}',
@@ -104,27 +117,37 @@ class Command(BaseCommand):
             f'CREATE DATABASE {new_db_name};'
         ]
 
-        dump_file = os.path.join(DB_BACK_FOLDER_DIR, dump_filename)
+        # subprocess.run(create_db_cmd, check=True, env=env)
+        bakup_manager_logger.info(f'База данных {new_db_name} создана')
 
         restore_cmd = [
             'pg_restore',
             f'--host={self.db_host}',
             f'--port={self.db_port}',
             f'--username={self.db_user}',
+            '--no-owner',  # если нужна совместимость
             '--dbname', new_db_name,
             dump_file
         ]
 
-        env = {
-            'PGPASSWORD': self.db_pswd
-        }
-
-        subprocess.run(create_db_cmd, check=True, env=env)
-        bakup_manager_logger.info(f'База данных {new_db_name} создана')
-
-        subprocess.run(restore_cmd, check=True, env=env)
-        bakup_manager_logger.info(
-            f'Восстановление дампа в новую базу {new_db_name} завершено')
+        try:
+            subprocess.run(
+                restore_cmd,
+                check=True,
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            bakup_manager_logger.info(
+                f'Восстановление дампа в новую базу {new_db_name} завершено'
+            )
+        except subprocess.CalledProcessError as e:
+            bakup_manager_logger.exception(
+                'Ошибка восстановления базы:\n'
+                f'STDOUT: {e.stdout}\n'
+                f'STDERR: {e.stderr}'
+            )
 
     def cleanup_old_backups(self, dt: timedelta) -> None:
         """Удаляет дампы базы данных старше N дней."""

@@ -1,7 +1,7 @@
 <button class="toggle-status-history">Показать историю статусов</button>
 
 <ul class="status-history">
-  {% for history in incident.status_history.all|dictsortreversed:"insert_date" %}
+  {% for history in incident.prefetched_status_history %}
     <li class="status-item">
       <span class="status-name {{ history.status.status_type.css_class }}">{{ history.status.name }}</span>
       <span class="status-date">{{ history.insert_date|date:"d.m.Y H:i" }}</span>

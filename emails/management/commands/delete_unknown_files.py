@@ -141,4 +141,53 @@ class Command(BaseCommand):
             )
             EmailManager.get_email_attachments(email)
 
+        self._remove_orphan_attachments()
+
         tg_manager.send_success_notification(__name__)
+
+    def _remove_orphan_attachments(self):
+        attachments_to_delete = []
+        attachments = EmailAttachment.objects.all()
+        total = len(attachments)
+
+        for index, attachment in enumerate(attachments):
+            PrettyPrint.progress_bar_error(
+                index, total,
+                'Проверка записей, без файла в базе для EmailAttachment:'
+            )
+
+            file_path = Path(settings.MEDIA_ROOT) / attachment.file_url.name
+            if not file_path.exists():
+                attachments_to_delete.append(attachment.id)
+
+        intext_to_delete = []
+        intexts = EmailInTextAttachment.objects.all()
+        total = len(intexts)
+
+        for index, attachment in enumerate(intexts):
+            PrettyPrint.progress_bar_warning(
+                index, total,
+                'Проверка записей, без файла в базе для EmailInTextAttachment:'
+            )
+
+            file_path = Path(settings.MEDIA_ROOT) / attachment.file_url.name
+            if not file_path.exists():
+                intext_to_delete.append(attachment.id)
+
+        if attachments_to_delete:
+            email_managment_logger.info(
+                f'Удаляем {len(attachments_to_delete)} записей '
+                'EmailAttachment без файлов'
+            )
+            EmailAttachment.objects.filter(
+                id__in=attachments_to_delete
+            ).delete()
+
+        if intext_to_delete:
+            email_managment_logger.info(
+                f'Удаляем {len(intext_to_delete)} записей '
+                'EmailInTextAttachment без файлов'
+            )
+            EmailInTextAttachment.objects.filter(
+                id__in=intext_to_delete
+            ).delete()

@@ -32,7 +32,7 @@
   flex-direction: column;
   gap: var(--space-xs);
   font-size: var(--font-xs);
-  color: var(--gray-color);
+  color: var(--add-color);
   align-items: flex-end;
   height: 100%;
 }

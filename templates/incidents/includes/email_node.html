@@ -15,7 +15,7 @@
       </div>
     
       <div class="email-attachments-wrapper">
-        {% if node.email.email_attachments.exists or node.email.email_intext_attachments.exists %}
+        {% if node.email.email_attachments.all or node.email.email_intext_attachments.all %}
           <button type="button" class="toggle-attachments-btn" onclick="this.nextElementSibling.classList.toggle('hidden'); this.textContent = this.nextElementSibling.classList.contains('hidden') ? 'Показать вложения' : 'Скрыть вложения';">
             Показать вложения
           </button>
@@ -115,7 +115,7 @@
         {% endfor %}
       </div>
       
-      {% if node.email.email_msg_cc.exists %}
+      {% if node.email.email_msg_cc.all %}
         <div class="email-to-cc">
           <strong>Копия:</strong>
           {% for cc in node.email.email_msg_cc.all %}
