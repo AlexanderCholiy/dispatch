@@ -596,6 +596,7 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                                 email_body = self.prepare_text_from_bytes(
                                     part
                                 ) if email_body is None else email_body
+
                                 if content_type == 'text/html':
                                     email_body = self.prepare_text_from_html(
                                         email_body
@@ -611,6 +612,7 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                             'Ошибка при сохранении файла для email: ',
                             email_msg_id
                         ))
+
                 except KeyboardInterrupt:
                     raise
                 except Exception:
@@ -626,7 +628,8 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                             email_body
                         )
                         email_body = EmailManager.normalize_text_with_json(
-                            email_body)
+                            email_body
+                        )
                     else:
                         email_body = None
 

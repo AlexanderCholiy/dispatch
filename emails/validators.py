@@ -76,8 +76,43 @@ class EmailValidator:
         return emails
 
     def prepare_text_from_html(self, html_body_text: str) -> str:
-        soup = BeautifulSoup(html_body_text, 'lxml')
-        return soup.get_text(strip=True)
+        """Преобразует HTML в чистый текст, сохраняя ссылки."""
+
+        if not html_body_text:
+            return ''
+
+        # Проверяем: это действительно HTML, а не просто текст с <https://...>
+        is_html = bool(re.search(r'</\w+>', html_body_text))
+
+        if is_html:
+            soup = BeautifulSoup(html_body_text, 'lxml')
+
+            # Заменим <a>теги их текстом + ссылкой:
+            for a in soup.find_all('a'):
+                href = a.get('href')
+                if href:
+                    a.replace_with(f'{a.get_text(strip=True)} ({href})')
+
+            text = soup.get_text(strip=True)
+        else:
+            text = html_body_text.strip()
+
+        text = re.sub(
+            r'(https?://[^\s<>{}]+)\s*\n\s*([^\s<>{}]+)',
+            lambda m: m.group(1) + m.group(2),
+            text,
+            flags=re.MULTILINE
+        )
+
+        # Убираем обёртку в угловых скобках: <https://...> → https://...
+        text = re.sub(r'<(https?://[^>\s]+)>', r'\1', text)
+
+        # Убираем случайные пробелы внутри URL
+        text = re.sub(
+            r'https?://\S*\s+\S*', lambda m: m.group(0).replace(' ', ''), text
+        )
+
+        return text
 
     def prepare_text_from_bytes(self, msg: message.Message) -> str:
         charset = msg.get_content_charset() or 'utf-8'
