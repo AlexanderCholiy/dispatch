@@ -419,7 +419,7 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
             email_ids = list(set(new_emails_ids + found_emails_ids))
             messages = self.fetch_emails_in_chunks(mail, email_ids)
 
-            parsed_messages = []
+            parsed_messages: list[message.Message] = []
             for part in messages:
                 if isinstance(part, tuple) and len(part) == 2:
                     msg_bytes = part[1]
@@ -515,6 +515,7 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                     email_body = None
 
                     save_file_err = False
+
                     if msg.is_multipart():
                         for sub_index, part in enumerate(msg.walk()):
                             email_msg_id_hash: str = (
@@ -524,6 +525,7 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                                 f'{email_date.strftime("%H%M%S")}__'
                                 f'{email_msg_id_hash}__{sub_index}__'
                             )
+
                             content_type: Optional[str] = (
                                 part.get_content_type()
                             )
@@ -591,20 +593,18 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                                     'text/plain', 'text/html'
                                 )
                             ):
-                                payload = part.get_payload(decode=True)
                                 email_body = self.prepare_text_from_bytes(
-                                    payload
-                                )
+                                    part
+                                ) if email_body is None else email_body
                                 if content_type == 'text/html':
                                     email_body = self.prepare_text_from_html(
                                         email_body
                                     ).replace(email_subject or '', '').strip()
                     else:
-                        html_body_text = msg.get_payload(decode=True).decode(
-                            encoding=encoding
-                        )
+                        html_body_text = self.prepare_text_from_bytes(msg)
                         email_body = self.prepare_text_from_html(
-                            html_body_text)
+                            html_body_text
+                        )
 
                     if save_file_err:
                         email_parser_logger.warning((

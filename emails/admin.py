@@ -39,6 +39,7 @@ class EmailMessageAdmin(admin.ModelAdmin):
         'id',
         'email_incident__id',
         'email_subject',
+        'email_msg_id',
     )
     list_editable = ('email_incident',)
     ordering = ('-email_date',)

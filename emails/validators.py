@@ -77,18 +77,14 @@ class EmailValidator:
 
     def prepare_text_from_html(self, html_body_text: str) -> str:
         soup = BeautifulSoup(html_body_text, 'lxml')
-        body_text = (
-            soup.get_text(separator='\n').strip()
-        )
-        return body_text
+        return soup.get_text(strip=True)
 
-    def prepare_text_from_bytes(self, byte_body_text: bytes) -> str:
-        result: dict = chardet.detect(byte_body_text)
-        encoding = result.get('encoding') or 'utf-8'
-        body_text = (
-            byte_body_text.decode(encoding, errors='replace').strip()
+    def prepare_text_from_bytes(self, msg: message.Message) -> str:
+        charset = msg.get_content_charset() or 'utf-8'
+        return (
+            msg.get_payload(decode=True).decode(charset, errors='replace')
+            .strip()
         )
-        return body_text
 
     def save_email_attachments(
         self,
