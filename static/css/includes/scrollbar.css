@@ -7,6 +7,10 @@
   background-color: var(--add-background-color);
 }
 
+body::-webkit-scrollbar-track {
+  border-left: 1px solid var(--extra-color);
+}
+
 ::-webkit-scrollbar-thumb {
   background-color: var(--extra-color);
   border-radius: var(--radius-xs);
@@ -27,6 +31,10 @@
   background-size: 12px; /* Размер стрелки */
   background-repeat: no-repeat;
   background-position: center;
+}
+
+body::-webkit-scrollbar-button {
+  border-left: 1px solid var(--extra-color);
 }
 
 /* Горизонтальные стрелки */

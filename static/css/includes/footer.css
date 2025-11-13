@@ -2,7 +2,11 @@ footer {
   width: 100%;
   position: relative;
   z-index: 10;
-  background-color: var(--background-color);
+  background: linear-gradient(
+    320deg,
+    var(--add-background-color) 0%,
+    var(--background-color) 100%
+  );
   margin-top: auto;
   box-shadow: 0 var(--space-xs) var(--space-md)var(--extra-color);
 }

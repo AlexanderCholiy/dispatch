@@ -63,7 +63,7 @@ def staff_required(view_func: Callable):
         if not user.is_superuser and not user.is_staff:
             messages.error(
                 request,
-                'Данная страница доступна только владельцу или персоналу'
+                'Данная страница доступна только персоналу'
             )
             return redirect(reverse(settings.LOGIN_URL))
         return view_func(request, *args, **kwargs)

@@ -41,17 +41,58 @@
               {% for att in node.email.email_intext_attachments.all %}
                 <li class="attachment-item">
                   <a href="{{ att.file_url.url }}" target="_blank" class="attachment-file">
-                    {% if att.file_name|lower|slice:"-4:" in ".jpg.png.gif" or att.file_name|lower|slice:"-5:" == ".jpeg" %}
-                      <span class="attachment-preview" style="background-image: url('{{ att.file_url.url }}');"></span>
-                    {% else %}
-                      <span class="attachment-icon
-                        {% if att.file_name|lower|slice:"-4:" == ".pdf" %}pdf
-                        {% elif att.file_name|lower|slice:"-5:" == ".xlsx" %}xlsx
-                        {% elif att.file_name|lower|slice:"-5:" == ".docx" %}docx
-                        {% elif att.file_name|lower|slice:"-4:" == ".txt" %}txt
-                        {% else %}file{% endif %}"></span>
-                    {% endif %}
-                      <p class="attachment-name">{{ att.file_name }}</p>
+                    {% with att.file_name|lower as fname %}
+                      {% if fname|slice:"-4:" in ".jpg.png.gif" or fname|slice:"-5:" == ".jpeg" or fname|slice:"-5:" == ".webp" or fname|slice:"-4:" == ".bmp" or fname|slice:"-4:" == ".svg" or fname|slice:"-5:" == ".jfif" %}
+                      <img src="{{ att.file_url.url }}" 
+                          alt="{{ att.file_name }}" 
+                          class="attachment-preview" 
+                          onerror="this.onerror=null; this.outerHTML='<i class=\'bx bx-image\'></i>';">
+                      {% else %}
+                        <span class="attachment-icon
+                          {% if fname|slice:"-4:" == ".pdf" %}pdf
+                          {% elif fname|slice:"-5:" == ".xlsx" %}xlsx
+                          {% elif fname|slice:"-4:" == ".xls" %}xlsx
+                          {% elif fname|slice:"-7:" == ".gsheet" %}gsheet
+                          {% elif fname|slice:"-5:" == ".docx" %}docx
+                          {% elif fname|slice:"-4:" == ".doc" %}docx
+                          {% elif fname|slice:"-5:" == ".gdoc" %}gdoc
+                          {% elif fname|slice:"-5:" == ".pptx" %}pptx
+                          {% elif fname|slice:"-4:" == ".ppt" %}pptx
+                          {% elif fname|slice:"-4:" == ".txt" %}txt
+                          {% elif fname|slice:"-5:" == ".json" %}json
+                          {% elif fname|slice:"-4:" == ".csv" %}csv
+                          {% elif fname|slice:"-5:" == ".html" %}html
+                          {% elif fname|slice:"-4:" == ".zip" %}zip
+                          {% elif fname|slice:"-3:" == ".7z" %}zip
+                          {% elif fname|slice:"-3:" == ".gz" %}zip
+                          {% elif fname|slice:"-4:" == ".rar" %}rar
+                          {% elif fname|slice:"-4:" == ".tar" %}rar
+                          {% elif fname|slice:"-4:" == ".mp3" %}mp3
+                          {% elif fname|slice:"-4:" == ".mp4" %}video
+                          {% elif fname|slice:"-4:" == ".mov" %}video
+                          {% elif fname|slice:"-4:" == ".avi" %}video
+                          {% elif fname|slice:"-4:" == ".mkv" %}video
+                          {% elif fname|slice:"-5:" == ".webm" %}video
+                          {% elif fname|slice:"-5:" == ".vsdx" %}file
+                          {% elif fname|slice:"-4:" == ".vsd" %}file
+                          {% elif fname|slice:"-4:" == ".odt" %}file
+                          {% elif fname|slice:"-4:" == ".ods" %}file
+                          {% elif fname|slice:"-4:" == ".odp" %}file
+                          {% elif fname|slice:"-5:" == ".epub" %}file
+                          {% elif fname|slice:"-8:" == ".gslides" %}file
+                          {% elif fname|slice:"-6:" == ".gdraw" %}file
+                          {% elif fname|slice:"-6:" == ".gform" %}file
+                          {% elif fname|slice:"-4:" == ".rtf" %}file
+                          {% elif fname|slice:"-4:" == ".bz2" %}file
+                          {% elif fname|slice:"-4:" == ".mpp" %}file
+                          {% elif fname|slice:"-4:" == ".mdb" %}file
+                          {% elif fname|slice:"-4:" == ".wav" %}file
+                          {% elif fname|slice:"-4:" == ".ogg" %}file
+                          {% else %}file{% endif %}">
+                        </span>
+                      {% endif %}
+                    {% endwith %}
+                    <p class="attachment-name">{{ att.file_name }}</p>
                   </a>
                 </li>
               {% endfor %}

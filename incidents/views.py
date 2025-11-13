@@ -11,6 +11,7 @@ from django_ratelimit.decorators import ratelimit
 
 from emails.models import EmailMessage, EmailReference
 from users.utils import role_required
+from users.models import Roles, User
 
 from .constants import (
     INCIDENTS_PER_PAGE,
@@ -58,7 +59,7 @@ def index(request: HttpRequest) -> HttpResponse:
         email_incident=OuterRef('pk')
     ).order_by('-is_first_email', 'email_date').values('email_from')[:1]
 
-    incidents = Incident.objects.all().select_related(
+    incidents = Incident.objects.exclude(code__isnull=True).select_related(
         'incident_type',
         'responsible_user',
         'pole',
@@ -153,12 +154,26 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
             'base_station__operator',
             'history',
         )
-        .filter(pk=incident_id)
+        .filter(pk=incident_id, code__isnull=False)
         .first()
     )
 
     if not incident:
         raise Http404(f'Инцидент с ID: {incident_id} не найден')
+
+    user: User = request.user
+    allowed_roles = [Roles.DISPATCH]
+    can_manage = user.role in allowed_roles or user.is_superuser
+
+    if request.method == 'POST':
+        if not can_manage:
+            roles = [f'"{role.label}"' for role in allowed_roles]
+            messages.error(
+                request, f'Данная операция доступна только: {', '.join(roles)}'
+            )
+            return redirect(
+                'incidents:incident_detail', incident_id=incident.id
+            )
 
     sort_order = (
         request.GET.get('email_sort')
@@ -314,6 +329,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
                 'move_email_form': confirm_form,
                 'selected_email_ids': email_ids_groups,
                 'confirm_stage': True,
+                'can_manage': can_manage,
             }
             return render(request, template_name, context)
 
@@ -332,13 +348,14 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         'move_email_form': move_email_form,
         'selected_email_ids': selected_email_ids,
         'confirm_stage': confirm_stage,
+        'can_manage': can_manage,
     }
 
     return render(request, template_name, context)
 
 
 @login_required
-@role_required()
+@role_required(allowed_roles=[Roles.DISPATCH])
 @ratelimit(key='user_or_ip', rate='20/m', block=True)
 @require_POST
 def confirm_move_emails(request: HttpRequest) -> HttpResponse:
@@ -354,6 +371,13 @@ def confirm_move_emails(request: HttpRequest) -> HttpResponse:
     source_incident: Incident = form.cleaned_data['source_incident_id']
     target_incident: Incident = form.cleaned_data['target_incident_code']
     email_ids_groups: list[list[int]] = form.cleaned_data['email_ids']
+
+    if source_incident.code is None or target_incident.code is None:
+        messages.error(
+            request,
+            f'Инцидент {source_incident} и/или {target_incident} не найден.'
+        )
+        return redirect(request.META.get('HTTP_REFERER', 'incidents:index'))
 
     email_ids = [email_id for group in email_ids_groups for email_id in group]
     emails_to_move = EmailMessage.objects.filter(

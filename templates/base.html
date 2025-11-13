@@ -16,7 +16,6 @@
     <title> 
       {% block title %}NT Cellular Systems{% endblock %}
     </title>
-    <script src="{% static 'js/theme_init.js' %}"></script>
     <link rel="icon" href="{% static 'img/fav/favicon.ico' %}" type="image">
     <link 
       rel="apple-touch-icon" 
@@ -39,6 +38,7 @@
       rel='stylesheet' 
       href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css'
       >
+    <script src="{% static 'js/theme_init.js' %}"></script>
     <script>
       (function() {
         const theme = localStorage.getItem('theme');
@@ -76,15 +76,15 @@
   </head>
   <body>
     {% include "includes/spinner.html" %}
-
     <div class="wrapper">
       {% include "includes/header.html" %}
       
       <div class="layout">
         {% include "includes/sidebar.html" %}
-
+        
         <div class="main-area">
           {% include "includes/messages.html" %}
+          <div class="background-img"></div>
           <main class="content-wrapper">
             {% block content %}Контента пока нет :({% endblock %}
           </main>
@@ -93,14 +93,13 @@
       {% include "includes/footer.html" %}
     </div>
 
-    <script src="{% static 'js/loader.js' %}"></script>
     <script src="{% static 'js/theme_toggle.js' %}"></script>
+    <script src="{% static 'js/loader.js' %}"></script>
     <script src="{% static 'js/user_menu.js' %}"></script>
     <script src="{% static 'js/sidebar.js' %}"></script>
     <script src="{% static 'js/scroll_to_top.js' %}"></script>
     <script src="{% static 'js/tooltip.js' %}"></script>
     <script src="{% static 'js/copy_text.js' %}"></script>
-    <script src="{% static 'js/search_filter.js' %}"></script>
     <script src="{% static 'js/focus_on_search_filter.js' %}"></script>
     {% block extra_js %}{% endblock %}
   </body>

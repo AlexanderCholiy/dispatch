@@ -19,7 +19,7 @@
     <div class="card-body">
       {% include "incidents/includes/incident_meta.html" with incident=incident %}
 
-      {% if confirm_stage and email_three %}
+      {% if confirm_stage and email_three and can_manage %}
         <form id="confirm-move-emails-form" method="post" action="{% url 'incidents:confirm_move_emails' %}">
           {% csrf_token %}
           <div class="form-controls">
@@ -45,7 +45,7 @@
             </div>
           </div>
         </form>
-      {% elif not confirm_stage and email_three %}
+      {% elif not confirm_stage and email_three and can_manage %}
         <form id="move-emails-form" method="post">
           {% csrf_token %}
           <div class="form-controls">
@@ -75,6 +75,18 @@
             </div>
           </div>
         </form>
+      {% elif email_three %}
+        <div class="form-controls">
+          <div class="form-controls-left"></div>
+          <div class="form-controls-right">
+            <button type="button" class="btn btn-secondary sort-emails-btn tooltip" data-sort="asc" data-title="Сначала новые">
+              <i class='bx bx-chevrons-down'></i>
+            </button>
+            <button type="button" class="btn btn-secondary sort-emails-btn tooltip" data-sort="desc" data-title="Сначала старые">
+              <i class='bx bx-chevrons-up'></i>
+            </button>
+          </div>
+        </div>
       {% endif %}
 
       <div class="email-three">
@@ -93,7 +105,7 @@
                     <a class="email-link" href="#email-{{ node }}">{{ node }}</a>{% if not forloop.last %}, {% endif %}
                   {% endfor %}
 
-                  {% if not confirm_stage %}
+                  {% if not confirm_stage and can_manage %}
                     <label class="custom-checkbox-wrapper email-tree-checkbox-label">
                       <input type="checkbox"
                             class="email-tree-checkbox"
@@ -112,8 +124,6 @@
               </div>
             </div>
           {% endfor %}
-        {% else %}
-          <p class="empty">Писем пока нет</p>
         {% endif %}
       </div>
 

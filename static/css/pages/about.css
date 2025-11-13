@@ -15,6 +15,11 @@
   line-height: 1.6;
   font-size: var(--font-sm);
   margin-block: var(--space-lg);
+  text-align: justify;
+  hyphens: auto;
+  overflow-wrap: break-word;
+  word-break: normal;
+  text-indent: var(--space-xl);
 }
 
 .contacts {
@@ -85,4 +90,25 @@
 .contacts td:nth-child(3) .email-link:hover {
   color: var(--blue-color);
   text-decoration: underline;
+}
+
+.yt-company,
+.ts-company {
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--color);
+  transition: all var(--transition-value);
+}
+
+.yt-company:hover,
+.ts-company:hover {
+  text-decoration: underline;
+}
+
+.yt-company:hover {
+  color: var(--blue-color);
+}
+
+.ts-company:hover {
+  color: var(--red-color);
 }

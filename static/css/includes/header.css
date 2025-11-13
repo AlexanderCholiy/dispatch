@@ -4,7 +4,11 @@
   justify-content: space-between;
   gap: var(--space-md);
   padding: var(--space-sm) var(--space-md);
-  background-color: var(--background-color);
+  background: linear-gradient(
+    320deg,
+    var(--add-background-color) 0%,
+    var(--background-color) 100%
+  );
   box-shadow: 0 var(--space-xs) var(--space-sm) var(--extra-color);
   position: relative;
   z-index: 10;

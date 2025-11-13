@@ -16,7 +16,7 @@
   user-select: none;
   /* Задержка через JS */
   transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
-  z-index: 10000;
+  z-index: 100;
   display: none;
   box-shadow: 0 0 var(--space-xs) var(--extra-color);
 }
