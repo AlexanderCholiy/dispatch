@@ -6,8 +6,15 @@
           <li>
             <a href="{% url 'incidents:index' %}" 
               class="nav-link {% if view_name == 'incidents:index' %}active{% endif %}">
-              <i class='bx  bx-folder'></i> 
+              <i class='bx  bx-calendar-check'></i> 
               <span class="link-text">Инциденты</span>
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'emails:emails_list' %}" 
+              class="nav-link {% if view_name == 'emails:emails_list' %}active{% endif %}">
+              <i class='bx  bx-envelope'></i> 
+              <span class="link-text">Почта</span>
             </a>
           </li>
           <li>

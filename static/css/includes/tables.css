@@ -6,18 +6,18 @@
   transition: background-color var(--transition-value);
 }
 
-.incidents-table {
+.custom-table {
   border-collapse: collapse;
   width: 100%;
 }
 
-.incidents-table thead {
+.custom-table thead {
   color: var(--color);
   text-align: left;
   transition: color var(--transition-value);
 }
 
-.incidents-table th {
+.custom-table th {
   padding: var(--space-xs) var(--space-sm);
   font-weight: 500;
   white-space: nowrap;
@@ -26,7 +26,7 @@
   transition: border-color var(--transition-value);
 }
 
-.incidents-table td {
+.custom-table td {
   padding: var(--space-xs) var(--space-sm);
   margin-right: var(--space-xs);
   border-bottom: 1px solid var(--add-background-color);
@@ -35,16 +35,16 @@
   transition: color var(--transition-value) border-color var(--transition-value);
 }
 
-.incidents-table td:hover {
+.custom-table td:hover {
   color: var(--color);
 }
 
-.incidents-table tbody tr:hover {
+.custom-table tbody tr:hover {
   background-color: var(--add-background-color);
   transition: background-color var(--transition-value);
 }
 
-.incidents-table tbody tr:last-child td {
+.custom-table tbody tr:last-child td {
   border-bottom: none;
 }
 

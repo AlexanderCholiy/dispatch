@@ -1,4 +1,4 @@
-.incident-filter-form {
+.table-filter-form {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -23,8 +23,8 @@
   justify-content: flex-end;
 }
 
-.incident-filter-form input[type="text"],
-.incident-filter-form select {
+.table-filter-form input[type="text"],
+.table-filter-form select {
   display: inline-block;
   padding: var(--space-sm);
   padding-right: calc(var(--space-sm) * 2.5);
@@ -43,8 +43,8 @@
   -moz-appearance: none;
 }
 
-.incident-filter-form input[type="text"]:hover,
-.incident-filter-form select:hover {
+.table-filter-form input[type="text"]:hover,
+.table-filter-form select:hover {
   outline: none;
   box-shadow: 0 0 var(--space-xs) var(--extra-color);
 }
@@ -53,14 +53,14 @@
   position: relative;
 }
 
-.incident-filter-form .btn {
+.table-filter-form .btn {
   padding: var(--space-xs) var(--space-sm);
   box-sizing: border-box;
   font-size: var(--font-md);
 }
 
 @media (max-width: 768px) {
-  .incident-filter-form {
+  .table-filter-form {
     flex-direction: column;
     align-items: stretch;
     gap: var(--space-md);
@@ -74,8 +74,8 @@
     gap: var(--space-sm);
   }
 
-  .incident-filter-form input[type="text"],
-  .incident-filter-form select {
+  .table-filter-form input[type="text"],
+  .table-filter-form select {
     flex: 1;
     min-width: 20%;
   }

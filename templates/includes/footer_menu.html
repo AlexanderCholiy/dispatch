@@ -9,6 +9,12 @@
         </a>
       </li>
       <li>
+        <a href="{% url 'emails:emails_list' %}" 
+            class="{% if view_name == 'emails:emails_list' %}active{% endif %}">
+          <span>Почта</span>
+        </a>
+      </li>
+      <li>
         <a href="{% url 'users:users_list' %}" 
             class="{% if view_name == 'users:users_list' %}active{% endif %}">
           <span>Пользователи</span>
