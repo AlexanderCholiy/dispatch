@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import OuterRef, Prefetch, Q, Subquery
+from django.db.models import OuterRef, Prefetch, Q, Subquery, QuerySet
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
@@ -139,7 +139,7 @@ def index(request: HttpRequest) -> HttpResponse:
 @ratelimit(key='user_or_ip', rate='20/m', block=True)
 def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
     template_name = 'incidents/incident_detail.html'
-    incident = IncidentManager.prepare_incident_info(incident_id)
+    incident = IncidentManager().prepare_incident_info(incident_id)
 
     if not incident:
         raise Http404(f'Инцидент с ID: {incident_id} не найден')
@@ -170,25 +170,18 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
 
     sort_reverse = sort_order == 'asc'
 
-    order = ('-email_date', 'is_first_email') if (
-        sort_reverse
-    ) else ('email_date', '-is_first_email')
-
-    emails = sorted(
-        incident.email_messages.all(),
-        key=lambda e: getattr(e, 'email_date'),
-        reverse=sort_reverse
-    )
+    # Письма отсортированы в запросе к Incident
+    emails: QuerySet[EmailMessage] = incident.all_incident_emails
 
     if emails:
-        first_email = emails[0] if not sort_reverse else emails[-1]
+        first_email = emails[-1]
         incident.first_email_subject = first_email.email_subject
         incident.first_email_from = first_email.email_from
     else:
         incident.first_email_subject = None
         incident.first_email_from = None
 
-    email_three = IncidentManager.build_email_tree(emails)
+    email_three = IncidentManager().build_email_tree(emails, sort_reverse)
     move_email_form = MoveEmailsForm(
         email_tree=email_three, current_incident=incident
     )
@@ -207,7 +200,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
                 move_email_form.cleaned_data['target_incident_code']
             )
 
-            target_incident = IncidentManager.prepare_incident_info(
+            target_incident = IncidentManager().prepare_incident_info(
                 target_incident.id
             )
 
@@ -223,26 +216,27 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
                     queryset=(
                         EmailReference.objects
                         .select_related('email_msg')
-                        .order_by('id')
-                    )
+                        .order_by('id'),
+                    ),
+                    to_attr='prefetched_references'
                 ),
                 'email_attachments',
                 'email_intext_attachments',
                 'email_msg_to',
                 'email_msg_cc',
-            ).order_by(*order)
+            ).order_by('-email_date', 'is_first_email')
 
-            new_email_tree = IncidentManager.build_email_tree(new_emails)
+            new_email_tree = IncidentManager().build_email_tree(
+                new_emails, sort_reverse
+            )
 
-            target_emails = [
-                e for e in new_emails
-                if e.email_incident_id == target_incident.id
-            ]
+            # Письма отсортированы в запросе к Incident
+            target_emails: QuerySet[EmailMessage] = (
+                target_incident.all_incident_emails
+            )
 
             if new_emails:
-                first_email = target_emails[0] if not (
-                    sort_reverse
-                ) else target_emails[-1]
+                first_email = target_emails[-1]
                 incident.first_email_subject = first_email.email_subject
                 incident.first_email_from = first_email.email_from
             else:

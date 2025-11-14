@@ -19,7 +19,7 @@ class MoveEmailsForm(forms.Form):
 
     def __init__(
         self,
-        email_tree: EmailNode,
+        email_tree: list[EmailNode],
         current_incident: Incident,
         *args, **kwargs
     ):
@@ -41,7 +41,9 @@ class MoveEmailsForm(forms.Form):
                     'Все ID писем должны быть целыми числами.'
                 )
 
-        branch_ids = [set(root['branch_ids']) for root in self.email_tree]
+        branch_ids: list[set[int]] = [
+            set(root['branch_ids']) for root in self.email_tree
+        ]
         for group in email_ids_groups:
             if not any(set(group) <= b_set for b_set in branch_ids):
                 raise ValidationError(
@@ -128,9 +130,10 @@ class ConfirmMoveEmailsForm(forms.Form):
                 'email_msg_to',
                 'email_msg_cc',
             )
-            .order_by('email_date', '-is_first_email')
+            .order_by('-email_date', 'is_first_email')
         )
-        source_email_tree = IncidentManager.build_email_tree(emails)
+
+        source_email_tree = IncidentManager().build_email_tree(emails)
         branch_ids = [set(root['branch_ids']) for root in source_email_tree]
 
         for group in email_ids_groups:

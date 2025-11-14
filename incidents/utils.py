@@ -1,4 +1,5 @@
 import random
+from collections import defaultdict
 from datetime import timedelta
 from typing import Optional, TypedDict
 
@@ -48,9 +49,9 @@ from .validators import IncidentValidator
 
 
 class EmailNode(TypedDict):
-    email: EmailMessage
-    children: list['EmailNode']
-    references: list[EmailMessage]
+    email: EmailMessage  # объект письма
+    children: list['EmailNode']  # ответы на это письмо
+    branch_ids: list[int]  # плоский список ID всех писем в этой ветке
 
 
 class IncidentManager(IncidentValidator):
@@ -920,71 +921,163 @@ class IncidentManager(IncidentValidator):
 
         return updated
 
-    @staticmethod
-    def build_email_tree(emails: QuerySet[EmailMessage]) -> list[EmailNode]:
+    def build_email_tree(
+        self, emails: QuerySet[EmailMessage], sort_reverse: bool = False
+    ) -> list[EmailNode]:
         """
-        Строит дерево цепочки писем, включая references как объекты
-        EmailMessage.
-
-        Args:
-            emails (QuerySet[EmailMessage]): Письма, отсортированные по дате.
+        Строит дерево email-цепочки.
+        Использует reply_id и references.
         """
-        email_dict: dict[str, EmailNode] = {}
-        email_roots: list[EmailNode] = []
-        all_emails_by_id = {e.email_msg_id: e for e in emails}
+        msg_groups: list[set[EmailMessage]] = []
+        emails_set = set(emails)
 
-        for email in emails:
-            refs = []
+        # 1. Формируем группы связанных писем:
+        for email in emails_set:
+            all_ids: set[str] = {email.email_msg_id, }
 
-            # 1. Добавляем все ссылки из EmailReference (уникальные)
-            for ref in getattr(email, 'prefetched_references', []):
+            if email.email_msg_reply_id:
+                all_ids.add(email.email_msg_reply_id)
+
+            if hasattr(email, 'prefetched_references'):
+                references: list[EmailReference] = email.prefetched_references
+            else:
+                references: list[EmailReference] = list(
+                    email.email_references.select_related('email_msg')
+                )
+
+            ref_ids: set[str] = {
+                ref.email_msg_references
+                for ref in references if ref.email_msg_references
+            }
+            all_ids.update(ref_ids)
+
+            # Находим пересекающиеся письма:
+            overlapping_emails = {
+                em for em in emails_set
                 if (
-                    ref.email_msg_id != email.email_msg_id
-                    and ref.email_msg not in refs
-                ):
-                    refs.append(ref.email_msg)
-
-            # 2. Добавляем родителя, если есть и его ещё нет
-            parent_email = all_emails_by_id.get(email.email_msg_reply_id)
-            if parent_email and parent_email not in refs:
-                refs.insert(0, parent_email)
-
-            # 3. Удаляем возможные дубликаты и самого себя
-            refs = [
-                r for i, r in enumerate(refs)
-                if r.id != email.id and r not in refs[:i]
-            ]
-
-            email_dict[email.email_msg_id] = {
-                'email': email,
-                'children': [],
-                'references': refs,
-                'branch_ids': [],
+                    em.email_msg_id in all_ids
+                    or (
+                        em.email_msg_reply_id
+                        and em.email_msg_reply_id in all_ids
+                    )
+                )
             }
 
-        # 4. Строим дерево
-        for email in emails:
-            node = email_dict[email.email_msg_id]
-            parent_id = email.email_msg_reply_id
-            if parent_id and parent_id in email_dict:
-                email_dict[parent_id]['children'].append(node)
+            # Проверяем, есть ли эти письма уже в какой-то существующей группе:
+            existing_groups = [g for g in msg_groups if g & overlapping_emails]
+
+            if existing_groups:
+                # Объединяем все пересекающиеся группы + новые письма:
+                merged_group = set().union(
+                    *existing_groups, overlapping_emails
+                )
+                # Удаляем старые группы:
+                msg_groups = [
+                    g for g in msg_groups if g not in existing_groups
+                ]
+                msg_groups.append(merged_group)
             else:
-                email_roots.append(node)
+                msg_groups.append(overlapping_emails)
 
-        def collect_ids(node: dict):
-            ids = [node['email'].id]
-            for child in node['children']:
-                ids.extend(collect_ids(child))
-            node['branch_ids'] = ids
-            return ids
+        # 2. Строим EmailNode для каждой группы
+        result: list[EmailNode] = []
 
-        for root in email_roots:
-            collect_ids(root)
+        def group_sort_key(g: set[EmailMessage]):
+            dates = [e.email_date for e in g]
+            ids = [e.id for e in g]
 
-        return email_roots
+            if not sort_reverse:
+                return (
+                    min(dates),
+                    min(ids),
+                )
+            else:
+                return (
+                    max(dates),
+                    max(ids),
+                )
 
-    @staticmethod
-    def prepare_incident_info(incident_id: int) -> Optional[Incident]:
+        msg_groups = sorted(
+            msg_groups,
+            key=group_sort_key,
+            reverse=sort_reverse,
+        )
+
+        msg_2_check = EmailMessage.objects.get(id=145861)
+
+        for group in msg_groups:
+            if msg_2_check not in group:
+                continue
+
+            # Сортируем письма по дате
+            sorted_group = sorted(
+                group,
+                key=lambda e: (e.email_date, e.id),
+                reverse=sort_reverse,
+            )
+            branch_ids = [e.id for e in sorted_group]
+
+            node_dict = {e.email_msg_id: EmailNode(email=e, children=[], branch_ids=[]) for e in sorted_group}
+
+            # 5. Находим реальный корень
+            referenced_ids = set()
+            for e in sorted_group:
+                if e.email_msg_reply_id:
+                    referenced_ids.add(e.email_msg_reply_id)
+                refs = getattr(e, "prefetched_references", None)
+                if refs is None:
+                    refs = e.email_references.all()
+                for ref in refs:
+                    referenced_ids.add(ref.email_msg_references)
+
+            root_email = next((e for e in sorted_group if e.email_msg_id not in referenced_ids), sorted_group[0])
+
+            # 6. Строим граф связей
+            graph = defaultdict(set)
+            by_id = {e.email_msg_id: e for e in sorted_group}
+
+            for e in sorted_group:
+                # reply
+                if e.email_msg_reply_id and e.email_msg_reply_id in by_id:
+                    parent = by_id[e.email_msg_reply_id]
+                    graph[parent.email_msg_id].add(e)
+                    graph[e.email_msg_id].add(parent)
+                # references
+                refs = getattr(e, "prefetched_references", None)
+                if refs is None:
+                    refs = e.email_references.all()
+                for ref in refs:
+                    ref_id = ref.email_msg_references
+                    if ref_id in by_id:
+                        parent = by_id[ref_id]
+                        graph[parent.email_msg_id].add(e)
+                        graph[e.email_msg_id].add(parent)
+
+            # 7. Рекурсивная сборка дерева
+            visited = set()
+
+            def build_tree_recursive(parent_email):
+                if parent_email.email_msg_id in visited:
+                    return node_dict[parent_email.email_msg_id]
+                visited.add(parent_email.email_msg_id)
+                parent_node = node_dict[parent_email.email_msg_id]
+                for child in sorted(graph[parent_email.email_msg_id], key=lambda x: (x.email_date, x.id), reverse=sort_reverse):
+                    if child.email_msg_id != parent_email.email_msg_id:
+                        child_node = node_dict[child.email_msg_id]
+                        if child_node not in parent_node['children']:
+                            parent_node['children'].append(child_node)
+                        build_tree_recursive(child)
+                return parent_node
+
+            root_node = build_tree_recursive(root_email)
+            root_node['branch_ids'] = branch_ids
+            result.append(root_node)
+
+        print(result)
+
+        return result
+
+    def prepare_incident_info(self, incident_id: int) -> Optional[Incident]:
         """
         Запрос для подготовки информации об инциденте со всей перепиской.
         """
@@ -1024,7 +1117,8 @@ class IncidentManager(IncidentValidator):
                         'email_intext_attachments',
                         'email_msg_to',
                         'email_msg_cc',
-                    ),
+                    ).order_by('-email_date', 'is_first_email'),
+                    to_attr='all_incident_emails'
                 ),
             )
             .filter(pk=incident_id, code__isnull=False)
@@ -1034,8 +1128,8 @@ class IncidentManager(IncidentValidator):
         if not incident:
             return
 
-        if getattr(incident, 'latest_statuses', None):
-            latest_status = incident.latest_statuses[0]
+        if getattr(incident, 'prefetched_status_history', None):
+            latest_status = incident.prefetched_status_history[0]
             incident.latest_status_name = latest_status.status.name
             incident.latest_status_date = latest_status.insert_date
             incident.latest_status_class = (
