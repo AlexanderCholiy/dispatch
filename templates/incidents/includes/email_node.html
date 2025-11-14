@@ -127,11 +127,11 @@
       <div class="email-date"><strong>Дата:</strong>{{ node.email.email_date|date:"d.m.Y H:i" }}</div>
 
       <div class="email-meta-id"><strong>ID письма:</strong>{{ node.email.id }}</div>
-      {% if node.references %}
+      {% if node.branch_ids and forloop.parentloop %}
         <div class="email-meta-ref">
           <strong>Ответ на:</strong> 
-          {% for ref in node.references %}
-            <a class="email-link" href="#email-{{ ref.id }}">{{ ref.id }}</a>{% if not forloop.last %}, {% endif %}
+          {% for id in node.branch_ids %}
+            <a class="email-link" href="#email-{{ id }}">{{ id }}</a>{% if not forloop.last %}, {% endif %}
           {% endfor %}
         </div>
       {% endif %}

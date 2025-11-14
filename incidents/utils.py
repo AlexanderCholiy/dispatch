@@ -1,5 +1,4 @@
 import random
-from collections import defaultdict
 from datetime import timedelta
 from typing import Optional, TypedDict
 
@@ -11,6 +10,8 @@ from django.utils import timezone
 from emails.models import EmailFolder, EmailMessage, EmailReference
 from users.models import Roles, User
 from yandex_tracker.utils import YandexTrackerManager
+from core.loggers import LoggerFactory
+from core.constants import INCIDENTS_LOG_ROTATING_FILE
 
 from .constants import (
     AVR_CATEGORY,
@@ -46,6 +47,11 @@ from .models import (
     IncidentStatusHistory,
 )
 from .validators import IncidentValidator
+
+
+incident_manager_logger = LoggerFactory(
+    __name__, INCIDENTS_LOG_ROTATING_FILE
+).get_logger()
 
 
 class EmailNode(TypedDict):
@@ -1003,12 +1009,7 @@ class IncidentManager(IncidentValidator):
             reverse=sort_reverse,
         )
 
-        msg_2_check = EmailMessage.objects.get(id=145861)
-
         for group in msg_groups:
-            if msg_2_check not in group:
-                continue
-
             # Сортируем письма по дате
             sorted_group = sorted(
                 group,
@@ -1017,63 +1018,47 @@ class IncidentManager(IncidentValidator):
             )
             branch_ids = [e.id for e in sorted_group]
 
-            node_dict = {e.email_msg_id: EmailNode(email=e, children=[], branch_ids=[]) for e in sorted_group}
+            root_email = sorted_group[0]
+            children_emails = sorted_group[1:]
 
-            # 5. Находим реальный корень
-            referenced_ids = set()
-            for e in sorted_group:
-                if e.email_msg_reply_id:
-                    referenced_ids.add(e.email_msg_reply_id)
-                refs = getattr(e, "prefetched_references", None)
-                if refs is None:
-                    refs = e.email_references.all()
-                for ref in refs:
-                    referenced_ids.add(ref.email_msg_references)
+            msg_id_map = {e.email_msg_id: e for e in sorted_group}
 
-            root_email = next((e for e in sorted_group if e.email_msg_id not in referenced_ids), sorted_group[0])
+            children_nodes = []
+            for child_email in children_emails:
+                child_branch_ids = [root_email.id]
 
-            # 6. Строим граф связей
-            graph = defaultdict(set)
-            by_id = {e.email_msg_id: e for e in sorted_group}
+                reply_id = child_email.email_msg_reply_id
 
-            for e in sorted_group:
-                # reply
-                if e.email_msg_reply_id and e.email_msg_reply_id in by_id:
-                    parent = by_id[e.email_msg_reply_id]
-                    graph[parent.email_msg_id].add(e)
-                    graph[e.email_msg_id].add(parent)
-                # references
-                refs = getattr(e, "prefetched_references", None)
-                if refs is None:
-                    refs = e.email_references.all()
-                for ref in refs:
-                    ref_id = ref.email_msg_references
-                    if ref_id in by_id:
-                        parent = by_id[ref_id]
-                        graph[parent.email_msg_id].add(e)
-                        graph[e.email_msg_id].add(parent)
+                while reply_id and reply_id in msg_id_map:
+                    parent_email = msg_id_map[reply_id]
 
-            # 7. Рекурсивная сборка дерева
-            visited = set()
+                    if parent_email.id not in child_branch_ids:
+                        child_branch_ids.append(parent_email.id)
 
-            def build_tree_recursive(parent_email):
-                if parent_email.email_msg_id in visited:
-                    return node_dict[parent_email.email_msg_id]
-                visited.add(parent_email.email_msg_id)
-                parent_node = node_dict[parent_email.email_msg_id]
-                for child in sorted(graph[parent_email.email_msg_id], key=lambda x: (x.email_date, x.id), reverse=sort_reverse):
-                    if child.email_msg_id != parent_email.email_msg_id:
-                        child_node = node_dict[child.email_msg_id]
-                        if child_node not in parent_node['children']:
-                            parent_node['children'].append(child_node)
-                        build_tree_recursive(child)
-                return parent_node
+                    reply_id = parent_email.email_msg_reply_id
 
-            root_node = build_tree_recursive(root_email)
-            root_node['branch_ids'] = branch_ids
+                    if len(child_branch_ids) > 100:
+                        incident_manager_logger.critical(
+                            'Слишком длинная ветка email. '
+                            f'ID текущего письма: {child_email.id}'
+                        )
+                        break
+
+                children_nodes.append(
+                    EmailNode(
+                        email=child_email,
+                        branch_ids=child_branch_ids,
+                        children=[]
+                    )
+                )
+
+            root_node = EmailNode(
+                email=root_email,
+                branch_ids=branch_ids,
+                children=children_nodes,
+            )
+
             result.append(root_node)
-
-        print(result)
 
         return result
 
