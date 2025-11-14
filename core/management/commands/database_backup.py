@@ -117,7 +117,7 @@ class Command(BaseCommand):
             f'CREATE DATABASE {new_db_name};'
         ]
 
-        # subprocess.run(create_db_cmd, check=True, env=env)
+        subprocess.run(create_db_cmd, check=True, env=env)
         bakup_manager_logger.info(f'База данных {new_db_name} создана')
 
         restore_cmd = [

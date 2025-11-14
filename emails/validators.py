@@ -6,7 +6,6 @@ from email import header, message
 from email.utils import getaddresses
 from typing import Optional
 
-import chardet
 from bs4 import BeautifulSoup
 from django.core.exceptions import ValidationError
 

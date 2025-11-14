@@ -1,17 +1,17 @@
 import random
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 from typing import Optional, TypedDict
 
 from django.db import connection, models
-from django.db.models import Count, Min, Q, QuerySet, Prefetch
+from django.db.models import Count, Min, Prefetch, Q, QuerySet
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
+from core.constants import INCIDENTS_LOG_ROTATING_FILE
+from core.loggers import LoggerFactory
 from emails.models import EmailFolder, EmailMessage, EmailReference
 from users.models import Roles, User
 from yandex_tracker.utils import YandexTrackerManager
-from core.loggers import LoggerFactory
-from core.constants import INCIDENTS_LOG_ROTATING_FILE
 
 from .constants import (
     AVR_CATEGORY,
@@ -47,7 +47,6 @@ from .models import (
     IncidentStatusHistory,
 )
 from .validators import IncidentValidator
-
 
 incident_manager_logger = LoggerFactory(
     __name__, INCIDENTS_LOG_ROTATING_FILE
