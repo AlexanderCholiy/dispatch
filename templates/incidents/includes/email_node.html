@@ -130,9 +130,11 @@
       {% if node.branch_ids and forloop.parentloop %}
         <div class="email-meta-ref">
           <strong>Ответ на:</strong> 
-          {% for id in node.branch_ids %}
-            <a class="email-link" href="#email-{{ id }}">{{ id }}</a>{% if not forloop.last %}, {% endif %}
-          {% endfor %}
+          <div>
+            {% for id in node.branch_ids %}
+              <a class="email-link" href="#email-{{ id }}">{{ id }}</a>{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+          </div>
         </div>
       {% endif %}
     </div>  

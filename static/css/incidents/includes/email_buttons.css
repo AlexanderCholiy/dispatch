@@ -11,12 +11,15 @@ display: flex;
   display: flex;
   align-items: center;
   gap: var(--space-xs);
+  flex-wrap: wrap;
+  max-width: 70%;
 }
 
 .form-controls-right {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+  flex-shrink: 0;
 }
 
 .cancel-move-email,

@@ -15,8 +15,12 @@
   align-items: start;
 }
 
+.email-tree.chosen .email-content {
+  border-color: var(--gray-color);
+}
+
 .email-content.email-highlight {
-  border-color: var(--priority-color) !important;
+  border-color: var(--green-color) !important;
 }
 
 .email-left {
@@ -91,13 +95,10 @@
 }
 
 .email-link:hover {
-  color: var(--priority-color);
+  color: var(--add-color);
   text-decoration: underline;
 }
 
-/* .email-meta-id {
-  margin-top: auto;
-} */
 
 @media (max-width: 768px) {
   .email-content {

@@ -1,5 +1,5 @@
 import random
-from datetime import timedelta
+from datetime import timedelta, datetime
 from typing import Optional, TypedDict
 
 from django.db import connection, models
@@ -58,6 +58,8 @@ class EmailNode(TypedDict):
     email: EmailMessage  # объект письма
     children: list['EmailNode']  # ответы на это письмо
     branch_ids: list[int]  # плоский список ID всех писем в этой ветке
+    min_date: Optional[datetime]
+    max_date: Optional[datetime]
 
 
 class IncidentManager(IncidentValidator):
@@ -1025,7 +1027,7 @@ class IncidentManager(IncidentValidator):
 
             children_nodes = []
             for child_email in children_emails:
-                child_branch_ids = [root_email.id]
+                child_branch_ids = []
 
                 reply_id = child_email.email_msg_reply_id
 
@@ -1044,18 +1046,33 @@ class IncidentManager(IncidentValidator):
                         )
                         break
 
+                child_branch_ids.sort()
+
                 children_nodes.append(
                     EmailNode(
                         email=child_email,
                         branch_ids=child_branch_ids,
-                        children=[]
+                        children=[],
+                        min_date=None,
+                        max_date=None,
                     )
                 )
+
+            branch_ids.sort()
+
+            if sort_reverse:
+                min_date = sorted_group[-1].email_date
+                max_date = sorted_group[0].email_date
+            else:
+                min_date = sorted_group[0].email_date
+                max_date = sorted_group[-1].email_date
 
             root_node = EmailNode(
                 email=root_email,
                 branch_ids=branch_ids,
                 children=children_nodes,
+                min_date=min_date,
+                max_date=max_date,
             )
 
             result.append(root_node)

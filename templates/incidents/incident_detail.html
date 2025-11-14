@@ -94,28 +94,38 @@
           {% for root in email_three %}
             <div class="email-tree{% if confirm_stage and root.branch_ids in selected_email_ids %} chosen{% endif %}" id="email-tree-{{ forloop.counter }}">
               <div class="email-tree-header">
-                <button class="btn btn-secondary toggle-tree-btn" type="button"
-                        data-tree-id="email-tree-{{ forloop.counter }}">
-                  Показать переписку
-                </button>
+                <div class="email-tree-header-top">
+                  <button class="btn btn-secondary toggle-tree-btn" type="button"
+                          data-tree-id="email-tree-{{ forloop.counter }}">
+                    Показать переписку
+                  </button>
 
-                <div class="email-tree-ids">
-                  <strong>ID писем:</strong>
-                  {% for node in root.branch_ids %}
-                    <a class="email-link" href="#email-{{ node }}">{{ node }}</a>{% if not forloop.last %}, {% endif %}
-                  {% endfor %}
+                  <div class="email-tree-header-right">
+                    {% if root.min_date and root.max_date %}
+                      <span class="email-tree-dates">
+                        {{ root.min_date|date:"d.m.Y H:i" }} — {{ root.max_date|date:"d.m.Y H:i" }}
+                      </span>
+                    {% endif %}
 
-                  {% if not confirm_stage and can_manage %}
-                    <label class="custom-checkbox-wrapper email-tree-checkbox-label">
-                      <input type="checkbox"
-                            class="email-tree-checkbox"
-                            data-ids='{{ root.branch_ids|safe }}'
-                            {% for node_id in root.branch_ids %}
-                                {% if node_id|safe in selected_email_ids %}checked{% endif %}
-                            {% endfor %}>
-                      <i class="bx bx-check check-icon"></i>
-                    </label>
-                  {% endif %}
+                    {% if not confirm_stage and can_manage %}
+                      <label class="custom-checkbox-wrapper email-tree-checkbox-label">
+                        <input type="checkbox"
+                              class="email-tree-checkbox"
+                              data-ids='{{ root.branch_ids|safe }}'
+                              {% for node_id in root.branch_ids %}
+                                  {% if node_id|safe in selected_email_ids %}checked{% endif %}
+                              {% endfor %}>
+                        <i class="bx bx-check check-icon"></i>
+                      </label>
+                    {% endif %}
+                  </div>
+
+                  <div class="email-tree-ids">
+                    <strong>ID писем:</strong>
+                    {% for node in root.branch_ids %}
+                      <a class="email-link" href="#email-{{ node }}">{{ node }}</a>
+                    {% endfor %}
+                  </div>
                 </div>
               </div>
 

@@ -216,7 +216,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
                     queryset=(
                         EmailReference.objects
                         .select_related('email_msg')
-                        .order_by('id'),
+                        .order_by('id')
                     ),
                     to_attr='prefetched_references'
                 ),
@@ -235,7 +235,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
                 target_incident.all_incident_emails
             )
 
-            if new_emails:
+            if target_emails:
                 first_email = target_emails[-1]
                 incident.first_email_subject = first_email.email_subject
                 incident.first_email_from = first_email.email_from
