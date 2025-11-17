@@ -40,6 +40,9 @@ yt_managment_logger = LoggerFactory(
 class Command(BaseCommand):
     help = 'Обновление данных в YandexTracker.'
 
+    _processed_issues: dict[int, str] = {}
+    _duplicate_issues: set[tuple[int, str]] = set()
+
     min_wait = 30
 
     def handle(self, *args, **kwargs):
@@ -49,6 +52,8 @@ class Command(BaseCommand):
         had_errors_last_time = False
         last_error_type = None
 
+        duplicate_issues = set()
+
         while True:
             err = None
             total_errors = 0
@@ -57,7 +62,8 @@ class Command(BaseCommand):
 
             try:
                 total_operations, total_errors, total_updated = (
-                    self.check_closed_issues())
+                    self.check_closed_issues()
+                )
                 if total_updated or total_errors:
                     yt_managment_logger.info(
                         f'Обработано {total_operations} закрытых '
@@ -87,6 +93,14 @@ class Command(BaseCommand):
                     tg_manager.send_error_notification(__name__, err)
                     last_error_type = type(err).__name__
 
+                if self._duplicate_issues != duplicate_issues:
+                    duplicate_issues = self._duplicate_issues
+                    yt_managment_logger.warning(
+                        'Найдены дубликаты ID инцидентов в YandexTracker '
+                        f'({len(duplicate_issues)} шт):\n{duplicate_issues}'
+                    )
+                self._processed_issues = {}
+
     @min_wait_timer(yt_managment_logger, min_wait)
     @timer(yt_managment_logger)
     def check_closed_issues(self) -> tuple[int, int, int]:
@@ -103,7 +117,8 @@ class Command(BaseCommand):
         all_tasks: list[Callable] = []
 
         closed_issues_batches = yt_manager.closed_issues(
-            YT_ISSUES_DAYS_AGO_FILTER)
+            YT_ISSUES_DAYS_AGO_FILTER
+        )
 
         for i, closed_issues in enumerate(closed_issues_batches, 1):
             batch_total, batch_errors, batch_updated, tasks = (
@@ -156,6 +171,17 @@ class Command(BaseCommand):
             )
 
             database_id = issue.get(yt_manager.database_global_field_id)
+            issue_key: str = issue['key']
+
+            # Проверка, что в Трекере нет дубликатов по ID инцидента:
+            if database_id in self._processed_issues:
+                duplicate_issue_key = self._processed_issues[database_id]
+                self._duplicate_issues.add(
+                    (database_id, duplicate_issue_key)
+                )
+                continue
+
+            self._processed_issues[database_id] = issue_key
 
             if database_id is not None:
                 incident_ids_to_update.add(database_id)

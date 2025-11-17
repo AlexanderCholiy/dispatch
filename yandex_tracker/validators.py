@@ -716,6 +716,10 @@ def check_yt_incident_data(
 
     # Синхронизируем актуальность заявки в базе, код заявки:
     if incident.is_incident_finish or incident.code != issue_key:
+        logger.debug(
+            f'Меняем код у инцидента {incident.id} '
+            f'с {incident.code} на {issue_key}'
+        )
         incident.is_incident_finish = False
         incident.code = issue_key
         incident.save()
@@ -733,9 +737,17 @@ def check_yt_incident_data(
         )
 
         if incident.responsible_user and not username:
+            logger.debug(
+                f'Меняем пользователя у инцидента {incident.id} '
+                f'с {incident.responsible_user} на {None}'
+            )
             incident.responsible_user = None
             incident.save()
         elif not incident.responsible_user and username:
+            logger.debug(
+                f'Меняем пользователя у инцидента {incident.id} '
+                f'с {incident.responsible_user} на {username}'
+            )
             incident.responsible_user = User.objects.get(username=username)
             incident.save()
         elif (
@@ -743,6 +755,10 @@ def check_yt_incident_data(
             and username
             and username != incident.responsible_user.username
         ):
+            logger.debug(
+                f'Меняем пользователя у инцидента {incident.id} '
+                f'с {incident.responsible_user} на {username}'
+            )
             incident.responsible_user = User.objects.get(username=username)
             incident.save()
 
@@ -763,10 +779,19 @@ def check_yt_incident_data(
                 )
                 or not incident.incident_type
             ):
+                logger.debug(
+                    f'Меняем тип инцидента {incident.id} '
+                    f'с {incident.incident_type} на {type_of_incident}'
+                )
                 incident.incident_type = IncidentType.objects.get(
-                    name=type_of_incident)
+                    name=type_of_incident
+                )
                 incident.save()
         elif incident.incident_type:
+            logger.debug(
+                f'Меняем тип инцидента {incident.id} '
+                f'с {incident.incident_type} на {None}'
+            )
             incident.incident_type = None
             incident.save()
     elif (
@@ -924,6 +949,9 @@ def check_yt_incident_data(
             was_avr_date_update = True
 
         if was_avr_date_update:
+            logger.debug(
+                f'Меняем SLA АВР инцидента {incident.id}'
+            )
             incident.save()
 
     # Синхронизируем дату и время SLA РВР:
@@ -959,6 +987,9 @@ def check_yt_incident_data(
             was_rvr_date_update = True
 
         if was_rvr_date_update:
+            logger.debug(
+                f'Меняем SLA РВР инцидента {incident.id} '
+            )
             incident.save()
 
     # Синхронизируем данные по базовой станции (ДО проверки опоры):
@@ -1021,7 +1052,8 @@ def check_yt_incident_data(
             ]
             # Берём первую подходящую БС:
             incident_bs_candidate = (
-                matching_stations[0]) if matching_stations else None
+                matching_stations[0]
+            ) if matching_stations else None
 
         # Устанавливаем БС и опору из найденного кандидата
         if incident_bs_candidate:
@@ -1032,15 +1064,29 @@ def check_yt_incident_data(
             )
 
             if bs_changed or pole_changed:
+                logger.debug(
+                    f'Меняем опору и БС инцидента {incident.id} '
+                    f'с {incident.pole} ({incident.base_station}) '
+                    f'на {incident_bs_candidate.pole} '
+                    f'({incident_bs_candidate})'
+                )
                 incident.base_station = incident_bs_candidate
                 incident.pole = incident_bs_candidate.pole
                 incident.save()
         else:
             if incident.base_station is not None:
+                logger.debug(
+                    f'Меняем БС инцидента {incident.id} '
+                    f'с {incident.base_station} на {None}'
+                )
                 incident.base_station = None
                 incident.save()
 
     elif incident_bs and not base_station_number:
+        logger.debug(
+            f'Меняем БС инцидента {incident.id} '
+            f'с {incident.base_station} на {None}'
+        )
         incident.base_station = None
         incident.save()
 
@@ -1087,6 +1133,10 @@ def check_yt_incident_data(
     # Синхронизируем данные по опоре (только если БС не установила опору)
     if not incident.pole and pole_number:
         exact_pole = Pole.objects.filter(pole=pole_number).first()
+        logger.debug(
+            f'Меняем опору инцидента {incident.id} '
+            f'с {None} на {exact_pole}'
+        )
         if exact_pole:
             incident.pole = exact_pole
         else:
@@ -1101,6 +1151,10 @@ def check_yt_incident_data(
             not incident.base_station
             or incident.base_station.pole != incident.pole
         ):
+            logger.debug(
+                f'Меняем опору инцидента {incident.id} '
+                f'с {incident.pole} на {None}'
+            )
             incident.pole = None
             incident.save()
 
@@ -1112,6 +1166,10 @@ def check_yt_incident_data(
                 or incident.base_station.pole != incident.pole
             ):
                 exact_pole = Pole.objects.filter(pole=pole_number).first()
+                logger.debug(
+                    f'Меняем опору инцидента {incident.id} '
+                    f'с {incident.pole} на {exact_pole}'
+                )
                 if exact_pole:
                     incident.pole = exact_pole
                 else:

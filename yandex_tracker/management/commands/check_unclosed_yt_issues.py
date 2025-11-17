@@ -55,6 +55,9 @@ yt_managment_logger = LoggerFactory(
 class Command(BaseCommand):
     help = 'Обновление данных в YandexTracker, с уведомлениями в Telegram.'
 
+    _processed_issues: dict[int, str] = {}
+    _duplicate_issues: set[tuple[int, str]] = set()
+
     min_wait = 5
 
     cache_timer = 600
@@ -83,6 +86,8 @@ class Command(BaseCommand):
         first_success_sent = False
         had_errors_last_time = False
         last_error_type = None
+
+        duplicate_issues = set()
 
         while True:
             err = None
@@ -119,6 +124,14 @@ class Command(BaseCommand):
                 if err is not None and last_error_type != type(err).__name__:
                     tg_manager.send_error_notification(__name__, err)
                     last_error_type = type(err).__name__
+
+                if self._duplicate_issues != duplicate_issues:
+                    duplicate_issues = self._duplicate_issues
+                    yt_managment_logger.warning(
+                        'Найдены дубликаты ID инцидентов в YandexTracker '
+                        f'({len(duplicate_issues)} шт):\n{duplicate_issues}'
+                    )
+                self._processed_issues = {}
 
     def _get_pole_names_sorted_from_cache(self):
         if (
@@ -423,6 +436,16 @@ class Command(BaseCommand):
                             )
                         )
                     continue
+
+                # Проверка, что в Трекере нет дубликатов по ID инцидента:
+                if database_id in self._processed_issues:
+                    duplicate_issue_key = self._processed_issues[database_id]
+                    self._duplicate_issues.add(
+                        (database_id, duplicate_issue_key)
+                    )
+                    continue
+
+                self._processed_issues[database_id] = issue_key
 
                 last_status_history = None
                 if (
