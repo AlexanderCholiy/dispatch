@@ -6,7 +6,8 @@ from email import header, message
 from email.utils import getaddresses
 from typing import Optional
 
-from bs4 import BeautifulSoup
+from inscriptis import get_text
+from bs4 import BeautifulSoup, Comment
 from django.core.exceptions import ValidationError
 
 from core.constants import INCIDENT_DIR, SUBFOLDER_DATE_FORMAT
@@ -75,38 +76,98 @@ class EmailValidator:
         return emails
 
     def prepare_text_from_html(self, html_body_text: str) -> str:
-        """Преобразует HTML в чистый текст, сохраняя ссылки."""
-
         if not html_body_text:
             return ''
 
-        # Проверяем: это действительно HTML, а не просто текст с <https://...>
-        is_html = bool(re.search(r'</\w+>', html_body_text))
+        # Очищаем HTML от стилей, скриптов и комментариев
+        soup = BeautifulSoup(html_body_text, 'lxml')
+        for tag in soup(['style', 'script']):
+            tag.decompose()
+        for comment in soup.find_all(
+            string=lambda text: isinstance(text, Comment)
+        ):
+            comment.extract()
 
-        if is_html:
-            soup = BeautifulSoup(html_body_text, 'lxml')
+        # Преобразуем ссылки <a>текст</a> → текст (URL)
+        for a in soup.find_all('a'):
+            href = a.get('href')
+            if href:
+                a.replace_with(f'{a.get_text(strip=True)} ({href})')
 
-            # Заменим <a>теги их текстом + ссылкой:
-            for a in soup.find_all('a'):
-                href = a.get('href')
-                if href:
-                    a.replace_with(f'{a.get_text(strip=True)} ({href})')
+        # Преобразуем HTML в текст через Inscriptis
+        html_clean = str(soup)
+        text = get_text(html_clean)
 
-            text = soup.get_text(strip=True)
-        else:
-            text = html_body_text.strip()
+        # Вставляем пунктирную линию перед историей переписки
+        br_line = '\n--------------------\n'
 
+        def insert_separator(match):
+            return br_line + match.group(0)
+
+        # Считаем, что переписка начинается с этих ключевых слов
+        text = re.sub(
+            r'^(From:|Sent:|To:|Cc:|Subject:)',
+            insert_separator, text, flags=re.MULTILINE
+        )
+
+        # Аккуратные абзацы
+        text = re.sub(r' *\n+ *', '\n\n', text)
+
+        # Убираем случайные пробелы в URL
+        text = re.sub(
+            r'https?://\S*\s+\S*', lambda m: m.group(0).replace(' ', ''), text
+        )
+
+        return text.strip()
+
+    def prepare_text_from_html_bak(self, html_body_text: str) -> str:
+        if not html_body_text:
+            return ''
+
+        soup = BeautifulSoup(html_body_text, 'lxml')
+
+        # Удаляем стили, скрипты и комментарии
+        for tag in soup(['style', 'script']):
+            tag.decompose()
+        for comment in soup.find_all(
+            string=lambda text: isinstance(text, Comment)
+        ):
+            comment.extract()
+
+        # Заменяем ссылки
+        for a in soup.find_all('a'):
+            href = a.get('href')
+            if href:
+                a.replace_with(f"{a.get_text(strip=True)} ({href})")
+
+        br_line = '\n--------------------\n'
+
+        lines = []
+        for element in soup.recursiveChildGenerator():
+            if getattr(element, 'name', None) in ['p', 'div', 'li']:
+                lines.append('\n')
+            elif getattr(element, 'name', None) == 'br':
+                lines.append('\n')
+            elif getattr(element, 'name', None) == 'hr':
+                lines.append(br_line)
+            elif isinstance(element, str):
+                text_piece = element.strip()
+                if text_piece:
+                    if re.match(r'^(From):', text_piece):
+                        lines.append(br_line)
+                    lines.append(text_piece)
+
+        text = ' '.join(lines)
+        text = re.sub(r' *\n+ *', '\n\n', text)  # аккуратные абзацы
+
+        # Исправляем URL
         text = re.sub(
             r'(https?://[^\s<>{}]+)\s*\n\s*([^\s<>{}]+)',
             lambda m: m.group(1) + m.group(2),
             text,
             flags=re.MULTILINE
         )
-
-        # Убираем обёртку в угловых скобках: <https://...> → https://...
         text = re.sub(r'<(https?://[^>\s]+)>', r'\1', text)
-
-        # Убираем случайные пробелы внутри URL
         text = re.sub(
             r'https?://\S*\s+\S*', lambda m: m.group(0).replace(' ', ''), text
         )
