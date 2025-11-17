@@ -80,6 +80,12 @@ main .text-muted {
   margin: 0;
 }
 
+.empty {
+  text-align: center;
+  color: var(--gray-color);
+}
+
+
 main .link-text {
   vertical-align: 0;
   line-height: 1;

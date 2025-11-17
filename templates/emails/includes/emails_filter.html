@@ -7,44 +7,18 @@
 <form method="get" class="table-filter-form" id="filter-form">
   <div class="left-part">
     <div class="select-wrapper">
-      <select name="status" id="status-select" class="select tooltip" data-title="Последний статус инцидента">
-        <option value="" {% if not selected.status %}selected{% endif %}>Статус: Все</option>
-        {% for s in statuses %}
-          <option value="{{ s }}" {% if selected.status == s %}selected{% endif %}>Статус: {{ s }}</option>
+      <select name="folder" id="folder-select" class="select tooltip" data-title="Email папка">
+        <option value="" {% if not selected.folder %}selected{% endif %}>Папка: Все</option>
+        {% for f in folders %}
+          <option value="{{ f }}" {% if selected.folder == f %}selected{% endif %}>Папка: {{ f }}</option>
         {% endfor %}
       </select>
     </div>
-
-    <input
-      type="text"
-      name="pole"
-      value="{{ selected.pole|default:'' }}"
-      placeholder="Шифр опоры"
-      aria-label="Фильтр опоры"
-      id="pole-input"
-      maxlength="32"
-      pattern="[a-zA-Z0-9\-]*"
-      class="tooltip"
-      data-title="Только латинские буквы, цифры и дефис"
-    />
-
-    <input
-      type="text"
-      name="base_station"
-      value="{{ selected.base_station|default:'' }}"
-      placeholder="Номер БС"
-      aria-label="Фильтр по номеру базовой станции"
-      id="base-station-input"
-      maxlength="32"
-      pattern="[a-zA-Z0-9\-]*"
-      class="tooltip"
-      data-title="Только латинские буквы, цифры и дефис"
-    >
   </div>
     
   <div class="right-parts">
     <div class="select-wrapper">
-      <select name="per_page" id="per-page" class="select tooltip" data-title="Кол-во инцидентов на странице">
+      <select name="per_page" id="per-page" class="select tooltip" data-title="Кол-во писем на странице">
         {% for size in page_size_choices %}
         <option value="{{ size }}" {% if selected.per_page == size %}selected{% endif %}>Показать: {{ size }}</option>
         {% endfor %}
@@ -62,7 +36,7 @@
 </form>
 
 {% block extra_js %}
-<script src="{% static 'js/incidents/search_filter.js' %}"></script>
+<script src="{% static 'js/emails/search_filter.js' %}"></script>
 <script src="{% static 'js/save_elements_per_page.js' %}"></script>
 <script src="{% static 'js/reset_tables_filter.js' %}"></script>
 {% endblock %}

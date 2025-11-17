@@ -7,10 +7,40 @@
 <form method="get" class="table-filter-form" id="filter-form">
   <div class="left-part">
     <div class="select-wrapper">
+      <select name="finish"
+              id="finish-select"
+              class="select tooltip"
+              data-title="Статус завершения инцидента">
+
+        <option value="" {% if selected.is_incident_finish is None %}selected{% endif %}>
+          Все доступные
+        </option>
+
+        <option value="true" {% if selected.is_incident_finish is True %}selected{% endif %}>
+          Завершенные
+        </option>
+
+        <option value="false" {% if selected.is_incident_finish is False %}selected{% endif %}>
+          Не завершенные
+        </option>
+
+      </select>
+    </div>
+
+    <div class="select-wrapper">
       <select name="status" id="status-select" class="select tooltip" data-title="Последний статус инцидента">
         <option value="" {% if not selected.status %}selected{% endif %}>Статус: Все</option>
         {% for s in statuses %}
           <option value="{{ s }}" {% if selected.status == s %}selected{% endif %}>Статус: {{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="select-wrapper">
+      <select name="category" id="category-select" class="select tooltip" data-title="Категория инцидента">
+        <option value="" {% if not selected.category %}selected{% endif %}>Категория: Все</option>
+        {% for cat in categories %}
+          <option value="{{ cat }}" {% if selected.category == cat %}selected{% endif %}>Категория: {{ cat }}</option>
         {% endfor %}
       </select>
     </div>

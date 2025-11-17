@@ -17,6 +17,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const statusSelect = document.getElementById('status-select');
       if (statusSelect) statusSelect.selectedIndex = 0;
 
+      // Сбрасываем папку
+      const folderSelect = document.getElementById('folder-select');
+      if (folderSelect) folderSelect.selectedIndex = 0;
+
+      // Сбрасываем статус
+      const categorySelect = document.getElementById('category-select');
+      if (categorySelect) categorySelect.selectedIndex = 0;
+
       // Восстанавливаем per_page
       if (perPageSelect && perPageValue) {
         perPageSelect.value = perPageValue;
@@ -28,7 +36,18 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // Очищаем скрытые инпуты в форме поиска
-      const hiddenInputs = document.querySelectorAll('#search-hidden-pole, #search-hidden-base-station, #search-hidden-status, #search-hidden-role');
+      const hiddenIds = [
+        'search-hidden-pole',
+        'search-hidden-base-station',
+        'search-hidden-status',
+        'search-hidden-role',
+        'search-hidden-folder',
+        'search-hidden-finish',
+      ];
+
+      const hiddenInputs = document.querySelectorAll(
+        hiddenIds.map(id => `#${id}`).join(', ')
+      );
       hiddenInputs.forEach(input => input.value = '');
 
       // Обновляем скрытое поле q, чтобы запрос был пустым

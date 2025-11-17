@@ -71,6 +71,11 @@
   transition: background-color var(--transition-value), color var(--transition-value);
 }
 
+.custom-table td.empty {
+    padding: var(--space-md) 0;
+    font-weight: 500;
+}
+
 @media (max-width: 768px) {
   .status-badge {
     min-width: 100px;

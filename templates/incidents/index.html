@@ -3,6 +3,7 @@
 
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/includes/tables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/incidents/index.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -15,6 +16,7 @@
           <thead>
             <tr>
               <th>Код</th>
+              <th>Категория</th>
               <th>Инцидент</th>
               <th>Исполнитель</th>
               <th>Статус</th>
@@ -32,6 +34,17 @@
                   <a href="{% url 'incidents:incident_detail' incident.id %}" class="incident-link">
                     {{ incident }}
                   </a>
+                </td>
+                <td class="category">
+                  {% for cat in incident.categories.all %}
+                    <span class="{% if cat.name == 'АВР' %}avr-category
+                                {% elif cat.name == 'РВР' %}rvr-category
+                                {% elif cat.name == 'ДГУ' %}dgu-category
+                                {% else %}default-category
+                                {% endif %}">
+                        {{ cat.name }}
+                    </span>{% if not forloop.last %}, {% endif %}
+                  {% endfor %}
                 </td>
                 <td class="tooltip"
                     data-title="Заявитель {{ incident.first_email_from|default:'—' }}">
@@ -79,7 +92,7 @@
                 <td>{{ incident.incident_date|date:"d.m.Y H:i" }}</td>
               </tr>
             {% empty %}
-              <tr><td colspan="8" class="empty">Нет данных</td></tr>
+              <tr><td colspan="9" class="empty">Нет данных</td></tr>
             {% endfor %}
           </tbody>
         </table>

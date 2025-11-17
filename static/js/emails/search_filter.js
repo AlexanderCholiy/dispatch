@@ -3,11 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const filterForm = document.getElementById('filter-form');
   const searchInput = document.getElementById('search-input');
 
-  const finishSelect = document.getElementById('finish-select');
-  const statusSelect = document.getElementById('status-select');
-  const categorySelect = document.getElementById('category-select');
-  const poleInput = document.getElementById('pole-input');
-  const baseStationInput = document.getElementById('base-station-input');
+  const folderSelect = document.getElementById('folder-select');
   const perPageSelect = document.getElementById('per-page');
 
   // Обновление скрытого поля q в фильтре при вводе в поиске
@@ -40,10 +36,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Привязка событий к фильтрам
-  syncHiddenField(finishSelect, 'finish');
-  syncHiddenField(statusSelect, 'status');
-  syncHiddenField(categorySelect, 'category');
-  syncHiddenField(poleInput, 'pole');
-  syncHiddenField(baseStationInput, 'base_station');
+  syncHiddenField(folderSelect, 'folder');
   syncHiddenField(perPageSelect, 'per_page');
 });

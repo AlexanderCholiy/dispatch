@@ -27,9 +27,10 @@ from .models import EmailMessage, EmailFolder
 def emails_list(request: HttpRequest) -> HttpResponse:
     query = request.GET.get('q', '').strip()
     folder_name = request.GET.get('folder', '').strip()
+
     per_page = int(
         request.GET.get('per_page')
-        or request.COOKIES.get('per_page')
+        or request.COOKIES.get('per_page_emails')
         or EMAILS_PER_PAGE
     )
 
@@ -39,7 +40,7 @@ def emails_list(request: HttpRequest) -> HttpResponse:
         return redirect(f"{request.path}?{params.urlencode()}")
 
     emails = EmailMessage.objects.exclude(
-        email_incident__isnull=False
+        email_incident__isnull=True
     ).select_related(
         'email_incident',
         'folder',
@@ -58,14 +59,17 @@ def emails_list(request: HttpRequest) -> HttpResponse:
     ).order_by('-email_date', 'is_first_email')
 
     if query:
-        emails = emails.filter(
+        filters = (
             Q(email_incident__code__icontains=query)
             | Q(email_subject__icontains=query)
-            | Q(id=query)
-        ).distinct()
+        )
+        if query.isdigit():
+            filters |= Q(pk=int(query))
+
+        emails = emails.filter(filters).distinct()
 
     if folder_name:
-        incidents = emails.filter(folder__name=folder_name)
+        emails = emails.filter(folder__name=folder_name)
 
     folders = cache.get_or_set(
         'email_filter_folders',

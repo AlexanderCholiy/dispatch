@@ -24,6 +24,7 @@ from .models import (
     IncidentHistory,
     IncidentStatus,
     IncidentStatusHistory,
+    IncidentCategory,
 )
 from .utils import IncidentManager
 
@@ -36,16 +37,26 @@ def index(request: HttpRequest) -> HttpResponse:
     pole = request.GET.get('pole', '').strip()
     base_station = request.GET.get('base_station', '').strip()
     status_name = request.GET.get('status', '').strip()
+    category_name = request.GET.get('category', '').strip()
+    is_incident_finish = request.GET.get('finish', '').strip()
+
+    if is_incident_finish == 'true':
+        is_incident_finish = True
+    elif is_incident_finish == 'false':
+        is_incident_finish = False
+    else:
+        is_incident_finish = None
+
     per_page = int(
         request.GET.get('per_page')
-        or request.COOKIES.get('per_page')
+        or request.COOKIES.get('per_page_root')
         or INCIDENTS_PER_PAGE
     )
 
     if per_page not in PAGE_SIZE_INCIDENTS_CHOICES:
         params = request.GET.copy()
         params['per_page'] = INCIDENTS_PER_PAGE
-        return redirect(f"{request.path}?{params.urlencode()}")
+        return redirect(f'{request.path}?{params.urlencode()}')
 
     latest_status_subquery = IncidentStatusHistory.objects.filter(
         incident=OuterRef('pk')
@@ -69,6 +80,7 @@ def index(request: HttpRequest) -> HttpResponse:
         'statuses',
         'email_messages',
         'base_station__operator',
+        'categories',
     ).annotate(
         latest_status_name=Subquery(
             latest_status_subquery.values('status__name')[:1]
@@ -82,6 +94,9 @@ def index(request: HttpRequest) -> HttpResponse:
         first_email_subject=Subquery(first_email_subject_subquery),
         first_email_from=Subquery(first_email_from_subquery),
     ).order_by('-update_date', '-incident_date', 'id')
+
+    if is_incident_finish is not None:
+        incidents = incidents.filter(is_incident_finish=is_incident_finish)
 
     if query:
         incidents = incidents.filter(
@@ -100,10 +115,23 @@ def index(request: HttpRequest) -> HttpResponse:
     if status_name:
         incidents = incidents.filter(latest_status_name=status_name)
 
+    if category_name:
+        incidents = incidents.filter(categories__name=category_name)
+
     statuses = cache.get_or_set(
         'incident_filter_statuses',
         lambda: list(
             IncidentStatus.objects.values_list('name', flat=True)
+            .distinct()
+            .order_by('name')
+        ),
+        MAX_INCIDENTS_INFO_CACHE_SEC,
+    )
+
+    categories = cache.get_or_set(
+        'incident_filter_categories',
+        lambda: list(
+            IncidentCategory.objects.values_list('name', flat=True)
             .distinct()
             .order_by('name')
         ),
@@ -123,10 +151,13 @@ def index(request: HttpRequest) -> HttpResponse:
         'search_query': query,
         'page_url_base': page_url_base,
         'statuses': statuses,
+        'categories': categories,
         'selected': {
+            'is_incident_finish': is_incident_finish,
+            'status': status_name,
+            'category': category_name,
             'pole': pole,
             'base_station': base_station,
-            'status': status_name,
             'per_page': per_page,
         },
         'page_size_choices': PAGE_SIZE_INCIDENTS_CHOICES,
