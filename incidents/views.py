@@ -21,10 +21,10 @@ from .constants import (
 from .forms import ConfirmMoveEmailsForm, MoveEmailsForm
 from .models import (
     Incident,
+    IncidentCategory,
     IncidentHistory,
     IncidentStatus,
     IncidentStatusHistory,
-    IncidentCategory,
 )
 from .utils import IncidentManager
 

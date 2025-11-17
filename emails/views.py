@@ -1,24 +1,19 @@
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.core.paginator import Paginator
-from django.db import transaction
-from django.db.models import OuterRef, Prefetch, Q, QuerySet, Subquery
-from django.http import Http404, HttpRequest, HttpResponse
+from django.db.models import Prefetch, Q
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
-from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 
-from emails.models import EmailMessage, EmailReference
-from users.models import Roles, User
 from users.utils import role_required
 
 from .constants import (
     EMAILS_PER_PAGE,
-    PAGE_SIZE_EMAILS_CHOICES,
     MAX_EMAILS_INFO_CACHE_SEC,
+    PAGE_SIZE_EMAILS_CHOICES,
 )
-
-from .models import EmailMessage, EmailFolder
+from .models import EmailFolder, EmailMessage, EmailReference
 
 
 @login_required
