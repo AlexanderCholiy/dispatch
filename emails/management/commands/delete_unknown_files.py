@@ -7,9 +7,9 @@ from django.utils import timezone
 
 from core.constants import (
     EMAIL_LOG_ROTATING_FILE,
+    EMAIL_MIME_DIR,
     INCIDENT_DIR,
     SUBFOLDER_DATE_FORMAT,
-    EMAIL_MIME_DIR,
 )
 from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
@@ -17,7 +17,10 @@ from core.tg_bot import tg_manager
 from core.wraps import timer
 from emails.constants import MAX_EMAILS_ATTACHMENT_DAYS
 from emails.models import (
-    EmailAttachment, EmailInTextAttachment, EmailMessage, EmailMime
+    EmailAttachment,
+    EmailInTextAttachment,
+    EmailMessage,
+    EmailMime
 )
 from emails.utils import EmailManager
 
@@ -84,7 +87,7 @@ class Command(BaseCommand):
         tg_manager.send_startup_notification(__name__)
 
         attachment_dir = Path(INCIDENT_DIR)
-        mime_dir = Path(INCIDENT_DIR)
+        mime_dir = Path(EMAIL_MIME_DIR)
         if not attachment_dir.exists():
             email_managment_logger.warning(
                 f'Папки {attachment_dir} не существует.')

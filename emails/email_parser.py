@@ -11,10 +11,10 @@ from typing import Any, List, Optional, Tuple, Union
 from zoneinfo import ZoneInfo
 
 from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 from requests.exceptions import RequestException
-from django.core.files.base import ContentFile
 
 from core.constants import API_STATUS_EXCEPTIONS, EMAIL_LOG_ROTATING_FILE
 from core.exceptions import ApiServerError, ApiTooManyRequests

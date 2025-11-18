@@ -1,11 +1,11 @@
 import email
 import os
 import re
+import unicodedata
 from datetime import datetime
 from email import header, message
 from email.utils import getaddresses
 from typing import Optional
-import unicodedata
 
 import html2text
 from bs4 import BeautifulSoup, Comment, NavigableString, Tag

@@ -1,12 +1,10 @@
-import os
-
 from django.contrib.auth import get_user_model
 from django.db import models
 
 from core.constants import MAX_EMAIL_ID_LEN
 from core.models import Attachment, Detail, Msg2, SpecialEmail
-from incidents.models import Incident
 from core.utils import email_mime_upload_to
+from incidents.models import Incident
 
 from .constants import (
     MAX_EMAIL_LEN,

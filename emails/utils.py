@@ -27,10 +27,10 @@ from .models import (
     EmailFolder,
     EmailInTextAttachment,
     EmailMessage,
+    EmailMime,
     EmailReference,
     EmailTo,
     EmailToCC,
-    EmailMime,
 )
 
 incident_manager_logger = LoggerFactory(
