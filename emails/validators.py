@@ -5,9 +5,10 @@ from datetime import datetime
 from email import header, message
 from email.utils import getaddresses
 from typing import Optional
+import unicodedata
 
-from inscriptis import get_text
-from bs4 import BeautifulSoup, Comment
+import html2text
+from bs4 import BeautifulSoup, Comment, NavigableString, Tag
 from django.core.exceptions import ValidationError
 
 from core.constants import INCIDENT_DIR, SUBFOLDER_DATE_FORMAT
@@ -75,58 +76,80 @@ class EmailValidator:
 
         return emails
 
-    def prepare_text_from_html(self, html_body_text: str) -> str:
-        if not html_body_text:
-            return ''
+    @staticmethod
+    def normalize_invisible_spaces(text: Optional[str]) -> Optional[str]:
+        """
+        Приводит строку к нормальному виду:
+        - заменяет все невидимые пробелоподобные символы на обычный пробел,
+        - убирает лишние пробелы в начале/конце,
+        - сводит повторяющиеся пробелы к одному.
+        """
+        if not text or not text.strip():
+            return None
 
-        # Очищаем HTML от стилей, скриптов и комментариев
-        soup = BeautifulSoup(html_body_text, 'lxml')
-        for tag in soup(['style', 'script']):
-            tag.decompose()
-        for comment in soup.find_all(
-            string=lambda text: isinstance(text, Comment)
-        ):
-            comment.extract()
+        # Нормализуем Unicode (чтобы объединить похожие символы)
+        text = unicodedata.normalize('NFKC', text)
 
-        # Преобразуем ссылки <a>текст</a> → текст (URL)
-        for a in soup.find_all('a'):
-            href = a.get('href')
-            if href:
-                a.replace_with(f'{a.get_text(strip=True)} ({href})')
+        # Заменяем все пробельные символы (в том числе NBSP, табуляции,
+        # переводы строки) на обычный пробел
+        text = re.sub(r'[\s\u00A0\u2000-\u200B\u202F\u205F\u3000]+', ' ', text)
 
-        # Преобразуем HTML в текст через Inscriptis
-        html_clean = str(soup)
-        text = get_text(html_clean)
-
-        # Вставляем пунктирную линию перед историей переписки
-        br_line = '\n--------------------\n'
-
-        def insert_separator(match):
-            return br_line + match.group(0)
-
-        # Считаем, что переписка начинается с этих ключевых слов
-        text = re.sub(
-            r'^(From:|Sent:|To:|Cc:|Subject:)',
-            insert_separator, text, flags=re.MULTILINE
-        )
-
-        # Аккуратные абзацы
-        text = re.sub(r' *\n+ *', '\n\n', text)
-
-        # Убираем случайные пробелы в URL
-        text = re.sub(
-            r'https?://\S*\s+\S*', lambda m: m.group(0).replace(' ', ''), text
-        )
-
+        # Убираем пробелы в начале и конце
         return text.strip()
 
-    def prepare_text_from_html_bak(self, html_body_text: str) -> str:
-        if not html_body_text:
+    def _add_reply_dividers(
+        self,
+        text: str,
+        divider: str = '-----Original Message-----'
+    ) -> str:
+        """
+        Добавляет разделитель перед строками, начинающимися с 'From:'.
+        Разделитель вставляется только один раз подряд.
+        """
+        lines = text.splitlines()
+        result = []
+        just_inserted_divider = False
+
+        for line in lines:
+            stripped = line.strip()
+
+            if stripped.startswith('From:') and 'Original Message' not in text:
+                if not just_inserted_divider:
+                    result.append(divider)
+                    just_inserted_divider = True
+            else:
+                if stripped != '':
+                    just_inserted_divider = False
+
+            result.append(line)
+
+        return '\n'.join(result)
+
+    def prepare_text_from_html_bak(self, html: str) -> str:
+        # 1) HTML → plain text (без markdown):
+        h = html2text.HTML2Text()
+        h.ignore_links = False        # оставляем ссылки
+        h.ignore_images = True        # убираем картинки
+        h.body_width = 0              # сохраняем переносы
+        h.skip_internal_links = False  # ссылки как обычный текст
+        h.single_line_break = False   # сохраняем переносы строк
+        h.protect_links = True        # ссылки в скобках
+
+        text = h.handle(html)
+
+        # 2) Убираем markdown-символы:
+        text = re.sub(r'[*_`#\[\]>-]', '', text)
+
+        # 3) Добавляем разделители перед ответами:
+        text = self._add_reply_dividers(text)
+
+        return text
+
+    def prepare_text_from_html(self, html: str) -> str:
+        if not html:
             return ''
 
-        soup = BeautifulSoup(html_body_text, 'lxml')
-
-        # Удаляем стили, скрипты и комментарии
+        soup = BeautifulSoup(html, 'lxml')
         for tag in soup(['style', 'script']):
             tag.decompose()
         for comment in soup.find_all(
@@ -134,43 +157,53 @@ class EmailValidator:
         ):
             comment.extract()
 
-        # Заменяем ссылки
-        for a in soup.find_all('a'):
-            href = a.get('href')
-            if href:
-                a.replace_with(f"{a.get_text(strip=True)} ({href})")
-
-        br_line = '\n--------------------\n'
-
         lines = []
-        for element in soup.recursiveChildGenerator():
-            if getattr(element, 'name', None) in ['p', 'div', 'li']:
-                lines.append('\n')
-            elif getattr(element, 'name', None) == 'br':
-                lines.append('\n')
-            elif getattr(element, 'name', None) == 'hr':
-                lines.append(br_line)
-            elif isinstance(element, str):
-                text_piece = element.strip()
-                if text_piece:
-                    if re.match(r'^(From):', text_piece):
-                        lines.append(br_line)
-                    lines.append(text_piece)
 
-        text = ' '.join(lines)
-        text = re.sub(r' *\n+ *', '\n\n', text)  # аккуратные абзацы
+        def walk(node):
+            if isinstance(node, NavigableString):
+                text = node.strip()
+                if text:
+                    lines.append(text)
+            elif isinstance(node, Tag):
+                # перенос строки для блочных элементов
+                if node.name == 'br':
+                    lines.append('\n')
+                elif node.name in ['p', 'li', 'div', 'section', 'article']:
+                    # добавляем переносы перед блоком
+                    lines.append('\n')
+                    # для li добавляем маркер
+                    prefix = '- ' if node.name == 'li' else ''
+                    if any(
+                        isinstance(c, NavigableString) and c.strip()
+                        for c in node.contents
+                    ):
+                        lines.append(prefix)
 
-        # Исправляем URL
-        text = re.sub(
-            r'(https?://[^\s<>{}]+)\s*\n\s*([^\s<>{}]+)',
-            lambda m: m.group(1) + m.group(2),
-            text,
-            flags=re.MULTILINE
-        )
-        text = re.sub(r'<(https?://[^>\s]+)>', r'\1', text)
-        text = re.sub(
-            r'https?://\S*\s+\S*', lambda m: m.group(0).replace(' ', ''), text
-        )
+                # обработка ссылок
+                if node.name == 'a' and node.get('href'):
+                    text_a = node.get_text(strip=True)
+                    if text_a:
+                        lines.append(f'{text_a} ({node["href"]})')
+                    return
+
+                # рекурсивный обход детей
+                for child in node.children:
+                    walk(child)
+
+                # перенос после блочных элементов
+                if node.name in ['p', 'div', 'section', 'article']:
+                    lines.append('\n')
+
+        walk(soup.body or soup)
+
+        # собираем текст, сохраняем переносы
+        text = ''.join(lines)
+        # убираем лишние пробелы перед переносами
+        text = re.sub(r'[ \t]+\n', '\n', text)
+        text = re.sub(r'\n{3,}', '\n\n', text)
+        text = re.sub(r' +', ' ', text)
+
+        text = self._add_reply_dividers(text)
 
         return text
 

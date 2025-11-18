@@ -669,6 +669,10 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                         self._is_from_yandex_tracker(msg, email_subject)
                     )
 
+                    email_subject = EmailValidator.normalize_invisible_spaces(
+                        email_subject
+                    )
+
                     try:
                         with transaction.atomic():
                             email_msg = self.add_email_message(
