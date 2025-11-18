@@ -15,12 +15,15 @@
       </div>
     
       <div class="email-attachments-wrapper">
-        {% if node.email.email_attachments.all or node.email.email_intext_attachments.all %}
+        {% if node.email.email_attachments.all or node.email.email_intext_attachments.all or node.email.email_mime %}
           <button type="button" class="toggle-attachments-btn" onclick="this.nextElementSibling.classList.toggle('hidden'); this.textContent = this.nextElementSibling.classList.contains('hidden') ? 'Показать вложения' : 'Скрыть вложения';">
             Показать вложения
           </button>
           <div class="email-attachments hidden">
             <ul>
+              {% if node.email.email_mime %}
+                {% include "emails/includes/attachment_item.html" with att=node.email.email_mime %}
+              {% endif %}
               {% for att in node.email.email_attachments.all %}
                 {% include "emails/includes/attachment_item.html" with att=att %}
               {% endfor %}

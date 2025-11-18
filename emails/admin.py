@@ -10,6 +10,7 @@ from .models import (
     EmailFolder,
     EmailInTextAttachment,
     EmailMessage,
+    EmailMime,
 )
 
 admin.site.empty_value_display = EMPTY_VALUE
@@ -23,6 +24,25 @@ class EmailErrAdmin(admin.ModelAdmin):
 @admin.register(EmailFolder)
 class EmailFolderAdmin(admin.ModelAdmin):
     list_display = ('name', 'description',)
+
+
+class EmailMimeInline(admin.StackedInline):
+    model = EmailMime
+    extra = 0
+    can_delete = True
+
+    readonly_fields = ('file_link',)
+
+    def file_link(self, obj: EmailMime):
+        """Ссылка на скачивание .eml файла"""
+        if obj and obj.file_url:
+            return format_html(
+                '<a href="{}" target="_blank">Скачать MIME (.eml)</a>',
+                obj.file_url.url,
+            )
+        return format_html('<span>Файл отсутствует</span>')
+
+    file_link.short_description = 'Файл MIME (.eml)'
 
 
 @admin.register(EmailMessage)
@@ -50,10 +70,11 @@ class EmailMessageAdmin(admin.ModelAdmin):
         'was_added_2_yandex_tracker',
         'folder',
     )
+    inlines = [EmailMimeInline]
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.select_related('email_incident', 'folder')
+        return qs.select_related('email_incident', 'folder', 'email_mime')
 
     readonly_fields = (
         'email_attachments_list',

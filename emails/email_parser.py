@@ -14,6 +14,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 from requests.exceptions import RequestException
+from django.core.files.base import ContentFile
 
 from core.constants import API_STATUS_EXCEPTIONS, EMAIL_LOG_ROTATING_FILE
 from core.exceptions import ApiServerError, ApiTooManyRequests
@@ -21,7 +22,7 @@ from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
 from core.utils import Config
 from core.wraps import min_wait_timer, timer
-from emails.models import EmailErr, EmailFolder, EmailMessage
+from emails.models import EmailErr, EmailFolder, EmailMessage, EmailMime
 from incidents.utils import IncidentManager
 from yandex_tracker.exceptions import YandexTrackerAuthErr
 from yandex_tracker.utils import YandexTrackerManager, yt_manager
@@ -419,14 +420,14 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
             email_ids = list(set(new_emails_ids + found_emails_ids))
             messages = self.fetch_emails_in_chunks(mail, email_ids)
 
-            parsed_messages: list[message.Message] = []
+            parsed_messages: list[tuple[message.Message, bytes]] = []
             for part in messages:
                 if isinstance(part, tuple) and len(part) == 2:
                     msg_bytes = part[1]
                     if not msg_bytes:
                         continue
                     msg = email.message_from_bytes(msg_bytes)
-                    parsed_messages.append(msg)
+                    parsed_messages.append((msg, msg_bytes))
 
             email_err_msg_ids = []
             email_err_msg_ids_to_del = []
@@ -439,7 +440,7 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                 .values_list('email_msg_id', flat=True)
             )
 
-            for index, msg in enumerate(parsed_messages):
+            for index, (msg, raw_msg_bytes) in enumerate(parsed_messages):
 
                 PrettyPrint.progress_bar_debug(
                     index, total, f'Парсинг почты (папка {folder.name}):')
@@ -646,7 +647,8 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
 
                     if json_dicts and is_first_email:
                         email_from_i = json_dicts[0].get(
-                            'E-mail для обратной связи')
+                            'E-mail для обратной связи'
+                        )
 
                         email_cc_i = []
                         for key, value in json_dicts[0].items():
@@ -698,6 +700,15 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                                 ),
                                 folder=folder,
                             )
+
+                            email_mime, _ = EmailMime.objects.get_or_create(
+                                email_msg=email_msg
+                            )
+                            filename = f'{email_msg_id}.eml'
+                            email_mime.file_url.save(
+                                filename, ContentFile(raw_msg_bytes), save=True
+                            )
+
                             self.add_incident_from_email(
                                 email_msg, self.yt_manager
                             )

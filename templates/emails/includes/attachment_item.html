@@ -47,6 +47,7 @@
           {% elif fname|slice:"-4:" == ".mdb" %}file
           {% elif fname|slice:"-4:" == ".wav" %}file
           {% elif fname|slice:"-4:" == ".ogg" %}file
+          {% elif fname|slice:"-4:" == ".eml" %}email
           {% else %}file{% endif %}">
         </span>
       {% endif %}

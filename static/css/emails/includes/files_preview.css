@@ -77,6 +77,7 @@
 .attachment-icon.mp3 { background-image: url('/static/img/icons/mp3.png'); }
 .attachment-icon.video { background-image: url('/static/img/icons/video.png'); }
 .attachment-icon.html { background-image: url('/static/img/icons/html.png'); }
+.attachment-icon.email { background-image: url('/static/img/icons/email.png'); }
 
 .email-attachments.hidden {
   display: none;

@@ -1,9 +1,12 @@
+import os
+
 from django.contrib.auth import get_user_model
 from django.db import models
 
 from core.constants import MAX_EMAIL_ID_LEN
 from core.models import Attachment, Detail, Msg2, SpecialEmail
 from incidents.models import Incident
+from core.utils import email_mime_upload_to
 
 from .constants import (
     MAX_EMAIL_LEN,
@@ -232,3 +235,40 @@ class EmailToCC(Msg2):
         ]
         verbose_name = 'Получатель (в копии) email'
         verbose_name_plural = 'Получатели (в копии) email'
+
+
+class EmailMime(models.Model):
+    email_msg = models.OneToOneField(
+        EmailMessage,
+        on_delete=models.CASCADE,
+        related_name='email_mime',
+        verbose_name='Письмо',
+        db_index=True,
+    )
+    file_url = models.FileField(
+        upload_to=email_mime_upload_to,
+        null=True,
+        blank=True,
+        verbose_name='Файл с оригиналом письма (.eml)',
+        help_text='Необязательный файл с исходным письмом в формате MIME.'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата создания'
+    )
+
+    class Meta:
+        verbose_name = 'оригинальное письмо'
+        verbose_name_plural = 'Оригинальные письма'
+
+    def __str__(self):
+        return f'Mime для {self.email_msg.email_msg_id}'
+
+    def delete(self, *args, **kwargs):
+        if self.file_url:
+            self.file_url.delete(save=False)
+        super().delete(*args, **kwargs)
+
+    @property
+    def file_name(self) -> str:
+        return 'original.eml'

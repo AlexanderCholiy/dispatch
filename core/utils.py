@@ -7,6 +7,7 @@ from django.utils import timezone
 from .constants import (
     SUBFOLDER_DATE_FORMAT,
     SUBFOLDER_EMAIL_NAME,
+    SUBFOLDER_MIME_EMAIL_NAME,
 )
 from .exceptions import ConfigEnvError
 from .loggers import LoggerFactory
@@ -32,6 +33,25 @@ def attachment_upload_to(instance, filename: str):
         date_str = timezone.now().strftime(SUBFOLDER_DATE_FORMAT)
 
     return os.path.join(SUBFOLDER_EMAIL_NAME, date_str, filename)
+
+
+def email_mime_upload_to(instance, filename: str):
+    """
+    Формируем путь вида:
+    email_mime/YYYY-MM-DD/filename.eml
+    """
+    if (
+        hasattr(instance, 'email_msg')
+        and instance.email_msg
+        and instance.email_msg.email_date
+    ):
+        date_str = instance.email_msg.email_date.strftime(
+            SUBFOLDER_DATE_FORMAT
+        )
+    else:
+        date_str = timezone.now().strftime(SUBFOLDER_DATE_FORMAT)
+
+    return os.path.join(SUBFOLDER_MIME_EMAIL_NAME, date_str, filename)
 
 
 def format_seconds(seconds: float) -> str:

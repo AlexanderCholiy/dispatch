@@ -15,7 +15,6 @@ from .utils import attachment_upload_to
 
 class Attachment(models.Model):
     """Абстрактная модель для вложений. Файл хранится в папке MEDIA_ROOT."""
-
     file_url = models.FileField(
         upload_to=attachment_upload_to,
         max_length=MAX_FILE_URL_LEN,

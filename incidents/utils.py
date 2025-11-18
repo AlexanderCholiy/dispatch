@@ -1089,7 +1089,7 @@ class IncidentManager(IncidentValidator):
                 'responsible_user',
                 'pole',
                 'pole__region',
-                'base_station'
+                'base_station',
             )
             .prefetch_related(
                 'statuses',
@@ -1105,7 +1105,9 @@ class IncidentManager(IncidentValidator):
                 ),
                 Prefetch(
                     'email_messages',
-                    queryset=EmailMessage.objects.select_related('folder')
+                    queryset=EmailMessage.objects.select_related(
+                        'folder', 'email_mime'
+                    )
                     .prefetch_related(
                         Prefetch(
                             'email_references',

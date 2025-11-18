@@ -39,6 +39,7 @@ def emails_list(request: HttpRequest) -> HttpResponse:
     ).select_related(
         'email_incident',
         'folder',
+        'email_mime',
     ).prefetch_related(
         Prefetch(
             'email_references',

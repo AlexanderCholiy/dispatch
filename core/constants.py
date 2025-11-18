@@ -61,8 +61,10 @@ MAX_EMAIL_ID_LEN = 256
 
 SUBFOLDER_DATE_FORMAT = '%Y-%m-%d'
 SUBFOLDER_EMAIL_NAME = 'emails_attachments'
+SUBFOLDER_MIME_EMAIL_NAME = 'emails_mimes'
 # Модель Attachment настроена на папку settings.MEDIA_ROOT:
 INCIDENT_DIR = os.path.join(settings.MEDIA_ROOT, SUBFOLDER_EMAIL_NAME)
+EMAIL_MIME_DIR = os.path.join(settings.MEDIA_ROOT, SUBFOLDER_MIME_EMAIL_NAME)
 EMPTY_VALUE = 'Не задано'
 
 API_STATUS_EXCEPTIONS = {

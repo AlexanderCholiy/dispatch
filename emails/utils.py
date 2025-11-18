@@ -30,6 +30,7 @@ from .models import (
     EmailReference,
     EmailTo,
     EmailToCC,
+    EmailMime,
 )
 
 incident_manager_logger = LoggerFactory(
@@ -217,7 +218,11 @@ class EmailManager:
 
     @staticmethod
     def valid_email_file_path(
-        attachments: list[EmailAttachment] | list[EmailInTextAttachment]
+        attachments: (
+            list[EmailAttachment]
+            | list[EmailInTextAttachment]
+            | list[EmailMime]
+        )
     ) -> list[str]:
         """
         Возвращает список валидных путей к вложениям.
@@ -272,6 +277,21 @@ class EmailManager:
         return list(
             EmailManager.valid_email_file_path(email_attachments)
             + EmailManager.valid_email_file_path(email_intext_attachments)
+        )
+
+    @staticmethod
+    def get_email_mimes(email: EmailMessage) -> list[str]:
+        """
+        Возвращает список реальных путей к файлам, если они существуют.
+
+        Записи, для которых файл отсутсвует удаляются.
+        """
+        email_mime = EmailMime.objects.filter(
+            email_msg=email
+        ).order_by('file_url')
+
+        return list(
+            EmailManager.valid_email_file_path(email_mime)
         )
 
     @staticmethod

@@ -1,10 +1,13 @@
-{% if email.email_attachments.all or email.email_intext_attachments.all %}
+{% if email.email_attachments.all or email.email_intext_attachments.all or email.email_mime%}
 <div class="email-attachments-wrapper">
     <button type="button" class="toggle-attachments-btn">
         Показать вложения
     </button>
     <div class="email-attachments hidden">
       <ul>
+        {% if email.email_mime %}
+          {% include "emails/includes/attachment_item.html" with att=email.email_mime %}
+        {% endif %}
         {% for att in email.email_attachments.all %}
           {% include "emails/includes/attachment_item.html" with att=att %}
         {% endfor %}
