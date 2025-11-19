@@ -99,6 +99,11 @@ class EmailMessage(models.Model):
         'Было ли письмо добавлено в YandexTracker',
         db_index=True
     )
+    need_2_add_in_yandex_tracker = models.BooleanField(
+        'Необходимо ли перенести письмо в YandexTracker',
+        default=False,
+        db_index=True
+    )
     email_incident = models.ForeignKey(
         Incident,
         on_delete=models.SET_NULL,

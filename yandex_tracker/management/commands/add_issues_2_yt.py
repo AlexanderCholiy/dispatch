@@ -134,6 +134,7 @@ class Command(BaseCommand):
                     yt_managment_logger.exception(e)
                 else:
                     email.was_added_2_yandex_tracker = True
+                    email.need_2_add_in_yandex_tracker = False
                     email.save()
 
         # Блокируем кастомные поля обратно:

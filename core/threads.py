@@ -20,7 +20,8 @@ def get_task_name(task: Callable) -> str:
 def tasks_in_threads(
     tasks: list[Callable],
     logger: Logger,
-    cpu_bound: Optional[bool] = None
+    cpu_bound: Optional[bool] = None,
+    raise_exs: bool = False,
 ):
     """
     Выполняет список задач в потоках.
@@ -65,6 +66,8 @@ def tasks_in_threads(
                 logger.exception(
                     f'Ошибка при выполнении задачи {task_name}: {e}'
                 )
+                if raise_exs:
+                    raise
 
         logger.debug(
             f'Выполнено {completed}/{total} задач'

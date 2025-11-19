@@ -1,3 +1,5 @@
+from functools import partial
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
@@ -9,9 +11,17 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 
+from core.exceptions import (
+    ApiBadRequest,
+    ApiNotFound,
+    ApiServerError,
+    ApiTooManyRequests
+)
+from core.threads import tasks_in_threads
 from emails.models import EmailMessage, EmailReference
 from users.models import Roles, User
 from users.utils import role_required
+from yandex_tracker.utils import yt_manager, yt_manager_logger
 
 from .constants import (
     INCIDENTS_PER_PAGE,
@@ -340,15 +350,32 @@ def confirm_move_emails(request: HttpRequest) -> HttpResponse:
         return redirect(request.META.get('HTTP_REFERER', 'incidents:index'))
 
     email_ids = [email_id for group in email_ids_groups for email_id in group]
+
+    # Дополнительные параметры запроса нужны для YandexTracker:
     emails_to_move = EmailMessage.objects.filter(
         pk__in=email_ids,
         email_incident=source_incident,
-    )
+    ).order_by('id')
+
+    old_emails = list(emails_to_move)
 
     with transaction.atomic():
         emails_to_move.update(
-            email_incident=target_incident, was_added_2_yandex_tracker=False
+            email_incident=target_incident,
+            need_2_add_in_yandex_tracker=True,
+            was_added_2_yandex_tracker=False,  # Надо для трекера
         )
+
+        last_email = EmailMessage.objects.filter(
+            email_incident=source_incident,
+            is_email_from_yandex_tracker=False,
+            was_added_2_yandex_tracker=True,
+        ).exclude(pk__in=email_ids).order_by('-email_date').first()
+
+        if last_email:
+            last_email.need_2_add_in_yandex_tracker = True
+            last_email.was_added_2_yandex_tracker = False
+            last_email.save()
 
         source_name = source_incident.code if (
             source_incident.code
@@ -374,10 +401,52 @@ def confirm_move_emails(request: HttpRequest) -> HttpResponse:
             performed_by=request.user,
         )
 
-    messages.success(
-        request,
-        f'Письма успешно перенесены в инцидент {target_incident.code}.'
-    )
+        try:
+            yt_comments = yt_manager.select_issue_comments(
+                source_incident.code
+            )
+
+            tasks = []
+
+            for comment in yt_comments:
+                comment_id: int = comment['id']
+
+                for email in old_emails:
+                    if yt_manager.is_comment_related(comment, email):
+                        tasks.append(
+                            partial(
+                                yt_manager.delete_comment,
+                                source_incident.code,
+                                comment_id,
+                            )
+                        )
+                        break
+
+            tasks_in_threads(
+                tasks, yt_manager_logger, cpu_bound=False, raise_exs=True
+            )
+
+        except (ApiNotFound, ApiBadRequest):
+            transaction.set_rollback(True)
+            messages.error(
+                request,
+                'В YandexTracker не найден инцидент с кодом: '
+                f'{source_incident.code}'
+            )
+        except (ApiTooManyRequests, ApiServerError):
+            transaction.set_rollback(True)
+            messages.warning(
+                request,
+                'YandexTracker временно не доступен. Попробуйте позже.'
+            )
+        else:
+            messages.success(
+                request,
+                'Письма успешно перенесены. '
+                'В ближайшее время они появятся в YandexTracker как '
+                f'комментарии к задаче {target_incident.code}.'
+            )
+
     return redirect(
         'incidents:incident_detail', incident_id=source_incident.id
     )

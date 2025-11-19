@@ -242,6 +242,9 @@ class YandexTrackerManager:
         Исключаем письма старше N дней назад, чтобы не добавлять
         неактуальные инциденты при смене основного фильтра.
 
+        Если у письма есть флаг need_2_add_in_yandex_tracker, то оно в любом
+        случае попадает в выборку.
+
         Args:
             days (days): Количество дней назад, для фильтрации писем не
             зарегестрированных в YandexTracker. По умолчанию 1.
@@ -272,7 +275,16 @@ class YandexTrackerManager:
             emails_not_in_yt | emails_with_incidents_in_yt
         ).exclude(
             models.Q(email_date__lt=exclusion_date)
-        ).distinct().order_by(
+        )
+
+        emails_need_2_add_in_yandex_tracker = EmailMessage.objects.filter(
+            need_2_add_in_yandex_tracker=True,
+            email_incident__isnull=False,
+        )
+
+        emails = emails | emails_need_2_add_in_yandex_tracker
+
+        emails = emails.distinct().order_by(
             'email_incident_id', 'email_date', '-is_first_email', 'id'
         )
 
@@ -485,6 +497,49 @@ class YandexTrackerManager:
             sub_func_name=inspect.currentframe().f_code.co_name,
         )
 
+    def is_comment_related(
+        self, comment: dict, email: EmailMessage
+    ) -> bool:
+        comment_text: str = comment.get('text', '')
+        comment_text_meta = comment_text.split('```text')[0]
+
+        if not comment_text_meta:
+            return False
+
+        comment_created_by: str = comment['createdBy']['id']
+
+        if self.current_user_uid != comment_created_by:
+            return False
+
+        # Если указан ID сразу возвращаем True
+        m = re.search(r'\*\*ID:\*\*\s*\|\s*`([^`]+)`', comment_text_meta)
+        email_id = m.group(1).strip() if m else None
+        if email_id is not None and email_id == str(email.id):
+            return True
+
+        m = re.search(r'###.*?"\*\*(.*?)\*\*"', comment_text_meta)
+        subject = m.group(1).strip() if m else None
+        if not subject or subject != email.email_subject:
+            return False
+
+        m = re.search(r'\*\*От:\*\*\s*\|\s*`([^`]+)`', comment_text_meta)
+        email_from = m.group(1).strip() if m else None
+        if not email_from or email_from != email.email_from:
+            return False
+
+        m = re.search(r'\*\*Дата:\*\*\s*\|\s*`([^`]+)`', comment_text_meta)
+        date_raw = m.group(1).strip() if m else None
+
+        email_date_moscow = email.email_date.astimezone(
+            timezone.get_current_timezone()
+        )
+        email_formatted_date = email_date_moscow.strftime('%d.%m.%Y %H:%M')
+
+        if not date_raw or date_raw != email_formatted_date:
+            return False
+
+        return True
+
     def delete_comment(self, issue_key: str, comment_id: int) -> dict:
         url = f'{self.create_issue_url}{issue_key}/comments/{comment_id}'
         return self._make_request(
@@ -596,7 +651,8 @@ class YandexTrackerManager:
         В противном случае обновляем.
         """
         email_datetime = email_datetime.isoformat() if isinstance(
-            email_datetime, datetime) else None
+            email_datetime, datetime
+        ) else None
 
         payload = {
             'summary': summary,
@@ -703,6 +759,7 @@ class YandexTrackerManager:
 
         comment_like_email.extend([
             f'| **Дата:** | `{formatted_date}` |',
+            f'| **ID:** | `{email.id}` |',
             '',
             '```text',  # Тип контента для подсветки (text, email, markdown)
         ])
@@ -765,15 +822,26 @@ class YandexTrackerManager:
                 except ValueError:
                     pass
 
-        if email.pk in existing_email_ids:
+        if (
+            email.pk in existing_email_ids
+            and not email.need_2_add_in_yandex_tracker
+        ):
             return
 
         temp_files = self.download_email_temp_files(email)
         comment_text = self._comment_like_email_with_markdown(email)
         self.create_comment(issue_key, comment_text, temp_files)
 
-        updated_email_ids = list(existing_email_ids)
-        updated_email_ids.append(email.pk)
+        updated_email_ids = EmailMessage.objects.filter(
+            email_incident=email.email_incident,
+            was_added_2_yandex_tracker=True
+        ).values_list('id', flat=True).distinct().order_by('id')
+
+        updated_email_ids = list(updated_email_ids)
+        if email.pk not in updated_email_ids:
+            updated_email_ids.append(email.pk)
+
+        updated_email_ids.sort()
         updated_email_ids_str = ', '.join(str(pk) for pk in updated_email_ids)
 
         payload = {

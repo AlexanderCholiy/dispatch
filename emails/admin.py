@@ -111,6 +111,7 @@ class EmailMessageAdmin(admin.ModelAdmin):
                 'is_first_email',
                 'is_email_from_yandex_tracker',
                 'was_added_2_yandex_tracker',
+                'need_2_add_in_yandex_tracker',
                 'folder',
             )
         })
