@@ -233,7 +233,6 @@ class Command(BaseCommand):
         for database_id, issue in database_ids_with_issues:
             incident = incidents_dict.get(database_id)
             issue_key = issue['key']
-
             status_key: str = issue['status']['key']
 
             if not incident:
@@ -325,11 +324,15 @@ class Command(BaseCommand):
         if incidents_to_add_end_status:
             with transaction.atomic():
                 for incident in incidents_to_add_end_status:
-                    incident.statuses.add(default_end_status)
+                    IncidentManager.add_end_status(
+                        incident, 'Статус установлен через YandexTracker'
+                    )
 
         if incidents_to_add_generation_status:
             with transaction.atomic():
                 for incident in incidents_to_add_generation_status:
-                    incident.statuses.add(default_generation_status)
+                    IncidentManager.add_generation_status(
+                        incident, 'Статус установлен через YandexTracker'
+                    )
 
         return total, error_count, updated_count, validation_tasks

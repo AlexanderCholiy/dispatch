@@ -39,6 +39,8 @@ from .constants import (
     RVR_CATEGORY,
     WAIT_ACCEPTANCE_STATUS_DESC,
     WAIT_ACCEPTANCE_STATUS_NAME,
+    END_STATUS_NAME,
+    END_STATUS_DESC,
 )
 from .models import (
     Incident,
@@ -344,6 +346,27 @@ class IncidentManager(IncidentValidator):
         status, _ = IncidentStatus.objects.get_or_create(
             name=GENERATION_STATUS_NAME,
             defaults={'description': GENERATION_STATUS_DESC}
+        )
+        category_names = set(
+            incident.categories.all().values_list('name', flat=True)
+        )
+        IncidentStatusHistory.objects.create(
+            incident=incident,
+            status=status,
+            comments=comment,
+            is_avr_category=AVR_CATEGORY in category_names,
+            is_rvr_category=RVR_CATEGORY in category_names,
+            is_dgu_category=DGU_CATEGORY in category_names,
+        )
+        incident.statuses.add(status)
+
+    @staticmethod
+    def add_end_status(
+        incident: Incident, comment: Optional[str] = None
+    ) -> None:
+        status, _ = IncidentStatus.objects.get_or_create(
+            name=END_STATUS_NAME,
+            defaults={'description': END_STATUS_DESC}
         )
         category_names = set(
             incident.categories.all().values_list('name', flat=True)
