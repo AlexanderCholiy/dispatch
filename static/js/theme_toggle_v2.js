@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const themes = ['light', 'dark', 'auto'];
   const themeIcon = document.getElementById('theme-icon');
   const themeToggle = document.getElementById('theme-toggle');
-  const root = document.documentElement;
+  const html = document.documentElement || document.getElementsByTagName('html')[0];
 
   const themeIcons = {
     light: 'bx-sun',
@@ -17,15 +17,17 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   function applyTheme(theme) {
-    root.classList.remove('light', 'dark');
+    // Убираем старые темы
+    html.classList.remove('light', 'dark');
 
     if (theme === 'light') {
-      root.classList.add('light');
+      html.classList.add('light');
     } else if (theme === 'dark') {
-      root.classList.add('dark');
+      html.classList.add('dark');
     } else if (theme === 'auto') {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      root.classList.add(prefersDark ? 'dark' : 'light');
+      const autoTheme = prefersDark ? 'dark' : 'light';
+      html.classList.add(autoTheme);
     }
 
     if (themeIcon) {
@@ -65,5 +67,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Применяем сохранённую тему при загрузке
   applyTheme(getSavedTheme());
 });

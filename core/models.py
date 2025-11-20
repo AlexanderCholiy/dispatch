@@ -1,6 +1,7 @@
 import os
 
 from django.db import models
+from django.urls import reverse
 
 from emails.constants import MAX_EMAIL_LEN
 
@@ -9,6 +10,7 @@ from .constants import (
     MAX_FILE_URL_LEN,
     MAX_LG_DESCRIPTION,
     MAX_ST_DESCRIPTION,
+    PUBLIC_SUBFOLDER_NAME,
 )
 from .utils import attachment_upload_to
 
@@ -75,6 +77,27 @@ class Attachment(models.Model):
             parts = base.split('__')
             return parts[-1] if parts else base
         return 'unknown'
+
+    @property
+    def protected_url(self):
+        """Генерируем URL через view с проверкой прав."""
+        if not self.file_url:
+            return ''
+        if self.file_url.name.startswith(PUBLIC_SUBFOLDER_NAME + '/'):
+            return self.file_url.url
+
+        return reverse('protected_media', args=[self.file_url.name])
+
+    @property
+    def public_url(self):
+        """Прямой URL для файлов из public/"""
+        if (
+            self.file_url
+            and self.file_url.name.startswith(f'{PUBLIC_SUBFOLDER_NAME}/')
+        ):
+            return self.file_url.url
+
+        return ''
 
 
 class Detail(models.Model):

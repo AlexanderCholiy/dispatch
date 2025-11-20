@@ -24,11 +24,11 @@
 }
 
 .user-card.online {
-  border-left: 4px solid var(--green-color);
+  border-left: var(--space-xs) solid var(--priority-color);
 }
 
 .user-card.offline {
-  border-left: 4px solid var(--red-color);
+  border-left: var(--space-xs) solid var(--red-color);
 }
 
 .user-info {

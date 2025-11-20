@@ -1,10 +1,16 @@
+import os
 from http import HTTPStatus
 from typing import Optional
 
+from django.conf import settings
 from django.contrib.sites.shortcuts import get_current_site
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, Http404, FileResponse
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.urls.exceptions import Resolver404
+
+from .constants import INLINE_EXTS
+from users.views import role_required
 
 
 def bad_request(
@@ -49,3 +55,40 @@ def too_many_requests(
     return render(
         request, 'core/429.html', status=HTTPStatus.TOO_MANY_REQUESTS
     )
+
+
+@login_required
+@role_required()
+def protected_media(request: HttpRequest, file_path: str):
+    """Отдача защищённых файлов через X-Accel-Redirect."""
+    if file_path.startswith('public/'):
+        raise Http404('Файл публичный, используйте прямую ссылку')
+
+    full_path = os.path.join(settings.MEDIA_ROOT, file_path)
+    if not os.path.exists(full_path):
+        raise Http404('Файл не найден')
+
+    ext = os.path.splitext(file_path)[1].lower()
+
+    is_inline = ext in INLINE_EXTS
+    filename = os.path.basename(file_path)
+
+    # В разработке отдаем файл напрямую через Django:
+    if settings.DEBUG:
+        return FileResponse(
+            open(full_path, 'rb'),
+            as_attachment=not is_inline,
+            filename=filename
+        )
+
+    # В продакшене отдаём файл через Nginx:
+    response = HttpResponse()
+    response['X-Accel-Redirect'] = f'/media/{file_path}'
+    response['Content-Type'] = ''
+
+    if is_inline:
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+    else:
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    return response

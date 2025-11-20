@@ -14,7 +14,8 @@ from .constants import (
     MAX_USER_ROLE_LEN,
     MAX_USER_USERNAME_LEN,
     PASSWORD_HELP_TEXT,
-    USERNAME_HELP_TEXT
+    USERNAME_HELP_TEXT,
+    SUBFOLDER_AVATAR_DIR,
 )
 from .validators import (
     username_format_validators,
@@ -49,7 +50,7 @@ class User(AbstractUser):
     )
     avatar = models.ImageField(
         'Аватар',
-        upload_to='users/',
+        upload_to=SUBFOLDER_AVATAR_DIR,
         blank=True,
         null=True,
         help_text='Загрузите аватар пользователя в формате JPG или PNG',

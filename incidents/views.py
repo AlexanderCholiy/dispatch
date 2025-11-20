@@ -80,7 +80,7 @@ def index(request: HttpRequest) -> HttpResponse:
         email_incident=OuterRef('pk')
     ).order_by('-is_first_email', 'email_date').values('email_from')[:1]
 
-    incidents = Incident.objects.exclude(code__isnull=True).select_related(
+    incidents = Incident.objects.select_related(
         'incident_type',
         'responsible_user',
         'pole',

@@ -1147,7 +1147,7 @@ class IncidentManager(IncidentValidator):
                     to_attr='all_incident_emails'
                 ),
             )
-            .filter(pk=incident_id, code__isnull=False)
+            .filter(pk=incident_id)
             .first()
         )
 

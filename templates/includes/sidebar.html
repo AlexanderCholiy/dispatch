@@ -1,6 +1,7 @@
 <nav id="sidebar" class="sidebar">
   <div class="sidebar-content">
     <ul>
+      <li class="empty-line"></li>
       {% with request.resolver_match.view_name as view_name %}
         {% if user.is_authenticated %}
           <li>

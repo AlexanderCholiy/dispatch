@@ -24,7 +24,7 @@
 .container-sm,
 .container-xl {
   width: 100%;
-  margin: var(--space-lg) auto;
+  margin: var(--space-md) auto;
   box-sizing: border-box;
 }
 

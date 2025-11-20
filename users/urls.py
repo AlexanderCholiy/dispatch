@@ -13,7 +13,7 @@ urlpatterns = [
         views.confirm_email_change, name='confirm_email_change'
     ),
     path('profile/', views.profile, name='profile'),
-    path('users/', views.users_list, name='users_list'),
-    path('users/<int:user_id>/', views.user_detail, name='user_detail'),
+    path('', views.users_list, name='users_list'),
+    path('<int:user_id>/', views.user_detail, name='user_detail'),
     path('schedule/<int:user_id>/', views.work_schedule, name='work_schedule'),
 ]

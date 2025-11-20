@@ -59,6 +59,7 @@ MAX_ST_DESCRIPTION = 256
 MAX_LG_DESCRIPTION = 1024
 MAX_EMAIL_ID_LEN = 256
 
+PUBLIC_SUBFOLDER_NAME = 'public'
 SUBFOLDER_DATE_FORMAT = '%Y-%m-%d'
 SUBFOLDER_EMAIL_NAME = 'emails_attachments'
 SUBFOLDER_MIME_EMAIL_NAME = 'emails_mimes'
@@ -87,3 +88,21 @@ os.makedirs(REMOTE_DB_BACK_FOLDER_DIR, exist_ok=True)
 MAX_DB_BACK = timedelta(days=3)
 MAX_REMOTE_DB_BACK = timedelta(days=15)
 DATETIME_FORMAT = '%d.%m.%Y %H:%M:%S'
+
+INLINE_EXTS = {
+    # images
+    '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg', '.jfif',
+
+    # pdf
+    '.pdf',
+
+    # text
+    '.txt', '.rtf', '.json',
+
+    # video
+    '.mp4', '.webm', '.mov', '.avi', '.mkv',
+    '.mp3', '.wav', '.ogg',
+
+    # audio
+    '.mp3', '.wav', '.ogg',
+}

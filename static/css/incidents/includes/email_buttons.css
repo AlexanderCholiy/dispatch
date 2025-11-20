@@ -17,9 +17,24 @@ display: flex;
 
 .form-controls-right {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: var(--space-sm);
   flex-shrink: 0;
+}
+
+.form-controls-right input,
+.form-controls-right button {
+  display: flex;
+  align-items: center;
+  font-size: var(--font-xs);
+  line-height: 1;
+}
+
+.form-controls-right .form-actions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: nowrap;
+  align-items: center;
 }
 
 .cancel-move-email,
@@ -28,21 +43,4 @@ display: flex;
 .sort-emails-btn {
   padding: 0.16rem;
   font-size: var(--font-xs);
-}
-
-@media (max-width: 768px) {
-  .form-controls {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-sm);
-  }
-
-  .form-controls-left,
-  .form-controls-right {
-    justify-content: right;
-  }
-
-  #move-emails-btn {
-    width: 100%;
-  }
 }

@@ -7,12 +7,12 @@ app_name = 'incidents'
 urlpatterns = [
     path('', views.index, name='index'),
     path(
-        'incident/<int:incident_id>/',
+        'incidents/<int:incident_id>/',
         views.incident_detail,
         name='incident_detail'
     ),
     path(
-        'incident/move-emails/',
+        'incidents/move-emails/',
         views.confirm_move_emails,
         name='confirm_move_emails'
     )

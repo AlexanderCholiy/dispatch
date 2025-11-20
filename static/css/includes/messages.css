@@ -55,23 +55,28 @@
   }
 }
 
+.alert-success,
+.alert-warning,
+.alert-error {
+  color: var(--add-background-color);
+}
+
 .alert-success {
   background-color: var(--green-color);
 }
 
 .alert-info {
-  background-color: var(--add-background-color);
+  background-color: var(--background-color);
 }
 
 .alert-warning {
   background-color: var(--yellow-color);
-  color: var(--add-background-color)
 }
 
-.alert-error,
-.alert-danger {
+.alert-error {
   background-color: var(--red-color);
 }
+
 
 @media (min-width: 768px) {
   body.sidebar-expanded .messages-container {

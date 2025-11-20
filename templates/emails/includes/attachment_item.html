@@ -1,8 +1,8 @@
 {% with fname=att.file_name|lower %}
   <li class="attachment-item">
-    <a href="{{ att.file_url.url }}" target="_blank" class="attachment-file">
+    <a href="{{ att.protected_url }}" target="_blank" class="attachment-file">
       {% if fname|slice:"-4:" in ".jpg.png.gif" or fname|slice:"-5:" == ".jpeg" or fname|slice:"-5:" == ".webp" or fname|slice:"-4:" == ".bmp" or fname|slice:"-4:" == ".svg" or fname|slice:"-5:" == ".jfif" %}
-      <img src="{{ att.file_url.url }}" 
+      <img src="{{ att.protected_url }}" 
           alt="{{ att.file_name }}" 
           class="attachment-preview" 
           onerror="this.onerror=null; this.outerHTML='<i class=\'bx bx-image\'></i>';">

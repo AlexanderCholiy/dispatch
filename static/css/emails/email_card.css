@@ -13,6 +13,14 @@
   transition: box-shadow var(--transition-value), transform var(--transition-value);
 }
 
+.inbox-email {
+  border-left: var(--space-xs) solid var(--priority-color);
+}
+
+.sent-email {
+  border-left: var(--space-xs) solid var(--red-color);
+}
+
 .email-card:hover {
   box-shadow: 0 0 var(--space-sm) var(--extra-color);
 }
@@ -102,7 +110,7 @@
 }
 
 .incident-closed {
-  color: var(--red-color);
+  color: var(--gray-color);
 }
 
 .email-body {
@@ -115,11 +123,22 @@
 }
 
 .email-body-content {
-  line-height: 1.6;
   font-size: var(--font-sm);
-  text-align: justify;
-  hyphens: auto;
   color: var(--add-color);
+  line-height: 1.6;
+  margin-block: var(--space-lg);
+  hyphens: auto;
   overflow-wrap: break-word;
   word-break: normal;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: var(--space-xs);
+}
+
+@media (max-width: 768px) {
+  .email-body-content {
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
+  }
 }

@@ -29,16 +29,28 @@
   text-decoration: none;
 }
 
-.attachment-preview, .attachment-icon {
-  display: inline-block;
-  width: 60px;
-  height: 60px;
-  background-size: cover;
+.attachment-preview {
+  width: var(--space-xxl);
+  height: var(--space-xxl);
+  object-fit: contain;
+  object-position: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--extra-color);
+  margin-bottom: var(--space-xs);
+  display: block;
+  background-color: var(--extra-color);
+}
+
+.attachment-icon {
+  width: var(--space-xxl);
+  height: var(--space-xxl);
+  background-size: contain;
+  background-repeat: no-repeat;
   background-position: center;
   border-radius: var(--radius-sm);
   border: 1px solid var(--extra-color);
   margin-bottom: var(--space-xs);
-  text-decoration: none;
+  background-color: var(--extra-color);
 }
 
 .attachment-name {

@@ -15,6 +15,15 @@
   transition: background-color var(--transition-value), box-shadow var(--transition-value);
 }
 
+.empty-line {
+  height: var(--space-md);
+  background: linear-gradient(
+    320deg,
+    var(--add-background-color) 0%,
+    var(--background-color) 100%
+  );
+}
+
 .header-left,
 .header-center,
 .header-right {

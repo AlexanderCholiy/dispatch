@@ -28,18 +28,18 @@
         </div>
       {% endif %}
 
-      {% if next %}
+      {% if next and not form.errors %}
         {% if user.is_authenticated %}
         <div class="messages-container">
           <div class="message alert-error">
-            Ваш аккаунт не имеет доступа к этой странице.
+            Ваш аккаунт не имеет доступа этой странице.
             Войдите под другим аккаунтом.
           </div>
         </div>
         {% else %}
         <div class="messages-container">
-          <div class="message alert-warning">
-            Пожалуйста, войдите в систему, чтобы просматривать эту страницу.
+          <div class="message alert-info">
+            Авторизуйтесь, чтобы продолжить.
           </div>
         </div>
         {% endif %}

@@ -1,3 +1,5 @@
+import os
+
 import debug_toolbar
 from django.conf import settings
 from django.conf.urls.static import static
@@ -10,6 +12,8 @@ from rest_framework import permissions
 
 from users.forms import AuthForm
 from users.views import CustomLoginView, CustomPasswordResetView
+from core.views import protected_media
+from core.constants import PUBLIC_SUBFOLDER_NAME
 
 handler400 = 'core.views.bad_request'
 handler403 = 'core.views.permission_denied'
@@ -97,6 +101,7 @@ app_urls = [
     path('admin/', admin.site.urls),
     path('pages/', include('pages.urls')),
     path('api/v1/', include('api.urls')),
+    path('media/<path:file_path>/', protected_media, name='protected_media'),
 ]
 
 urlpatterns = auth_urlpatterns + app_urls + swagger_urls
@@ -104,4 +109,6 @@ urlpatterns = auth_urlpatterns + app_urls + swagger_urls
 if settings.DEBUG:
     urlpatterns += (path('__debug__/', include(debug_toolbar.urls)),)
     urlpatterns += static(
-        settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+        '/media/public/',
+        document_root=os.path.join(settings.MEDIA_ROOT, PUBLIC_SUBFOLDER_NAME)
+    )
