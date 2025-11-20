@@ -101,7 +101,7 @@ app_urls = [
     path('admin/', admin.site.urls),
     path('pages/', include('pages.urls')),
     path('api/v1/', include('api.urls')),
-    path('media/<path:file_path>/', protected_media, name='protected_media'),
+    path('media/<path:file_path>', protected_media, name='protected_media'),
 ]
 
 urlpatterns = auth_urlpatterns + app_urls + swagger_urls
