@@ -1,6 +1,7 @@
 import os
 from http import HTTPStatus
 from typing import Optional
+from urllib.parse import quote
 
 from django.conf import settings
 from django.contrib.sites.shortcuts import get_current_site
@@ -64,50 +65,56 @@ def too_many_requests(
 @login_required
 @role_required()
 def protected_media(request: HttpRequest, file_path: str):
-    """Отдача защищённых файлов через X-Accel-Redirect."""
-    django_logger.info(f'[1] Запрос защищённого файла: {file_path}')
+    """Отдача защищённых файлов через X-Accel-Redirect для продакшена."""
+    normalized_path = os.path.normpath(file_path)
 
-    if file_path.startswith('public/'):
-        django_logger.warning('[2] Файл публичный — выбрасываем 404')
+    if normalized_path.startswith('public/'):
         raise Http404('Файл публичный, используйте прямую ссылку')
 
-    full_path = os.path.join(settings.MEDIA_ROOT, file_path)
-    django_logger.info(f'[2] Полный путь к файлу: {full_path}')
+    full_path = os.path.join(settings.MEDIA_ROOT, normalized_path)
 
-    if not os.path.exists(full_path):
-        django_logger.error(
-            f'[3] Файл {full_path} не найден — выбрасываем 404'
+    if not full_path.startswith(os.path.abspath(settings.MEDIA_ROOT)):
+        django_logger.warning(
+            f'Попытка доступа за пределы MEDIA_ROOT: {full_path}'
         )
         raise Http404('Файл не найден')
 
-    ext = os.path.splitext(file_path)[1].lower()
+    if not os.path.exists(full_path):
+        django_logger.warning(f'Файл {full_path} не найден')
+        raise Http404('Файл не найден')
 
+    ext = os.path.splitext(file_path)[1].lower()
     is_inline = ext in INLINE_EXTS
     filename = os.path.basename(file_path)
 
     # В разработке отдаем файл напрямую через Django:
     if settings.DEBUG:
-        django_logger.info('[3] DEBUG=True — отдаём через FileResponse')
         return FileResponse(
             open(full_path, 'rb'),
             as_attachment=not is_inline,
             filename=filename
         )
 
+    # Кодируем каждый сегмент пути для URL
+    safe_path = '/'.join(quote(part) for part in file_path.split('/'))
+    redirect_url = f'/media/{safe_path}'
+
     # В продакшене отдаём файл через Nginx:
     response = HttpResponse()
-    redirect_url = f'/media/{file_path}'
     response['X-Accel-Redirect'] = redirect_url
-    django_logger.info(
-        f'[3] DEBUG=False — отдаём через X-Accel-Redirect: {redirect_url}'
+
+    # Кодируем имя файла для Content-Disposition
+    filename_ascii = filename.encode('ascii', 'ignore').decode() or 'file'
+    filename_rfc5987 = quote(filename)
+
+    disposition_type = 'inline' if is_inline else 'attachment'
+    disposition = (
+        f'{disposition_type}; '
+        f'filename="{filename_ascii}"; '
+        f'filename*=UTF-8\'\'{filename_rfc5987}'
     )
 
-    if is_inline:
-        response['Content-Disposition'] = f'inline; filename="{filename}"'
-    else:
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-
+    response['Content-Disposition'] = disposition
     response['Content-Type'] = ''
-    django_logger.info(f'[4] Ответ возвращён: {response}')
 
     return response
