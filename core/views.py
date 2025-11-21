@@ -83,9 +83,9 @@ def protected_media(request: HttpRequest, file_path: str):
         django_logger.warning(f'Файл {full_path} не найден')
         raise Http404('Файл не найден')
 
-    ext = os.path.splitext(file_path)[1].lower()
+    ext = os.path.splitext(normalized_path)[1].lower()
     is_inline = ext in INLINE_EXTS
-    filename = os.path.basename(file_path)
+    filename = os.path.basename(normalized_path)
 
     # В разработке отдаем файл напрямую через Django:
     if settings.DEBUG:
@@ -96,7 +96,7 @@ def protected_media(request: HttpRequest, file_path: str):
         )
 
     # Кодируем каждый сегмент пути для URL
-    safe_path = '/'.join(quote(part) for part in file_path.split('/'))
+    safe_path = '/'.join(quote(part) for part in normalized_path.split('/'))
     redirect_url = f'/media/{safe_path}'
 
     # В продакшене отдаём файл через Nginx:
