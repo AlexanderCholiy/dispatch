@@ -541,6 +541,10 @@ sudo docker compose exec dispatch_backend bash
 sudo docker compose stop && sudo docker compose up --build -d
 ```
 > Локально пересобрать и запустить докер образы.
+```bash
+sudo docker compose build dispatch_gateway && sudo docker compose up -d dispatch_gateway
+```
+> Локально пересобрать и перезапустить докер образ nginx.
 
 ### 3. Настройка Gunicorn
 1. Определение ресурсов сервера:
