@@ -56,11 +56,11 @@ class Attachment(models.Model):
         super().save(*args, **kwargs)
 
     @property
-    def get_attachment_url(self):
+    def get_admin_attachment_url(self):
         """Данный метод нужен для удобства в админ панели."""
-        if self.file_url and hasattr(self.file_url, 'url'):
+        if self.protected_url:
             return (
-                f'<a href="{self.file_url.url}" target="_blank">'
+                f'<a href="{self.protected_url}" target="_blank">'
                 f'{os.path.basename(self.file_url.name)}</a>'
             )
         return None

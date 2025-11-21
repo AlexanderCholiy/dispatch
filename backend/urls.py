@@ -101,10 +101,9 @@ app_urls = [
     path('admin/', admin.site.urls),
     path('pages/', include('pages.urls')),
     path('api/v1/', include('api.urls')),
-    path('media/<path:file_path>', protected_media, name='protected_media'),
 ]
 
-urlpatterns = auth_urlpatterns + app_urls + swagger_urls
+urlpatterns = swagger_urls + auth_urlpatterns + app_urls
 
 if settings.DEBUG:
     urlpatterns += (path('__debug__/', include(debug_toolbar.urls)),)
@@ -112,3 +111,11 @@ if settings.DEBUG:
         '/media/public/',
         document_root=os.path.join(settings.MEDIA_ROOT, PUBLIC_SUBFOLDER_NAME)
     )
+
+urlpatterns += (
+    path(
+        'protected-media/<path:file_path>',
+        protected_media,
+        name='protected_media'
+    ),
+)
