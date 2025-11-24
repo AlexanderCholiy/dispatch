@@ -27,15 +27,15 @@
               </div>
               <div class="email-to">
                 <strong>Кому:</strong>
-                {% for to in email.email_msg_to.all %}
-                {{ to.email_to }}{% if not forloop.last %}, {% endif %}
+                {% for to in email.prefetched_to %}
+                  {{ to.email_to }}{% if not forloop.last %}, {% endif %}
                 {% endfor %}
               </div>
-              {% if email.email_msg_cc.all %}
+              {% if email.prefetched_cc %}
                 <div class="email-to-cc">
                   <strong>Копия:</strong>
-                  {% for cc in email.email_msg_cc.all %}
-                  {{ cc.email_to }}{% if not forloop.last %}, {% endif %}
+                  {% for cc in email.prefetched_cc %}
+                    {{ cc.email_to }}{% if not forloop.last %}, {% endif %}
                   {% endfor %}
                 </div>
               {% endif %}

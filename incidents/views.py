@@ -72,13 +72,14 @@ def index(request: HttpRequest) -> HttpResponse:
         incident=OuterRef('pk')
     ).order_by('-insert_date')
 
-    first_email_subject_subquery = EmailMessage.objects.filter(
-        email_incident=OuterRef('pk')
-    ).order_by('email_date', '-is_first_email').values('email_subject')[:1]
-
-    first_email_from_subquery = EmailMessage.objects.filter(
-        email_incident=OuterRef('pk')
-    ).order_by('-is_first_email', 'email_date').values('email_from')[:1]
+    first_email_subquery = (
+        EmailMessage.objects
+        .filter(email_incident=OuterRef('pk'))
+        .order_by(
+            '-is_first_email',
+            'email_date',
+        )
+    )
 
     incidents = Incident.objects.select_related(
         'incident_type',
@@ -87,9 +88,6 @@ def index(request: HttpRequest) -> HttpResponse:
         'pole__region',
         'base_station',
     ).prefetch_related(
-        'statuses',
-        'email_messages',
-        'base_station__operator',
         'categories',
     ).annotate(
         latest_status_name=Subquery(
@@ -101,8 +99,12 @@ def index(request: HttpRequest) -> HttpResponse:
         latest_status_class=Subquery(
             latest_status_subquery.values('status__status_type__css_class')[:1]
         ),
-        first_email_subject=Subquery(first_email_subject_subquery),
-        first_email_from=Subquery(first_email_from_subquery),
+        first_email_subject=Subquery(
+            first_email_subquery.values('email_subject')[:1]
+        ),
+        first_email_from=Subquery(
+            first_email_subquery.values('email_from')[:1]
+        ),
     ).order_by('-update_date', '-incident_date', 'id')
 
     if is_incident_finish is not None:

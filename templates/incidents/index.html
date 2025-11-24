@@ -81,8 +81,7 @@
                     —
                   {% endif %}
                 </td>
-                <td class="tooltip"
-                    data-title="{% if incident.base_station %}{% for op in incident.base_station.operator.all %}{{ op.operator_name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}">
+                <td>
                   {% if incident.base_station %}
                     <span class="copy-text" data-text="{{ incident.base_station.bs_name }}">{{ incident.base_station.bs_name|default:"—" }}</span>
                   {% else %}

@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.views import LoginView, PasswordResetView
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -259,6 +259,9 @@ def users_list(request: HttpRequest) -> HttpResponse:
 
     users = (
         User.objects
+        .select_related(
+            'work_schedule',
+        )
         .exclude(role=Roles.GUEST).exclude(is_active=False)
         .order_by('username')
     )
@@ -300,50 +303,55 @@ def users_list(request: HttpRequest) -> HttpResponse:
 
 @login_required
 def user_detail(request: HttpRequest, user_id: int):
-    """Подробная информация о пользователе со статистикой."""
-    user = get_object_or_404(User, pk=user_id, is_active=True)
+    user = get_object_or_404(
+        User.objects.select_related('work_schedule'),
+        pk=user_id,
+        is_active=True
+    )
+
+    incidents = Incident.objects.filter(responsible_user=user)
+
+    last_week = now() - timedelta(days=7)
+
+    stats = incidents.aggregate(
+        open_incidents=Count('id', filter=Q(is_incident_finish=False)),
+        closed_incidents=Count('id', filter=Q(is_incident_finish=True)),
+        open_last_week=Count(
+            'id',
+            filter=Q(is_incident_finish=False, insert_date__gte=last_week),
+        ),
+        closed_last_week=Count(
+            'id',
+            filter=Q(is_incident_finish=True, update_date__gte=last_week),
+        ),
+    )
 
     sla_percentage = 0
 
-    incidents = Incident.objects.filter(responsible_user=user)
-    open_incidents = incidents.filter(is_incident_finish=False).count()
-    closed_incidents = incidents.filter(is_incident_finish=True).count()
-
-    last_week = now() - timedelta(days=7)
-    open_last_week = incidents.filter(
-        is_incident_finish=False, insert_date__gte=last_week
-    ).count()
-    closed_last_week = incidents.filter(
-        is_incident_finish=True, update_date__gte=last_week
-    ).count()
-
-    if closed_incidents:
-        closed_recent = incidents.filter(
+    closed_recent = (
+        incidents.filter(
             is_incident_finish=True,
             insert_date__gte=last_week,
-        ).select_related('incident_type')
+        )
+        .select_related('incident_type')
+    )
 
-        total = len(closed_recent)
-        sla_ok_count = 0
+    total = stats['closed_last_week']
 
+    if total:
         sla_ok_count = sum(
             1
             for i in closed_recent
             if not i.is_sla_avr_expired and not i.is_sla_rvr_expired
         )
 
-        if total:
-            sla_percentage = round(sla_ok_count / total * 100, 1)
-            sla_percentage = int(
-                sla_percentage
-            ) if sla_percentage.is_integer() else sla_percentage
+        sla_percentage = round(sla_ok_count / total * 100, 1)
+        if sla_percentage.is_integer():
+            sla_percentage = int(sla_percentage)
 
     context = {
         'user': user,
-        'open_incidents': open_incidents,
-        'closed_incidents': closed_incidents,
-        'open_last_week': open_last_week,
-        'closed_last_week': closed_last_week,
+        **stats,
         'sla_percentage': sla_percentage,
     }
 
@@ -352,7 +360,16 @@ def user_detail(request: HttpRequest, user_id: int):
 
 @login_required
 def work_schedule(request: HttpRequest, user_id: int):
-    user = get_object_or_404(User, pk=user_id, is_active=True)
+    user = get_object_or_404(
+        User.objects.select_related('work_schedule'),
+        pk=user_id,
+        is_active=True
+    )
+
+    schedule = getattr(user, 'work_schedule', None)
+
+    if schedule is None:
+        schedule = WorkSchedule(user=user)
 
     if (
         not request.user.is_superuser
@@ -364,8 +381,6 @@ def work_schedule(request: HttpRequest, user_id: int):
             'Данная страница доступна только персоналу'
         )
         return redirect(reverse(settings.LOGIN_URL))
-
-    schedule, _ = WorkSchedule.objects.get_or_create(user=user)
 
     if request.method == 'POST':
         form = WorkScheduleForm(request.POST, instance=schedule)
@@ -379,9 +394,8 @@ def work_schedule(request: HttpRequest, user_id: int):
     else:
         form = WorkScheduleForm(instance=schedule)
 
-    context = {
-        'user_obj': user,
-        'form': form,
-    }
-
-    return render(request, 'users/work_schedule_form.html', context)
+    return render(
+        request,
+        'users/work_schedule_form.html',
+        {'user_obj': user, 'form': form}
+    )

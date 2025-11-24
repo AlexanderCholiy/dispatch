@@ -13,7 +13,7 @@ from .constants import (
     MAX_EMAILS_INFO_CACHE_SEC,
     PAGE_SIZE_EMAILS_CHOICES,
 )
-from .models import EmailFolder, EmailMessage, EmailReference
+from .models import EmailFolder, EmailMessage
 
 
 @login_required
@@ -42,16 +42,17 @@ def emails_list(request: HttpRequest) -> HttpResponse:
         'email_mime',
     ).prefetch_related(
         Prefetch(
-            'email_references',
-            queryset=EmailReference.objects.select_related(
-                'email_msg'
-            ).order_by('id'),
-            to_attr='prefetched_references'
+            'email_attachments', to_attr='prefetched_attachments'
         ),
-        'email_attachments',
-        'email_intext_attachments',
-        'email_msg_to',
-        'email_msg_cc',
+        Prefetch(
+            'email_intext_attachments', to_attr='prefetched_intext_attachments'
+        ),
+        Prefetch(
+            'email_msg_to', to_attr='prefetched_to'
+        ),
+        Prefetch(
+            'email_msg_cc', to_attr='prefetched_cc'
+        ),
     ).order_by('-email_date', 'is_first_email')
 
     if query:

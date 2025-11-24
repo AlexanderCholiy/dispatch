@@ -1115,7 +1115,6 @@ class IncidentManager(IncidentValidator):
                 'base_station',
             )
             .prefetch_related(
-                'statuses',
                 'history',
                 'base_station__operator',
                 'categories',
