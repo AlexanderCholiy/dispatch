@@ -1,4 +1,5 @@
 import os
+from urllib.parse import quote
 
 from django.db import models
 from django.urls import reverse
@@ -83,10 +84,15 @@ class Attachment(models.Model):
         """Генерируем URL через view с проверкой прав."""
         if not self.file_url:
             return ''
-        if self.file_url.name.startswith(PUBLIC_SUBFOLDER_NAME + '/'):
+
+        path = self.file_url.name
+
+        if path.startswith(PUBLIC_SUBFOLDER_NAME + '/'):
             return self.file_url.url
 
-        return reverse('protected_media', args=[self.file_url.name])
+        safe_path = quote(path, safe='/')
+
+        return reverse('protected_media', args=[safe_path])
 
     @property
     def public_url(self):
