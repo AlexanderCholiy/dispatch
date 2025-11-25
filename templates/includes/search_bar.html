@@ -12,7 +12,8 @@
         autocomplete="off"
       >
 
-    <input type="hidden" name="role" value="{{ selected_role }}" id="search-hidden-role">
+    <input type="hidden" name="role" value="{{ selected.role }}" id="search-hidden-role">
+    <input type="hidden" name="per_page" value="{{ selected.per_page }}" id="search-hidden-per-page">
 
     <button type="submit" class="tooltip" data-title="Поиск по имени, фамилии или email" tabindex="-1"><i class="bx bx-search"></i></button>
   {% elif view_name in 'emails:emails_list' %}

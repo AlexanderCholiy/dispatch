@@ -129,6 +129,14 @@ DATABASES = {
             'Connection Timeout': 10,
         },
     },
+    'ts': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('TS_DB_NAME'),
+        'USER': os.environ.get('TS_DB_USER'),
+        'PASSWORD': os.environ.get('TS_DB_PASSWORD'),
+        'HOST': os.environ.get('TS_DB_HOST'),
+        'PORT': os.environ.get('TS_DB_PORT'),
+    },
 }
 
 DATABASE_ROUTERS = ['monitoring.routers.ReadOnlyRouter']

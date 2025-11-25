@@ -30,9 +30,9 @@ class EmailMimeInline(admin.StackedInline):
     model = EmailMime
     extra = 0
     can_delete = False
-    fields = ('protected_file_link', 'created_at')
+    fields = ('protected_file_link',)
 
-    readonly_fields = ('protected_file_link', 'created_at')
+    readonly_fields = ('protected_file_link',)
 
     def protected_file_link(self, obj: EmailMime):
         """Ссылка на скачивание .eml файла"""

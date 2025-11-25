@@ -47,7 +47,7 @@
                   {% endfor %}
                 </td>
                 <td class="tooltip"
-                    data-title="Заявитель {{ incident.first_email_from|default:'—' }}">
+                    data-title="{{ incident.first_email_from|default:'' }}">
                   {% if incident.first_email_subject %}
                     {{ incident.first_email_subject|truncatechars:64|default:"—" }}
                   {% else %}

@@ -22,7 +22,7 @@ from core.constants import DJANGO_LOG_ROTATING_FILE
 from core.loggers import LoggerFactory
 from incidents.models import Incident
 
-from .constants import MAX_USERS_PER_PAGE
+from .constants import USERS_PER_PAGE, PAGE_SIZE_USERS_CHOICES
 from .forms import (
     ChangeEmailForm,
     UserForm,
@@ -252,9 +252,20 @@ def users_list(request: HttpRequest) -> HttpResponse:
     query = request.GET.get('q', '').strip()
     role_filter = request.GET.get('role', '').strip().lower()
 
+    per_page = int(
+        request.GET.get('per_page')
+        or request.COOKIES.get('per_page_emails')
+        or USERS_PER_PAGE
+    )
+
+    if per_page not in PAGE_SIZE_USERS_CHOICES:
+        params = request.GET.copy()
+        params['per_page'] = USERS_PER_PAGE
+        return redirect(f"{request.path}?{params.urlencode()}")
+
+    roles = [role for role in Roles if role != Roles.GUEST]
     role_filter = role_filter if (
-        role_filter
-        and role_filter in {Roles.DISPATCH.value, Roles.USER.value}
+        role_filter and role_filter in [r.value for r in roles]
     ) else ''
 
     users = (
@@ -283,7 +294,7 @@ def users_list(request: HttpRequest) -> HttpResponse:
 
         users = users.filter(q_filter)
 
-    paginator = Paginator(users, MAX_USERS_PER_PAGE)
+    paginator = Paginator(users, per_page)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
@@ -295,7 +306,12 @@ def users_list(request: HttpRequest) -> HttpResponse:
         'page_obj': page_obj,
         'search_query': query,
         'page_url_base': page_url_base,
-        'selected_role': role_filter,
+        'roles': roles,
+        'selected': {
+            'role': role_filter,
+            'per_page': per_page,
+        },
+        'page_size_choices': PAGE_SIZE_USERS_CHOICES,
     }
 
     return render(request, 'users/users.html', context)

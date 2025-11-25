@@ -1,7 +1,7 @@
 .emails-wrapper {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
+  gap: var(--space-sm);
 }
 
 .email-card {

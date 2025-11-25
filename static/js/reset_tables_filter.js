@@ -13,17 +13,25 @@ document.addEventListener('DOMContentLoaded', () => {
       const inputs = filterForm.querySelectorAll('input[type="text"]');
       inputs.forEach(input => input.value = '');
 
+      // Сбрасываем фильтр завершен ли инцидент
+      const finishSelect = document.getElementById('finish-select');
+      if (finishSelect) finishSelect.selectedIndex = 0;
+
       // Сбрасываем статус
       const statusSelect = document.getElementById('status-select');
       if (statusSelect) statusSelect.selectedIndex = 0;
 
+      // Сбрасываем категорию
+      const categorySelect = document.getElementById('category-select');
+      if (categorySelect) categorySelect.selectedIndex = 0;
+      
       // Сбрасываем папку
       const folderSelect = document.getElementById('folder-select');
       if (folderSelect) folderSelect.selectedIndex = 0;
 
-      // Сбрасываем статус
-      const categorySelect = document.getElementById('category-select');
-      if (categorySelect) categorySelect.selectedIndex = 0;
+      // Сбрасываем роль
+      const roleSelect = document.getElementById('role-select');
+      if (roleSelect) roleSelect.selectedIndex = 0;
 
       // Восстанавливаем per_page
       if (perPageSelect && perPageValue) {
@@ -37,12 +45,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Очищаем скрытые инпуты в форме поиска
       const hiddenIds = [
+        'search-hidden-finish',
+        'search-hidden-status',
+        'search-hidden-category',
         'search-hidden-pole',
         'search-hidden-base-station',
-        'search-hidden-status',
-        'search-hidden-role',
         'search-hidden-folder',
-        'search-hidden-finish',
+        'search-hidden-role',
       ];
 
       const hiddenInputs = document.querySelectorAll(

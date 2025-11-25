@@ -256,10 +256,6 @@ class EmailMime(models.Model):
         verbose_name='Файл с оригиналом письма (.eml)',
         help_text='Необязательный файл с исходным письмом в формате MIME.'
     )
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='Дата создания'
-    )
 
     class Meta:
         verbose_name = 'оригинальное письмо'

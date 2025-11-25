@@ -1,14 +1,13 @@
 import json
-import os
 from http import HTTPStatus
 from types import NoneType
 from typing import Generator, Iterable
+from numpy import nan
 
 import pandas as pd
 import requests
-from django.db import transaction
+from django.db import transaction, connections
 from django.db.models import Q
-from numpy import nan
 
 from core.constants import TS_LOG_ROTATING_FILE
 from core.loggers import LoggerFactory
@@ -16,13 +15,13 @@ from core.pretty_print import PrettyPrint
 from core.wraps import timer
 
 from .constants import (
-    AVR_FILE,
-    BASE_STATIONS_FILE,
+    # AVR_FILE,
+    # BASE_STATIONS_FILE,
     COLUMNS_TO_KEEP_AVR_REPORT,
     COLUMNS_TO_KEEP_BS_OPERATORS_REPORT,
     COLUMNS_TO_KEEP_POLES_TL,
     DB_CHUNK_UPDATE,
-    POLES_FILE,
+    # POLES_FILE,
     TS_AVR_REPORT_URL,
     TS_BS_REPORT_URL,
     TS_POLES_TL_URL,
@@ -51,7 +50,9 @@ class Api(SocialValidators):
 
     @staticmethod
     @timer(ts_api_logger)
-    def download_json(json_file_path: str, url: str, chunk_size: int = 1000):
+    def download_json(
+        self, json_file_path: str, url: str, chunk_size: int = 1000
+    ):
         response = requests.get(url, stream=True)
 
         if response.status_code == HTTPStatus.OK:
@@ -67,9 +68,8 @@ class Api(SocialValidators):
         else:
             ts_api_logger.critical(f'Ошибка при загрузки данных из "{url}"')
 
-    @staticmethod
     def json_2_df(
-        json_file_path: str, columns_to_keep: list[str]
+        self, json_file_path: str, columns_to_keep: list[str]
     ) -> pd.DataFrame:
         with open(json_file_path, 'r', encoding='utf-8-sig') as file:
             data = json.load(file)
@@ -82,22 +82,54 @@ class Api(SocialValidators):
         df.replace(nan, None, inplace=True)
         return df
 
-    @staticmethod
     def chunked(
-        iterable: Iterable, chunk_size: int = 100
+        self, iterable: Iterable, chunk_size: int = 100
     ) -> Generator[list, None, None]:
         """Делит итерируемый объект на части заданного размера."""
         items = list(iterable)
         for i in range(0, len(items), chunk_size):
             yield items[i:i + chunk_size]
 
-    @staticmethod
-    @transaction.atomic
-    def update_poles(update_json: bool = True):
-        if update_json or not os.path.exists(POLES_FILE):
-            Api.download_json(POLES_FILE, TS_POLES_TL_URL)
+    def get_ts_poles(self) -> pd.DataFrame:
+        columns_quoted = ', '.join(
+            f'"{col}"' if col != 'RegionRu' else '"Регион ru" AS "RegionRu"'
+            for col in COLUMNS_TO_KEEP_POLES_TL
+        )
+        query = f'SELECT {columns_quoted} FROM "Таблица опор";'
 
-        poles = Api.json_2_df(POLES_FILE, COLUMNS_TO_KEEP_POLES_TL)
+        with connections['ts'].cursor() as cursor:
+            cursor.execute(query)
+            columns = [col[0] for col in cursor.description]
+            data = cursor.fetchall()
+
+        return pd.DataFrame.from_records(data, columns=columns)
+
+    def _is_pole_changed(
+        self, pole_obj: Pole, row: dict, region_obj: Region
+    ) -> bool:
+        return (
+            pole_obj.pole != row['Шифр']
+            or pole_obj.bs_name != row['Имя БС']
+            or pole_obj.pole_status != (row['Статус опоры'] or None)
+            or pole_obj.pole_latitude != (row['Широта'] or None)
+            or pole_obj.pole_longtitude != (row['Долгота'] or None)
+            or pole_obj.pole_height != (row['Высота опоры'] or None)
+            or pole_obj.address != (row['Адрес'] or None)
+            or pole_obj.infrastructure_company != (
+                row['Инфраструктурная компания'] or None
+            )
+            or pole_obj.anchor_operator != (row['Якорный оператор'] or None)
+            or pole_obj.region_id != region_obj.id
+        )
+
+    @transaction.atomic
+    def update_poles(self, update_json: bool = True):
+        # if update_json or not os.path.exists(POLES_FILE):
+        #     self.download_json(POLES_FILE, TS_POLES_TL_URL)
+
+        # poles = self.json_2_df(POLES_FILE, COLUMNS_TO_KEEP_POLES_TL)
+        poles = self.get_ts_poles()
+
         poles['SiteId'] = poles['SiteId'].astype(int)
         poles['Широта'] = poles['Широта'].astype(float)
         poles['Долгота'] = poles['Долгота'].astype(float)
@@ -115,8 +147,16 @@ class Api(SocialValidators):
             - {UNDEFINED_ID}
         )
         if poles_2_delete:
-            for chunk in Api.chunked(poles_2_delete, DB_CHUNK_UPDATE):
-                Pole.objects.filter(site_id__in=chunk).delete()
+            deleted_poles = 0
+            for chunk in self.chunked(poles_2_delete, DB_CHUNK_UPDATE):
+                del_poles_i, _ = (
+                    Pole.objects.filter(site_id__in=chunk).delete()
+                )
+                deleted_poles += del_poles_i
+            ts_api_logger.debug(
+                'Pole удалены: '
+                f'{deleted_poles} из {len(poles_2_delete)}'
+            )
 
         # Добавляем опору по умолчанию:
         Pole.add_default_value()
@@ -174,18 +214,19 @@ class Api(SocialValidators):
 
             pole_obj = poles_cache.get(site_id)
             if pole_obj:
-                pole_obj.pole = pole
-                pole_obj.bs_name = bs_name
-                pole_obj.pole_status = pole_status
-                pole_obj.pole_latitude = pole_latitude
-                pole_obj.pole_longtitude = pole_longtitude
-                pole_obj.pole_height = pole_height
-                pole_obj.region = region_obj
-                pole_obj.address = address
-                pole_obj.infrastructure_company = infrastructure_company
-                pole_obj.anchor_operator = anchor_operator
+                if self._is_pole_changed(pole_obj, row, region_obj):
+                    pole_obj.pole = pole
+                    pole_obj.bs_name = bs_name
+                    pole_obj.pole_status = pole_status
+                    pole_obj.pole_latitude = pole_latitude
+                    pole_obj.pole_longtitude = pole_longtitude
+                    pole_obj.pole_height = pole_height
+                    pole_obj.region = region_obj
+                    pole_obj.address = address
+                    pole_obj.infrastructure_company = infrastructure_company
+                    pole_obj.anchor_operator = anchor_operator
 
-                poles_to_update.append(pole_obj)
+                    poles_to_update.append(pole_obj)
             else:
                 bulk_poles_to_create.append(
                     Pole(
@@ -207,30 +248,34 @@ class Api(SocialValidators):
             ts_api_logger.warning(f'Проверьте данные в {TS_POLES_TL_URL}')
 
         if bulk_regions_to_create:
-            Region.objects.bulk_create(
+            new_created_regions = Region.objects.bulk_create(
                 bulk_regions_to_create,
                 ignore_conflicts=True, batch_size=DB_CHUNK_UPDATE
             )
-            created_regions = {
-                r.region_en: r
-                for r in Region.objects.filter(
-                    region_en__in=[r.region_en for r in bulk_regions_to_create]
-                )
-            }
+            created_regions = {r.region_en: r for r in new_created_regions}
             regions_cache.update(created_regions)
+            ts_api_logger.debug(
+                'Region добавлены: '
+                f'{len(new_created_regions)} из {len(bulk_regions_to_create)}'
+            )
 
         for p in bulk_poles_to_create:
+            p: Pole
             p.region = regions_cache[p.region.region_en]
 
         if bulk_poles_to_create:
-            Pole.objects.bulk_create(
+            created_poles = Pole.objects.bulk_create(
                 bulk_poles_to_create,
                 ignore_conflicts=True,
                 batch_size=DB_CHUNK_UPDATE
             )
+            ts_api_logger.debug(
+                'Pole добавлены: '
+                f'{len(created_poles)} из {len(bulk_poles_to_create)}'
+            )
 
         if poles_to_update:
-            Pole.objects.bulk_update(
+            updated_poles = Pole.objects.bulk_update(
                 poles_to_update,
                 fields=[
                     'pole',
@@ -246,34 +291,76 @@ class Api(SocialValidators):
                 ],
                 batch_size=DB_CHUNK_UPDATE
             )
+            ts_api_logger.debug(
+                f'Pole обновлены: {updated_poles} из {len(poles_to_update)}'
+            )
 
-    @staticmethod
-    def update_avr(update_json: bool = True):
+    def get_ts_avr(self) -> pd.DataFrame:
+        email_col = (
+            '"2_Контактные данные подрядчика Email" '
+            'AS "Контактные данные подрядчика Email"'
+        )
+        phone_col = (
+            '"3_Контактные данные подрядчика Тел" '
+            'AS "Контактные данные подрядчика Телефон"'
+        )
+
+        columns_quoted = ', '.join(
+            (
+                email_col
+                if col == 'Контактные данные подрядчика Email'
+                else phone_col
+                if col == 'Контактные данные подрядчика Телефон'
+                else f'"{col}"'
+            )
+            for col in COLUMNS_TO_KEEP_AVR_REPORT
+        )
+        query = f'SELECT {columns_quoted} FROM "АВР";'
+
+        with connections['ts'].cursor() as cursor:
+            cursor.execute(query)
+            columns = [col[0] for col in cursor.description]
+            data = cursor.fetchall()
+
+        return pd.DataFrame.from_records(data, columns=columns)
+
+    def update_avr(self, update_json: bool = True):
         """
         Обновление подрядчиков по АВР.
 
         Если для опоры отсутсвует подрядчик тогда берем по умолчанию.
         Если для подрядчика нет Email, тогда ничего не выставляем.
         """
-        if update_json or not os.path.exists(AVR_FILE):
-            Api.download_json(AVR_FILE, TS_AVR_REPORT_URL)
+        # if update_json or not os.path.exists(AVR_FILE):
+        #     self.download_json(AVR_FILE, TS_AVR_REPORT_URL)
 
-        avr = Api.json_2_df(AVR_FILE, COLUMNS_TO_KEEP_AVR_REPORT)
+        # avr = self.json_2_df(AVR_FILE, COLUMNS_TO_KEEP_AVR_REPORT)
+        avr = self.get_ts_avr()
         total = len(avr)
+
+        contractors_cache = {
+            c.contractor_name: c for c in AVRContractor.objects.all()
+        }
+        email_objs = {o.email: o for o in ContractorEmail.objects.all()}
+        phone_objs = {o.phone: o for o in ContractorPhone.objects.all()}
 
         # Удаляем не актуальные записи
         new_contractors: set[str] = set(avr['Подрядчик'].dropna())
-        existing_contractors: set[str] = set(
-            AVRContractor.objects.values_list('contractor_name', flat=True)
-        )
+        existing_contractors: set[str] = set(contractors_cache.keys())
         contractors_to_delete = (
             existing_contractors - new_contractors - {UNDEFINED_CASE}
         )
 
         if contractors_to_delete:
-            AVRContractor.objects.filter(
+            deleted_avr, _ = AVRContractor.objects.filter(
                 contractor_name__in=contractors_to_delete
             ).delete()
+            for name in contractors_to_delete:
+                contractors_cache.pop(name, None)
+            ts_api_logger.debug(
+                'AVRContractor удалены: '
+                f'{deleted_avr} из {len(contractors_to_delete)}'
+            )
 
         # Дефолтный подрядчик и дефолтная опора
         with transaction.atomic():
@@ -281,56 +368,51 @@ class Api(SocialValidators):
                 contractor_name=UNDEFINED_CASE,
                 defaults={'is_excluded_from_contract': False}
             )
+            contractors_cache[UNDEFINED_CASE] = default_contractor
 
             default_pole = Pole.add_default_value()
-            default_pole.avr_contractor = default_contractor
-            default_pole.save()
+            if default_pole.avr_contractor_id != default_contractor.id:
+                default_pole.avr_contractor = default_contractor
+                default_pole.save(update_fields=['avr_contractor'])
 
             # Дефолтные email для дефолтной опоры
-            email_objs = [
-                ContractorEmail.objects.get_or_create(email=email)[0]
-                for email in UNDEFINED_EMAILS
-            ]
-            for email_obj in email_objs:
+            for email in UNDEFINED_EMAILS:
+                obj, _ = ContractorEmail.objects.get_or_create(email=email)
+
                 PoleContractorEmail.objects.get_or_create(
                     contractor=default_contractor,
                     pole=default_pole,
-                    email=email_obj
+                    email=obj
                 )
 
         # Кеш всех опор
         poles_cache: dict[str, Pole] = {p.pole: p for p in Pole.objects.all()}
 
         # Кэш существующих email/phone связей
-        existing_email_links = PoleContractorEmail.objects.select_related(
-            'email'
-        ).all()
-        email_cache: dict[tuple[int, int], set[str]] = {}
-        for link in existing_email_links:
-            key = (link.contractor_id, link.pole_id)
-            email_cache.setdefault(key, set()).add(link.email.email)
+        email_cache = {}
+        for link in PoleContractorEmail.objects.select_related('email'):
+            email_cache.setdefault(
+                (link.contractor_id, link.pole_id), set()
+            ).add(link.email.email)
 
-        existing_phone_links = PoleContractorPhone.objects.select_related(
-            'phone'
-        ).all()
-        phone_cache: dict[tuple[int, int], set[str]] = {}
-        for link in existing_phone_links:
-            key = (link.contractor_id, link.pole_id)
-            phone_cache.setdefault(key, set()).add(link.phone.phone)
+        phone_cache = {}
+        for link in PoleContractorPhone.objects.select_related('phone'):
+            phone_cache.setdefault(
+                (link.contractor_id, link.pole_id), set()
+            ).add(link.phone.phone)
+
+        updated_poles = []
+        poles_in_avr = set()
+        email_and_phones_pairs_to_delete = set()
 
         find_unvalid_values = False
-
-        poles_in_avr = set()
-
-        email_and_phones_pairs_to_delete = set()
-        updated_poles = []
 
         for index, row in avr.iterrows():
             PrettyPrint.progress_bar_info(
                 index, total,
                 (
                     'Обновление AVRContractor, ContractorEmail, '
-                    'ContractorPhone и связи с Pole:'
+                    'ContractorPhone и связей с Pole:'
                 )
             )
 
@@ -355,31 +437,46 @@ class Api(SocialValidators):
 
                 # Подрядчик
                 if contractor_name:
-                    contractor, _ = AVRContractor.objects.update_or_create(
-                        contractor_name=contractor_name,
-                        defaults={
-                            'is_excluded_from_contract': (
+                    contractor = contractors_cache.get(contractor_name)
+
+                    if contractor:
+                        if (
+                            contractor.is_excluded_from_contract != (
                                 is_excluded_from_contract
                             )
-                        }
-                    )
+                        ):
+                            contractor.is_excluded_from_contract = (
+                                is_excluded_from_contract
+                            )
+                            contractor.save(
+                                update_fields=['is_excluded_from_contract']
+                            )
+                    else:
+                        contractor = AVRContractor.objects.create(
+                            contractor_name=contractor_name,
+                            is_excluded_from_contract=is_excluded_from_contract
+                        )
+                        contractors_cache[contractor_name] = contractor
                 else:
                     # Не актуальные записи обновим потом
                     contractor = default_contractor
 
                 # Опора
                 pole = poles_cache.get(pole_number, default_pole)
-                pole.avr_contractor = contractor
-                updated_poles.append(pole)
+                if pole.avr_contractor_id != contractor.id:
+                    pole.avr_contractor = contractor
+                    updated_poles.append(pole)
 
                 poles_in_avr.add(pole.pole)
 
                 # Старые связи нужно удалить, если contractor != текущий
                 email_and_phones_pairs_to_delete.add((pole.id, contractor.id))
 
+                key = (contractor.pk, pole.pk)
+
                 # Email
                 if contractor_emails:
-                    valid_emails, _ = Api.split_and_validate_emails(
+                    valid_emails, _ = self.split_and_validate_emails(
                         contractor_emails
                     )
                 else:
@@ -387,14 +484,12 @@ class Api(SocialValidators):
                         contractor == default_contractor
                     ) else []
 
-                valid_emails_set = set(valid_emails)
-
-                key = (contractor.pk, pole.pk)
-                current_emails_set = email_cache.get(key, set())
+                new_emails = set(valid_emails)
+                old_emails = email_cache.get(key, set())
+                email_cache[key] = new_emails
 
                 # Удаляем устаревшие связи подрядчик - email
-                to_remove = current_emails_set - valid_emails_set
-
+                to_remove = old_emails - new_emails
                 if to_remove:
                     PoleContractorEmail.objects.filter(
                         contractor=contractor,
@@ -403,32 +498,32 @@ class Api(SocialValidators):
                     ).delete()
 
                 # Добавляем новые
-                for email in valid_emails_set - current_emails_set:
-                    email_obj, _ = ContractorEmail.objects.get_or_create(
-                        email=email
-                    )
+                for email in new_emails - old_emails:
+                    email_obj = email_objs.get(email)
+                    if not email_obj:
+                        email_obj = ContractorEmail.objects.create(email=email)
+                        email_objs[email] = email_obj
+
                     PoleContractorEmail.objects.get_or_create(
                         contractor=contractor,
                         pole=pole,
                         email=email_obj
                     )
 
-                email_cache[key] = valid_emails_set
-
                 # Phone
                 if contractor_phones:
-                    valid_phones, _ = Api.split_and_validate_phones(
+                    valid_phones, _ = self.split_and_validate_phones(
                         contractor_phones
                     )
                 else:
                     valid_phones = []
 
-                valid_phones_set = set(valid_phones)
-
-                current_phones_set = phone_cache.get(key, set())
+                new_phones = set(valid_phones)
+                old_phones = phone_cache.get(key, set())
+                phone_cache[key] = new_phones
 
                 # Удаляем устаревшие связи подрядчик - телефон
-                to_remove_phones = current_phones_set - valid_phones_set
+                to_remove_phones = old_phones - new_phones
                 if to_remove_phones:
                     PoleContractorPhone.objects.filter(
                         contractor=contractor,
@@ -437,17 +532,17 @@ class Api(SocialValidators):
                     ).delete()
 
                 # Добавляем новые
-                for phone in valid_phones_set - current_phones_set:
-                    phone_obj, _ = ContractorPhone.objects.get_or_create(
-                        phone=phone
-                    )
+                for phone in new_phones - old_phones:
+                    phone_obj = phone_objs.get(phone)
+                    if not phone_obj:
+                        phone_obj = ContractorPhone.objects.create(phone=phone)
+                        phone_objs[phone] = phone_obj
+
                     PoleContractorPhone.objects.get_or_create(
                         contractor=contractor,
                         pole=pole,
                         phone=phone_obj
                     )
-
-                phone_cache[key] = valid_phones_set
 
             except Exception:
                 ts_api_logger.debug(f'Проверьте данные: {row}')
@@ -457,13 +552,17 @@ class Api(SocialValidators):
             ts_api_logger.warning(f'Проверьте данные в {TS_AVR_REPORT_URL}')
 
         if updated_poles:
-            Pole.objects.bulk_update(
+            success_updated_poles = Pole.objects.bulk_update(
                 updated_poles, ['avr_contractor'], batch_size=DB_CHUNK_UPDATE
+            )
+            ts_api_logger.debug(
+                'Pole обновлены: '
+                f'{success_updated_poles} из {len(updated_poles)}'
             )
 
         # Удаляем все устаревшие email/phone связи:
         pairs_list = list(email_and_phones_pairs_to_delete)
-        chunks = list(Api.chunked(pairs_list, DB_CHUNK_UPDATE))
+        chunks = list(self.chunked(pairs_list, DB_CHUNK_UPDATE))
         total = len(chunks)
         for index, batch in enumerate(chunks):
             PrettyPrint.progress_bar_success(
@@ -484,47 +583,68 @@ class Api(SocialValidators):
         poles_to_reset = Pole.objects.filter(
             pole__in=set(poles_cache.keys()) - poles_in_avr
         )
-        poles_to_reset.update(avr_contractor=default_contractor)
-        PoleContractorEmail.objects.filter(pole__in=poles_to_reset).delete()
-        PoleContractorPhone.objects.filter(pole__in=poles_to_reset).delete()
-        default_email_objs = {
-            email: ContractorEmail.objects.get_or_create(email=email)[0]
-            for email in UNDEFINED_EMAILS
-        }
 
-        bulk_links = []
-        total = len(poles_to_reset)
+        if poles_to_reset:
+            poles_to_reset.update(avr_contractor=default_contractor)
+            PoleContractorEmail.objects.filter(
+                pole__in=poles_to_reset
+            ).delete()
+            PoleContractorPhone.objects.filter(
+                pole__in=poles_to_reset
+            ).delete()
 
-        for index, pole in enumerate(poles_to_reset):
-            PrettyPrint.progress_bar_warning(
-                index, total,
-                (
-                    'Обновление AVRContractor, ContractorEmail, '
-                    'ContractorPhone и связи с Pole для отсутсвующих данных '
-                    'в выгрузке:'
-                )
-            )
-            for email_obj in default_email_objs.values():
-                bulk_links.append(
-                    PoleContractorEmail(
-                        contractor=default_contractor,
-                        pole=pole,
-                        email=email_obj
+            default_email_objs = {
+                email: ContractorEmail.objects.get_or_create(email=email)[0]
+                for email in UNDEFINED_EMAILS
+            }
+
+            bulk_links = []
+            total = len(poles_to_reset)
+
+            for index, pole in enumerate(poles_to_reset):
+                PrettyPrint.progress_bar_warning(
+                    index, total,
+                    (
+                        'Назначение дефолтного подрядчика и '
+                        'PoleContractorEmail для отсутствующих Pole в '
+                        'выгрузке:'
                     )
                 )
+                for email_obj in default_email_objs.values():
+                    bulk_links.append(
+                        PoleContractorEmail(
+                            contractor=default_contractor,
+                            pole=pole,
+                            email=email_obj
+                        )
+                    )
 
-        PoleContractorEmail.objects.bulk_create(
-            bulk_links, ignore_conflicts=True, batch_size=DB_CHUNK_UPDATE
+            PoleContractorEmail.objects.bulk_create(
+                bulk_links, ignore_conflicts=True, batch_size=DB_CHUNK_UPDATE
+            )
+
+    def get_ts_bs(self) -> pd.DataFrame:
+        columns_quoted = ', '.join(
+            f'"{col}"' for col in COLUMNS_TO_KEEP_BS_OPERATORS_REPORT
         )
+        query = f'SELECT {columns_quoted} FROM "EI.Размещённые арендаторы";'
 
-    @staticmethod
+        with connections['ts'].cursor() as cursor:
+            cursor.execute(query)
+            columns = [col[0] for col in cursor.description]
+            data = cursor.fetchall()
+
+        return pd.DataFrame.from_records(data, columns=columns)
+
     @transaction.atomic
-    def update_base_stations(update_json: bool = True):
-        if update_json or not os.path.exists(BASE_STATIONS_FILE):
-            Api.download_json(BASE_STATIONS_FILE, TS_BS_REPORT_URL)
+    def update_base_stations(self, update_json: bool = True):
+        # if update_json or not os.path.exists(BASE_STATIONS_FILE):
+        #     self.download_json(BASE_STATIONS_FILE, TS_BS_REPORT_URL)
 
-        base_stations = Api.json_2_df(
-            BASE_STATIONS_FILE, COLUMNS_TO_KEEP_BS_OPERATORS_REPORT)
+        # base_stations = self.json_2_df(
+        #     BASE_STATIONS_FILE, COLUMNS_TO_KEEP_BS_OPERATORS_REPORT
+        # )
+        base_stations = self.get_ts_bs()
         total = len(base_stations)
 
         # Удаляем не актуальные записи:
@@ -542,13 +662,22 @@ class Api(SocialValidators):
         )
 
         if combinations_bs_to_delete:
-            for chunk in Api.chunked(
+            deleted_count = 0
+            for chunk in self.chunked(
                 combinations_bs_to_delete, chunk_size=DB_CHUNK_UPDATE
             ):
                 query = Q()
                 for pole_val, bs_val in chunk:
                     query |= Q(pole__pole=pole_val, bs_name=bs_val)
-                BaseStation.objects.filter(query).delete()
+
+                deleted_count_i, _ = BaseStation.objects.filter(query).delete()
+
+                deleted_count += deleted_count_i
+
+            ts_api_logger.debug(
+                'BaseStation удалены: '
+                f'{deleted_count} из {len(combinations_bs_to_delete)}'
+            )
 
         new_operators_combinations = set(
             zip(
@@ -565,16 +694,23 @@ class Api(SocialValidators):
         )
 
         if combinations_operators_to_delete:
-            for chunk in Api.chunked(
+            deleted_count = 0
+            for chunk in self.chunked(
                 combinations_operators_to_delete, chunk_size=DB_CHUNK_UPDATE
             ):
                 query = Q()
                 for op_name, op_group in chunk:
                     query |= Q(operator_name=op_name, operator_group=op_group)
-                BaseStationOperator.objects.filter(query).delete()
+                deleted_count_i, _ = (
+                    BaseStationOperator.objects.filter(query).delete()
+                )
+                deleted_count += deleted_count_i
+            ts_api_logger.debug(
+                'BaseStationOperator удалены: '
+                f'{deleted_count} из {len(combinations_operators_to_delete)}'
+            )
 
-        # Обновляем актуальные записи:
-        # Кешируем все существующие опоры и операторы для быстрого доступа:
+        # Кешируем все существующие опоры и операторов:
         poles = {p.pole: p for p in Pole.objects.all()}
         bs_cache: dict[tuple[str, int], BaseStation] = {
             (b.bs_name, b.pole_id): b
@@ -640,7 +776,7 @@ class Api(SocialValidators):
             ts_api_logger.warning(f'Проверьте данные в {TS_BS_REPORT_URL}')
 
         if bulk_operators_to_create:
-            BaseStationOperator.objects.bulk_create(
+            new_operators = BaseStationOperator.objects.bulk_create(
                 bulk_operators_to_create,
                 ignore_conflicts=True,
                 batch_size=DB_CHUNK_UPDATE
@@ -649,9 +785,13 @@ class Api(SocialValidators):
                 (o.operator_name, o.operator_group): o
                 for o in BaseStationOperator.objects.all()
             }
+            ts_api_logger.debug(
+                'BaseStationOperator добавлены: '
+                f'{len(new_operators)} из {len(bulk_operators_to_create)}'
+            )
 
         if bulk_bs_to_create:
-            BaseStation.objects.bulk_create(
+            new_bs = BaseStation.objects.bulk_create(
                 bulk_bs_to_create,
                 ignore_conflicts=True,
                 batch_size=DB_CHUNK_UPDATE
@@ -660,6 +800,10 @@ class Api(SocialValidators):
                 (b.bs_name, b.pole_id): b
                 for b in BaseStation.objects.select_related('pole')
             }
+            ts_api_logger.debug(
+                'BaseStationOperator добавлены: '
+                f'{len(new_bs)} из {len(bulk_bs_to_create)}'
+            )
 
         bs_2_operators: dict[tuple[str, int], list[BaseStationOperator]] = {}
         for bs_key, op_key in relations_to_set:
@@ -676,4 +820,10 @@ class Api(SocialValidators):
                 'Обновление связей между BaseStation и BaseStationOperator:'
             )
             base_station = bs_cache[bs_key]
-            base_station.operator.set(operator_objs)
+
+            current_operator_ids = set(
+                base_station.operator.values_list('id', flat=True)
+            )
+            new_operator_ids = set(o.id for o in operator_objs)
+            if current_operator_ids != new_operator_ids:
+                base_station.operator.set(operator_objs)

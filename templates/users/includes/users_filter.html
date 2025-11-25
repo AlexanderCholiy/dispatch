@@ -1,25 +1,43 @@
 {% load static %}
 
 {% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/users/includes/users_filter.css' %}">
+<link rel="stylesheet" href="{% static 'css/includes/table_filter.css' %}">
 {% endblock %}
 
-<form method="get" class="user-filter-form" id="filter-form">
-  <div class="filter-wrapper">
+<form method="get" class="table-filter-form" id="filter-form">
+  <div class="left-part">
     <div class="select-wrapper">
-      <select name="role" class="select" id="role-select">
-        <option value="">Все роли</option>
-        <option value="user" {% if selected_role == 'user' %}selected{% endif %}>Пользователь</option>
-        <option value="dispatch" {% if selected_role == 'dispatch' %}selected{% endif %}>Диспетчер</option>
+      <select name="role" id="role-select" class="select tooltip" data-title="Роль пользователя">
+        <option value="" {% if not selected.role %}selected{% endif %}>Роль: Все</option>
+        {% for r in roles %}
+          <option value="{{ r }}" {% if selected.role == r %}selected{% endif %}>{{ r.label }}</option>
+        {% endfor %}
       </select>
     </div>
-
-    <input type="hidden" name="q" value="{{ search_query }}" id="filter-hidden-q">
-
-    <button type="submit" class="btn btn-primary tooltip" data-title="Применить фильтр"><i class="bx bx-filter"></i></button>
   </div>
+    
+  <div class="right-parts">
+    <div class="select-wrapper">
+      <select name="per_page" id="per-page" class="select tooltip" data-title="Кол-во пользователей на странице">
+        {% for size in page_size_choices %}
+        <option value="{{ size }}" {% if selected.per_page == size %}selected{% endif %}>Показать: {{ size }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="button" id="reset-filters" class="btn btn-secondary tooltip" data-title="Сбросить фильтры">
+      <i class="bx bx-x-circle"></i>
+    </button>
+    <button type="submit" class="btn btn-primary tooltip" data-title="Применить фильтр">
+      <i class="bx bx-filter"></i>
+    </button>
+  </div>
+
+  <input type="hidden" name="q" value="{{ search_query }}" id="filter-hidden-q">
+
 </form>
 
 {% block extra_js %}
-  <script src="{% static 'js/users/search_filter.js' %}"></script>
+<script src="{% static 'js/users/search_filter.js' %}"></script>
+<script src="{% static 'js/save_elements_per_page.js' %}"></script>
+<script src="{% static 'js/reset_tables_filter.js' %}"></script>
 {% endblock %}

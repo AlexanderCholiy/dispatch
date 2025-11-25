@@ -4,7 +4,7 @@ from django.contrib.auth.forms import UserChangeForm, UserCreationForm
 
 from core.constants import EMPTY_VALUE
 
-from .constants import MAX_USERS_PER_PAGE
+from .constants import USERS_PER_PAGE
 from .models import PendingUser, User, WorkSchedule
 
 admin.site.empty_value_display = EMPTY_VALUE
@@ -94,4 +94,4 @@ class PendingUserAdmin(admin.ModelAdmin):
     list_display = ('email', 'username', 'last_login')
     search_fields = ('email', 'username')
     ordering = ('email',)
-    list_per_page = MAX_USERS_PER_PAGE
+    list_per_page = USERS_PER_PAGE

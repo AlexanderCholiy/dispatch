@@ -56,9 +56,10 @@ class Command(BaseCommand):
             lock_acquired = True
 
             os.makedirs(TS_DATA_DIR, exist_ok=True)
-            Api.update_poles()
-            Api.update_avr()
-            Api.update_base_stations()
+            ts_api = Api()
+            ts_api.update_poles()
+            ts_api.update_avr()
+            ts_api.update_base_stations()
 
         finally:
             if lock_acquired and os.path.exists(UPDATE_DATA_FROM_TS_LOCK_FILE):
