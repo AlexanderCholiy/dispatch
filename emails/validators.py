@@ -227,7 +227,21 @@ class EmailValidator:
             ValidationError: не допустимый тип файла.
         """
         content_type = part.get_content_type()
-        payload = part.get_payload(decode=True)
+
+        if content_type == 'message/rfc822':
+            inner = part.get_payload()[0] if isinstance(
+                part.get_payload(), list
+            ) else part.get_payload()
+            payload = inner.as_bytes()
+        else:
+            payload = part.get_payload(decode=True)
+
+        if payload is None:
+            raise ValidationError(
+                f'Не удалось извлечь содержимое файла {filename} '
+                f'({content_type})'
+            )
+
         file_size = len(payload)
         ext = os.path.splitext(filename)[1].lower()
 
@@ -235,7 +249,8 @@ class EmailValidator:
             content_type.startswith(prefix) for prefix in ALLOWED_MIME_PREFIXES
         ) and ext not in ALLOWED_EXTENSIONS:
             raise ValidationError(
-                f'Недопустимый тип файла {filename} ({content_type})')
+                f'Недопустимый тип файла {filename} ({content_type})'
+            )
 
         if file_size > MAX_ATTACHMENT_SIZE:
             raise ValidationError(
@@ -250,4 +265,4 @@ class EmailValidator:
         os.makedirs(file_dir, exist_ok=True)
         filepath = os.path.join(file_dir, filename)
         with open(filepath, 'wb') as f:
-            f.write(part.get_payload(decode=True))
+            f.write(payload)

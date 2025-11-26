@@ -535,13 +535,26 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                             )
 
                             if (
-                                content_disposition and (
-                                    content_disposition == 'attachment'
+                                (
+                                    content_disposition
+                                    and content_disposition == 'attachment'
+                                )
+                                or (
+                                    content_type
+                                    and content_type == 'message/rfc822'
                                 )
                             ):
                                 original_file_name: Optional[str] = (
                                     part.get_filename()
                                 )
+
+                                if (
+                                    not original_file_name
+                                    and content_type
+                                    and content_type == 'message/rfc822'
+                                ):
+                                    original_file_name = 'msg.eml'
+
                                 if not original_file_name:
                                     continue
 
@@ -602,6 +615,7 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                                     email_body = self.prepare_text_from_html(
                                         email_body
                                     ).replace(email_subject or '', '').strip()
+
                     else:
                         html_body_text = self.prepare_text_from_bytes(msg)
                         email_body = self.prepare_text_from_html(

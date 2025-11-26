@@ -84,7 +84,7 @@
 }
 
 .email-tree-ids a.email-link:last-child::after {
-  content: ".";
+  content: "";
 }
 
 .email-tree-body.hidden {

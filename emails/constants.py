@@ -54,6 +54,9 @@ ALLOWED_MIME_PREFIXES = {
     'application/vnd.ms-project',  # .mpp
     'application/vnd.ms-access',   # .mdb
 
+    # Электронные письма
+    'message/rfc822',  # стандартный MIME для .eml/.msg
+
     # Универсальный бинарный тип для файлов вроде .sor
     'application/octet-stream',
 }
@@ -91,4 +94,7 @@ ALLOWED_EXTENSIONS = {
 
     # Картинки
     '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.jfif',
+
+    # Электронные письма
+    '.eml', '.msg',
 }

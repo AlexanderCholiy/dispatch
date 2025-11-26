@@ -45,7 +45,7 @@ class Attachment(models.Model):
 
     def save(self, *args, **kwargs):
         if self.pk:
-            old = self.objects.filter(pk=self.pk).first()
+            old = self.__class__.objects.filter(pk=self.pk).first()
             if (
                 old
                 and old.file_url
