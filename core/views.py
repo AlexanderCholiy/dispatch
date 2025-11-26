@@ -4,16 +4,16 @@ from typing import Optional
 from urllib.parse import quote
 
 from django.conf import settings
-from django.contrib.sites.shortcuts import get_current_site
-from django.http import HttpRequest, HttpResponse, Http404, FileResponse
 from django.contrib.auth.decorators import login_required
+from django.contrib.sites.shortcuts import get_current_site
+from django.http import FileResponse, Http404, HttpRequest, HttpResponse
 from django.shortcuts import render
 from django.urls.exceptions import Resolver404
 
-from .constants import INLINE_EXTS, DJANGO_LOG_ROTATING_FILE
 from users.views import role_required
-from .loggers import LoggerFactory
 
+from .constants import DJANGO_LOG_ROTATING_FILE, INLINE_EXTS
+from .loggers import LoggerFactory
 
 django_logger = LoggerFactory(__name__, DJANGO_LOG_ROTATING_FILE).get_logger()
 

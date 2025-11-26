@@ -18,6 +18,8 @@ from .constants import (
     DEFAULT_STATUS_DESC,
     DEFAULT_STATUS_NAME,
     DGU_CATEGORY,
+    END_STATUS_DESC,
+    END_STATUS_NAME,
     ERR_STATUS_DESC,
     ERR_STATUS_NAME,
     GENERATION_STATUS_DESC,
@@ -39,8 +41,6 @@ from .constants import (
     RVR_CATEGORY,
     WAIT_ACCEPTANCE_STATUS_DESC,
     WAIT_ACCEPTANCE_STATUS_NAME,
-    END_STATUS_NAME,
-    END_STATUS_DESC,
 )
 from .models import (
     Incident,

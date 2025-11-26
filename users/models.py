@@ -14,8 +14,8 @@ from .constants import (
     MAX_USER_ROLE_LEN,
     MAX_USER_USERNAME_LEN,
     PASSWORD_HELP_TEXT,
-    USERNAME_HELP_TEXT,
     SUBFOLDER_AVATAR_DIR,
+    USERNAME_HELP_TEXT,
 )
 from .validators import (
     username_format_validators,

@@ -10,10 +10,10 @@ from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from rest_framework import permissions
 
+from core.constants import PUBLIC_SUBFOLDER_NAME
+from core.views import protected_media
 from users.forms import AuthForm
 from users.views import CustomLoginView, CustomPasswordResetView
-from core.views import protected_media
-from core.constants import PUBLIC_SUBFOLDER_NAME
 
 handler400 = 'core.views.bad_request'
 handler403 = 'core.views.permission_denied'

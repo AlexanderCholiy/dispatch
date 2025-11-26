@@ -2,26 +2,23 @@ import json
 from http import HTTPStatus
 from types import NoneType
 from typing import Generator, Iterable
-from numpy import nan
 
 import pandas as pd
 import requests
-from django.db import transaction, connections
+from django.db import connections, transaction
 from django.db.models import Q
+from numpy import nan
 
 from core.constants import TS_LOG_ROTATING_FILE
 from core.loggers import LoggerFactory
 from core.pretty_print import PrettyPrint
 from core.wraps import timer
 
-from .constants import (
-    # AVR_FILE,
-    # BASE_STATIONS_FILE,
+from .constants import (  # AVR_FILE,; BASE_STATIONS_FILE,; POLES_FILE,
     COLUMNS_TO_KEEP_AVR_REPORT,
     COLUMNS_TO_KEEP_BS_OPERATORS_REPORT,
     COLUMNS_TO_KEEP_POLES_TL,
     DB_CHUNK_UPDATE,
-    # POLES_FILE,
     TS_AVR_REPORT_URL,
     TS_BS_REPORT_URL,
     TS_POLES_TL_URL,

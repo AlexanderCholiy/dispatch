@@ -1,9 +1,9 @@
-import os
-import subprocess
 import gzip
+import os
+import shutil
+import subprocess
 from datetime import datetime
 from pathlib import Path, PurePosixPath
-import shutil
 
 import paramiko
 from django.conf import settings
@@ -50,7 +50,7 @@ class Command(BaseCommand):
 
     @timer(bakup_manager_logger)
     def handle(self, *args, **options):
-        # self.backup_db()
+        self.backup_db()
         self.send_backup_on_reserve_server()
         self.cleanup_remote_backups()
         self.cleanup_old_backups()
