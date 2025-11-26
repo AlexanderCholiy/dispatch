@@ -1,10 +1,7 @@
-from urllib.parse import quote
-
 from django.contrib.auth import get_user_model
 from django.db import models
-from django.urls import reverse
 
-from core.constants import MAX_EMAIL_ID_LEN, PUBLIC_SUBFOLDER_NAME
+from core.constants import MAX_EMAIL_ID_LEN
 from core.models import Attachment, Detail, Msg2, SpecialEmail
 from core.utils import email_mime_upload_to
 from incidents.models import Incident
@@ -243,7 +240,7 @@ class EmailToCC(Msg2):
         verbose_name_plural = 'Получатели (в копии) email'
 
 
-class EmailMime(models.Model):
+class EmailMime(Attachment):
     email_msg = models.OneToOneField(
         EmailMessage,
         on_delete=models.CASCADE,
@@ -260,43 +257,18 @@ class EmailMime(models.Model):
     )
 
     class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['email_msg', 'file_url'],
+                name='unique_email_mime'
+            )
+        ]
         verbose_name = 'оригинальное письмо'
         verbose_name_plural = 'Оригинальные письма'
 
     def __str__(self):
         return f'Mime для {self.email_msg.email_msg_id}'
 
-    def delete(self, *args, **kwargs):
-        if self.file_url:
-            self.file_url.delete(save=False)
-        super().delete(*args, **kwargs)
-
     @property
     def file_name(self) -> str:
         return 'original.eml'
-
-    @property
-    def protected_url(self):
-        """Генерируем URL через view с проверкой прав."""
-        if not self.file_url:
-            return ''
-
-        path = self.file_url.name
-
-        if path.startswith(PUBLIC_SUBFOLDER_NAME + '/'):
-            return self.file_url.url
-
-        safe_path = quote(path, safe='/')
-
-        return reverse('protected_media', args=[safe_path])
-
-    @property
-    def public_url(self):
-        """Прямой URL для файлов из public/"""
-        if (
-            self.file_url
-            and self.file_url.name.startswith(f'{PUBLIC_SUBFOLDER_NAME}/')
-        ):
-            return self.file_url.url
-
-        return ''

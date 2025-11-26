@@ -1,6 +1,9 @@
 import os
 import subprocess
-from datetime import datetime, timedelta
+import gzip
+from datetime import datetime
+from pathlib import Path, PurePosixPath
+import shutil
 
 import paramiko
 from django.conf import settings
@@ -47,16 +50,16 @@ class Command(BaseCommand):
 
     @timer(bakup_manager_logger)
     def handle(self, *args, **options):
-        self.backup_db()
-        self.send_backup_on_reserve_server(self.remote_db_back_folder_dir)
-        self.cleanup_remote_backups(
-            MAX_REMOTE_DB_BACK, self.remote_db_back_folder_dir
-        )
-        self.cleanup_old_backups(MAX_DB_BACK)
+        # self.backup_db()
+        self.send_backup_on_reserve_server()
+        self.cleanup_remote_backups()
+        self.cleanup_old_backups()
+        self.compress_old_remote_backups()
+
         # self.restore_database(
         #     (
         #         '/home/a.choliy/dispatch/data/backup_db/'
-        #         + 'backup_dispatch_2025-11-13_20-24.sql'
+        #         + 'backup_dispatch_backend_2025-11-26_12-08.sql'
         #     ),
         #     f'dump_{self.db_name}'
         # )
@@ -77,8 +80,9 @@ class Command(BaseCommand):
                     '-h', self.db_host,
                     '-p', str(self.db_port),
                     '-U', self.db_user,
-                    '-F', 'c',
+                    '-F', 'p',
                     '-b',
+                    '--no-owner',
                     '-f', backup_file,
                     self.db_name,
                 ],
@@ -121,13 +125,12 @@ class Command(BaseCommand):
         bakup_manager_logger.info(f'База данных {new_db_name} создана')
 
         restore_cmd = [
-            'pg_restore',
+            'psql',
             f'--host={self.db_host}',
             f'--port={self.db_port}',
             f'--username={self.db_user}',
-            '--no-owner',  # если нужна совместимость
             '--dbname', new_db_name,
-            dump_file
+            '-f', dump_file
         ]
 
         try:
@@ -149,39 +152,50 @@ class Command(BaseCommand):
                 f'STDERR: {e.stderr}'
             )
 
-    def cleanup_old_backups(self, dt: timedelta) -> None:
-        """Удаляет дампы базы данных старше N дней."""
+    def cleanup_old_backups(self) -> None:
+        """Удаляет .sql и .sql.gz дампы базы данных старше N дней."""
         now = datetime.now()
-        cutoff_date = now - dt
+        cutoff_date = now - MAX_DB_BACK
 
-        for filename in os.listdir(DB_BACK_FOLDER_DIR):
-            if (
-                not filename.startswith('backup_')
-                or not filename.endswith('.sql')
+        folder = Path(DB_BACK_FOLDER_DIR)
+
+        for file in folder.iterdir():
+            if not file.name.startswith(f'backup_{self.db_name}_'):
+                continue
+
+            if not (
+                file.name.endswith('.sql') or file.name.endswith('.sql.gz')
             ):
                 continue
 
+            date_str = (
+                file.name
+                .replace(f'backup_{self.db_name}_', '')
+                .replace('.sql.gz', '')
+                .replace('.sql', '')
+            )
+
             try:
-                date_str = (
-                    filename.replace(f'backup_{self.db_name}_', '')
-                    .replace('.sql', '')
-                )
                 file_date = datetime.strptime(
-                    date_str, DB_BACK_FILENAME_DATETIME_FORMAT)
+                    date_str,
+                    DB_BACK_FILENAME_DATETIME_FORMAT
+                )
             except ValueError:
                 bakup_manager_logger.warning(
-                    f'Пропущен файл (не удалось распарсить дату): {filename}')
+                    f'Пропущен файл (не удалось распарсить дату): {file.name}'
+                )
                 continue
 
             if file_date < cutoff_date:
-                file_path = os.path.join(DB_BACK_FOLDER_DIR, filename)
                 try:
-                    os.remove(file_path)
+                    file.unlink()
                     bakup_manager_logger.info(
-                        f'Удалён старый бэкап: {file_path}')
-                except OSError as e:
+                        f'Удалён старый бэкап: {file.as_posix()}'
+                    )
+                except Exception as e:
                     bakup_manager_logger.exception(
-                        f'Ошибка при удалении {file_path}: {e}')
+                        f'Ошибка при удалении {file.as_posix()}: {e}'
+                    )
 
     def _sftp_upload(self, local_path: str, remote_path: str):
         if self.missing_reserve_params:
@@ -252,7 +266,7 @@ class Command(BaseCommand):
             except FileNotFoundError:
                 sftp.mkdir(current)
 
-    def send_backup_on_reserve_server(self, remote_path: str):
+    def send_backup_on_reserve_server(self):
         """Сохраняет дампы базы данных на резервный сервер."""
         files_2_send = []
         remote_files = []
@@ -283,7 +297,7 @@ class Command(BaseCommand):
 
         if self.missing_reserve_params:
             bakup_manager_logger.error(
-                'Невозможно выполнить удалённую очистку бэкапов. '
+                'Невозможно выполнить перенос бэкапов. '
                 'Отсутствуют параметры подключения: '
                 f'{", ".join(self.missing_reserve_params)}'
             )
@@ -301,18 +315,18 @@ class Command(BaseCommand):
             )
             sftp = paramiko.SFTPClient.from_transport(transport)
             try:
-                remote_files = sftp.listdir(remote_path)
+                remote_files = sftp.listdir(self.remote_db_back_folder_dir)
             except IOError:
                 bakup_manager_logger.warning(
                     f'Не удалось прочитать удалённую директорию '
-                    f'{remote_path}. '
+                    f'{self.remote_db_back_folder_dir}. '
                 )
-                self.sftp_mkdirs(sftp, remote_path)
+                self.sftp_mkdirs(sftp, self.remote_db_back_folder_dir)
                 remote_files = []
         except Exception as e:
             bakup_manager_logger.exception(
                 'Ошибка при попытки чтения удаленной директории '
-                f'{remote_path}: {e}'
+                f'{self.remote_db_back_folder_dir}: {e}'
             )
         finally:
             try:
@@ -326,11 +340,13 @@ class Command(BaseCommand):
 
         for file_path in files_2_send:
             filename = os.path.basename(file_path)
-            remote_file_path = os.path.join(remote_path, filename)
+            remote_file_path = os.path.join(
+                self.remote_db_back_folder_dir, filename
+            )
             self._sftp_upload(file_path, remote_file_path)
 
-    def cleanup_remote_backups(self, dt: timedelta, remote_dir: str) -> None:
-        """Удаляет старые SQL-бэкапы на удалённом сервере."""
+    def cleanup_remote_backups(self) -> None:
+        """Удаляет старые .sql и .sql.gz бэкапы на удалённом сервере."""
         if self.missing_reserve_params:
             bakup_manager_logger.error(
                 'Невозможно выполнить удалённую очистку бэкапов. '
@@ -339,7 +355,7 @@ class Command(BaseCommand):
             )
             return
 
-        cutoff_date = datetime.now() - dt
+        cutoff_date = datetime.now() - MAX_REMOTE_DB_BACK
         transport = None
         sftp = None
 
@@ -348,42 +364,188 @@ class Command(BaseCommand):
                 (self.reserve_host, self.reserve_port)
             )
             transport.connect(
-                username=self.reserve_username, password=self.reserve_password
+                username=self.reserve_username,
+                password=self.reserve_password
             )
             sftp = paramiko.SFTPClient.from_transport(transport)
 
-            for filename in sftp.listdir(remote_dir):
-                if (
-                    not filename.startswith(f'backup_{self.db_name}_')
-                    or not filename.endswith('.sql')
+            for filename in sftp.listdir(self.remote_db_back_folder_dir):
+                if not filename.startswith(f'backup_{self.db_name}_'):
+                    continue
+
+                if not (
+                    filename.endswith('.sql') or filename.endswith('.sql.gz')
                 ):
                     continue
 
+                date_str = (
+                    filename
+                    .replace(f'backup_{self.db_name}_', '')
+                    .replace('.sql.gz', '')
+                    .replace('.sql', '')
+                )
+
                 try:
-                    date_str = (
-                        filename
-                        .replace(f'backup_{self.db_name}_', '')
-                        .replace('.sql', '')
+                    file_date = datetime.strptime(
+                        date_str,
+                        DB_BACK_FILENAME_DATETIME_FORMAT
                     )
+                except ValueError:
+                    bakup_manager_logger.warning(
+                        f'Пропущен файл на удалённом сервере '
+                        f'(не удалось распарсить дату): {filename}'
+                    )
+                    continue
+
+                if file_date < cutoff_date:
+                    remote_path = str(
+                        PurePosixPath(self.remote_db_back_folder_dir)
+                        / filename
+                    )
+
+                    try:
+                        sftp.remove(remote_path)
+                        bakup_manager_logger.info(
+                            f'Удалён старый: {remote_path}'
+                        )
+                    except Exception as e:
+                        bakup_manager_logger.exception(
+                            f'Ошибка при удалении файла {remote_path}: {e}'
+                        )
+
+        except Exception as e:
+            bakup_manager_logger.exception(
+                f'Ошибка при очистке бэкапов на удаленном сервере: {e}'
+            )
+
+        finally:
+            if sftp:
+                sftp.close()
+            if transport:
+                transport.close()
+
+    def gzip_compress(
+        self, file_path: Path, del_original_file: bool = True
+    ) -> Path:
+        gz_path = file_path.with_suffix(file_path.suffix + '.gz')
+
+        with open(file_path, 'rb') as f_in:
+            with gzip.open(gz_path, 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
+
+        if del_original_file:
+            os.remove(file_path)
+
+        return gz_path
+
+    def gzip_decompress(
+        self,
+        gz_path: Path,
+        file_suffix: str = '',
+        del_original_file: bool = True
+    ) -> Path:
+        file_path = gz_path.with_suffix(file_suffix)
+
+        with gzip.open(gz_path, 'rb') as f_in:
+            with open(file_path, 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
+
+        if del_original_file:
+            os.remove(gz_path)
+
+        return file_path
+
+    def compress_old_remote_backups(self) -> None:
+        """
+        Архивирует .sql файлы на удалённом сервере, возраст которых
+        старше MAX_DB_BACK, но младше MAX_REMOTE_DB_BACK.
+        """
+
+        if self.missing_reserve_params:
+            bakup_manager_logger.error(
+                'Невозможно выполнить архивацию бэкапов. '
+                'Отсутствуют параметры: '
+                f'{", ".join(self.missing_reserve_params)}'
+            )
+            return
+
+        now = datetime.now()
+        min_age = now - MAX_DB_BACK
+        max_age = now - MAX_REMOTE_DB_BACK
+
+        transport = None
+        sftp = None
+
+        try:
+            transport = paramiko.Transport(
+                (self.reserve_host, self.reserve_port)
+            )
+            transport.connect(
+                username=self.reserve_username,
+                password=self.reserve_password
+            )
+
+            sftp = paramiko.SFTPClient.from_transport(transport)
+
+            for filename in sftp.listdir(self.remote_db_back_folder_dir):
+                if not filename.startswith(f'backup_{self.db_name}_'):
+                    continue
+
+                if not filename.endswith('.sql'):
+                    continue
+
+                date_str = (
+                    filename
+                    .replace(f'backup_{self.db_name}_', '')
+                    .replace('.sql', '')
+                )
+
+                try:
                     file_date = datetime.strptime(
                         date_str, DB_BACK_FILENAME_DATETIME_FORMAT
                     )
                 except ValueError:
                     bakup_manager_logger.warning(
-                        f'Пропущен файл на удалённом сервере: {filename}'
+                        f'Пропущен файл (некорректная дата): {filename}'
                     )
                     continue
 
-                if file_date < cutoff_date:
-                    remote_file = os.path.join(remote_dir, filename)
-                    sftp.remove(remote_file)
-                    bakup_manager_logger.info(
-                        f'Удалён старый удалённый бэкап: {remote_file}'
-                    )
+                if not (max_age < file_date < min_age):
+                    continue
+
+                remote_sql = str(
+                    PurePosixPath(self.remote_db_back_folder_dir) / filename
+                )
+                remote_gz = remote_sql + '.gz'
+
+                bakup_manager_logger.info(
+                    f'Архивация удалённого файла {remote_sql}'
+                )
+
+                # Скачиваем .sql во временный файл
+                local_tmp = Path(DB_BACK_FOLDER_DIR) / f'__tmp_{filename}'
+                sftp.get(remote_sql, str(local_tmp))
+
+                # Сжимаем локально
+                gz_local = self.gzip_compress(local_tmp)
+
+                # Загружаем .gz обратно на сервер
+                sftp.put(str(gz_local), remote_gz)
+
+                # Удаляем локальные временные файлы
+                gz_local.unlink(missing_ok=True)
+                local_tmp.unlink(missing_ok=True)
+
+                # Удаляем исходный .sql на сервере
+                sftp.remove(remote_sql)
+
+                bakup_manager_logger.info(
+                    f'Удалён оригинал и загружен архив: {remote_gz}'
+                )
 
         except Exception as e:
             bakup_manager_logger.exception(
-                f'Ошибка при удалённой очистке бэкапов: {e}'
+                f'Ошибка архивации удалённых бэкапов: {e}'
             )
         finally:
             if sftp:

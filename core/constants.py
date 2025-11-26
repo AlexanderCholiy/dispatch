@@ -86,7 +86,7 @@ os.makedirs(DB_BACK_FOLDER_DIR, exist_ok=True)
 os.makedirs(REMOTE_DB_BACK_FOLDER_DIR, exist_ok=True)
 
 MAX_DB_BACK = timedelta(days=3)
-MAX_REMOTE_DB_BACK = timedelta(days=15)
+MAX_REMOTE_DB_BACK = timedelta(days=7)
 DATETIME_FORMAT = '%d.%m.%Y %H:%M:%S'
 
 INLINE_EXTS = {

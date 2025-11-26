@@ -215,6 +215,7 @@ media/*
 data/backup_db/*
 data/lock/*
 *.sql
+data/remote_backup_db/*
 
 # Logs
 *.log
