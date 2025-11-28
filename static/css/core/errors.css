@@ -31,6 +31,10 @@
     margin: 0;
 }
 
+.card-title {
+    color: var(--add-color);
+}
+
 .error-card .card-title {
     color: var(--red-color);
 }
