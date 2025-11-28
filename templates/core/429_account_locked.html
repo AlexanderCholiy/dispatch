@@ -9,14 +9,14 @@
 
 {% block content %}
 <div class="container-sm">
-  <div class="card">
+  <div class="card warning-card">
     <div class="card-body card-bg">
 
       <!-- Левая часть: текст -->
       <div class="card-bg-content">
         <p class="card-title">Аккаунт временно заблокирован</p>
 
-        <p class="card-text error-message">
+        <p class="card-text">
           Пользователь "{{ username }}" временно заблокирован после {{ failure_limit }} неудачных попыток входа.
         </p>
 

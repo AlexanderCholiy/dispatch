@@ -8,12 +8,12 @@
 
 {% block content %}
 <div class="container-sm">
-  <div class="card">
+  <div class="card info-card">
     <div class="card-body card-bg">
       <div class="card-bg-content">
         <p class="card-title">Страница не найдена: 404</p>
 
-        <p class="card-text error-message">
+        <p class="card-text">
           {% if path %}
           Упс! Страницы с адресом <code>{{ path }}</code> не существует.
           {% else %}
