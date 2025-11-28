@@ -248,6 +248,7 @@ class CustomLoginView(LoginView):
 
 
 @login_required
+@role_required()
 def users_list(request: HttpRequest) -> HttpResponse:
     query = request.GET.get('q', '').strip()
     role_filter = request.GET.get('role', '').strip().lower()
@@ -318,6 +319,7 @@ def users_list(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@role_required()
 def user_detail(request: HttpRequest, user_id: int):
     user = get_object_or_404(
         User.objects.select_related('work_schedule'),
@@ -375,6 +377,7 @@ def user_detail(request: HttpRequest, user_id: int):
 
 
 @login_required
+@role_required()
 def work_schedule(request: HttpRequest, user_id: int):
     user = get_object_or_404(
         User.objects.select_related('work_schedule'),

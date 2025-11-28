@@ -1,13 +1,19 @@
 {% extends "base.html" %}
 {% load static %}
 {% load tz %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/core/errors.css' %}">
+{% endblock %}
 
 {% block title %}Ошибка 429{% endblock %}
 
 {% block content %}
-  <div class="container-sm">
-    <div class="card">
-      <div class="card-body">
+<div class="container-sm">
+  <div class="card">
+    <div class="card-body card-bg">
+
+      <!-- Левая часть: текст -->
+      <div class="card-bg-content">
         <p class="card-title">Аккаунт временно заблокирован</p>
 
         <p class="card-text error-message">
@@ -15,17 +21,27 @@
         </p>
 
         {% if cooloff_timedelta %}
-          <p class="card-text text-muted" id="cooloff-block" data-login-url="{% url 'login' %}">
+        <p class="card-text text-muted" id="cooloff-block" data-login-url="{% url 'login' %}">
             Следующую попытку входа можно будет совершить через
             <strong id="cooloff-time" data-utc="{{ cooloff_timedelta }}"></strong>.
-          </p>
+        </p>
         {% endif %}
+        <p class="card-text card-link">
+          <a href="{% url 'password_reset' %}" class="link-text">Забыли пароль?</a>
+        </p>
 
       </div>
+
+      <!-- Правая часть: картинка -->
+      <div class="card-bg-image-wrapper">
+        <img src="{% static 'img/errors/429.png' %}" class="card-bg-img" alt="">
+      </div>
+
     </div>
   </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
-  <script src="{% static 'js/core/timer.js' %}"></script>
+<script src="{% static 'js/core/timer.js' %}"></script>
 {% endblock %}

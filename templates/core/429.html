@@ -1,20 +1,31 @@
 {% extends "base.html" %}
 {% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/core/errors.css' %}">
+{% endblock %}
 
 {% block title %}Ошибка 429{% endblock %}
 
 {% block content %}
 <div class="container-sm">
   <div class="card">
-    <div class="card-body">
-      <p class="card-title">Ошибка 429 — Слишком много запросов</p>
-      <p class="card-text error-message">
-        Вы сделали слишком много запросов за короткий промежуток времени.
-        Пожалуйста, попробуйте позже.
-      </p>
-      <p class="card-text">
-        <a href="{% url 'incidents:index' %}" class="link-text">Вернуться на главную</a>
-      </p>
+    <div class="card-body card-bg">
+  
+      <div class="card-bg-content">
+        <p class="card-title">Ошибка 429 — Слишком много запросов</p>
+
+        <p class="card-text error-message">
+          Вы сделали слишком много запросов за короткий промежуток времени.
+          Пожалуйста, попробуйте позже.
+        </p>
+        <p class="card-text card-link">
+          <a href="{% url 'incidents:index' %}" class="link-text">Вернуться на главную</a>
+        </p>
+      </div>
+
+      <div class="card-bg-image-wrapper">
+        <img src="{% static 'img/errors/429.png' %}" class="card-bg-img" alt="">
+      </div>
     </div>
   </div>
 </div>
