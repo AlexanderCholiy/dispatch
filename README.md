@@ -179,13 +179,13 @@ Supervisor управляет запуском:
 
 ## 🧩 Стек технологий
 
-| Категория          | Технологии                                 |
-|--------------------|--------------------------------------------|
-| **Backend**        | Python 3.12, Django 4.2, YandexTracker API |
-| **Frontend**       | Веб-интерфейс через Yandex Tracker         |
-| **База данных**    | PostgreSQL                                 |
-| **Инфраструктура** | Docker, Docker Compose, Nginx              |
-| **CI/CD**          | GitHub Actions                             |
+| Категория          | Технологии                                                   |
+|--------------------|--------------------------------------------------------------|
+| **Backend**        | Python 3.12, Django 4.2, YandexTracker API, Celery, RabbitMQ |
+| **Frontend**       | Веб-интерфейс через Django Templates, Yandex Tracker         |
+| **База данных**    | PostgreSQL                                                   |
+| **Инфраструктура** | Docker, Docker Compose, Nginx                                |
+| **CI/CD**          | GitHub Actions                                               |
 
 ---
 
@@ -449,10 +449,14 @@ sudo service nginx reload
 ---
 
 ## ⚙️ Запуск в режиме разработки
-1. Запустите из Docker Compose только контейнер с базой данных PostgreSQL:
+1. Запустите необходимые контейнеры через Docker Compose: базу данных PostgreSQL, брокер сообщений RabbitMQ и воркеры Celery для фоновой обработки задач:
 ```bash
-sudo docker compose up -d dispatch_db
+sudo docker compose up -d dispatch_db dispatch_redis dispatch_celery_heavy_worker dispatch_celery_worker dispatch_celery_beat
 ```
+```bash
+sudo docker compose restart dispatch_celery_heavy_worker dispatch_celery_worker dispatch_celery_beat
+```
+> Если вы изменяете код задач Celery, обязательно перезапускайте соответствующие сервисы, чтобы новые изменения вступили в силу.
 
 2. В файле .env установите флаг отладки `DEBUG=True`.
 

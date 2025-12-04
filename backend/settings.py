@@ -3,6 +3,7 @@ from datetime import timedelta
 from logging import Filter
 from pathlib import Path
 
+from celery.schedules import crontab
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
@@ -62,6 +63,7 @@ INSTALLED_APPS = [
     'drf_yasg',
     'axes',  # после всех приложений
     'django_cleanup.apps.CleanupConfig',  # после всех приложений
+    'django_celery_results',
 ]
 
 MIDDLEWARE = [
@@ -137,6 +139,43 @@ DATABASES = {
         'HOST': os.environ.get('TS_DB_HOST'),
         'PORT': os.environ.get('TS_DB_PORT'),
     },
+}
+
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL')
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_CACHE_BACKEND = 'django-cache'
+CELERY_RESULT_EXTENDED = True
+CELERY_TRACK_STARTED = True
+CELERY_RESULT_EXPIRES = 7 * 24 * 3600  # Очистка записей
+
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Europe/Moscow'
+
+# Подтверждаем задачу после выполнения.
+CELERY_TASK_ACKS_LATE = True
+CELERY_TASK_REJECT_ON_WORKER_LOST = True
+# Максимальное количество задач, которые один процесс воркера выполнит перед
+# перезапуском. Полезно для очистки памяти после долгих задач.
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 100
+# Сколько задач воркер берёт сразу из очереди для обработки
+# (предотвращает "захват" многих задач одним воркером).
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+# Если задача выполняется дольше, Celery выбрасывает исключение
+# SoftTimeLimitExceeded внутри задачи, которое можно поймать и корректно
+# завершить обработку.
+CELERY_TASK_SOFT_TIME_LIMIT = 300
+# Если задача превышает это время, Celery принудительно завершает процесс,
+# который её выполняет. Используется для защиты от «зависших» задач, которые
+# могут блокировать воркеры.
+CELERY_TASK_TIME_LIMIT = 600
+
+CELERY_BEAT_SCHEDULE = {
+    'cleanup_old_task_results': {
+        'task': 'core.tasks.cleanup_old_task_results',
+        'schedule': crontab(hour=0, minute=0),
+    }
 }
 
 DATABASE_ROUTERS = ['monitoring.routers.ReadOnlyRouter']
@@ -279,9 +318,7 @@ LOGGING = {
             'class': 'logging.handlers.RotatingFileHandler',
             'level': 'WARNING',
             'formatter': 'verbose',
-            'filename': os.path.join(
-                BASE_DIR, 'logs', 'django', 'django.log'
-            ),
+            'filename': os.path.join(BASE_DIR, 'logs', 'django', 'django.log'),
             'maxBytes': 10 * 1024 * 1024,
             'backupCount': 3,
             'encoding': 'utf-8',
@@ -290,14 +327,21 @@ LOGGING = {
             'class': 'logging.handlers.RotatingFileHandler',
             'level': 'ERROR',
             'formatter': 'verbose',
-            'filename': os.path.join(
-                BASE_DIR, 'logs', 'django', '500.log'
-            ),
+            'filename': os.path.join(BASE_DIR, 'logs', 'django', '500.log'),
             'maxBytes': 10 * 1024 * 1024,
             'backupCount': 3,
             'encoding': 'utf-8',
             'filters': ['server_error_filter'],
         },
+        'rotating_celery_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'level': 'INFO',
+            'formatter': 'verbose',
+            'filename': os.path.join(BASE_DIR, 'logs', 'celery', 'celery.log'),
+            'maxBytes': 10 * 1024 * 1024,
+            'backupCount': 5,
+            'encoding': 'utf-8',
+        }
     },
     'loggers': {
         'django': {
@@ -314,5 +358,12 @@ LOGGING = {
             'level': 'ERROR',
             'propagate': False,
         },
+        'celery': {
+            'handlers': [
+                'rotating_celery_file', 'console'
+            ] if DEBUG else ['rotating_celery_file'],
+            'level': 'INFO',
+            'propagate': False,
+        }
     },
 }

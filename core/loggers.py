@@ -2,6 +2,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 
 from .constants import (
+    CELLERY_LOG_ROTATING_FILE,
     DEFAULT_LOG_FILE,
     DEFAULT_LOG_LEVEL,
     DEFAULT_LOG_MODE,
@@ -99,3 +100,8 @@ class LoggerFactory:
 
     def get_logger(self) -> logging.Logger:
         return self.logger
+
+
+celery_logger = LoggerFactory(
+    'celery_logger', CELLERY_LOG_ROTATING_FILE
+).get_logger()

@@ -226,3 +226,4 @@ logs/supervisor/*
 !logs/cron/
 logs/cron/*
 !logs/django/
+!logs/celery/
