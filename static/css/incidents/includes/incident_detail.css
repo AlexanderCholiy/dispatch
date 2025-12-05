@@ -106,30 +106,6 @@
   overflow-x: auto;
 }
 
-.status-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-xs) 0;
-  border-bottom: 1px dashed var(--extra-color);
-}
-
-.status-item:not(:first-child) {
-  margin-top: var(--space-sm);
-}
-
-.status-name {
-  font-size: var(--font-xs);
-  text-align: center;
-  min-width: 160px;
-  max-width: 160px;
-}
-
-.status-date {
-  font-size: var(--font-xs);
-  color: var(--add-color);
-}
-
 .incident-sla p,
 .incident-meta p {
   border-bottom: 1px dashed var(--extra-color);
@@ -148,10 +124,5 @@
 
   .incident-date {
     text-align: left;
-  }
-
-  .status-name {
-    min-width: 100px;
-    max-width: 100px;
   }
 }
