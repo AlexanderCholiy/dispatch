@@ -38,7 +38,6 @@ class User(AbstractUser):
         'Email',
         unique=True,
         max_length=MAX_USER_EMAIL_LEN,
-        help_text='Введите адрес электронной почты',
         validators=[validate_user_email]
     )
     username = models.CharField(
@@ -53,7 +52,7 @@ class User(AbstractUser):
         upload_to=SUBFOLDER_AVATAR_DIR,
         blank=True,
         null=True,
-        help_text='Загрузите аватар пользователя в формате JPG или PNG',
+        help_text='Загрузите аватар пользователя в формате JPG или PNG.',
         validators=[
             FileExtensionValidator(allowed_extensions=ALLOWED_IMAGE_EXTENSIONS)
         ],
@@ -63,13 +62,13 @@ class User(AbstractUser):
         max_length=MAX_USER_ROLE_LEN,
         choices=Roles.choices,
         default=Roles.GUEST,
-        help_text='Выберите роль пользователя',
+        help_text='Выберите роль пользователя.',
     )
     date_of_birth = models.DateField(
         'Дата рождения',
         null=True,
         blank=True,
-        help_text='Формат: ГГГГ-ММ-ДД'
+        help_text='Формат: ГГГГ-ММ-ДД.'
     )
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
@@ -203,11 +202,10 @@ class PendingUser(models.Model):
         help_text=USERNAME_HELP_TEXT,
     )
     email = models.EmailField(
-        'Почта',
+        'Адрес электронной почты',
         unique=True,
         max_length=MAX_USER_EMAIL_LEN,
         validators=[validate_pending_email],
-        help_text='Введите адрес электронной почты',
     )
 
     password = models.CharField(

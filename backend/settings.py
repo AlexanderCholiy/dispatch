@@ -244,6 +244,8 @@ AXES_LOCKOUT_PARAMETERS = ['ip_address', 'username']
 
 AXES_RESET_ON_SUCCESS = True
 
+RATELIMIT_VIEW = 'core.views.too_many_requests'
+
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.yandex.ru')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))

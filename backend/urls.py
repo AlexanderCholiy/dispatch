@@ -13,7 +13,13 @@ from rest_framework import permissions
 from core.constants import PUBLIC_SUBFOLDER_NAME
 from core.views import protected_media
 from users.forms import AuthForm
-from users.views import CustomLoginView, CustomPasswordResetView
+from users.views import (
+    CustomLoginView,
+    CustomPasswordChangeDoneView,
+    CustomPasswordResetCompleteView,
+    CustomPasswordResetDoneView,
+    CustomPasswordResetView,
+)
 
 handler400 = 'core.views.bad_request'
 handler403 = 'core.views.permission_denied'
@@ -63,23 +69,23 @@ auth_urlpatterns = [
         name='logout',
     ),
     path(
-        'password_change/',
+        'password-change/',
         auth_views.PasswordChangeView.as_view(),
         name='password_change',
     ),
     path(
-        'password_change/done/',
-        auth_views.PasswordChangeDoneView.as_view(),
+        'password-change/done/',
+        CustomPasswordChangeDoneView.as_view(),
         name='password_change_done',
     ),
     path(
-        'password_reset/',
+        'password-reset/',
         CustomPasswordResetView.as_view(),
         name='password_reset',
     ),
     path(
-        'password_reset/done/',
-        auth_views.PasswordResetDoneView.as_view(),
+        'password-reset/done/',
+        CustomPasswordResetDoneView.as_view(),
         name='password_reset_done',
     ),
     path(
@@ -88,8 +94,8 @@ auth_urlpatterns = [
         name='password_reset_confirm',
     ),
     path(
-        'reset/done/',
-        auth_views.PasswordResetCompleteView.as_view(),
+        'password-reset/complete/',
+        CustomPasswordResetCompleteView.as_view(),
         name='password_reset_complete',
     ),
 ]

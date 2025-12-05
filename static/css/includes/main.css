@@ -72,12 +72,20 @@
 
 main .text-muted {
   color: var(--gray-color);
-  font-size: var(--font-md);
 }
 
 .card-text {
   line-height: 1.5;
   margin: 0;
+  text-align: justify;
+  hyphens: auto;
+  overflow-wrap: break-word;
+  word-break: normal;
+  text-indent: var(--space-md);
+}
+
+.card-text + .card-text {
+  margin-block-start: var(--space-sm);
 }
 
 .empty {

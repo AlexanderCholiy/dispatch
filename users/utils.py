@@ -1,11 +1,9 @@
-from datetime import timedelta
 from functools import wraps
 from typing import Callable
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.tokens import default_token_generator
-from django.core.mail import send_mail
 from django.http import HttpRequest
 from django.shortcuts import redirect
 from django.urls import reverse
@@ -16,6 +14,7 @@ from core.constants import DJANGO_LOG_ROTATING_FILE
 from core.loggers import LoggerFactory
 
 from .models import PendingUser, Roles, User
+from .tasks import send_activation_email_task, send_confirm_email_task
 
 django_logger = LoggerFactory(__name__, DJANGO_LOG_ROTATING_FILE).get_logger()
 
@@ -70,143 +69,45 @@ def staff_required(view_func: Callable):
     return wrapped_view
 
 
-def timedelta_to_human_time(time_delta: timedelta) -> str:
-    seconds = int(time_delta.total_seconds())
-    if seconds <= 0:
-        raise ValueError('Значение должно быть > 0')
-
-    time_units = {
-        'день': 86400,
-        'час': 3600,
-        'минута': 60,
-        'секунда': 1,
-    }
-
-    parts = []
-    remaining_seconds = seconds
-
-    for unit_name, unit_seconds in time_units.items():
-        if remaining_seconds >= unit_seconds:
-            unit_value = remaining_seconds // unit_seconds
-            remaining_seconds %= unit_seconds
-
-            if unit_name == 'день':
-                if unit_value % 10 == 1 and unit_value % 100 != 11:
-                    unit_name_formatted = 'день'
-                elif (
-                    2 <= unit_value % 10 <= 4
-                    and (unit_value % 100 < 10 or unit_value % 100 >= 20)
-                ):
-                    unit_name_formatted = 'дня'
-                else:
-                    unit_name_formatted = 'дней'
-            elif unit_name == 'час':
-                if unit_value % 10 == 1 and unit_value % 100 != 11:
-                    unit_name_formatted = 'час'
-                elif (
-                    2 <= unit_value % 10 <= 4
-                    and (unit_value % 100 < 10 or unit_value % 100 >= 20)
-                ):
-                    unit_name_formatted = 'часа'
-                else:
-                    unit_name_formatted = 'часов'
-            elif unit_name == 'минута':
-                if unit_value % 10 == 1 and unit_value % 100 != 11:
-                    unit_name_formatted = 'минута'
-                elif (
-                    2 <= unit_value % 10 <= 4
-                    and (unit_value % 100 < 10 or unit_value % 100 >= 20)
-                ):
-                    unit_name_formatted = 'минуты'
-                else:
-                    unit_name_formatted = 'минут'
-            elif unit_name == 'секунда':
-                if unit_value % 10 == 1 and unit_value % 100 != 11:
-                    unit_name_formatted = 'секунда'
-                elif (
-                    2 <= unit_value % 10 <= 4
-                    and (unit_value % 100 < 10 or unit_value % 100 >= 20)
-                ):
-                    unit_name_formatted = 'секунды'
-                else:
-                    unit_name_formatted = 'секунд'
-
-            parts.append(f'{unit_value} {unit_name_formatted}')
-
-    return ', '.join(parts)
-
-
 def send_activation_email(
     pending_user: PendingUser, request: HttpRequest
-) -> bool:
+):
+    """
+    Создаёт ссылку для активации пользователя и ставит задачу Celery
+    на отправку email.
+    """
     token = default_token_generator.make_token(pending_user)
     uid = urlsafe_base64_encode(force_bytes(pending_user.pk))
+
     activation_path = reverse(
-        'users:activate', kwargs={'uidb64': uid, 'token': token})
-    link = request.build_absolute_uri(activation_path)
-    host = request.get_host()
-    valid_period = timedelta_to_human_time(
-        settings.REGISTRATION_ACCESS_TOKEN_LIFETIME
+        'users:activate', kwargs={'uidb64': uid, 'token': token}
+    )
+    activation_link = request.build_absolute_uri(activation_path)
+    domain = request.get_host()
+
+    send_activation_email_task.delay(
+        pending_user_id=pending_user.pk,
+        domain=domain,
+        activation_link=activation_link,
     )
 
-    subject = f'Подтверждение почты на {host}'
-    message = (
-        f'Здравствуйте, {pending_user.username}!\n\n'
-        f'Вы указали этот адрес при регистрации на {host}.\n'
-        f'Для подтверждения перейдите по ссылке: \n{link}\n\n'
-        f'Срок действия ссылки — {valid_period}.\n\n'
-        f'Если вы не регистрировались — просто проигнорируйте это письмо.'
-    )
-    try:
-        send_mail(
-            subject, message, settings.DEFAULT_FROM_EMAIL, [pending_user.email]
-        )
-        return True
-    except Exception as e:
-        pending_user.delete()
-        messages.error(
-            request,
-            'Не удалось отправить письмо с подтверждением. Попробуйте позже.'
-        )
-        django_logger.exception(e)
-    return False
 
+def send_confirm_email(pending_user: PendingUser, request: HttpRequest):
+    """
+    Создаёт ссылку для подтверждения смены email пользователя и ставит задачу
+    Celery на отправку email.
+    """
+    token = default_token_generator.make_token(pending_user)
+    uid = urlsafe_base64_encode(force_bytes(pending_user.pk))
 
-def send_confirm_email(user: PendingUser, request: HttpRequest) -> bool:
-    token = default_token_generator.make_token(user)
-    uid = urlsafe_base64_encode(force_bytes(user.pk))
-    confirmation_path = reverse(
-        'users:confirm_email_change',
-        kwargs={'uidb64': uid, 'token': token}
+    confirm_email_path = reverse(
+        'users:confirm_email_change', kwargs={'uidb64': uid, 'token': token}
     )
-    link = request.build_absolute_uri(confirmation_path)
-    host = request.get_host()
-    valid_period = timedelta_to_human_time(
-        settings.REGISTRATION_ACCESS_TOKEN_LIFETIME
-    )
+    confirm_email_link = request.build_absolute_uri(confirm_email_path)
+    domain = request.get_host()
 
-    subject = f'Подтверждение смены email на {host}'
-    message = (
-        f'Здравствуйте, {user.original_username}!\n\n'
-        f'Вы запросили изменение email адреса на {host}.\n'
-        f'Новый email: {user.email}\n\n'
-        f'Для подтверждения изменения перейдите по ссылке: \n'
-        f'{link}\n\n'
-        f'Срок действия ссылки — {valid_period}.\n\n'
-        f'Если вы не запрашивали смену email — проигнорируйте это письмо.'
+    send_confirm_email_task.delay(
+        pending_user_id=pending_user.pk,
+        domain=domain,
+        confirm_email_link=confirm_email_link,
     )
-
-    try:
-        send_mail(
-            subject, message, settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email]
-        )
-        return True
-    except Exception as e:
-        user.delete()
-        messages.error(
-            request,
-            'Не удалось отправить письмо с подтверждением. Попробуйте позже.'
-        )
-        django_logger.exception(e)
-    return False

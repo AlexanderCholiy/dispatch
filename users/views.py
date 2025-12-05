@@ -1,4 +1,5 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
+from typing import Optional
 
 from axes.helpers import get_client_ip_address
 from axes.models import AccessAttempt
@@ -6,20 +7,28 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.tokens import default_token_generator
-from django.contrib.auth.views import LoginView, PasswordResetView
+from django.contrib.auth.views import (
+    LoginView,
+    PasswordChangeDoneView,
+    PasswordResetCompleteView,
+    PasswordResetDoneView,
+    PasswordResetView
+)
+from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.decorators import method_decorator
-from django.utils.encoding import force_str
-from django.utils.http import urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.timezone import now
 from django_ratelimit.decorators import ratelimit
 
 from core.constants import DJANGO_LOG_ROTATING_FILE
 from core.loggers import LoggerFactory
+from core.utils import timedelta_to_human_time
 from incidents.models import Incident
 
 from .constants import PAGE_SIZE_USERS_CHOICES, USERS_PER_PAGE
@@ -30,6 +39,7 @@ from .forms import (
     WorkScheduleForm,
 )
 from .models import PendingUser, Roles, User, WorkSchedule
+from .tasks import send_password_reset_email_task
 from .utils import (
     role_required,
     send_activation_email,
@@ -40,31 +50,164 @@ django_logger = LoggerFactory(__name__, DJANGO_LOG_ROTATING_FILE).get_logger()
 
 
 @method_decorator(
+    ratelimit(key='user_or_ip', rate='5/m', block=True),
+    name='dispatch',
+)
+class CustomPasswordResetDoneView(PasswordResetDoneView):
+    def dispatch(self, request, *args, **kwargs):
+        if not request.session.get('password_reset_allowed'):
+            messages.warning(
+                request,
+                'Эта страница доступна только после запроса на восстановление '
+                'пароля.'
+            )
+            return redirect('password_reset')
+
+        del request.session['password_reset_allowed']
+        return super().dispatch(request, *args, **kwargs)
+
+
+@method_decorator(
+    ratelimit(key='user_or_ip', rate='5/m', block=True),
+    name='dispatch',
+)
+class CustomPasswordResetCompleteView(PasswordResetCompleteView):
+    def get(self, request, *args, **kwargs):
+        messages.success(request, 'Ваш новый пароль сохранён.')
+
+        if request.user.is_authenticated:
+            return redirect('users:profile')
+        return redirect('login')
+
+
+@method_decorator(
     ratelimit(key='user_or_ip', rate='5/m', block=True, method='POST'),
     name='dispatch',
 )
 class CustomPasswordResetView(PasswordResetView):
 
-    def dispatch(self, *args, **kwargs):
-        return super().dispatch(*args, **kwargs)
+    def form_valid(self, form):
+        """Анти-спам + отправка письма через Celery."""
+        email = form.cleaned_data['email'].lower()
 
-    def get_initial(self):
-        initial = super().get_initial()
-        email = self.request.GET.get('email')
-        if email:
-            initial['email'] = email
-        return initial
+        key = f'password_reset_throttle:{email}'
+        last_time: Optional[datetime] = cache.get(key)
+
+        cooldown: timedelta = settings.AXES_COOLOFF_TIME
+
+        if last_time:
+            elapsed = now() - last_time
+            if elapsed < cooldown:
+                remaining = cooldown - elapsed
+                wait_human = timedelta_to_human_time(remaining)
+                messages.warning(
+                    self.request,
+                    f'Запрос уже был отправлен. Подождите {wait_human}.'
+                )
+                return redirect('password_reset')
+
+        cache.set(key, now(), timeout=int(cooldown.total_seconds()))
+
+        try:
+            user = User.objects.get(email=email)
+
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+
+            reset_path = reverse(
+                'password_reset_confirm',
+                kwargs={'uidb64': uid, 'token': token},
+            )
+            reset_password_link = self.request.build_absolute_uri(reset_path)
+            domain = self.request.get_host()
+
+            send_password_reset_email_task.delay(
+                user_id=user.pk,
+                domain=domain,
+                reset_password_link=reset_password_link,
+            )
+
+        except User.DoesNotExist:
+            pass
+
+        self.request.session['password_reset_allowed'] = True
+
+        return redirect('password_reset_done')
 
 
-@ratelimit(key='user_or_ip', rate='10/m', block=True, method='POST')
+@method_decorator(
+    ratelimit(key='user_or_ip', rate='10/m', block=True, method='POST'),
+    name='dispatch'
+)
+class CustomPasswordChangeDoneView(PasswordChangeDoneView):
+    def get(self, request, *args, **kwargs):
+        messages.success(request, 'Пароль успешно изменён!')
+        return redirect('users:profile')
+
+
+@method_decorator(
+    ratelimit(key='user_or_ip', rate='10/m', block=True, method='POST'),
+    name='dispatch'
+)
+class CustomLoginView(LoginView):
+
+    def form_invalid(self, form):
+        response = super().form_invalid(form)
+
+        username = self.request.POST.get('username', '')
+        user = User.objects.filter(
+            Q(username=username) | Q(email=username)
+        ).first()
+        username_real = user.email if user else username
+
+        ip_address = get_client_ip_address(self.request)
+        failure_limit = getattr(settings, 'AXES_FAILURE_LIMIT', 3)
+        cool_off = getattr(settings, 'AXES_COOLOFF_TIME', timedelta(minutes=5))
+
+        recent_attempt = AccessAttempt.objects.filter(
+            username=username_real,
+            ip_address=ip_address,
+            failures_since_start__gt=0,
+        ).order_by('-attempt_time').first()
+
+        if recent_attempt:
+            failures = recent_attempt.failures_since_start
+            remaining = max(failure_limit - failures, 0)
+
+            if remaining > 0:
+                messages.warning(
+                    self.request,
+                    f'Осталось попыток входа: {remaining}'
+                )
+            else:
+                lock_start_time = recent_attempt.attempt_time
+                cooldown_end = lock_start_time + cool_off
+                time_remaining = cooldown_end - now()
+
+                seconds_left = int(time_remaining.total_seconds())
+                if seconds_left > 0:
+                    messages.error(
+                        self.request,
+                        f'Повторите попытку через {seconds_left} секунд. '
+                        'Каждая новая попытка продлевает таймер!'
+                    )
+
+        return response
+
+
+@ratelimit(key='user_or_ip', rate='20/m', block=True, method='POST')
 def register(request: HttpRequest) -> HttpResponse:
     if request.method == 'POST':
         form = UserRegisterForm(request.POST)
         if form.is_valid():
             pending_user = form.save()
-            if send_activation_email(pending_user, request):
-                return render(
-                    request, 'users/email_confirmation_sent.html')
+            send_activation_email(pending_user, request)
+            messages.success(
+                request,
+                'На указанную вами почту была отправлена ссылка для '
+                'подтверждения.'
+            )
+            return redirect('login')
     else:
         form = UserRegisterForm()
 
@@ -72,7 +215,9 @@ def register(request: HttpRequest) -> HttpResponse:
     return render(request, 'registration/register.html', context)
 
 
-def activate(request: HttpRequest, uidb64: str, token: str) -> HttpResponse:
+def activate(
+    request: HttpRequest, uidb64: str, token: str
+) -> HttpResponseRedirect:
     pending_user = None
     try:
         uid = force_str(urlsafe_base64_decode(uidb64))
@@ -102,8 +247,15 @@ def activate(request: HttpRequest, uidb64: str, token: str) -> HttpResponse:
             password=pending_user.password,  # hashed
             is_active=True
         )
-        return render(request, 'registration/activation_success.html')
-    return render(request, 'registration/activation_invalid.html')
+        messages.success(request, 'Ваш аккаунт был успешно активирован.')
+        return redirect('login')
+
+    messages.error(
+        request,
+        'Ссылка для активации недействительна или уже была использована. '
+        'Пожалуйста, пройдите регистрацию заново.'
+    )
+    return redirect('users:register')
 
 
 @login_required
@@ -120,8 +272,13 @@ def change_email(request: HttpRequest) -> HttpResponse:
                 email=new_email,
                 password=user.password,
             )
-            if send_confirm_email(pending_user, request):
-                return render(request, 'users/email_confirmation_sent.html')
+            send_confirm_email(pending_user, request)
+            messages.success(
+                request,
+                'На указанную вами почту была отправлена ссылка для '
+                'подтверждения.'
+            )
+            return redirect('users:profile')
         else:
             for name, errors in form.errors.items():
                 if name == '__all__':
@@ -195,56 +352,6 @@ def profile(request: HttpRequest) -> HttpResponse:
 
     context = {'form': form}
     return render(request, 'users/profile_form.html', context)
-
-
-@method_decorator(
-    ratelimit(key='user_or_ip', rate='5/m', block=True, method='POST'),
-    name='dispatch'
-)
-class CustomLoginView(LoginView):
-
-    def form_invalid(self, form):
-        response = super().form_invalid(form)
-
-        username = self.request.POST.get('username', '')
-        user = User.objects.filter(
-            Q(username=username) | Q(email=username)
-        ).first()
-        username_real = user.email if user else username
-
-        ip_address = get_client_ip_address(self.request)
-        failure_limit = getattr(settings, 'AXES_FAILURE_LIMIT', 3)
-        cool_off = getattr(settings, 'AXES_COOLOFF_TIME', timedelta(minutes=5))
-
-        recent_attempt = AccessAttempt.objects.filter(
-            username=username_real,
-            ip_address=ip_address,
-            failures_since_start__gt=0,
-        ).order_by('-attempt_time').first()
-
-        if recent_attempt:
-            failures = recent_attempt.failures_since_start
-            remaining = max(failure_limit - failures, 0)
-
-            if remaining > 0:
-                messages.warning(
-                    self.request,
-                    f'Осталось попыток входа: {remaining}'
-                )
-            else:
-                lock_start_time = recent_attempt.attempt_time
-                cooldown_end = lock_start_time + cool_off
-                time_remaining = cooldown_end - now()
-
-                seconds_left = int(time_remaining.total_seconds())
-                if seconds_left > 0:
-                    messages.error(
-                        self.request,
-                        f'Повторите попытку через {seconds_left} секунд. '
-                        'Каждая новая попытка продлевает таймер!'
-                    )
-
-        return response
 
 
 @login_required

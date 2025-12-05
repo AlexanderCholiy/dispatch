@@ -10,7 +10,8 @@ from .constants import (
     MAX_USER_AGE,
     MAX_USER_USERNAME_DISPLAY_LEN,
     MIN_USER_AGE,
-    MIN_USER_PASSWORD_LEN
+    MIN_USER_PASSWORD_LEN,
+    PASSWORD_HELP_TEXT,
 )
 from .models import PendingUser, User, WorkSchedule
 from .validators import validate_user_email
@@ -23,12 +24,7 @@ class UserRegisterForm(forms.ModelForm):
             'minlength': MIN_USER_PASSWORD_LEN,
             'autocomplete': 'new-password',
         }),
-        help_text=(
-            f'Пароль должен содержать минимум {MIN_USER_PASSWORD_LEN} '
-            'символов, не может быть полностью числовым, '
-            'не должен быть похож на имя пользователя и '
-            'не должен быть слишком простым.'
-        ),
+        help_text=PASSWORD_HELP_TEXT,
         strip=True,
     )
     password2 = forms.CharField(

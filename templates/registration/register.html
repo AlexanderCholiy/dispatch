@@ -20,13 +20,18 @@
             <label for="{{ field.id_for_label }}">{{ field.label }}</label>
             {{ field }}
             
-            {% if field.help_text %}
-              <p class="form-text"><small class="text-muted help-text">{{ field.help_text }}</small></p>
+            {% if field.help_text and not field.errors  %}
+              <ul class="help-list">
+                {% for row in field.help_text.splitlines %}
+                  <li>{{ row }}</li>
+                {% endfor %}
+              </ul>
             {% endif %}
             
-            {% if field.error %}
-              <div class="error">{{ field.errors }}</div>
+            {% if field.errors %}
+              <div class="error-list">{{ field.errors }}</div>
             {% endif %}
+
           </div>
         {% endfor %}
         <button type="submit" class="btn btn-primary submit-button">Зарегистрироваться</button>
