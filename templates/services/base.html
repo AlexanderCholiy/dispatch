@@ -1,0 +1,29 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block subject %}Email{% endblock %}</title>
+  <!-- Только для разработки -->
+  <!-- <link rel="stylesheet" href="{% static 'css/services/base.css' %}"> -->
+  <!-- <link rel="stylesheet" href="{% static 'css/services/includes/footer.css' %}"> -->
+</head>
+<body class="body">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#e1e4eb">
+    <tr>
+      <td align="center" style="padding:20px 0;">
+        <table width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" class="wrapper">
+          <tr>
+            <td>
+              {% block content %}{% endblock %}
+              {% include "services/includes/footer.html" %}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

@@ -1,3 +1,13 @@
+.toggle-incident-history {
+  background-color: var(--green-color);
+  color: var(--add-background-color);
+}
+
+.toggle-incident-history:hover {
+  background-color: var(--green-color);
+  color: var(--background-color);
+}
+
 .incident-history {
   list-style: none;
   margin-top: var(--space-xs);

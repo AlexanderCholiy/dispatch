@@ -7,6 +7,14 @@ networks:
   dispatch_network:
     driver: bridge
 
+# Общая конфигурация логирования
+x-log-opts: &default-logging
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "2"
+
 services:
   # PostgreSQL
   dispatch_db:
@@ -40,11 +48,12 @@ services:
 
   # Celery worker (основные задачи)
   dispatch_celery_worker:
+    <<: *default-logging
     build:
       context: .
     working_dir: /app
     command: >
-      celery -A backend.celery worker --loglevel=info --logfile=/app/logs/celery/celery_worker.log -Q default,low,medium,high
+      celery -A backend.celery worker --loglevel=error --logfile=/app/logs/celery/celery_worker.log -Q default,low,medium,high
     env_file: .env
     volumes:
       - .:/app
@@ -57,10 +66,11 @@ services:
 
   # Celery worker (тяжелые задачи)
   dispatch_celery_heavy_worker:
+    <<: *default-logging
     build:
       context: .
     working_dir: /app
-    command: celery -A backend.celery worker --loglevel=info --logfile=/app/logs/celery/celery_heavy_worker.log -Q heavy --concurrency=2
+    command: celery -A backend.celery worker --loglevel=error --logfile=/app/logs/celery/celery_heavy_worker.log -Q heavy --concurrency=2
     env_file: .env
     volumes:
       - .:/app
@@ -73,8 +83,9 @@ services:
 
   # Celery worker (планировщик задач)
   dispatch_celery_beat:
+    <<: *default-logging
     build: .
-    command: celery -A backend.celery beat --loglevel=info --logfile=/app/logs/celery/celery_beat.log
+    command: celery -A backend.celery beat --loglevel=error --logfile=/app/logs/celery/celery_beat.log
     env_file: .env
     volumes:
       - .:/app

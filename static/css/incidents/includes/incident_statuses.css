@@ -1,3 +1,13 @@
+.toggle-status-history {
+  background-color: var(--priority-color);
+  color: var(--add-background-color);
+}
+
+.toggle-status-history:hover {
+  background-color: var(--priority-color);
+  color: var(--background-color);
+}
+
 .status-history {
   max-height: 250px;
   overflow-y: auto;

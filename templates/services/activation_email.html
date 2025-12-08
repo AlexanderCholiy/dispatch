@@ -1,0 +1,40 @@
+{% extends "services/base.html" %}
+
+{% block subject %}Подтверждение регистрации{% endblock %}
+
+{% block content %}
+
+<h2>Подтверждение регистрации</h2>
+
+<p>Здравствуйте, <strong>{{ username }}</strong>!</p>
+
+<p>
+  Вы указали этот адрес электронной почты при регистрации на <strong>{{ domain }}</strong>. 
+  Чтобы завершить создание учётной записи, нажмите кнопку ниже:
+</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0" class="button-container">
+  <tr>
+    <td align="right">
+      <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: separate !important;">
+        <tr>
+          <td align="center" class="btn-wrapper">
+            <a href="{{ activation_link }}" target="_blank" class="btn">
+              Подтвердить регистрацию
+            </a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<p>
+  Ссылка будет активна <strong>{{ valid_period }}</strong>.
+</p>
+
+<p class="text-muted">
+  Если вы не оставляли заявку на регистрацию, просто проигнорируйте это письмо.
+</p>
+
+{% endblock %}

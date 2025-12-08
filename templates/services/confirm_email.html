@@ -1,0 +1,40 @@
+{% extends "services/base.html" %}
+
+{% block subject %}Подтверждение почты{% endblock %}
+
+{% block content %}
+
+<h2>Подтверждение почты</h2>
+
+<p>Здравствуйте, <strong>{{ username }}</strong>!</p>
+
+<p>
+  Вы запросили изменение email адреса на <strong>{{ domain }}</strong>. 
+  Для подтверждения изменения нажмите кнопку ниже:
+</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0" class="button-container">
+  <tr>
+    <td align="right">
+      <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: separate !important;">
+        <tr>
+          <td align="center" class="btn-wrapper">
+            <a href="{{ confirm_email_link }}" target="_blank" class="btn">
+              Подтвердить Email
+            </a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<p>
+  Ссылка будет активна <strong>{{ valid_period }}</strong>.
+</p>
+
+<p class="text-muted">
+  Если вы не оставляли заявку на смену email, просто проигнорируйте это письмо.
+</p>
+
+{% endblock %}

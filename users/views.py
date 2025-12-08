@@ -59,7 +59,7 @@ class CustomPasswordResetDoneView(PasswordResetDoneView):
             messages.warning(
                 request,
                 'Эта страница доступна только после запроса на восстановление '
-                'пароля.'
+                'пароля'
             )
             return redirect('password_reset')
 
@@ -73,7 +73,7 @@ class CustomPasswordResetDoneView(PasswordResetDoneView):
 )
 class CustomPasswordResetCompleteView(PasswordResetCompleteView):
     def get(self, request, *args, **kwargs):
-        messages.success(request, 'Ваш новый пароль сохранён.')
+        messages.success(request, 'Ваш новый пароль сохранён')
 
         if request.user.is_authenticated:
             return redirect('users:profile')
@@ -141,7 +141,7 @@ class CustomPasswordResetView(PasswordResetView):
 )
 class CustomPasswordChangeDoneView(PasswordChangeDoneView):
     def get(self, request, *args, **kwargs):
-        messages.success(request, 'Пароль успешно изменён!')
+        messages.success(request, 'Пароль успешно изменён')
         return redirect('users:profile')
 
 
@@ -189,7 +189,7 @@ class CustomLoginView(LoginView):
                     messages.error(
                         self.request,
                         f'Повторите попытку через {seconds_left} секунд. '
-                        'Каждая новая попытка продлевает таймер!'
+                        'Каждая новая попытка продлевает таймер.'
                     )
 
         return response
@@ -247,7 +247,7 @@ def activate(
             password=pending_user.password,  # hashed
             is_active=True
         )
-        messages.success(request, 'Ваш аккаунт был успешно активирован.')
+        messages.success(request, 'Ваш аккаунт был успешно активирован')
         return redirect('login')
 
     messages.error(
@@ -326,7 +326,7 @@ def confirm_email_change(
         user.save()
         messages.success(
             request,
-            'Ваш email был успешно изменен и подтвержден.'
+            'Ваш email был успешно изменен'
         )
         return redirect('users:change_email')
     messages.error(

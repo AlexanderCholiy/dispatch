@@ -18,8 +18,8 @@ document.addEventListener("DOMContentLoaded", function() {
       btnSelector: ".toggle-incident-history",
       blockSelector: ".incident-history",
       cookieName: "incidentHistoryVisible",
-      showText: "Показать историю",
-      hideText: "Скрыть историю"
+      showText: "Показать историю событий",
+      hideText: "Скрыть историю событий"
     }
   ];
 

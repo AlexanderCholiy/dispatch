@@ -89,7 +89,7 @@ REMOTE_DB_BACK_FOLDER_DIR = os.path.join(DATA_DIR, 'remote_backup_db')
 os.makedirs(DB_BACK_FOLDER_DIR, exist_ok=True)
 os.makedirs(REMOTE_DB_BACK_FOLDER_DIR, exist_ok=True)
 
-MAX_DB_BACK = timedelta(days=3)
+MAX_DB_BACK = timedelta(days=1)
 MAX_REMOTE_DB_BACK = timedelta(days=7)
 DATETIME_FORMAT = '%d.%m.%Y %H:%M:%S'
 
@@ -110,3 +110,7 @@ INLINE_EXTS = {
     # audio
     '.mp3', '.wav', '.ogg',
 }
+
+EMAIL_LOGO_PATH = os.path.join(
+    settings.BASE_DIR, 'static', 'img', 'services', 'logo.png'
+)

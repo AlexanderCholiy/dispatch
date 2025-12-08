@@ -347,7 +347,7 @@ def confirm_move_emails(request: HttpRequest) -> HttpResponse:
     if source_incident.code is None or target_incident.code is None:
         messages.error(
             request,
-            f'Инцидент {source_incident} и/или {target_incident} не найден.'
+            f'Инцидент {source_incident} и/или {target_incident} не найден'
         )
         return redirect(request.META.get('HTTP_REFERER', 'incidents:index'))
 
