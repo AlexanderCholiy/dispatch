@@ -15,10 +15,8 @@ from core.constants import (
     MAX_DB_BACK,
     MAX_REMOTE_DB_BACK,
 )
-from core.loggers import LoggerFactory
+from core.loggers import default_logger
 from core.wraps import timer
-
-bakup_manager_logger = LoggerFactory(__name__).get_logger()
 
 
 class Command(BaseCommand):
@@ -48,7 +46,7 @@ class Command(BaseCommand):
         }.items() if value is None
     ]
 
-    @timer(bakup_manager_logger)
+    @timer(default_logger)
     def handle(self, *args, **options):
         self.backup_db()
         self.send_backup_on_reserve_server()
@@ -88,9 +86,9 @@ class Command(BaseCommand):
                 ],
                 check=True
             )
-            bakup_manager_logger.info(f'Бэкап успешно создан: {backup_file}')
+            default_logger.info(f'Бэкап успешно создан: {backup_file}')
         except subprocess.CalledProcessError as e:
-            bakup_manager_logger.exception(e)
+            default_logger.exception(e)
             raise
 
     def restore_database(self, dump_file: str, new_db_name: str) -> None:
@@ -102,7 +100,7 @@ class Command(BaseCommand):
             new_db_name (str): Имя новой базы данных, куда восстановить
         """
         if not os.path.exists(dump_file):
-            bakup_manager_logger.error(
+            default_logger.error(
                 f'Дамп файл "{dump_file}" отсутствует. Проверьте путь к файлу.'
             )
             return
@@ -122,7 +120,7 @@ class Command(BaseCommand):
         ]
 
         subprocess.run(create_db_cmd, check=True, env=env)
-        bakup_manager_logger.info(f'База данных {new_db_name} создана')
+        default_logger.info(f'База данных {new_db_name} создана')
 
         restore_cmd = [
             'psql',
@@ -142,11 +140,11 @@ class Command(BaseCommand):
                 stderr=subprocess.PIPE,
                 text=True,
             )
-            bakup_manager_logger.info(
+            default_logger.info(
                 f'Восстановление дампа в новую базу {new_db_name} завершено'
             )
         except subprocess.CalledProcessError as e:
-            bakup_manager_logger.exception(
+            default_logger.exception(
                 'Ошибка восстановления базы:\n'
                 f'STDOUT: {e.stdout}\n'
                 f'STDERR: {e.stderr}'
@@ -181,7 +179,7 @@ class Command(BaseCommand):
                     DB_BACK_FILENAME_DATETIME_FORMAT
                 )
             except ValueError:
-                bakup_manager_logger.warning(
+                default_logger.warning(
                     f'Пропущен файл (не удалось распарсить дату): {file.name}'
                 )
                 continue
@@ -189,17 +187,17 @@ class Command(BaseCommand):
             if file_date < cutoff_date:
                 try:
                     file.unlink()
-                    bakup_manager_logger.info(
+                    default_logger.info(
                         f'Удалён старый бэкап: {file.as_posix()}'
                     )
                 except Exception as e:
-                    bakup_manager_logger.exception(
+                    default_logger.exception(
                         f'Ошибка при удалении {file.as_posix()}: {e}'
                     )
 
     def _sftp_upload(self, local_path: str, remote_path: str):
         if self.missing_reserve_params:
-            bakup_manager_logger.error(
+            default_logger.error(
                 'Невозможно выполнить передачу резервной копии на удалённый '
                 'сервер. Отсутствуют параметры подключения: '
                 f'{", ".join(self.missing_reserve_params)}'
@@ -236,17 +234,17 @@ class Command(BaseCommand):
                         sftp.mkdir(current)
 
             sftp.put(local_path, remote_path)
-            bakup_manager_logger.info(
+            default_logger.info(
                 'Файл успешно сохранен на удалённом сервере. '
                 f'Путь: {remote_path}'
             )
         except (paramiko.SSHException, OSError) as e:
-            bakup_manager_logger.error(
+            default_logger.error(
                 'Ошибка подключения или передачи данных на резервный '
                 f'сервер: {e}'
             )
         except Exception as e:
-            bakup_manager_logger.exception(
+            default_logger.exception(
                 'Непредвиденная ошибка при передаче данных на резервный '
                 f'сервер: {e}'
             )
@@ -287,7 +285,7 @@ class Command(BaseCommand):
                     date_str, DB_BACK_FILENAME_DATETIME_FORMAT
                 )
             except ValueError:
-                bakup_manager_logger.warning(
+                default_logger.warning(
                     f'Пропущен файл (не удалось распарсить дату): {filename}'
                 )
                 continue
@@ -296,7 +294,7 @@ class Command(BaseCommand):
             files_2_send.append(file_path)
 
         if self.missing_reserve_params:
-            bakup_manager_logger.error(
+            default_logger.error(
                 'Невозможно выполнить перенос бэкапов. '
                 'Отсутствуют параметры подключения: '
                 f'{", ".join(self.missing_reserve_params)}'
@@ -317,14 +315,14 @@ class Command(BaseCommand):
             try:
                 remote_files = sftp.listdir(self.remote_db_back_folder_dir)
             except IOError:
-                bakup_manager_logger.warning(
+                default_logger.warning(
                     f'Не удалось прочитать удалённую директорию '
                     f'{self.remote_db_back_folder_dir}. '
                 )
                 self.sftp_mkdirs(sftp, self.remote_db_back_folder_dir)
                 remote_files = []
         except Exception as e:
-            bakup_manager_logger.exception(
+            default_logger.exception(
                 'Ошибка при попытки чтения удаленной директории '
                 f'{self.remote_db_back_folder_dir}: {e}'
             )
@@ -348,7 +346,7 @@ class Command(BaseCommand):
     def cleanup_remote_backups(self) -> None:
         """Удаляет старые .sql и .sql.gz бэкапы на удалённом сервере."""
         if self.missing_reserve_params:
-            bakup_manager_logger.error(
+            default_logger.error(
                 'Невозможно выполнить удалённую очистку бэкапов. '
                 'Отсутствуют параметры подключения: '
                 f'{", ".join(self.missing_reserve_params)}'
@@ -391,7 +389,7 @@ class Command(BaseCommand):
                         DB_BACK_FILENAME_DATETIME_FORMAT
                     )
                 except ValueError:
-                    bakup_manager_logger.warning(
+                    default_logger.warning(
                         f'Пропущен файл на удалённом сервере '
                         f'(не удалось распарсить дату): {filename}'
                     )
@@ -405,16 +403,16 @@ class Command(BaseCommand):
 
                     try:
                         sftp.remove(remote_path)
-                        bakup_manager_logger.info(
+                        default_logger.info(
                             f'Удалён старый: {remote_path}'
                         )
                     except Exception as e:
-                        bakup_manager_logger.exception(
+                        default_logger.exception(
                             f'Ошибка при удалении файла {remote_path}: {e}'
                         )
 
         except Exception as e:
-            bakup_manager_logger.exception(
+            default_logger.exception(
                 f'Ошибка при очистке бэкапов на удаленном сервере: {e}'
             )
 
@@ -462,7 +460,7 @@ class Command(BaseCommand):
         """
 
         if self.missing_reserve_params:
-            bakup_manager_logger.error(
+            default_logger.error(
                 'Невозможно выполнить архивацию бэкапов. '
                 'Отсутствуют параметры: '
                 f'{", ".join(self.missing_reserve_params)}'
@@ -505,7 +503,7 @@ class Command(BaseCommand):
                         date_str, DB_BACK_FILENAME_DATETIME_FORMAT
                     )
                 except ValueError:
-                    bakup_manager_logger.warning(
+                    default_logger.warning(
                         f'Пропущен файл (некорректная дата): {filename}'
                     )
                     continue
@@ -518,7 +516,7 @@ class Command(BaseCommand):
                 )
                 remote_gz = remote_sql + '.gz'
 
-                bakup_manager_logger.info(
+                default_logger.info(
                     f'Архивация удалённого файла {remote_sql}'
                 )
 
@@ -539,12 +537,12 @@ class Command(BaseCommand):
                 # Удаляем исходный .sql на сервере
                 sftp.remove(remote_sql)
 
-                bakup_manager_logger.info(
+                default_logger.info(
                     f'Удалён оригинал и загружен архив: {remote_gz}'
                 )
 
         except Exception as e:
-            bakup_manager_logger.exception(
+            default_logger.exception(
                 f'Ошибка архивации удалённых бэкапов: {e}'
             )
         finally:

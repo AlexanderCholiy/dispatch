@@ -7,11 +7,8 @@ from django.core.management.base import BaseCommand
 from django.db.models import OuterRef, Prefetch, Q, Subquery
 from django.utils import timezone
 
-from core.constants import (
-    MIN_WAIT_SEC_WITH_CRITICAL_EXC,
-    YANDEX_TRACKER_ROTATING_FILE,
-)
-from core.loggers import LoggerFactory
+from core.constants import MIN_WAIT_SEC_WITH_CRITICAL_EXC
+from core.loggers import yt_logger
 from core.pretty_print import PrettyPrint
 from core.tg_bot import tg_manager
 from core.threads import tasks_in_threads
@@ -46,10 +43,6 @@ from yandex_tracker.constants import (
 )
 from yandex_tracker.utils import YandexTrackerManager, yt_manager
 from yandex_tracker.validators import check_yt_incident_data
-
-yt_managment_logger = LoggerFactory(
-    __name__, YANDEX_TRACKER_ROTATING_FILE
-).get_logger()
 
 
 class Command(BaseCommand):
@@ -98,14 +91,14 @@ class Command(BaseCommand):
                 total_operations, total_errors, total_updated = (
                     self.check_unclosed_issues())
                 if total_updated or total_errors:
-                    yt_managment_logger.info(
+                    yt_logger.info(
                         f'Обработано {total_operations} инцидент(ов), '
                         f'обновлено {total_updated}, ошибок {total_errors}'
                     )
             except KeyboardInterrupt:
                 return
             except Exception as e:
-                yt_managment_logger.critical(e, exc_info=True)
+                yt_logger.critical(e, exc_info=True)
                 err = e
                 time.sleep(MIN_WAIT_SEC_WITH_CRITICAL_EXC)
             else:
@@ -127,7 +120,7 @@ class Command(BaseCommand):
 
                 if self._duplicate_issues != duplicate_issues:
                     duplicate_issues = self._duplicate_issues
-                    yt_managment_logger.warning(
+                    yt_logger.warning(
                         'Найдены дубликаты ID инцидентов в YandexTracker '
                         f'({len(duplicate_issues)} шт):\n{duplicate_issues}'
                     )
@@ -238,7 +231,7 @@ class Command(BaseCommand):
                     )
                 )
             except Exception as e:
-                yt_managment_logger.exception(e)
+                yt_logger.exception(e)
                 all_devices = []
 
             self._devices_by_pole_cache: dict[str, list] = {}
@@ -256,8 +249,8 @@ class Command(BaseCommand):
             self._devices_by_pole_last_update = time.time()
         return self._devices_by_pole_cache
 
-    @min_wait_timer(yt_managment_logger, min_wait)
-    @timer(yt_managment_logger)
+    @min_wait_timer(yt_logger, min_wait)
+    @timer(yt_logger)
     def check_unclosed_issues(self) -> tuple[int, int, int]:
         yt_users = yt_manager.real_users_in_yt_tracker
         type_of_incident_field: dict = (
@@ -307,7 +300,7 @@ class Command(BaseCommand):
             total_updated += batch_updated
             all_tasks.extend(tasks)
 
-        tasks_in_threads(all_tasks, yt_managment_logger)
+        tasks_in_threads(all_tasks, yt_logger)
 
         return total_processed, total_errors, total_updated
 
@@ -459,7 +452,7 @@ class Command(BaseCommand):
                 ) = check_yt_incident_data(
                     incident=incident,
                     yt_manager=yt_manager,
-                    logger=yt_managment_logger,
+                    logger=yt_logger,
                     issue=issue,
                     yt_users=yt_users,
                     type_of_incident_field=type_of_incident_field,
@@ -714,7 +707,7 @@ class Command(BaseCommand):
                     incidents_2_update.append(incident)
 
             except Exception as e:
-                yt_managment_logger.exception(e)
+                yt_logger.exception(e)
                 error_count += 1
 
         if incidents_2_update:

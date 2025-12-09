@@ -17,11 +17,12 @@ from core.exceptions import (
     ApiServerError,
     ApiTooManyRequests
 )
+from core.loggers import yt_logger
 from core.threads import tasks_in_threads
 from emails.models import EmailMessage, EmailReference
 from users.models import Roles, User
 from users.utils import role_required
-from yandex_tracker.utils import yt_manager, yt_manager_logger
+from yandex_tracker.utils import yt_manager
 
 from .constants import (
     INCIDENTS_PER_PAGE,
@@ -425,7 +426,7 @@ def confirm_move_emails(request: HttpRequest) -> HttpResponse:
                         break
 
             tasks_in_threads(
-                tasks, yt_manager_logger, cpu_bound=False, raise_exs=True
+                tasks, yt_logger, cpu_bound=False, raise_exs=True
             )
 
         except (ApiNotFound, ApiBadRequest):

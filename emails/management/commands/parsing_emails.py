@@ -7,18 +7,11 @@ from django.core.management.base import (
     CommandParser,
 )
 
-from core.constants import (
-    EMAIL_LOG_ROTATING_FILE,
-    MIN_WAIT_SEC_WITH_CRITICAL_EXC,
-)
-from core.loggers import LoggerFactory
+from core.constants import MIN_WAIT_SEC_WITH_CRITICAL_EXC
+from core.loggers import email_parser_logger
 from core.tg_bot import tg_manager
 from core.utils import run_with_timeout_process
 from emails.email_parser import email_parser
-
-email_managment_logger = LoggerFactory(
-    __name__, EMAIL_LOG_ROTATING_FILE
-).get_logger()
 
 
 class Command(BaseCommand):
@@ -47,7 +40,7 @@ class Command(BaseCommand):
                 f'Неверное значение --mailbox: {mailbox!r}. '
                 f'Допустимые значения: {", ".join(self.mailbox_map.keys())}.'
             )
-            email_managment_logger.critical(err_msg)
+            email_parser_logger.critical(err_msg)
             raise CommandError(err_msg)
 
         mailbox_name = self.mailbox_map[mailbox]
@@ -85,16 +78,16 @@ class Command(BaseCommand):
                 current_timeout = min(
                     current_timeout + timeout_step, max_timeout
                 )
-                email_managment_logger.warning(
+                email_parser_logger.warning(
                     'IMAP timeout. Устанавливаем новый таймаут: '
                     f'{current_timeout} секунд.'
                 )
             except imaplib.IMAP4.abort:
-                email_managment_logger.debug(
+                email_parser_logger.debug(
                     'Соединение с IMAP-сервером неожиданно закрылось'
                 )
             except Exception as e:
-                email_managment_logger.critical(e, exc_info=True)
+                email_parser_logger.critical(e, exc_info=True)
                 err = e
                 time.sleep(MIN_WAIT_SEC_WITH_CRITICAL_EXC)
             else:
@@ -105,7 +98,7 @@ class Command(BaseCommand):
                     min_timeout, min(new_timeout, max_timeout)
                 )
 
-                email_managment_logger.debug(
+                email_parser_logger.debug(
                     f'Установлен новый таймаут: {current_timeout} сек.'
                 )
 

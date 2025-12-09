@@ -11,9 +11,7 @@ from .constants import (
     SUBFOLDER_MIME_EMAIL_NAME,
 )
 from .exceptions import ConfigEnvError
-from .loggers import LoggerFactory
-
-app_logger = LoggerFactory(__name__).get_logger()
+from .loggers import default_logger
 
 
 def attachment_upload_to(instance, filename: str):
@@ -176,7 +174,7 @@ class Config:
             try:
                 raise ConfigEnvError(missing_vars)
             except ConfigEnvError as e:
-                app_logger.critical(e)
+                default_logger.critical(e)
                 raise
 
 

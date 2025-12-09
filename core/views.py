@@ -12,10 +12,8 @@ from django.urls.exceptions import Resolver404
 
 from users.views import role_required
 
-from .constants import DJANGO_LOG_ROTATING_FILE, INLINE_EXTS
-from .loggers import LoggerFactory
-
-django_logger = LoggerFactory(__name__, DJANGO_LOG_ROTATING_FILE).get_logger()
+from .constants import INLINE_EXTS
+from .loggers import django_logger
 
 
 def bad_request(

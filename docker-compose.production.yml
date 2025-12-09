@@ -7,6 +7,14 @@ networks:
   dispatch_network:
     driver: bridge
 
+# Общая конфигурация логирования
+x-log-opts: &default-logging
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "2"
+
 services:
   # PostgreSQL
   dispatch_db:
@@ -24,6 +32,70 @@ services:
     command: >
       postgres -c listen_addresses='*'
 
+  # RabbitMQ (для Celery broker + optional result backend)
+  dispatch_rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: dispatch_rabbitmq
+    ports:
+      - "${RABBITMQ_PORT}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT}:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    networks:
+      - dispatch_network
+    restart: unless-stopped
+
+  # Celery worker (основные задачи)
+  dispatch_celery_worker:
+    <<: *default-logging
+    build:
+      context: .
+    working_dir: /app
+    command: >
+      celery -A backend.celery worker --loglevel=error --logfile=/app/logs/celery/celery_worker.log -Q default,low,medium,high
+    env_file: .env
+    volumes:
+      - .:/app
+    depends_on:
+      - dispatch_db
+      - dispatch_rabbitmq
+    networks:
+      - dispatch_network
+    restart: unless-stopped
+
+  # Celery worker (тяжелые задачи)
+  dispatch_celery_heavy_worker:
+    <<: *default-logging
+    build:
+      context: .
+    working_dir: /app
+    command: celery -A backend.celery worker --loglevel=error --logfile=/app/logs/celery/celery_heavy_worker.log -Q heavy --concurrency=2
+    env_file: .env
+    volumes:
+      - .:/app
+    depends_on:
+      - dispatch_db
+      - dispatch_rabbitmq
+    networks:
+      - dispatch_network
+    restart: unless-stopped
+
+  # Celery worker (планировщик задач)
+  dispatch_celery_beat:
+    <<: *default-logging
+    build: .
+    command: celery -A backend.celery beat --loglevel=error --logfile=/app/logs/celery/celery_beat.log
+    env_file: .env
+    volumes:
+      - .:/app
+    depends_on:
+      - dispatch_db
+      - dispatch_rabbitmq
+    networks:
+      - dispatch_network
+    restart: unless-stopped
+
   # Django backend (production image from Docker Hub)
   dispatch_backend:
     image: alexandercholiy/ts_dispatch:latest
@@ -36,6 +108,7 @@ services:
       - ./.env:/app/.env:ro   # монтируем .env внутрь контейнера (для cron)
     depends_on:
       - dispatch_db
+      - dispatch_rabbitmq
     networks:
       - dispatch_network
     restart: unless-stopped

@@ -7,11 +7,8 @@ from django.db import transaction
 from django.db.models import OuterRef, Prefetch, Subquery
 from django.utils import timezone
 
-from core.constants import (
-    MIN_WAIT_SEC_WITH_CRITICAL_EXC,
-    YANDEX_TRACKER_ROTATING_FILE,
-)
-from core.loggers import LoggerFactory
+from core.constants import MIN_WAIT_SEC_WITH_CRITICAL_EXC
+from core.loggers import yt_logger
 from core.pretty_print import PrettyPrint
 from core.tg_bot import tg_manager
 from core.threads import tasks_in_threads
@@ -31,10 +28,6 @@ from incidents.models import (
 from incidents.utils import IncidentManager
 from yandex_tracker.constants import YT_ISSUES_DAYS_AGO_FILTER
 from yandex_tracker.utils import YandexTrackerManager, yt_manager
-
-yt_managment_logger = LoggerFactory(
-    __name__, YANDEX_TRACKER_ROTATING_FILE
-).get_logger()
 
 
 class Command(BaseCommand):
@@ -65,7 +58,7 @@ class Command(BaseCommand):
                     self.check_closed_issues()
                 )
                 if total_updated or total_errors:
-                    yt_managment_logger.info(
+                    yt_logger.info(
                         f'Обработано {total_operations} закрытых '
                         f'инцидент(ов), обновлено {total_updated}, '
                         f'ошибок {total_errors}'
@@ -73,7 +66,7 @@ class Command(BaseCommand):
             except KeyboardInterrupt:
                 return
             except Exception as e:
-                yt_managment_logger.critical(e, exc_info=True)
+                yt_logger.critical(e, exc_info=True)
                 err = e
                 time.sleep(MIN_WAIT_SEC_WITH_CRITICAL_EXC)
             else:
@@ -95,14 +88,14 @@ class Command(BaseCommand):
 
                 if self._duplicate_issues != duplicate_issues:
                     duplicate_issues = self._duplicate_issues
-                    yt_managment_logger.warning(
+                    yt_logger.warning(
                         'Найдены дубликаты ID инцидентов в YandexTracker '
                         f'({len(duplicate_issues)} шт):\n{duplicate_issues}'
                     )
                 self._processed_issues = {}
 
-    @min_wait_timer(yt_managment_logger, min_wait)
-    @timer(yt_managment_logger)
+    @min_wait_timer(yt_logger, min_wait)
+    @timer(yt_logger)
     def check_closed_issues(self) -> tuple[int, int, int]:
         default_end_status, _ = IncidentStatus.objects.get_or_create(
             name=END_STATUS_NAME,
@@ -136,7 +129,7 @@ class Command(BaseCommand):
 
             all_tasks.extend(tasks)
 
-        tasks_in_threads(all_tasks, yt_managment_logger)
+        tasks_in_threads(all_tasks, yt_logger)
 
         return total_processed, total_errors, total_updated
 

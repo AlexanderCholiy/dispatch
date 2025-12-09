@@ -7,8 +7,7 @@ from django.db.models import Count, Min, Prefetch, Q, QuerySet
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
-from core.constants import INCIDENTS_LOG_ROTATING_FILE
-from core.loggers import LoggerFactory
+from core.loggers import incident_logger
 from emails.models import EmailFolder, EmailMessage, EmailReference
 from users.models import Roles, User
 from yandex_tracker.utils import YandexTrackerManager
@@ -49,10 +48,6 @@ from .models import (
     IncidentStatusHistory,
 )
 from .validators import IncidentValidator
-
-incident_manager_logger = LoggerFactory(
-    __name__, INCIDENTS_LOG_ROTATING_FILE
-).get_logger()
 
 
 class EmailNode(TypedDict):
@@ -1062,7 +1057,7 @@ class IncidentManager(IncidentValidator):
                     reply_id = parent_email.email_msg_reply_id
 
                     if len(child_branch_ids) > 100:
-                        incident_manager_logger.critical(
+                        incident_logger.critical(
                             'Слишком длинная ветка email. '
                             f'ID текущего письма: {child_email.id}'
                         )

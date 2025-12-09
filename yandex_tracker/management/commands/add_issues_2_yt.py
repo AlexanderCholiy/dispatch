@@ -4,21 +4,14 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import Min
 
-from core.constants import (
-    MIN_WAIT_SEC_WITH_CRITICAL_EXC,
-    YANDEX_TRACKER_ROTATING_FILE,
-)
-from core.loggers import LoggerFactory
+from core.constants import MIN_WAIT_SEC_WITH_CRITICAL_EXC
+from core.loggers import yt_logger
 from core.pretty_print import PrettyPrint
 from core.tg_bot import tg_manager
 from core.wraps import min_wait_timer, timer
 from emails.models import EmailMessage
 from incidents.utils import IncidentManager
 from yandex_tracker.utils import YandexTrackerManager, yt_manager
-
-yt_managment_logger = LoggerFactory(
-    __name__, YANDEX_TRACKER_ROTATING_FILE
-).get_logger()
 
 
 class Command(BaseCommand):
@@ -45,7 +38,7 @@ class Command(BaseCommand):
             except KeyboardInterrupt:
                 return
             except Exception as e:
-                yt_managment_logger.critical(e, exc_info=True)
+                yt_logger.critical(e, exc_info=True)
                 err = e
                 time.sleep(MIN_WAIT_SEC_WITH_CRITICAL_EXC)
             else:
@@ -65,8 +58,8 @@ class Command(BaseCommand):
                     tg_manager.send_error_notification(__name__, err)
                     last_error_type = type(err).__name__
 
-    @min_wait_timer(yt_managment_logger, min_seconds)
-    @timer(yt_managment_logger)
+    @min_wait_timer(yt_logger, min_seconds)
+    @timer(yt_logger)
     def add_issues_2_yt(self, yt_manager: YandexTrackerManager):
         emails = (
             YandexTrackerManager.emails_for_yandex_tracker()
@@ -131,7 +124,7 @@ class Command(BaseCommand):
                     raise
                 except Exception as e:
                     error_count += 1
-                    yt_managment_logger.exception(e)
+                    yt_logger.exception(e)
                 else:
                     email.was_added_2_yandex_tracker = True
                     email.need_2_add_in_yandex_tracker = False
@@ -149,7 +142,7 @@ class Command(BaseCommand):
             if index < len(fields) - 1:
                 time.sleep(self.min_seconds)
 
-        yt_managment_logger.info(
+        yt_logger.info(
             'Добавление инцидентов в YandexTracker завершено. '
             f'Успешно: {total - error_count} из {total}.'
         )

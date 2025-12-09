@@ -12,8 +12,7 @@ from django.db import models, transaction
 from django.utils import timezone
 from yandex_tracker_client import TrackerClient
 
-from core.constants import YANDEX_TRACKER_ROTATING_FILE
-from core.loggers import LoggerFactory
+from core.loggers import yt_logger
 from core.utils import Config
 from core.wraps import safe_request
 from emails.models import EmailMessage
@@ -31,10 +30,6 @@ from .constants import (
     IsNewMsg,
 )
 from .exceptions import YandexTrackerAuthErr
-
-yt_manager_logger = LoggerFactory(
-    __name__, YANDEX_TRACKER_ROTATING_FILE
-).get_logger()
 
 yt_manager_config = {
     'YT_CLIENT_ID': os.getenv('YT_CLIENT_ID'),
@@ -332,7 +327,7 @@ class YandexTrackerManager:
 
         return IsExpiredSLA.in_work
 
-    @safe_request(yt_manager_logger, retries=retries, timeout=timeout)
+    @safe_request(yt_logger, retries=retries, timeout=timeout)
     def _make_request(
         self, method: HTTPMethod, url: str, **kwargs
     ) -> dict:
@@ -354,7 +349,7 @@ class YandexTrackerManager:
         kwargs.pop('sub_func_name', None)
 
         if response.status_code == HTTPStatus.UNAUTHORIZED:
-            yt_manager_logger.info('Токен устарел, обновляем.')
+            yt_logger.info('Токен устарел, обновляем.')
             self._refresh_access_token()
             return requests.request(
                 method.value, url, headers=self.headers, **kwargs)
@@ -606,7 +601,7 @@ class YandexTrackerManager:
 
             size = os.path.getsize(filepath)
             if size > MAX_ATTACHMENT_SIZE_IN_YT:
-                yt_manager_logger.warning(
+                yt_logger.warning(
                     f'Превышен лимит размера файла: {filepath} '
                     f'({size} байт > допустимых '
                     f'{MAX_ATTACHMENT_SIZE_IN_YT} байт). '
@@ -620,7 +615,7 @@ class YandexTrackerManager:
             if file_id:
                 temp_files.append(file_id)
             else:
-                yt_manager_logger.error(
+                yt_logger.error(
                     f'Не удалось загрузить временный файл {filepath}.'
                     f'Ошибка: {response}'
                 )
@@ -1304,7 +1299,7 @@ class YandexTrackerManager:
         )
 
         if not target_transition:
-            yt_manager_logger.warning(
+            yt_logger.warning(
                 f'Для {issue_key} не возможен переход в статус '
                 f'{new_status_key}'
             )
@@ -1380,7 +1375,7 @@ class YandexTrackerManager:
                     raise TimeoutError(
                         f'Поле {field_id} занято более {timeout} секунд'
                     )
-                yt_manager_logger.debug(
+                yt_logger.debug(
                     f'Поле {field_id} занято, lock {elapsed:.1f}s'
                 )
                 time.sleep(0.5)
@@ -1434,7 +1429,7 @@ class YandexTrackerManager:
         finally:
             if os.path.exists(lock_file):
                 os.remove(lock_file)
-                yt_manager_logger.debug(f'Lock для поля {field_id} снят')
+                yt_logger.debug(f'Lock для поля {field_id} снят')
 
     @property
     def field_categories(self):

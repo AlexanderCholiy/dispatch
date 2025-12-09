@@ -10,13 +10,8 @@ from django.urls import reverse
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
-from core.constants import DJANGO_LOG_ROTATING_FILE
-from core.loggers import LoggerFactory
-
 from .models import PendingUser, Roles, User
 from .tasks import send_activation_email_task, send_confirm_email_task
-
-django_logger = LoggerFactory(__name__, DJANGO_LOG_ROTATING_FILE).get_logger()
 
 
 def role_required(

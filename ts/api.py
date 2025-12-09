@@ -9,8 +9,7 @@ from django.db import connections, transaction
 from django.db.models import Q
 from numpy import nan
 
-from core.constants import TS_LOG_ROTATING_FILE
-from core.loggers import LoggerFactory
+from core.loggers import ts_logger
 from core.pretty_print import PrettyPrint
 from core.wraps import timer
 
@@ -39,14 +38,12 @@ from .models import (
 )
 from .validators import SocialValidators
 
-ts_api_logger = LoggerFactory(__name__, TS_LOG_ROTATING_FILE).get_logger()
-
 
 class Api(SocialValidators):
     """Загрузка данных из TS и добавление их в БД"""
 
     @staticmethod
-    @timer(ts_api_logger)
+    @timer(ts_logger)
     def download_json(
         self, json_file_path: str, url: str, chunk_size: int = 1000
     ):
@@ -54,7 +51,7 @@ class Api(SocialValidators):
 
         if response.status_code == HTTPStatus.OK:
             loaded_size = 0
-            ts_api_logger.debug(f'Загрузка данных из "{url}"')
+            ts_logger.debug(f'Загрузка данных из "{url}"')
 
             with open(json_file_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=chunk_size):
@@ -63,7 +60,7 @@ class Api(SocialValidators):
                         f.write(chunk)
 
         else:
-            ts_api_logger.critical(f'Ошибка при загрузки данных из "{url}"')
+            ts_logger.critical(f'Ошибка при загрузки данных из "{url}"')
 
     def json_2_df(
         self, json_file_path: str, columns_to_keep: list[str]
@@ -150,7 +147,7 @@ class Api(SocialValidators):
                     Pole.objects.filter(site_id__in=chunk).delete()
                 )
                 deleted_poles += del_poles_i
-            ts_api_logger.debug(
+            ts_logger.debug(
                 'Pole удалены: '
                 f'{deleted_poles} из {len(poles_2_delete)}'
             )
@@ -242,7 +239,7 @@ class Api(SocialValidators):
                 )
 
         if find_unvalid_values:
-            ts_api_logger.warning(f'Проверьте данные в {TS_POLES_TL_URL}')
+            ts_logger.warning(f'Проверьте данные в {TS_POLES_TL_URL}')
 
         if bulk_regions_to_create:
             new_created_regions = Region.objects.bulk_create(
@@ -251,7 +248,7 @@ class Api(SocialValidators):
             )
             created_regions = {r.region_en: r for r in new_created_regions}
             regions_cache.update(created_regions)
-            ts_api_logger.debug(
+            ts_logger.debug(
                 'Region добавлены: '
                 f'{len(new_created_regions)} из {len(bulk_regions_to_create)}'
             )
@@ -266,7 +263,7 @@ class Api(SocialValidators):
                 ignore_conflicts=True,
                 batch_size=DB_CHUNK_UPDATE
             )
-            ts_api_logger.debug(
+            ts_logger.debug(
                 'Pole добавлены: '
                 f'{len(created_poles)} из {len(bulk_poles_to_create)}'
             )
@@ -288,7 +285,7 @@ class Api(SocialValidators):
                 ],
                 batch_size=DB_CHUNK_UPDATE
             )
-            ts_api_logger.debug(
+            ts_logger.debug(
                 f'Pole обновлены: {updated_poles} из {len(poles_to_update)}'
             )
 
@@ -354,7 +351,7 @@ class Api(SocialValidators):
             ).delete()
             for name in contractors_to_delete:
                 contractors_cache.pop(name, None)
-            ts_api_logger.debug(
+            ts_logger.debug(
                 'AVRContractor удалены: '
                 f'{deleted_avr} из {len(contractors_to_delete)}'
             )
@@ -542,17 +539,17 @@ class Api(SocialValidators):
                     )
 
             except Exception:
-                ts_api_logger.debug(f'Проверьте данные: {row}')
+                ts_logger.debug(f'Проверьте данные: {row}')
                 find_unvalid_values = True
 
         if find_unvalid_values:
-            ts_api_logger.warning(f'Проверьте данные в {TS_AVR_REPORT_URL}')
+            ts_logger.warning(f'Проверьте данные в {TS_AVR_REPORT_URL}')
 
         if updated_poles:
             success_updated_poles = Pole.objects.bulk_update(
                 updated_poles, ['avr_contractor'], batch_size=DB_CHUNK_UPDATE
             )
-            ts_api_logger.debug(
+            ts_logger.debug(
                 'Pole обновлены: '
                 f'{success_updated_poles} из {len(updated_poles)}'
             )
@@ -671,7 +668,7 @@ class Api(SocialValidators):
 
                 deleted_count += deleted_count_i
 
-            ts_api_logger.debug(
+            ts_logger.debug(
                 'BaseStation удалены: '
                 f'{deleted_count} из {len(combinations_bs_to_delete)}'
             )
@@ -702,7 +699,8 @@ class Api(SocialValidators):
                     BaseStationOperator.objects.filter(query).delete()
                 )
                 deleted_count += deleted_count_i
-            ts_api_logger.debug(
+
+            ts_logger.debug(
                 'BaseStationOperator удалены: '
                 f'{deleted_count} из {len(combinations_operators_to_delete)}'
             )
@@ -770,7 +768,7 @@ class Api(SocialValidators):
                 bulk_operators_to_create.append(operators_cache[op_key])
 
         if find_unvalid_values:
-            ts_api_logger.warning(f'Проверьте данные в {TS_BS_REPORT_URL}')
+            ts_logger.warning(f'Проверьте данные в {TS_BS_REPORT_URL}')
 
         if bulk_operators_to_create:
             new_operators = BaseStationOperator.objects.bulk_create(
@@ -782,7 +780,7 @@ class Api(SocialValidators):
                 (o.operator_name, o.operator_group): o
                 for o in BaseStationOperator.objects.all()
             }
-            ts_api_logger.debug(
+            ts_logger.debug(
                 'BaseStationOperator добавлены: '
                 f'{len(new_operators)} из {len(bulk_operators_to_create)}'
             )
@@ -797,7 +795,7 @@ class Api(SocialValidators):
                 (b.bs_name, b.pole_id): b
                 for b in BaseStation.objects.select_related('pole')
             }
-            ts_api_logger.debug(
+            ts_logger.debug(
                 'BaseStationOperator добавлены: '
                 f'{len(new_bs)} из {len(bulk_bs_to_create)}'
             )

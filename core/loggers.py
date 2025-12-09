@@ -7,6 +7,13 @@ from .constants import (
     DEFAULT_LOG_LEVEL,
     DEFAULT_LOG_MODE,
     DEFAULT_ROTATING_LOG_FILE,
+    DJANGO_LOG_ROTATING_FILE,
+    EMAIL_PARSER_LOG_ROTATING_FILE,
+    INCIDENTS_LOG_ROTATING_FILE,
+    TG_NOTIFICATIONS_ROTATING_FILE,
+    TS_LOG_ROTATING_FILE,
+    YANDEX_TRACKER_AUTO_EMAILS_ROTATING_FILE,
+    YANDEX_TRACKER_ROTATING_FILE,
 )
 from .exceptions import LoggerError
 
@@ -102,6 +109,36 @@ class LoggerFactory:
         return self.logger
 
 
+email_parser_logger = LoggerFactory(
+    'email_logger', EMAIL_PARSER_LOG_ROTATING_FILE
+).get_logger()
+
 celery_logger = LoggerFactory(
     'celery_logger', CELLERY_LOG_ROTATING_FILE
 ).get_logger()
+
+ts_logger = LoggerFactory(
+    'ts_logger', TS_LOG_ROTATING_FILE
+).get_logger()
+
+yt_logger = LoggerFactory(
+    'yt_logger', YANDEX_TRACKER_ROTATING_FILE
+).get_logger()
+
+yt_emails_logger = LoggerFactory(
+    'yt_emails_logger', YANDEX_TRACKER_AUTO_EMAILS_ROTATING_FILE
+).get_logger()
+
+tg_logger = LoggerFactory(
+    'tg_logger', TG_NOTIFICATIONS_ROTATING_FILE
+).get_logger()
+
+django_logger = LoggerFactory(
+    'django_logger', DJANGO_LOG_ROTATING_FILE
+).get_logger()
+
+incident_logger = LoggerFactory(
+    'incident_logger', INCIDENTS_LOG_ROTATING_FILE
+).get_logger()
+
+default_logger = LoggerFactory(__name__).get_logger()

@@ -12,12 +12,8 @@ from django.core.files import File
 from django.db import DatabaseError, models, transaction
 from django.utils import timezone
 
-from core.constants import (
-    INCIDENTS_LOG_ROTATING_FILE,
-    SUBFOLDER_DATE_FORMAT,
-    SUBFOLDER_EMAIL_NAME
-)
-from core.loggers import LoggerFactory
+from core.constants import SUBFOLDER_DATE_FORMAT, SUBFOLDER_EMAIL_NAME
+from core.loggers import email_parser_logger
 from core.models import Attachment
 from incidents.models import Incident
 
@@ -32,10 +28,6 @@ from .models import (
     EmailTo,
     EmailToCC,
 )
-
-incident_manager_logger = LoggerFactory(
-    __name__, INCIDENTS_LOG_ROTATING_FILE
-).get_logger()
 
 
 class EmailManager:
@@ -201,7 +193,7 @@ class EmailManager:
             attachment.delete()
 
         except DatabaseError as e:
-            incident_manager_logger.warning(
+            email_parser_logger.warning(
                 f'Ошибка базы данных при удалении {type(attachment)} '
                 f'{attachment.pk} ({reason}): {e}'
             )
@@ -211,7 +203,7 @@ class EmailManager:
 
         except Exception:
 
-            incident_manager_logger.exception(
+            email_parser_logger.exception(
                 f'Ошибка удаления {type(attachment)} {attachment.pk} '
                 f'({reason})'
             )
@@ -245,7 +237,7 @@ class EmailManager:
             try:
                 size = os.path.getsize(file_path)
             except OSError as e:
-                incident_manager_logger.warning(
+                email_parser_logger.warning(
                     f'Ошибка при получении размера файла "{file_path}": {e}'
                 )
                 continue
@@ -419,7 +411,7 @@ class EmailManager:
         """
         now_local = timezone.now()
         local_tz = ZoneInfo(settings.TIME_ZONE)
-        time_diff_threshold = timedelta(minutes=30)
+        threshold = timedelta(minutes=30)
 
         # Если в письме нет TZ — считаем UTC
         if email_date.tzinfo is None:
@@ -432,16 +424,15 @@ class EmailManager:
             return email_local
 
         # Если попали в будущее — пробуем заменить на временную зону проекта:
-        candidate_time = email_date.replace(tzinfo=local_tz)
-        candidate_local = candidate_time.astimezone(local_tz)
+        forced_local = email_date.replace(tzinfo=local_tz)
 
-        if abs(candidate_local - now_local) <= time_diff_threshold:
-            incident_manager_logger.warning(
-                f'Письмо {msg_id}: дата {email_date.astimezone(local_tz)} '
-                'была в будущем. Исправлено на '
-                f'{candidate_local.astimezone(local_tz)} с использованием '
-                f'локальной TZ {settings.TIME_ZONE}.'
+        if abs(forced_local - now_local) <= threshold:
+            email_parser_logger.warning(
+                f'Письмо {msg_id}: дата после преобразования '
+                f'({email_local}) оказалась в будущем. '
+                f'Исправлено на {forced_local} '
+                f'путём замены TZ на {settings.TIME_ZONE}.'
             )
-            return candidate_local
+            return forced_local
 
         return email_local

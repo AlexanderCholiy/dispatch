@@ -4,8 +4,8 @@ from typing import Optional, Union
 import telebot
 from telebot.types import Message
 
-from .constants import DEBUG_MODE, TG_NOTIFICATIONS_ROTATING_FILE
-from .loggers import LoggerFactory
+from .constants import DEBUG_MODE
+from .loggers import tg_logger
 from .utils import Config
 from .wraps import retry
 
@@ -18,9 +18,7 @@ Config.validate_env_variables(tg_manager_config)
 
 class TelegramNotifier:
 
-    logger = LoggerFactory(
-        __name__, TG_NOTIFICATIONS_ROTATING_FILE
-    ).get_logger()
+    logger = tg_logger
     max_msg_len = 4096
 
     def __init__(self, token: str, default_chat_id: str):

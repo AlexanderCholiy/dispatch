@@ -3,8 +3,7 @@ from typing import Callable, Optional
 
 from django.utils import timezone
 
-from core.constants import YANDEX_TRACKER_AUTO_EMAILS_ROTATING_FILE
-from core.loggers import LoggerFactory
+from core.loggers import yt_emails_logger
 from emails.email_parser import EmailParser
 from emails.models import EmailMessage
 from incidents.constants import (
@@ -19,10 +18,6 @@ from incidents.utils import IncidentManager
 
 from .constants import CURRENT_TZ, MAX_PREVIEW_TEXT_LEN
 from .utils import YandexTrackerManager
-
-auto_yt_emails_logger = LoggerFactory(
-    __name__, YANDEX_TRACKER_AUTO_EMAILS_ROTATING_FILE
-).get_logger()
 
 
 class AutoEmailsFromYT:
@@ -111,7 +106,7 @@ class AutoEmailsFromYT:
             self.issue_key, self.yt_manager.error_status_key, error_message
         )
         if was_status_update:
-            auto_yt_emails_logger.debug(error_message)
+            yt_emails_logger.debug(error_message)
             IncidentManager.add_error_status(self.incident, error_message)
 
     def _send_email(
@@ -138,7 +133,7 @@ class AutoEmailsFromYT:
             )
             return True
         except Exception as e:
-            auto_yt_emails_logger.exception(
+            yt_emails_logger.exception(
                 f'Ошибка отправки автоответа для {self.issue_key}: {e}'
             )
             return False

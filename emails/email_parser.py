@@ -16,9 +16,9 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 from requests.exceptions import RequestException
 
-from core.constants import API_STATUS_EXCEPTIONS, EMAIL_LOG_ROTATING_FILE
+from core.constants import API_STATUS_EXCEPTIONS
 from core.exceptions import ApiServerError, ApiTooManyRequests
-from core.loggers import LoggerFactory
+from core.loggers import email_parser_logger
 from core.pretty_print import PrettyPrint
 from core.utils import Config
 from core.wraps import min_wait_timer, timer
@@ -29,11 +29,6 @@ from yandex_tracker.utils import YandexTrackerManager, yt_manager
 
 from .utils import EmailManager
 from .validators import EmailValidator
-
-email_parser_logger = LoggerFactory(
-    __name__, EMAIL_LOG_ROTATING_FILE
-).get_logger()
-
 
 email_parser_config = {
     'PARSING_EMAIL_LOGIN': os.getenv('PARSING_EMAIL_LOGIN'),

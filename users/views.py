@@ -26,8 +26,7 @@ from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.timezone import now
 from django_ratelimit.decorators import ratelimit
 
-from core.constants import DJANGO_LOG_ROTATING_FILE
-from core.loggers import LoggerFactory
+from core.loggers import django_logger
 from core.utils import timedelta_to_human_time
 from incidents.models import Incident
 
@@ -45,8 +44,6 @@ from .utils import (
     send_activation_email,
     send_confirm_email,
 )
-
-django_logger = LoggerFactory(__name__, DJANGO_LOG_ROTATING_FILE).get_logger()
 
 
 @method_decorator(
@@ -86,9 +83,24 @@ class CustomPasswordResetCompleteView(PasswordResetCompleteView):
 )
 class CustomPasswordResetView(PasswordResetView):
 
+    def get_initial(self):
+        initial = super().get_initial()
+        if self.request.user.is_authenticated:
+            initial['email'] = self.request.user.email
+        return initial
+
     def form_valid(self, form):
         """Анти-спам + отправка письма через Celery."""
         email = form.cleaned_data['email'].lower()
+
+        if self.request.user.is_authenticated:
+            if self.request.user.email.lower() != email:
+                messages.warning(
+                    self.request,
+                    'Для восстановления пароля укажите адрес, привязанный к '
+                    'вашему аккаунту'
+                )
+                return redirect('password_reset')
 
         key = f'password_reset_throttle:{email}'
         last_time: Optional[datetime] = cache.get(key)

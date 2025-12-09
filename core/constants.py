@@ -23,7 +23,9 @@ DEFAULT_ROTATING_LOG_FILE = os.path.join(LOG_DIR, 'default', 'rt_log.log')
 DEFAULT_LOG_MODE = 4 if DEBUG_MODE else 1
 DEFAULT_LOG_LEVEL = DEBUG if DEBUG_MODE else INFO
 
-EMAIL_LOG_ROTATING_FILE = os.path.join(LOG_DIR, 'emails', 'emails.log')
+EMAIL_PARSER_LOG_ROTATING_FILE = os.path.join(
+    LOG_DIR, 'emails', 'email_parser.log'
+)
 TS_LOG_ROTATING_FILE = os.path.join(LOG_DIR, 'ts', 'ts.log')
 YANDEX_TRACKER_ROTATING_FILE = os.path.join(
     LOG_DIR, 'yandex_tracker', 'yandex_tracker.log')
@@ -42,7 +44,7 @@ CELLERY_LOG_ROTATING_FILE = os.path.join(
 )
 
 os.makedirs(os.path.dirname(DEFAULT_ROTATING_LOG_FILE), exist_ok=True)
-os.makedirs(os.path.dirname(EMAIL_LOG_ROTATING_FILE), exist_ok=True)
+os.makedirs(os.path.dirname(EMAIL_PARSER_LOG_ROTATING_FILE), exist_ok=True)
 os.makedirs(os.path.dirname(TS_LOG_ROTATING_FILE), exist_ok=True)
 os.makedirs(os.path.dirname(YANDEX_TRACKER_ROTATING_FILE), exist_ok=True)
 os.makedirs(os.path.dirname(INCIDENTS_LOG_ROTATING_FILE), exist_ok=True)

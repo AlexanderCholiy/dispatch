@@ -6,12 +6,11 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from core.constants import (
-    EMAIL_LOG_ROTATING_FILE,
     EMAIL_MIME_DIR,
     INCIDENT_DIR,
     SUBFOLDER_DATE_FORMAT,
 )
-from core.loggers import LoggerFactory
+from core.loggers import email_parser_logger
 from core.pretty_print import PrettyPrint
 from core.tg_bot import tg_manager
 from core.wraps import timer
@@ -23,10 +22,6 @@ from emails.models import (
     EmailMime
 )
 from emails.utils import EmailManager
-
-email_managment_logger = LoggerFactory(
-    __name__, EMAIL_LOG_ROTATING_FILE
-).get_logger()
 
 
 class Command(BaseCommand):
@@ -42,7 +37,7 @@ class Command(BaseCommand):
         try:
             size = file_path.stat().st_size
         except OSError:
-            email_managment_logger.warning(
+            email_parser_logger.warning(
                 f'Не удалось получить размер файла {file_path}'
             )
             return
@@ -50,11 +45,11 @@ class Command(BaseCommand):
         if size == 0:
             try:
                 file_path.unlink()
-                email_managment_logger.info(
+                email_parser_logger.info(
                     f'Удалён пустой файл вложения: {file_path}'
                 )
             except OSError:
-                email_managment_logger.warning(
+                email_parser_logger.warning(
                     f'Не удалось удалить пустой файл {file_path}'
                 )
             return
@@ -69,7 +64,7 @@ class Command(BaseCommand):
                     tz=timezone.get_current_timezone()
                 )
             except OSError:
-                email_managment_logger.warning(
+                email_parser_logger.warning(
                     'Не удалось получить время модификации '
                     f'{file_path}'
                 )
@@ -79,22 +74,22 @@ class Command(BaseCommand):
                 try:
                     file_path.unlink()
                 except OSError:
-                    email_managment_logger.warning(
+                    email_parser_logger.warning(
                         f'Не удалось удалить {file_path}')
 
-    @timer(email_managment_logger)
+    @timer(email_parser_logger)
     def handle(self, *args, **kwargs):
         tg_manager.send_startup_notification(__name__)
 
         attachment_dir = Path(INCIDENT_DIR)
         mime_dir = Path(EMAIL_MIME_DIR)
         if not attachment_dir.exists():
-            email_managment_logger.warning(
+            email_parser_logger.warning(
                 f'Папки {attachment_dir} не существует.')
             return
 
         if not mime_dir.exists():
-            email_managment_logger.warning(
+            email_parser_logger.warning(
                 f'Папки {mime_dir} не существует.')
             return
 
@@ -150,7 +145,7 @@ class Command(BaseCommand):
                         if folder_date < now - dt.timedelta(days=1):
                             dir_path.rmdir()
                 except OSError:
-                    email_managment_logger.warning(
+                    email_parser_logger.warning(
                         f'Не удалось удалить папку {dir_path}.')
                 except ValueError:
                     continue
@@ -175,7 +170,7 @@ class Command(BaseCommand):
                         if folder_date < now - dt.timedelta(days=1):
                             dir_path.rmdir()
                 except OSError:
-                    email_managment_logger.warning(
+                    email_parser_logger.warning(
                         f'Не удалось удалить папку {dir_path}.')
                 except ValueError:
                     continue
@@ -238,7 +233,7 @@ class Command(BaseCommand):
                 mime_to_delete.append(attachment.id)
 
         if attachments_to_delete:
-            email_managment_logger.info(
+            email_parser_logger.info(
                 f'Удаляем {len(attachments_to_delete)} записей '
                 'EmailAttachment без файлов'
             )
@@ -247,7 +242,7 @@ class Command(BaseCommand):
             ).delete()
 
         if intext_to_delete:
-            email_managment_logger.info(
+            email_parser_logger.info(
                 f'Удаляем {len(intext_to_delete)} записей '
                 'EmailInTextAttachment без файлов'
             )
@@ -256,7 +251,7 @@ class Command(BaseCommand):
             ).delete()
 
         if mime_to_delete:
-            email_managment_logger.info(
+            email_parser_logger.info(
                 f'Удаляем {len(mime_to_delete)} записей EmailMime без файлов'
             )
             EmailMime.objects.filter(id__in=mime_to_delete).delete()

@@ -3,21 +3,17 @@ from datetime import datetime, timedelta
 
 from django.core.management.base import BaseCommand
 
-from core.constants import TS_LOG_ROTATING_FILE, UPDATE_DATA_FROM_TS_LOCK_FILE
-from core.loggers import LoggerFactory
+from core.constants import UPDATE_DATA_FROM_TS_LOCK_FILE
+from core.loggers import ts_logger
 from core.wraps import timer
 from ts.api import Api
 from ts.constants import TS_DATA_DIR
-
-ts_managment_logger = LoggerFactory(
-    __name__, TS_LOG_ROTATING_FILE
-).get_logger()
 
 
 class Command(BaseCommand):
     help = 'Обновление таблиц опор, БС, операторов и подрядчиков по АВР'
 
-    @timer(ts_managment_logger, False)
+    @timer(ts_logger, False)
     def handle(self, *args, **kwargs):
         lock_acquired = False
         now = datetime.now()
@@ -35,17 +31,17 @@ class Command(BaseCommand):
                     ) if ts_time_str else None
 
                 if ts_time and now - ts_time < lock_timeout:
-                    ts_managment_logger.warning(
+                    ts_logger.warning(
                         'Данные TowerStore ещё обновляются, пропуск запуска'
                     )
                     return
                 else:
-                    ts_managment_logger.warning(
+                    ts_logger.warning(
                         f'Lock-файл {UPDATE_DATA_FROM_TS_LOCK_FILE} устарел, '
                         'перезаписываем'
                     )
             except Exception:
-                ts_managment_logger.exception(
+                ts_logger.exception(
                     'Не удалось прочитать lock-файл '
                     f'{UPDATE_DATA_FROM_TS_LOCK_FILE}, перезаписываем'
                 )

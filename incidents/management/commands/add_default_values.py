@@ -3,8 +3,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from numpy import nan
 
-from core.constants import INCIDENTS_LOG_ROTATING_FILE
-from core.loggers import LoggerFactory
+from core.loggers import incident_logger
 from core.pretty_print import PrettyPrint
 from core.wraps import timer
 from incidents.constants import (
@@ -46,10 +45,6 @@ from incidents.models import (
     IncidentType,
 )
 
-incident_managment_logger = LoggerFactory(
-    __name__, INCIDENTS_LOG_ROTATING_FILE
-).get_logger()
-
 
 class Command(BaseCommand):
     help = 'Заполнение дефолтными значениями IncidentStatus и IncidentType.'
@@ -59,7 +54,7 @@ class Command(BaseCommand):
         self.update_incident_category()
         self.update_incident_statuses()
 
-    @timer(incident_managment_logger)
+    @timer(incident_logger)
     def update_incident_types(self):
         incident_types = pd.read_excel(INCIDENT_TYPES_FILE)
         incident_types.replace('', None, inplace=True)
@@ -91,7 +86,7 @@ class Command(BaseCommand):
                     sla_deadline=sla_deadline,
                 )
 
-    @timer(incident_managment_logger)
+    @timer(incident_logger)
     @transaction.atomic()
     def update_incident_statuses(self):
         default_statuses = [
@@ -160,7 +155,7 @@ class Command(BaseCommand):
             if history.status_id not in valid_status_ids:
                 history.delete()
 
-    @timer(incident_managment_logger)
+    @timer(incident_logger)
     @transaction.atomic()
     def update_incident_category(self):
         incident_categories = pd.read_excel(INCIDENT_CATEGORIES_FILE)
