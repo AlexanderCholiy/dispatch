@@ -370,7 +370,11 @@ def profile(request: HttpRequest) -> HttpResponse:
 @role_required()
 def users_list(request: HttpRequest) -> HttpResponse:
     query = request.GET.get('q', '').strip()
-    role_filter = request.GET.get('role', '').strip().lower()
+
+    role_filter = (
+        request.GET.get('role', '').strip().lower()
+        or request.COOKIES.get('role').strip().lower()
+    )
 
     per_page = int(
         request.GET.get('per_page')

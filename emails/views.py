@@ -21,7 +21,11 @@ from .models import EmailFolder, EmailMessage
 @ratelimit(key='user_or_ip', rate='20/m', block=True)
 def emails_list(request: HttpRequest) -> HttpResponse:
     query = request.GET.get('q', '').strip()
-    folder_name = request.GET.get('folder', '').strip()
+
+    folder_name = (
+        request.GET.get('folder', '').strip()
+        or request.COOKIES.get('folder', '').strip()
+    )
 
     per_page = int(
         request.GET.get('per_page')

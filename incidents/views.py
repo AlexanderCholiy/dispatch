@@ -45,11 +45,31 @@ from .utils import IncidentManager
 @ratelimit(key='user_or_ip', rate='20/m', block=True)
 def index(request: HttpRequest) -> HttpResponse:
     query = request.GET.get('q', '').strip()
-    pole = request.GET.get('pole', '').strip()
-    base_station = request.GET.get('base_station', '').strip()
-    status_name = request.GET.get('status', '').strip()
-    category_name = request.GET.get('category', '').strip()
-    is_incident_finish = request.GET.get('finish', '').strip()
+
+    pole = (
+        request.GET.get('pole', '').strip()
+        or request.COOKIES.get('pole', '').strip()
+    )
+
+    base_station = (
+        request.GET.get('base_station', '').strip()
+        or request.COOKIES.get('base_station', '').strip()
+    )
+
+    status_name = (
+        request.GET.get('status', '').strip()
+        or request.COOKIES.get('status', '').strip()
+    )
+
+    category_name = (
+        request.GET.get('category', '').strip()
+        or request.COOKIES.get('category', '').strip()
+    )
+
+    is_incident_finish = (
+        request.GET.get('finish', '').strip()
+        or request.COOKIES.get('finish', '').strip()
+    )
 
     if is_incident_finish == 'true':
         is_incident_finish = True
