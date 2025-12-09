@@ -18,25 +18,29 @@
 }
 
 .custom-table th {
-  padding: var(--space-xs) var(--space-sm);
+  padding: var(--space-sm) var(--space-sm);
   font-weight: 500;
   white-space: nowrap;
-  border-bottom: 1.5px solid var(--extra-color);
+  border-bottom: 1.5px solid var(--gray-color);
   user-select: none;
   transition: border-color var(--transition-value);
 }
 
 .custom-table td {
-  padding: var(--space-xs) var(--space-sm);
+  padding: var(--space-sm);
   margin-right: var(--space-xs);
   border-bottom: 1px solid var(--add-background-color);
   vertical-align: middle;
   color: var(--add-color);
-  transition: color var(--transition-value) border-color var(--transition-value);
+  transition: color var(--transition-value), border-color var(--transition-value);
+}
+
+.custom-table tbody tr:hover td {
+  border-color: var(--gray-color);
 }
 
 .custom-table td:hover {
-  color: var(--color);
+  color: var(--color) !important;
 }
 
 .custom-table tbody tr:hover {
