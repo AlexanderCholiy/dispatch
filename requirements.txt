@@ -24,6 +24,7 @@ django-cleanup==9.0.0
 django-debug-toolbar==5.1.0
 django-filter==23.1
 django-ratelimit==4.1.0
+django-redis==6.0.0
 django_celery_results==2.6.0
 djangorestframework==3.16.1
 djangorestframework-simplejwt==5.3.1

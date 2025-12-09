@@ -2,6 +2,7 @@ volumes:
   dispatch_db_data:
   dispatch_static:
   dispatch_media:
+  dispatch_redis_data:
 
 networks:
   dispatch_network:
@@ -31,6 +32,21 @@ services:
       POSTGRES_HOST_AUTH_METHOD: "md5"
     command: >
       postgres -c listen_addresses='*'
+
+  # Redis (для кэша)
+  dispatch_redis:
+    image: redis:7-alpine
+    container_name: dispatch_redis
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - dispatch_redis_data:/data
+    networks:
+      - dispatch_network
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}", "--appendonly", "yes"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
 
   # RabbitMQ (для Celery broker + optional result backend)
   dispatch_rabbitmq:
@@ -110,6 +126,7 @@ services:
     depends_on:
       - dispatch_db
       - dispatch_rabbitmq
+      - dispatch_redis
     networks:
       - dispatch_network
     restart: unless-stopped

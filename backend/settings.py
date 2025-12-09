@@ -178,6 +178,22 @@ CELERY_BEAT_SCHEDULE = {
     }
 }
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': (
+            f'redis://{os.getenv("REDIS_USER", "default")}:'
+            f'{os.getenv("REDIS_PASSWORD", "")}@'
+            f'{os.getenv("REDIS_HOST", "localhost")}:'
+            f'{os.getenv("REDIS_PORT", 6379)}/1'
+        ),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        },
+        'TIMEOUT': 3600,
+    }
+}
+
 DATABASE_ROUTERS = ['monitoring.routers.ReadOnlyRouter']
 
 MIGRATION_MODULES = {

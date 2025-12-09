@@ -183,7 +183,7 @@ Supervisor управляет запуском:
 |--------------------|--------------------------------------------------------------|
 | **Backend**        | Python 3.12, Django 4.2, YandexTracker API, Celery, RabbitMQ |
 | **Frontend**       | Веб-интерфейс через Django Templates, Yandex Tracker         |
-| **База данных**    | PostgreSQL                                                   |
+| **База данных**    | PostgreSQL, Redis                                            |
 | **Инфраструктура** | Docker, Docker Compose, Nginx                                |
 | **CI/CD**          | GitHub Actions                                               |
 
@@ -449,9 +449,9 @@ sudo service nginx reload
 ---
 
 ## ⚙️ Запуск в режиме разработки
-1. Запустите необходимые контейнеры через Docker Compose: базу данных PostgreSQL, брокер сообщений RabbitMQ и воркеры Celery для фоновой обработки задач:
+1. Запустите необходимые контейнеры через Docker Compose: базу данных PostgreSQL, Redis, брокер сообщений RabbitMQ и воркеры Celery для фоновой обработки задач:
 ```bash
-sudo docker compose up -d --build --force-recreate dispatch_db dispatch_rabbitmq dispatch_celery_heavy_worker dispatch_celery_worker dispatch_celery_beat
+sudo docker compose up -d --build --force-recreate dispatch_db dispatch_redis dispatch_rabbitmq dispatch_celery_heavy_worker dispatch_celery_worker dispatch_celery_beat
 ```
 ```bash
 sudo docker compose restart dispatch_celery_heavy_worker dispatch_celery_worker dispatch_celery_beat
