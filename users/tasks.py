@@ -54,8 +54,6 @@ def send_activation_email_task(
             )
             user.delete()
             return
-    else:
-        user.delete()
 
 
 @shared_task(
@@ -103,8 +101,6 @@ def send_confirm_email_task(
             )
             user.delete()
             return
-    else:
-        user.delete()
 
 
 @shared_task(
