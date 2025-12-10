@@ -83,6 +83,15 @@
     <button type="button" id="reset-filters" class="btn btn-secondary tooltip" data-title="Сбросить фильтры">
       <i class="bx bx-x-circle"></i>
     </button>
+    {% if selected.sort == "asc" %}
+    <button type="button" class="btn btn-secondary sort-incidents-btn tooltip" data-sort="desc" data-param="sort_incidents" data-cookie="sort_incidents" data-title="Сначала новые">
+      <i class='bx bx-chevrons-down'></i>
+    </button>
+    {% else %}
+    <button type="button" class="btn btn-secondary sort-incidents-btn tooltip" data-sort="asc" data-param="sort_incidents" data-cookie="sort_incidents" data-title="Сначала старые">
+      <i class='bx bx-chevrons-up'></i>
+    </button>
+    {% endif %}
     <button type="submit" class="btn btn-primary tooltip" data-title="Применить фильтр">
       <i class="bx bx-filter"></i>
     </button>
@@ -95,4 +104,5 @@
 <script src="{% static 'js/incidents/search_filter.js' %}"></script>
 <script src="{% static 'js/save_elements_per_page.js' %}"></script>
 <script src="{% static 'js/reset_tables_filter.js' %}"></script>
+<script src="{% static 'js/sort_table.js' %}"></script>
 {% endblock %}

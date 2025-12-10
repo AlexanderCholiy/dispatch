@@ -14,6 +14,20 @@
         {% endfor %}
       </select>
     </div>
+
+    <input
+      type="email"
+      name="email_from"
+      value="{{ selected.email_from|default:'' }}"
+      placeholder="От кого"
+      aria-label="Фильтр отправителя"
+      id="email-from-input"
+      maxlength="64"
+      pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+      class="tooltip"
+      data-title="Адрес эл. почты"
+    />
+
   </div>
     
   <div class="right-parts">
@@ -27,6 +41,15 @@
     <button type="button" id="reset-filters" class="btn btn-secondary tooltip" data-title="Сбросить фильтры">
       <i class="bx bx-x-circle"></i>
     </button>
+    {% if selected.sort == "asc" %}
+    <button type="button" class="btn btn-secondary sort-emails-btn tooltip" data-sort="desc" data-param="sort_emails" data-cookie="sort_emails" data-title="Сначала новые">
+      <i class='bx bx-chevrons-down'></i>
+    </button>
+    {% else %}
+    <button type="button" class="btn btn-secondary sort-emails-btn tooltip" data-sort="asc" data-param="sort_emails" data-cookie="sort_emails" data-title="Сначала старые">
+      <i class='bx bx-chevrons-up'></i>
+    </button>
+    {% endif %}
     <button type="submit" class="btn btn-primary tooltip" data-title="Применить фильтр">
       <i class="bx bx-filter"></i>
     </button>
@@ -39,4 +62,5 @@
 <script src="{% static 'js/emails/search_filter.js' %}"></script>
 <script src="{% static 'js/save_elements_per_page.js' %}"></script>
 <script src="{% static 'js/reset_tables_filter.js' %}"></script>
+<script src="{% static 'js/sort_table.js' %}"></script>
 {% endblock %}

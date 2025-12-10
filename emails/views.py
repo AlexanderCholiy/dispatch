@@ -27,10 +27,21 @@ def emails_list(request: HttpRequest) -> HttpResponse:
         or request.COOKIES.get('folder', '').strip()
     )
 
+    email_from = (
+        request.GET.get('email_from', '').strip()
+        or request.COOKIES.get('email_from', '').strip()
+    )
+
     per_page = int(
         request.GET.get('per_page')
         or request.COOKIES.get('per_page_emails')
         or EMAILS_PER_PAGE
+    )
+
+    sort = (
+        request.GET.get('sort_emails')
+        or request.COOKIES.get('sort_emails')
+        or 'desc'
     )
 
     if per_page not in PAGE_SIZE_EMAILS_CHOICES:
@@ -41,8 +52,12 @@ def emails_list(request: HttpRequest) -> HttpResponse:
     base_qs = (
         EmailMessage.objects
         .exclude(email_incident__isnull=True)
-        .order_by('-email_date', 'is_first_email')
     )
+
+    if sort == 'asc':
+        base_qs = base_qs.order_by('email_date', 'is_first_email', 'id')
+    else:
+        base_qs = base_qs.order_by('-email_date', 'is_first_email', 'id')
 
     if query:
         filters = (
@@ -56,6 +71,9 @@ def emails_list(request: HttpRequest) -> HttpResponse:
 
     if folder_name:
         base_qs = base_qs.filter(folder__name=folder_name)
+
+    if email_from:
+        base_qs = base_qs.filter(email_from=email_from)
 
     paginator = Paginator(base_qs.values_list('id', flat=True), per_page)
     page_number = request.GET.get('page')
@@ -105,6 +123,7 @@ def emails_list(request: HttpRequest) -> HttpResponse:
         'selected': {
             'folder': folder_name,
             'per_page': per_page,
+            'sort': sort,
         },
         'page_size_choices': PAGE_SIZE_EMAILS_CHOICES,
     }

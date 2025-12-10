@@ -373,13 +373,19 @@ def users_list(request: HttpRequest) -> HttpResponse:
 
     role_filter = (
         request.GET.get('role', '').strip().lower()
-        or request.COOKIES.get('role').strip().lower()
+        or request.COOKIES.get('role', '').strip().lower()
     )
 
     per_page = int(
         request.GET.get('per_page')
         or request.COOKIES.get('per_page_emails')
         or USERS_PER_PAGE
+    )
+
+    sort = (
+        request.GET.get('sort_users')
+        or request.COOKIES.get('sort_users')
+        or 'asc'
     )
 
     if per_page not in PAGE_SIZE_USERS_CHOICES:
@@ -392,12 +398,11 @@ def users_list(request: HttpRequest) -> HttpResponse:
         role_filter and role_filter in [r.value for r in roles]
     ) else ''
 
-    base_qs = (
-        User.objects
-        .exclude(role=Roles.GUEST)
-        .exclude(is_active=False)
-        .order_by('username')
-    )
+    base_qs = User.objects.exclude(role=Roles.GUEST).exclude(is_active=False)
+    if sort == 'asc':
+        base_qs = base_qs.order_by('username', 'id')
+    else:
+        base_qs = base_qs.order_by('-username', 'id')
 
     if role_filter:
         base_qs = base_qs.filter(role=role_filter)
@@ -440,6 +445,7 @@ def users_list(request: HttpRequest) -> HttpResponse:
         'selected': {
             'role': role_filter,
             'per_page': per_page,
+            'sort': sort,
         },
         'page_size_choices': PAGE_SIZE_USERS_CHOICES,
     }

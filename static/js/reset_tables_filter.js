@@ -10,8 +10,25 @@ document.addEventListener('DOMContentLoaded', () => {
       const perPageValue = perPageSelect ? perPageSelect.value : null;
 
       // Очищаем текстовые поля фильтра
-      const inputs = filterForm.querySelectorAll('input[type="text"]');
-      inputs.forEach(input => input.value = '');
+      const inputsToClear = filterForm.querySelectorAll(
+        'input[type="text"], input[type="email"], input[type="number"], input[type="search"]'
+      );
+
+      inputsToClear.forEach(input => input.value = '');
+
+      // --- Очищаем cookies ---
+      function deleteCookie(name) {
+        document.cookie = name + "=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      }
+      deleteCookie('role');
+
+      deleteCookie('folder');
+      deleteCookie('email_from');
+
+      deleteCookie('finish');
+      deleteCookie('status');
+      deleteCookie('pole');
+      deleteCookie('base_station');
 
       // Сбрасываем фильтр завершен ли инцидент
       const finishSelect = document.getElementById('finish-select');
@@ -52,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'search-hidden-base-station',
         'search-hidden-folder',
         'search-hidden-role',
+        'search-hidden-email-from'
       ];
 
       const hiddenInputs = document.querySelectorAll(

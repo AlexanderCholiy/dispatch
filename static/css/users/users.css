@@ -60,7 +60,7 @@
 }
 
 .user-email:hover {
-  color: var(--yellow-color);
+  color: var(--red-color);
   text-decoration: underline;
 }
 

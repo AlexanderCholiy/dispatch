@@ -5,10 +5,12 @@ document.addEventListener('DOMContentLoaded', function() {
   const searchInput = document.getElementById('search-input');
 
   const folderSelect = document.getElementById('folder-select');
+  const emailfromSelect = document.getElementById('email-from-input');
   const perPageSelect = document.getElementById('per-page');
 
   const cookieNames = {
-    folder: 'folder'
+    folder: 'folder',
+    email_from: 'email_from'
   };
 
   // ---- COOKIE HELPERS ----
@@ -33,6 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   restoreValue(folderSelect, 'folder');
+  restoreValue(emailfromSelect, 'email_from');
 
   // ---- СОХРАНЕНИЕ В COOKIE ----
   function saveOnChange(input, name) {
@@ -43,6 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   saveOnChange(folderSelect, 'folder');
+  saveOnChange(emailfromSelect, 'email_from');
 
   // ----- СИНХРОНИЗАЦИЯ СКРЫТЫХ ПОЛЕЙ В searchForm -----
   function syncHiddenField(input, fieldName) {
@@ -60,6 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   syncHiddenField(folderSelect, 'folder');
+  syncHiddenField(emailfromSelect, 'email_from');
   syncHiddenField(perPageSelect, 'per_page');
 
   // ----- СИНХРОНИЗАЦИЯ Q -----

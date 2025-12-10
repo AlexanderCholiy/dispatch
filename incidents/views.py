@@ -78,6 +78,12 @@ def index(request: HttpRequest) -> HttpResponse:
     else:
         is_incident_finish = None
 
+    sort = (
+        request.GET.get('sort_incidents')
+        or request.COOKIES.get('sort_incidents')
+        or 'desc'
+    )
+
     per_page = int(
         request.GET.get('per_page')
         or request.COOKIES.get('per_page_root')
@@ -95,9 +101,12 @@ def index(request: HttpRequest) -> HttpResponse:
         'pole',
         'pole__region',
         'base_station'
-    ).prefetch_related('categories').order_by(
-        '-update_date', '-incident_date', 'id'
-    )
+    ).prefetch_related('categories')
+
+    if sort == 'asc':
+        base_qs = base_qs.order_by('update_date', 'incident_date', 'id')
+    else:
+        base_qs = base_qs.order_by('-update_date', '-incident_date', 'id')
 
     if is_incident_finish is not None:
         base_qs = base_qs.filter(is_incident_finish=is_incident_finish)
@@ -204,6 +213,7 @@ def index(request: HttpRequest) -> HttpResponse:
             'pole': pole,
             'base_station': base_station,
             'per_page': per_page,
+            'sort': sort,
         },
         'page_size_choices': PAGE_SIZE_INCIDENTS_CHOICES,
     }
