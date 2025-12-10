@@ -36,7 +36,7 @@ CSRF_COOKIE_AGE = 31449600  # 1 год
 
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
-SESSION_COOKIE_AGE = 604800  # Неделя
+SESSION_COOKIE_AGE = 3600  # 1 час
 
 SESSION_SAVE_EVERY_REQUEST = True
 
@@ -193,6 +193,8 @@ CACHES = {
         'TIMEOUT': 3600,
     }
 }
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 
 DATABASE_ROUTERS = ['monitoring.routers.ReadOnlyRouter']
 

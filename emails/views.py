@@ -38,9 +38,31 @@ def emails_list(request: HttpRequest) -> HttpResponse:
         params['per_page'] = EMAILS_PER_PAGE
         return redirect(f"{request.path}?{params.urlencode()}")
 
-    emails = EmailMessage.objects.exclude(
-        email_incident__isnull=True
-    ).select_related(
+    base_qs = (
+        EmailMessage.objects
+        .exclude(email_incident__isnull=True)
+        .order_by('-email_date', 'is_first_email')
+    )
+
+    if query:
+        filters = (
+            Q(email_incident__code=query)
+            | Q(email_subject__icontains=query)
+        )
+        if query.isdigit():
+            filters |= Q(pk=int(query))
+
+        base_qs = base_qs.filter(filters).distinct()
+
+    if folder_name:
+        base_qs = base_qs.filter(folder__name=folder_name)
+
+    paginator = Paginator(base_qs.values_list('id', flat=True), per_page)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    page_ids = list(page_obj.object_list)
+
+    emails_qs = EmailMessage.objects.filter(id__in=page_ids).select_related(
         'email_incident',
         'folder',
         'email_mime',
@@ -57,20 +79,8 @@ def emails_list(request: HttpRequest) -> HttpResponse:
         Prefetch(
             'email_msg_cc', to_attr='prefetched_cc'
         ),
-    ).order_by('-email_date', 'is_first_email')
-
-    if query:
-        filters = (
-            Q(email_incident__code=query)
-            | Q(email_subject__icontains=query)
-        )
-        if query.isdigit():
-            filters |= Q(pk=int(query))
-
-        emails = emails.filter(filters).distinct()
-
-    if folder_name:
-        emails = emails.filter(folder__name=folder_name)
+    )
+    emails = sorted(emails_qs, key=lambda e: page_ids.index(e.id))
 
     folders = cache.get_or_set(
         'email_filter_folders',
@@ -82,16 +92,13 @@ def emails_list(request: HttpRequest) -> HttpResponse:
         MAX_EMAILS_INFO_CACHE_SEC,
     )
 
-    paginator = Paginator(emails, per_page)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
     query_params = request.GET.copy()
     query_params.pop('page', None)
     page_url_base = f'?{query_params.urlencode()}&' if query_params else '?'
 
     context = {
         'page_obj': page_obj,
+        'emails': emails,
         'search_query': query,
         'page_url_base': page_url_base,
         'folders': folders,
@@ -101,4 +108,5 @@ def emails_list(request: HttpRequest) -> HttpResponse:
         },
         'page_size_choices': PAGE_SIZE_EMAILS_CHOICES,
     }
+
     return render(request, 'emails/emais_list.html', context)

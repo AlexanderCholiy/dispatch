@@ -1,4 +1,4 @@
-{% if email.prefetched_attachments or email.prefetched_intext_attachments or email.email_mime%}
+{% if email.prefetched_attachments or email.prefetched_intext_attachments or email.email_mime %}
 <div class="email-attachments-wrapper">
     <button type="button" class="toggle-attachments-btn">
         Показать вложения
@@ -8,10 +8,10 @@
         {% if email.email_mime %}
           {% include "emails/includes/attachment_item.html" with att=email.email_mime %}
         {% endif %}
-        {% for att in prefetched_attachments %}
+        {% for att in email.prefetched_attachments %}
           {% include "emails/includes/attachment_item.html" with att=att %}
         {% endfor %}
-        {% for att in prefetched_intext_attachments %}
+        {% for att in email.prefetched_intext_attachments %}
           {% include "emails/includes/attachment_item.html" with att=att %}
         {% endfor %}
       </ul>

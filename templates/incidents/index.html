@@ -27,7 +27,7 @@
             </tr>
           </thead>
           <tbody>
-            {% for incident in page_obj %}
+            {% for incident in incidents %}
               <tr>
                 <td class="tooltip"
                     data-title="{{ incident.incident_type.name|default:'' }}">

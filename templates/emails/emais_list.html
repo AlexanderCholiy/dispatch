@@ -14,7 +14,7 @@
 
   <div class="emails-wrapper" id="emails-wrapper">
 
-    {% for email in page_obj %}
+    {% for email in emails %}
       <div class="email-card {% if email.folder.name == 'INBOX' %}inbox-email{% else %}sent-email{% endif %}">
 
         <div class="email-header">

@@ -13,7 +13,7 @@
   {% include "users/includes/users_filter.html" %}
 
   <div class="card-grid">
-    {% for user in page_obj %}
+    {% for user in users %}
       <div class="user-card {% if user.work_schedule.is_working_now %}online{% else %}offline{% endif %}">       
         <div class="user-info">
           <p class="user-role">{{ user.get_role_display }}</p>

@@ -392,17 +392,15 @@ def users_list(request: HttpRequest) -> HttpResponse:
         role_filter and role_filter in [r.value for r in roles]
     ) else ''
 
-    users = (
+    base_qs = (
         User.objects
-        .select_related(
-            'work_schedule',
-        )
-        .exclude(role=Roles.GUEST).exclude(is_active=False)
+        .exclude(role=Roles.GUEST)
+        .exclude(is_active=False)
         .order_by('username')
     )
 
     if role_filter:
-        users = users.filter(role=role_filter)
+        base_qs = base_qs.filter(role=role_filter)
 
     if query:
         words = {w.strip().lower() for w in query.split(' ') if w.strip()}
@@ -416,11 +414,18 @@ def users_list(request: HttpRequest) -> HttpResponse:
         if any(word in words for word in new_user_keywords):
             q_filter |= Q(first_name__exact='') & Q(last_name__exact='')
 
-        users = users.filter(q_filter)
+        users = base_qs.filter(q_filter)
 
-    paginator = Paginator(users, per_page)
+    paginator = Paginator(base_qs.values_list('id', flat=True), per_page)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+    page_ids = list(page_obj.object_list)
+
+    users_qs = (
+        User.objects.filter(id__in=page_ids)
+        .select_related('work_schedule')
+    )
+    users = sorted(users_qs, key=lambda u: page_ids.index(u.id))
 
     query_params = request.GET.copy()
     query_params.pop('page', None)
@@ -428,6 +433,7 @@ def users_list(request: HttpRequest) -> HttpResponse:
 
     context = {
         'page_obj': page_obj,
+        'users': users,
         'search_query': query,
         'page_url_base': page_url_base,
         'roles': roles,

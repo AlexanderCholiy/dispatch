@@ -89,6 +89,44 @@ def index(request: HttpRequest) -> HttpResponse:
         params['per_page'] = INCIDENTS_PER_PAGE
         return redirect(f'{request.path}?{params.urlencode()}')
 
+    base_qs = Incident.objects.select_related(
+        'incident_type',
+        'responsible_user',
+        'pole',
+        'pole__region',
+        'base_station'
+    ).prefetch_related('categories').order_by(
+        '-update_date', '-incident_date', 'id'
+    )
+
+    if is_incident_finish is not None:
+        base_qs = base_qs.filter(is_incident_finish=is_incident_finish)
+
+    if query:
+        base_qs = base_qs.filter(
+            Q(code__icontains=query)
+            | Q(email_messages__email_subject__icontains=query)
+        ).distinct()
+
+    if pole:
+        base_qs = base_qs.filter(pole__pole__startswith=pole)
+
+    if base_station:
+        base_qs = base_qs.filter(
+            base_station__bs_name__startswith=base_station
+        )
+
+    if status_name:
+        base_qs = base_qs.filter(latest_status_name=status_name)
+
+    if category_name:
+        base_qs = base_qs.filter(categories__name=category_name)
+
+    paginator = Paginator(base_qs.values_list('id', flat=True), per_page)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    page_ids = list(page_obj.object_list)
+
     latest_status_subquery = IncidentStatusHistory.objects.filter(
         incident=OuterRef('pk')
     ).order_by('-insert_date')
@@ -102,15 +140,13 @@ def index(request: HttpRequest) -> HttpResponse:
         )
     )
 
-    incidents = Incident.objects.select_related(
+    incidents_qs = Incident.objects.filter(id__in=page_ids).select_related(
         'incident_type',
         'responsible_user',
         'pole',
         'pole__region',
         'base_station',
-    ).prefetch_related(
-        'categories',
-    ).annotate(
+    ).prefetch_related('categories').annotate(
         latest_status_name=Subquery(
             latest_status_subquery.values('status__name')[:1]
         ),
@@ -126,30 +162,9 @@ def index(request: HttpRequest) -> HttpResponse:
         first_email_from=Subquery(
             first_email_subquery.values('email_from')[:1]
         ),
-    ).order_by('-update_date', '-incident_date', 'id')
+    )
 
-    if is_incident_finish is not None:
-        incidents = incidents.filter(is_incident_finish=is_incident_finish)
-
-    if query:
-        incidents = incidents.filter(
-            Q(code__icontains=query)
-            | Q(email_messages__email_subject__icontains=query)
-        ).distinct()
-
-    if pole:
-        incidents = incidents.filter(pole__pole__startswith=pole)
-
-    if base_station:
-        incidents = incidents.filter(
-            base_station__bs_name__startswith=base_station
-        )
-
-    if status_name:
-        incidents = incidents.filter(latest_status_name=status_name)
-
-    if category_name:
-        incidents = incidents.filter(categories__name=category_name)
+    incidents = sorted(incidents_qs, key=lambda i: page_ids.index(i.id))
 
     statuses = cache.get_or_set(
         'incident_filter_statuses',
@@ -171,16 +186,13 @@ def index(request: HttpRequest) -> HttpResponse:
         MAX_INCIDENTS_INFO_CACHE_SEC,
     )
 
-    paginator = Paginator(incidents, per_page)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
     query_params = request.GET.copy()
     query_params.pop('page', None)
     page_url_base = f'?{query_params.urlencode()}&' if query_params else '?'
 
     context = {
         'page_obj': page_obj,
+        'incidents': incidents,
         'search_query': query,
         'page_url_base': page_url_base,
         'statuses': statuses,
