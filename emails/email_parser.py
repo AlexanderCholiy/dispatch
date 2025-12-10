@@ -63,6 +63,7 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
 
         self.sent_folder_name = sent_folder_name
 
+    @timer(email_parser_logger)
     def _find_emails_by_date(
         self, today: datetime, check_days: int, mail: imaplib.IMAP4_SSL
     ) -> list[bytes]:
@@ -87,6 +88,7 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
 
         return messages[0].split()
 
+    @timer(email_parser_logger)
     def _find_email_by_id(
         self,
         message_ids: set[str],
@@ -262,7 +264,8 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
 
         if any(header in msg for header in tracker_headers):
             matches = re.findall(
-                rf'{self.yt_manager.queue}-\d+', subject)
+                rf'{self.yt_manager.queue}-\d+', subject
+            )
             result = True if matches else False
 
         return result

@@ -6,6 +6,8 @@ from datetime import datetime
 from email import header, message
 from email.utils import getaddresses
 from typing import Optional
+from email.header import decode_header
+from tabulate import tabulate
 
 import html2text
 from bs4 import BeautifulSoup, Comment, NavigableString, Tag
@@ -58,19 +60,31 @@ class EmailValidator:
         )
         return email_from
 
+    def _decode_mime_header(self, value: str) -> str:
+        """Декодирует MIME-заголовки вроде =?utf-8?B?...?="""
+        if not value:
+            return ''
+        decoded_parts = decode_header(value)
+        return ''.join(
+            part.decode(encoding or 'utf-8') if isinstance(
+                part, bytes
+            ) else part
+            for part, encoding in decoded_parts
+        )
+
     def prepare_email_to(self, to_recipients: list[str]) -> list[str]:
         """Нормализуем список e-mail адресов из заголовков письма."""
-        parsed = getaddresses(to_recipients)
-        intermediate = [addr.strip() for _, addr in parsed if addr]
-
-        email_regex = re.compile(r'^[^@]+@[^@]+\.[^@]+$')
-
+        decoded = [self._decode_mime_header(addr) for addr in to_recipients]
+        parsed = getaddresses(decoded)
         emails = []
-        for addr in intermediate:
+
+        for _, addr in parsed:
+            addr = addr.strip()
+
             if (
-                len(addr) <= MAX_EMAIL_LEN
-                and email_regex.match(addr)
+                addr
                 and addr not in emails
+                and len(addr) <= MAX_EMAIL_LEN
             ):
                 emails.append(addr)
 
@@ -145,13 +159,30 @@ class EmailValidator:
 
         return text
 
+    def _table_to_text(self, table_tag: Tag) -> str:
+        """Преобразует HTML <table> в текстовую таблицу."""
+        rows = []
+        for tr in table_tag.find_all('tr'):
+            cols = [
+                td.get_text(strip=True) for td in tr.find_all(['td', 'th'])
+            ]
+            rows.append(cols)
+
+        return tabulate(rows, tablefmt='plain')
+
     def prepare_text_from_html(self, html: str) -> str:
         if not html:
             return ''
 
         soup = BeautifulSoup(html, 'lxml')
+
+        for table in soup.find_all('table'):
+            table_text = self._table_to_text(table)
+            table.replace_with(table_text)
+
         for tag in soup(['style', 'script']):
             tag.decompose()
+
         for comment in soup.find_all(
             string=lambda text: isinstance(text, Comment)
         ):
