@@ -35,6 +35,13 @@ def get_default_status_type():
     return contractor.pk
 
 
+class SLAStatus(models.TextChoices):
+    IN_PROGRESS = ('active', 'В работе')
+    LESS_THAN_HOUR = ('soon', 'Меньше часа')
+    EXPIRED = ('expired', 'Просрочен')
+    CLOSED_ON_TIME = ('closed', 'Закрыт вовремя')
+
+
 class Incident(models.Model):
     """Таблица инцидентов"""
     insert_date = models.DateTimeField(
@@ -313,6 +320,62 @@ class Incident(models.Model):
             )
         return None
     sla_rvr_deadline.fget.short_description = 'Срок устранения РВР'
+
+    @property
+    def sla_avr_status(self) -> Optional[SLAStatus]:
+        return self._get_sla_status('avr')
+
+    @property
+    def sla_rvr_status(self) -> Optional[SLAStatus]:
+        return self._get_sla_status('rvr')
+
+    def _get_sla_status(self, category: str) -> Optional[SLAStatus]:
+        """Определяет SLA-статус для категории 'avr' или 'rvr'."""
+        now = timezone.now()
+        is_avr = None
+
+        if category.lower() == 'avr':
+            is_avr = True
+            start = self.avr_start_date
+            end = self.avr_end_date
+            sla_minutes = (
+                self.incident_type.sla_deadline
+            ) if self.incident_type else None
+        elif category.lower() == 'rvr':
+            is_avr = False
+            start = self.rvr_start_date
+            end = self.rvr_end_date
+            sla_minutes = RVR_SLA_DEADLINE_IN_HOURS * 60
+        else:
+            return
+
+        if not start:
+            return
+
+        if end:
+            if is_avr:
+                return SLAStatus.EXPIRED if (
+                    self.is_sla_avr_expired
+                ) else SLAStatus.CLOSED_ON_TIME
+
+            return SLAStatus.EXPIRED if (
+                self.is_sla_rvr_expired
+            ) else SLAStatus.CLOSED_ON_TIME
+
+        if not sla_minutes:
+            return SLAStatus.CLOSED_ON_TIME if (
+                self.is_incident_finish
+            ) else None
+
+        deadline = start + timedelta(minutes=sla_minutes)
+        remaining = (deadline - now).total_seconds()
+
+        if remaining < 0:
+            return SLAStatus.EXPIRED
+        elif remaining <= 3600:
+            return SLAStatus.LESS_THAN_HOUR
+        else:
+            return SLAStatus.IN_PROGRESS
 
 
 class IncidentHistory(models.Model):

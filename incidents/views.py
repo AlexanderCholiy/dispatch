@@ -5,7 +5,15 @@ from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import OuterRef, Prefetch, Q, QuerySet, Subquery
+from django.db.models import (
+    OuterRef,
+    Prefetch,
+    Q,
+    QuerySet,
+    Subquery,
+    Value,
+    CharField,
+)
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
@@ -171,9 +179,15 @@ def index(request: HttpRequest) -> HttpResponse:
         first_email_from=Subquery(
             first_email_subquery.values('email_from')[:1]
         ),
+        sla_avr_status_val=Value('', output_field=CharField()),
+        sla_rvr_status_val=Value('', output_field=CharField()),
     )
 
     incidents = sorted(incidents_qs, key=lambda i: page_ids.index(i.id))
+
+    for incident in incidents:
+        incident.sla_avr_status_val = incident.sla_avr_status
+        incident.sla_rvr_status_val = incident.sla_rvr_status
 
     statuses = cache.get_or_set(
         'incident_filter_statuses',
@@ -217,6 +231,7 @@ def index(request: HttpRequest) -> HttpResponse:
         },
         'page_size_choices': PAGE_SIZE_INCIDENTS_CHOICES,
     }
+
     return render(request, 'incidents/index.html', context)
 
 

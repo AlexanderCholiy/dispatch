@@ -20,6 +20,8 @@
               <th>Инцидент</th>
               <th>Исполнитель</th>
               <th>Статус</th>
+              <th>SLA АВР</th>
+              <th>SLA РВР</th>
               <th>Обновлено</th>
               <th>Шифр опоры</th>
               <th>Номер БС</th>
@@ -64,15 +66,33 @@
                   {% endif %}
                 </td>
                 <td class="tooltip"
-                    data-title="{{ incident.latest_status_date|date:'d.m.Y H:i'|default:'—' }}">
-                  {% if incident.latest_status_name %}
-                    <span class="status-badge {{ incident.latest_status_class|default:'status-unknown' }}">
-                      {{ incident.latest_status_name }}
-                    </span>
-                  {% else %}
-                    —
-                  {% endif %}
-                </td>
+                data-title="{{ incident.latest_status_date|date:'d.m.Y H:i'|default:'—' }}">
+                {% if incident.latest_status_name %}
+                <span class="status-badge {{ incident.latest_status_class|default:'status-unknown' }}">
+                  {{ incident.latest_status_name }}
+                </span>
+                {% else %}
+                —
+                {% endif %}
+              </td>
+              <td>
+                {% if incident.sla_avr_status_val %}
+                  <span class="status-badge {{ incident.sla_avr_status_val.value|default:'status-unknown' }}">
+                    {{ incident.sla_avr_status_val.label }}
+                  </span>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td>
+                {% if incident.sla_rvr_status_val %}
+                  <span class="status-badge {{ incident.sla_rvr_status_val.value|default:'status-unknown' }}">
+                    {{ incident.sla_rvr_status_val.label }}
+                  </span>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
                 <td>{{ incident.update_date|date:"d.m.Y H:i" }}</td>
                 <td class="tooltip" data-title="{{ incident.pole.region.region_ru|default_if_none:'' }}">
                   {% if incident.pole %}
