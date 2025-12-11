@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
       deleteCookie('status');
       deleteCookie('pole');
       deleteCookie('base_station');
+      deleteCookie('category')
 
       // Сбрасываем фильтр завершен ли инцидент
       const finishSelect = document.getElementById('finish-select');

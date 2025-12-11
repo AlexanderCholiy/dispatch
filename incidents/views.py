@@ -69,10 +69,10 @@ def index(request: HttpRequest) -> HttpResponse:
         or request.COOKIES.get('status', '').strip()
     )
 
-    category_name = (
-        request.GET.get('category', '').strip()
-        or request.COOKIES.get('category', '').strip()
+    category_id = (
+        request.GET.get('category') or request.COOKIES.get('category')
     )
+    category_id = int(category_id) if category_id else None
 
     is_incident_finish = (
         request.GET.get('finish', '').strip()
@@ -144,8 +144,8 @@ def index(request: HttpRequest) -> HttpResponse:
     if status_name:
         base_qs = base_qs.filter(latest_status_name=status_name)
 
-    if category_name:
-        base_qs = base_qs.filter(categories__name=category_name)
+    if category_id:
+        base_qs = base_qs.filter(categories__id=category_id)
 
     paginator = Paginator(base_qs.values_list('id', flat=True), per_page)
     page_number = request.GET.get('page')
@@ -206,9 +206,8 @@ def index(request: HttpRequest) -> HttpResponse:
     categories = cache.get_or_set(
         'incident_filter_categories',
         lambda: list(
-            IncidentCategory.objects.values_list('name', flat=True)
-            .distinct()
-            .order_by('name')
+            IncidentCategory.objects.all().order_by('name')
+            .values('id', 'name')
         ),
         MAX_INCIDENTS_INFO_CACHE_SEC,
     )
@@ -227,7 +226,7 @@ def index(request: HttpRequest) -> HttpResponse:
         'selected': {
             'is_incident_finish': is_incident_finish,
             'status': status_name,
-            'category': category_name,
+            'category': category_id,
             'pole': pole,
             'base_station': base_station,
             'per_page': per_page,
