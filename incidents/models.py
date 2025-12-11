@@ -36,10 +36,11 @@ def get_default_status_type():
 
 
 class SLAStatus(models.TextChoices):
-    IN_PROGRESS = ('active', 'В работе')
-    LESS_THAN_HOUR = ('soon', 'Меньше часа')
-    EXPIRED = ('expired', 'Просрочен')
-    CLOSED_ON_TIME = ('closed', 'Закрыт вовремя')
+    # Используй value такой же как у классов IncidentStatus
+    IN_PROGRESS = ('in-progress', 'В работе')
+    LESS_THAN_HOUR = ('waiting', 'Меньше часа')
+    EXPIRED = ('canceled', 'Просрочен')
+    CLOSED_ON_TIME = ('closed', 'Закрыт')
 
 
 class Incident(models.Model):
@@ -331,6 +332,7 @@ class Incident(models.Model):
 
     def _get_sla_status(self, category: str) -> Optional[SLAStatus]:
         """Определяет SLA-статус для категории 'avr' или 'rvr'."""
+        return SLAStatus.LESS_THAN_HOUR
         now = timezone.now()
         is_avr = None
 

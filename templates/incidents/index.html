@@ -15,17 +15,17 @@
         <table class="custom-table">
           <thead>
             <tr>
-              <th>Код</th>
-              <th>Категория</th>
-              <th>Инцидент</th>
-              <th>Исполнитель</th>
-              <th>Статус</th>
-              <th>SLA АВР</th>
-              <th>SLA РВР</th>
-              <th>Обновлено</th>
-              <th>Шифр опоры</th>
-              <th>Номер БС</th>
-              <th>Дата регистрации</th>
+              <th data-col="code">Код</th>
+              <th data-col="category">Категория</th>
+              <th data-col="subject">Инцидент</th>
+              <th data-col="user">Исполнитель</th>
+              <th data-col="status">Статус</th>
+              <th data-col="sla_avr">SLA АВР</th>
+              <th data-col="sla_rvr">SLA РВР</th>
+              <th data-col="updated">Обновлено</th>
+              <th data-col="pole">Шифр опоры</th>
+              <th data-col="bs">Номер БС</th>
+              <th data-col="created">Дата регистрации</th>
             </tr>
           </thead>
           <tbody>
@@ -56,7 +56,8 @@
                     —
                   {% endif %}
                 </td>
-                <td class="tooltip" data-title="{{ incident.responsible_user.email|default:'' }}">
+                <td class="tooltip"
+                    data-title="{{ incident.responsible_user.email|default:'' }}">
                   {% if incident.responsible_user %}
                     <a href="{% url 'users:user_detail' incident.responsible_user.id %}" class="incident-link">
                       {{ incident.responsible_user.get_full_name|default:"Новый пользователь" }}
@@ -66,33 +67,33 @@
                   {% endif %}
                 </td>
                 <td class="tooltip"
-                data-title="{{ incident.latest_status_date|date:'d.m.Y H:i'|default:'—' }}">
-                {% if incident.latest_status_name %}
-                <span class="status-badge {{ incident.latest_status_class|default:'status-unknown' }}">
-                  {{ incident.latest_status_name }}
-                </span>
-                {% else %}
-                —
-                {% endif %}
-              </td>
-              <td>
-                {% if incident.sla_avr_status_val %}
-                  <span class="status-badge {{ incident.sla_avr_status_val.value|default:'status-unknown' }}">
-                    {{ incident.sla_avr_status_val.label }}
-                  </span>
-                {% else %}
-                  —
-                {% endif %}
-              </td>
-              <td>
-                {% if incident.sla_rvr_status_val %}
-                  <span class="status-badge {{ incident.sla_rvr_status_val.value|default:'status-unknown' }}">
-                    {{ incident.sla_rvr_status_val.label }}
-                  </span>
-                {% else %}
-                  —
-                {% endif %}
-              </td>
+                  data-title="{{ incident.latest_status_date|date:'d.m.Y H:i'|default:'—' }}">
+                  {% if incident.latest_status_name %}
+                    <span class="status-badge {{ incident.latest_status_class|default:'status-unknown' }}">
+                      {{ incident.latest_status_name }}
+                    </span>
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td>
+                  {% if incident.sla_avr_status_val %}
+                    <span class="status-badge {{ incident.sla_avr_status_val.value|default:'status-unknown' }}">
+                      {{ incident.sla_avr_status_val.label }}
+                    </span>
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td>
+                  {% if incident.sla_rvr_status_val %}
+                    <span class="status-badge {{ incident.sla_rvr_status_val.value|default:'status-unknown' }}">
+                      {{ incident.sla_rvr_status_val.label }}
+                    </span>
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
                 <td>{{ incident.update_date|date:"d.m.Y H:i" }}</td>
                 <td class="tooltip" data-title="{{ incident.pole.region.region_ru|default_if_none:'' }}">
                   {% if incident.pole %}
@@ -111,7 +112,7 @@
                 <td>{{ incident.incident_date|date:"d.m.Y H:i" }}</td>
               </tr>
             {% empty %}
-              <tr><td colspan="9" class="empty">Нет данных</td></tr>
+              <tr><td colspan="11" class="empty">Нет данных</td></tr>
             {% endfor %}
           </tbody>
         </table>
