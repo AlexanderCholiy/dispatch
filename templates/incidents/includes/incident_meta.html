@@ -1,47 +1,93 @@
 <div class="incident-meta">
-  {% if incident.pole %}
-    <p><strong>Опора:</strong> <span class="copy-text" data-text="{{ incident.pole }}">{{ incident.pole.pole }} ({{ incident.pole.region.region_ru|default:incident.pole.region.region_en }})</span></p>
-  {% endif %}
-  {% if incident.base_station %}
-    <p><strong>Базовая станция:</strong><span class="copy-text" data-text="{{ incident.base_station.bs_name }}">{{ incident.base_station.bs_name }}</span></p>
-  {% endif %}
-  {% if incident.responsible_user %}
-    <p><strong>Ответственный:</strong><span>{{ incident.responsible_user.get_full_name|default:incident.responsible_user.email }}</span></p>
-  {% endif %}
-  {% if incident.incident_type  %}
-    <p><strong>Тип:</strong><span>{{ incident.incident_type }}</span></p>
-  {% endif %}
-  {% if incident.categories.all  %}
-    <p><strong>Категории:</strong><span>{{ incident.categories.all|join:', ' }}</span></p>
-  {% endif %}
-  {% if incident.avr_contractor %}
-    <p><strong>Подрядчик по АВР:</strong><span>{{ incident.avr_contractor }}</span></p>
-  {% endif %}
+  <p>
+    <strong>Опора:</strong>
+    {% if incident.pole %}
+      <span class="copy-text" data-text="{{ incident.pole }}">{{ incident.pole.pole }} ({{ incident.pole.region.region_ru|default:incident.pole.region.region_en }})</span>
+    {% else %}
+      —  
+    {% endif %}
+  </p>
+
+  <p>
+    <strong>Базовая станция:</strong>
+    {% if incident.base_station %}
+      <span class="copy-text" data-text="{{ incident.base_station.bs_name }}">{{ incident.base_station.bs_name }}</span>
+    {% else %}
+      —
+    {% endif %}
+  </p>
+
+  <p>
+    <strong>Ответственный:</strong>
+    {% if incident.responsible_user %}
+      <span>{{ incident.responsible_user.get_full_name|default:incident.responsible_user.email }}</span>
+    {% else %}
+      —
+    {% endif %}
+  </p>
+
+  <p>
+    <strong>Тип:</strong>
+    {% if incident.incident_type %}
+      <span>{{ incident.incident_type }}</span>
+    {% else %}
+      —
+    {% endif %}
+  </p>
+
+  <p>
+    <strong>Категории:</strong>
+    {% if incident.categories.all %}
+      <span>{{ incident.categories.all|join:', ' }}</span>
+    {% else %}
+      —
+    {% endif %}
+  </p>
+
+  <p>
+    <strong>Подрядчик по АВР:</strong>
+    {% if incident.avr_contractor %}
+      <span>{{ incident.avr_contractor }}</span>
+    {% else %}
+      —
+    {% endif %}
+  </p>
 </div>
 
-{% if incident.sla_avr_deadline or incident.sla_rvr_deadline %}
-  <div class="incident-sla">
+<div class="incident-sla">
+  <p class="sla-row">
+    <span class="sla-left">
+      <strong>SLA АВР: </strong>
+      {% if incident.sla_avr_deadline %}
+        {{ incident.avr_start_date|date:"d.m.Y H:i" }} —
+        {{ incident.sla_avr_deadline|date:"d.m.Y H:i" }}
+      {% else %}
+        —
+      {% endif %}
+    </span>
+
     {% if incident.sla_avr_deadline %}
-      <p>
-        <strong>SLA АВР: </strong>
-        <span>
-          {{ incident.avr_start_date|date:"d.m.Y H:i" }} — {{ incident.sla_avr_deadline|date:"d.m.Y H:i" }}
-          {% if incident.is_sla_avr_expired %}
-            (просрочено)
-          {% endif %}
-        </span>
-      </p>
+      <span class="status-tag {{ incident.sla_avr_status_val.value|default:'status-unknown' }}">
+        {{ incident.sla_avr_status_val.label }}
+      </span>
     {% endif %}
+  </p>
+
+  <p class="sla-row">
+    <span class="sla-left">
+      <strong>SLA РВР: </strong>
+      {% if incident.sla_rvr_deadline %}
+        {{ incident.rvr_start_date|date:"d.m.Y H:i" }} —
+        {{ incident.sla_rvr_deadline|date:"d.m.Y H:i" }}
+      {% else %}
+        —
+      {% endif %}
+    </span>
+
     {% if incident.sla_rvr_deadline %}
-      <p>
-        <strong>SLA РВР: </strong>
-        <span>
-          {{ incident.rvr_start_date|date:"d.m.Y H:i" }} — {{ incident.sla_rvr_deadline|date:"d.m.Y H:i" }}
-          {% if incident.is_sla_rvr_expired %}
-            (просрочено)
-          {% endif %}
-        </span>
-      </p>
+      <span class="status-tag {{ incident.sla_rvr_status_val.value|default:'status-unknown' }}">
+        {{ incident.sla_rvr_status_val.label }}
+      </span>
     {% endif %}
-  </div>
-{% endif %}
+  </p>
+</div>

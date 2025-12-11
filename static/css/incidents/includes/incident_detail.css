@@ -36,8 +36,10 @@
   border-radius: var(--radius-sm);
   font-size: var(--font-xs);
   font-weight: 500;
-  color: var(--background-color);
+  color: var(--background-color) !important;
   justify-self: end;
+  min-width: 90px;
+  text-align: center;
 }
 
 .incident-date {
@@ -56,8 +58,7 @@
   font-size: var(--font-sm);
 }
 
-.incident-meta p,
-.incident-sla p {
+.incident-meta p {
   display: grid;
   grid-template-columns: max-content 1fr;
   gap: var(--space-sm);
@@ -65,9 +66,19 @@
   line-height: 1.4;
 }
 
+.incident-sla p {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: var(--space-sm) 0;
+  line-height: 1.4;
+}
+
 .incident-sla strong,
 .incident-meta strong {
   white-space: nowrap;
+  color: var(--color);
 }
 
 .incident-sla span,
@@ -111,6 +122,11 @@
 .incident-sla p,
 .incident-meta p {
   border-bottom: 1px dashed var(--extra-color);
+}
+
+.sla-row .status-tag {
+  display: inline-block;
+  transform: translateY(calc(var(--space-xs) * -1));
 }
 
 @media (max-width: 768px) {

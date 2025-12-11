@@ -3,7 +3,9 @@ from datetime import datetime, timedelta
 from typing import Optional, TypedDict
 
 from django.db import connection, models
-from django.db.models import Count, Min, Prefetch, Q, QuerySet
+from django.db.models import (
+    Count, Min, Prefetch, Q, QuerySet, Value, CharField
+)
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
@@ -1141,9 +1143,16 @@ class IncidentManager(IncidentValidator):
                     to_attr='all_incident_emails'
                 ),
             )
+            .annotate(
+                sla_avr_status_val=Value('', output_field=CharField()),
+                sla_rvr_status_val=Value('', output_field=CharField()),
+            )
             .filter(pk=incident_id)
             .first()
         )
+
+        incident.sla_avr_status_val = incident.sla_avr_status
+        incident.sla_rvr_status_val = incident.sla_rvr_status
 
         if not incident:
             return

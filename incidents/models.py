@@ -332,7 +332,6 @@ class Incident(models.Model):
 
     def _get_sla_status(self, category: str) -> Optional[SLAStatus]:
         """Определяет SLA-статус для категории 'avr' или 'rvr'."""
-        return SLAStatus.LESS_THAN_HOUR
         now = timezone.now()
         is_avr = None
 

@@ -103,13 +103,21 @@ def index(request: HttpRequest) -> HttpResponse:
         params['per_page'] = INCIDENTS_PER_PAGE
         return redirect(f'{request.path}?{params.urlencode()}')
 
+    latest_status_subquery = IncidentStatusHistory.objects.filter(
+        incident=OuterRef('pk')
+    ).order_by('-insert_date')
+
     base_qs = Incident.objects.select_related(
         'incident_type',
         'responsible_user',
         'pole',
         'pole__region',
         'base_station'
-    ).prefetch_related('categories')
+    ).prefetch_related('categories').annotate(
+        latest_status_name=Subquery(
+            latest_status_subquery.values('status__name')[:1]
+        )
+    )
 
     if sort == 'asc':
         base_qs = base_qs.order_by('update_date', 'incident_date', 'id')
@@ -143,10 +151,6 @@ def index(request: HttpRequest) -> HttpResponse:
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     page_ids = list(page_obj.object_list)
-
-    latest_status_subquery = IncidentStatusHistory.objects.filter(
-        incident=OuterRef('pk')
-    ).order_by('-insert_date')
 
     first_email_subquery = (
         EmailMessage.objects

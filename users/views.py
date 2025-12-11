@@ -400,9 +400,9 @@ def users_list(request: HttpRequest) -> HttpResponse:
 
     base_qs = User.objects.exclude(role=Roles.GUEST).exclude(is_active=False)
     if sort == 'asc':
-        base_qs = base_qs.order_by('username', 'id')
+        base_qs = base_qs.order_by('last_name', 'first_name', 'email', 'id')
     else:
-        base_qs = base_qs.order_by('-username', 'id')
+        base_qs = base_qs.order_by('-last_name', '-first_name', '-email', 'id')
 
     if role_filter:
         base_qs = base_qs.filter(role=role_filter)
@@ -411,7 +411,7 @@ def users_list(request: HttpRequest) -> HttpResponse:
         words = {w.strip().lower() for w in query.split(' ') if w.strip()}
         q_filter = Q()
         for word in words:
-            q_filter |= Q(username__icontains=word)
+            q_filter |= Q(email=word)
             q_filter |= Q(first_name__icontains=word)
             q_filter |= Q(last_name__icontains=word)
 
@@ -419,7 +419,7 @@ def users_list(request: HttpRequest) -> HttpResponse:
         if any(word in words for word in new_user_keywords):
             q_filter |= Q(first_name__exact='') & Q(last_name__exact='')
 
-        users = base_qs.filter(q_filter)
+        base_qs = base_qs.filter(q_filter)
 
     paginator = Paginator(base_qs.values_list('id', flat=True), per_page)
     page_number = request.GET.get('page')
