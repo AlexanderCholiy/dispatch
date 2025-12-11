@@ -4,14 +4,14 @@ import re
 import unicodedata
 from datetime import datetime
 from email import header, message
+from email.header import decode_header
 from email.utils import getaddresses
 from typing import Optional
-from email.header import decode_header
-from tabulate import tabulate
 
 import html2text
 from bs4 import BeautifulSoup, Comment, NavigableString, Tag
 from django.core.exceptions import ValidationError
+from tabulate import tabulate
 
 from core.constants import INCIDENT_DIR, SUBFOLDER_DATE_FORMAT
 

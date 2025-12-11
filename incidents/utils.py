@@ -4,7 +4,13 @@ from typing import Optional, TypedDict
 
 from django.db import connection, models
 from django.db.models import (
-    Count, Min, Prefetch, Q, QuerySet, Value, CharField
+    CharField,
+    Count,
+    Min,
+    Prefetch,
+    Q,
+    QuerySet,
+    Value,
 )
 from django.db.models.functions import Coalesce
 from django.utils import timezone

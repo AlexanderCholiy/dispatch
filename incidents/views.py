@@ -6,13 +6,13 @@ from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import (
+    CharField,
     OuterRef,
     Prefetch,
     Q,
     QuerySet,
     Subquery,
     Value,
-    CharField,
 )
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
