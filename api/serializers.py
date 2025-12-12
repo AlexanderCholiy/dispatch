@@ -135,17 +135,17 @@ class StatisticReportSerializer(serializers.ModelSerializer):
     total_open_incidents = serializers.IntegerField(read_only=True)
     active_contractor_incidents = serializers.IntegerField(read_only=True)
 
-    sla_avr_expired = serializers.IntegerField(read_only=True)
-    sla_rvr_expired = serializers.IntegerField(read_only=True)
+    sla_avr_expired_count = serializers.IntegerField(read_only=True)
+    sla_rvr_expired_count = serializers.IntegerField(read_only=True)
 
-    sla_avr_closed_on_time = serializers.IntegerField(read_only=True)
-    sla_rvr_closed_on_time = serializers.IntegerField(read_only=True)
+    sla_avr_closed_on_time_count = serializers.IntegerField(read_only=True)
+    sla_rvr_closed_on_time_count = serializers.IntegerField(read_only=True)
 
-    sla_avr_less_than_hour = serializers.IntegerField(read_only=True)
-    sla_rvr_less_than_hour = serializers.IntegerField(read_only=True)
+    sla_avr_less_than_hour_count = serializers.IntegerField(read_only=True)
+    sla_rvr_less_than_hour_count = serializers.IntegerField(read_only=True)
 
-    sla_avr_in_progress = serializers.IntegerField(read_only=True)
-    sla_rvr_in_progress = serializers.IntegerField(read_only=True)
+    sla_avr_in_progress_count = serializers.IntegerField(read_only=True)
+    sla_rvr_in_progress_count = serializers.IntegerField(read_only=True)
 
     total_incidents = serializers.SerializerMethodField()
 
@@ -157,14 +157,14 @@ class StatisticReportSerializer(serializers.ModelSerializer):
             'total_closed_incidents',
             'total_open_incidents',
             'active_contractor_incidents',
-            'sla_avr_expired',
-            'sla_avr_closed_on_time',
-            'sla_avr_less_than_hour',
-            'sla_avr_in_progress',
-            'sla_rvr_expired',
-            'sla_rvr_closed_on_time',
-            'sla_rvr_less_than_hour',
-            'sla_rvr_in_progress',
+            'sla_avr_expired_count',
+            'sla_avr_closed_on_time_count',
+            'sla_avr_less_than_hour_count',
+            'sla_avr_in_progress_count',
+            'sla_rvr_expired_count',
+            'sla_rvr_closed_on_time_count',
+            'sla_rvr_less_than_hour_count',
+            'sla_rvr_in_progress_count',
         )
 
     def get_total_incidents(self, obj: Region):

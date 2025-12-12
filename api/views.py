@@ -194,14 +194,14 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
         for region in base_qs:
             region_sla = sla_map.get(region.pk, {})
             for field in [
-                'sla_avr_expired',
-                'sla_avr_closed_on_time',
-                'sla_avr_less_than_hour',
-                'sla_avr_in_progress',
-                'sla_rvr_expired',
-                'sla_rvr_closed_on_time',
-                'sla_rvr_less_than_hour',
-                'sla_rvr_in_progress',
+                'sla_avr_expired_count',
+                'sla_avr_closed_on_time_count',
+                'sla_avr_less_than_hour_count',
+                'sla_avr_in_progress_count',
+                'sla_rvr_expired_count',
+                'sla_rvr_closed_on_time_count',
+                'sla_rvr_less_than_hour_count',
+                'sla_rvr_in_progress_count',
             ]:
                 setattr(region, field, region_sla.get(field, 0))
 
