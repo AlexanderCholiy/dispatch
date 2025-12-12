@@ -53,6 +53,8 @@
           value="{{ selected.is_incident_finish|yesno:'true,false,' }}">
     <input type="hidden" name="status" value="{{ selected.status }}" id="search-hidden-status">
     <input type="hidden" name="category" value="{{ selected.category }}" id="search-hidden-category">
+    <input type="hidden" name="sla_avr" value="{{ selected.sla_avr_status }}" id="search-hidden-sla-avr">
+    <input type="hidden" name="sla_rvr" value="{{ selected.sla_rvr_status }}" id="search-hidden-sla-rvr">
     <input type="hidden" name="pole" value="{{ selected.pole }}" id="search-hidden-pole">
     <input type="hidden" name="base_station" value="{{ selected.base_station }}" id="search-hidden-base-station">
     <input type="hidden" name="per_page" value="{{ selected.per_page }}" id="search-hidden-per-page">

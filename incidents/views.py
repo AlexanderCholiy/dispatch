@@ -32,10 +32,11 @@ from users.models import Roles, User
 from users.utils import role_required
 from yandex_tracker.utils import yt_manager
 
+from .annotations import annotate_sla_avr, annotate_sla_rvr
 from .constants import (
     INCIDENTS_PER_PAGE,
     MAX_INCIDENTS_INFO_CACHE_SEC,
-    PAGE_SIZE_INCIDENTS_CHOICES
+    PAGE_SIZE_INCIDENTS_CHOICES,
 )
 from .forms import ConfirmMoveEmailsForm, MoveEmailsForm
 from .models import (
@@ -44,6 +45,7 @@ from .models import (
     IncidentHistory,
     IncidentStatus,
     IncidentStatusHistory,
+    SLAStatus,
 )
 from .utils import IncidentManager
 
@@ -72,7 +74,10 @@ def index(request: HttpRequest) -> HttpResponse:
     category_id = (
         request.GET.get('category') or request.COOKIES.get('category')
     )
-    category_id = int(category_id) if category_id else None
+    if category_id and category_id.isdigit():
+        category_id = int(category_id)
+    else:
+        category_id = None
 
     is_incident_finish = (
         request.GET.get('finish', '').strip()
@@ -85,6 +90,18 @@ def index(request: HttpRequest) -> HttpResponse:
         is_incident_finish = False
     else:
         is_incident_finish = None
+
+    sla_avr_status = (
+        request.GET.get('sla_avr', '').strip()
+        or request.COOKIES.get('sla_avr', '').strip()
+        or None
+    )
+
+    sla_rvr_status = (
+        request.GET.get('sla_rvr', '').strip()
+        or request.COOKIES.get('sla_rvr', '').strip()
+        or None
+    )
 
     sort = (
         request.GET.get('sort_incidents')
@@ -112,17 +129,35 @@ def index(request: HttpRequest) -> HttpResponse:
         'responsible_user',
         'pole',
         'pole__region',
-        'base_station'
+        'base_station',
     ).prefetch_related('categories').annotate(
         latest_status_name=Subquery(
             latest_status_subquery.values('status__name')[:1]
-        )
+        ),
     )
 
-    if sort == 'asc':
-        base_qs = base_qs.order_by('update_date', 'incident_date', 'id')
-    else:
-        base_qs = base_qs.order_by('-update_date', '-incident_date', 'id')
+    base_qs = annotate_sla_avr(base_qs)
+    base_qs = annotate_sla_rvr(base_qs)
+
+    if sla_avr_status:
+        if sla_avr_status == SLAStatus.EXPIRED.value:
+            base_qs = base_qs.filter(sla_avr_expired=True)
+        elif sla_avr_status == SLAStatus.LESS_THAN_HOUR.value:
+            base_qs = base_qs.filter(sla_avr_less_than_hour=True)
+        elif sla_avr_status == SLAStatus.IN_PROGRESS.value:
+            base_qs = base_qs.filter(sla_avr_in_progress=True)
+        elif sla_avr_status == SLAStatus.CLOSED_ON_TIME.value:
+            base_qs = base_qs.filter(sla_avr_closed_on_time=True)
+
+    if sla_rvr_status:
+        if sla_rvr_status == SLAStatus.EXPIRED.value:
+            base_qs = base_qs.filter(sla_rvr_expired=True)
+        elif sla_rvr_status == SLAStatus.LESS_THAN_HOUR.value:
+            base_qs = base_qs.filter(sla_rvr_less_than_hour=True)
+        elif sla_rvr_status == SLAStatus.IN_PROGRESS.value:
+            base_qs = base_qs.filter(sla_rvr_in_progress=True)
+        elif sla_rvr_status == SLAStatus.CLOSED_ON_TIME.value:
+            base_qs = base_qs.filter(sla_rvr_closed_on_time=True)
 
     if is_incident_finish is not None:
         base_qs = base_qs.filter(is_incident_finish=is_incident_finish)
@@ -146,6 +181,11 @@ def index(request: HttpRequest) -> HttpResponse:
 
     if category_id:
         base_qs = base_qs.filter(categories__id=category_id)
+
+    if sort == 'asc':
+        base_qs = base_qs.order_by('update_date', 'incident_date', 'id')
+    else:
+        base_qs = base_qs.order_by('-update_date', '-incident_date', 'id')
 
     paginator = Paginator(base_qs.values_list('id', flat=True), per_page)
     page_number = request.GET.get('page')
@@ -223,6 +263,7 @@ def index(request: HttpRequest) -> HttpResponse:
         'page_url_base': page_url_base,
         'statuses': statuses,
         'categories': categories,
+        'sla_statuses': SLAStatus,
         'selected': {
             'is_incident_finish': is_incident_finish,
             'status': status_name,
@@ -231,6 +272,8 @@ def index(request: HttpRequest) -> HttpResponse:
             'base_station': base_station,
             'per_page': per_page,
             'sort': sort,
+            'sla_avr_status': sla_avr_status,
+            'sla_rvr_status': sla_rvr_status,
         },
         'page_size_choices': PAGE_SIZE_INCIDENTS_CHOICES,
     }

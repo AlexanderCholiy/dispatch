@@ -1,16 +1,16 @@
 .category span {
-    font-weight: 600;
+  font-weight: 450;
+}
+
+.rvr-category {
+  color: var(--green-color);
 }
 
 .avr-category,
 .default-category {
-    color: var(--color);
-}
-
-.rvr-category {
-    color: var(--blue-color);
+  color: var(--color);
 }
 
 .dgu-category {
-    color: var(--red-color);
+  color: var(--red-color);
 }

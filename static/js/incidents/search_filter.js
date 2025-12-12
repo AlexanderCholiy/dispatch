@@ -7,14 +7,19 @@ document.addEventListener('DOMContentLoaded', function() {
   const finishSelect = document.getElementById('finish-select');
   const statusSelect = document.getElementById('status-select');
   const categorySelect = document.getElementById('category-select');
+  const slaavrSelect = document.getElementById('sla-avr');
+  const slarvrSelect = document.getElementById('sla-rvr');
   const poleInput = document.getElementById('pole-input');
   const baseStationInput = document.getElementById('base-station-input');
+
   const perPageSelect = document.getElementById('per-page');
 
   const cookieNames = {
     finish: 'finish',
     status: 'status',
     category: 'category',
+    sla_avr: 'sla_avr',
+    sla_rvr: 'sla_rvr',
     pole: 'pole',
     base_station: 'base_station'
   };
@@ -43,6 +48,8 @@ document.addEventListener('DOMContentLoaded', function() {
   restoreValue(finishSelect, 'finish');
   restoreValue(statusSelect, 'status');
   restoreValue(categorySelect, 'category');
+  restoreValue(slaavrSelect, 'sla_avr');
+  restoreValue(slarvrSelect, 'sla_rvr');
   restoreValue(poleInput, 'pole');
   restoreValue(baseStationInput, 'base_station');
 
@@ -57,6 +64,8 @@ document.addEventListener('DOMContentLoaded', function() {
   saveOnChange(finishSelect, 'finish');
   saveOnChange(statusSelect, 'status');
   saveOnChange(categorySelect, 'category');
+  saveOnChange(slaavrSelect, 'sla_avr');
+  saveOnChange(slarvrSelect, 'sla_rvr');
   saveOnChange(poleInput, 'pole');
   saveOnChange(baseStationInput, 'base_station');
 
@@ -78,6 +87,8 @@ document.addEventListener('DOMContentLoaded', function() {
   syncHiddenField(finishSelect, 'finish');
   syncHiddenField(statusSelect, 'status');
   syncHiddenField(categorySelect, 'category');
+  syncHiddenField(slaavrSelect, 'sla_avr');
+  syncHiddenField(slarvrSelect, 'sla_rvr');
   syncHiddenField(poleInput, 'pole');
   syncHiddenField(baseStationInput, 'base_station');
   syncHiddenField(perPageSelect, 'per_page')

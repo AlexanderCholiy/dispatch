@@ -48,6 +48,34 @@
       </select>
     </div>
 
+    <div class="select-wrapper">
+      <select name="sla_avr" id="sla-avr" class="select tooltip" data-title="Статус SLA АВР">
+        <option value="" {% if not selected.sla_avr_status %}selected{% endif %}>
+          SLA АВР: Все
+        </option>
+        {% for item in sla_statuses %}
+          <option value="{{ item.value }}"
+                  {% if selected.sla_avr_status == item.value %}selected{% endif %}>
+            SLA АВР: {{ item.label }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="select-wrapper">
+      <select name="sla_rvr" id="sla-rvr" class="select tooltip" data-title="Статус SLA РВР">
+        <option value="" {% if not selected.sla_rvr_status %}selected{% endif %}>
+          SLA РВР: Все
+        </option>
+        {% for item in sla_statuses %}
+          <option value="{{ item.value }}"
+                  {% if selected.sla_rvr_status == item.value %}selected{% endif %}>
+            SLA РВР: {{ item.label }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
     <input
       type="text"
       name="pole"

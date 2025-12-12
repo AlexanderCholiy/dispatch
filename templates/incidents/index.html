@@ -16,13 +16,13 @@
           <thead>
             <tr>
               <th data-col="code">Код</th>
-              <th data-col="category">Категория</th>
               <th data-col="subject">Инцидент</th>
-              <th data-col="user">Исполнитель</th>
               <th data-col="status">Статус</th>
+              <th data-col="updated">Обновлено</th>
+              <th data-col="user">Исполнитель</th>
+              <th data-col="category">Категория</th>
               <th data-col="sla_avr">SLA АВР</th>
               <th data-col="sla_rvr">SLA РВР</th>
-              <th data-col="updated">Обновлено</th>
               <th data-col="pole">Шифр опоры</th>
               <th data-col="bs">Номер БС</th>
               <th data-col="created">Дата регистрации</th>
@@ -37,31 +37,10 @@
                     {{ incident }}
                   </a>
                 </td>
-                <td class="category">
-                  {% for cat in incident.categories.all %}
-                    <span class="{% if cat.name == 'АВР' %}avr-category
-                                {% elif cat.name == 'РВР' %}rvr-category
-                                {% elif cat.name == 'ДГУ' %}dgu-category
-                                {% else %}default-category
-                                {% endif %}">
-                        {{ cat.name }}
-                    </span>{% if not forloop.last %}, {% endif %}
-                  {% endfor %}
-                </td>
                 <td class="tooltip"
                     data-title="{{ incident.first_email_from|default:'' }}">
                   {% if incident.first_email_subject %}
                     {{ incident.first_email_subject|truncatechars:64|default:"—" }}
-                  {% else %}
-                    —
-                  {% endif %}
-                </td>
-                <td class="tooltip"
-                    data-title="{{ incident.responsible_user.email|default:'' }}">
-                  {% if incident.responsible_user %}
-                    <a href="{% url 'users:user_detail' incident.responsible_user.id %}" class="incident-link">
-                      {{ incident.responsible_user.get_full_name|default:"Новый пользователь" }}
-                    </a>
                   {% else %}
                     —
                   {% endif %}
@@ -75,6 +54,28 @@
                   {% else %}
                     —
                   {% endif %}
+                </td>
+                <td>{{ incident.update_date|date:"d.m.Y H:i" }}</td>
+                <td class="tooltip"
+                    data-title="{{ incident.responsible_user.email|default:'' }}">
+                  {% if incident.responsible_user %}
+                    <a href="{% url 'users:user_detail' incident.responsible_user.id %}" class="incident-link">
+                      {{ incident.responsible_user.get_full_name|default:"Новый пользователь" }}
+                    </a>
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td class="category">
+                  {% for cat in incident.categories.all %}
+                    <span class="{% if cat.name == 'АВР' %}avr-category
+                                {% elif cat.name == 'РВР' %}rvr-category
+                                {% elif cat.name == 'ДГУ' %}dgu-category
+                                {% else %}default-category
+                                {% endif %}">
+                        {{ cat.name }}
+                    </span>{% if not forloop.last %}, {% endif %}
+                  {% endfor %}
                 </td>
                 <td>
                   {% if incident.sla_avr_status_val %}
@@ -94,7 +95,6 @@
                     —
                   {% endif %}
                 </td>
-                <td>{{ incident.update_date|date:"d.m.Y H:i" }}</td>
                 <td class="tooltip" data-title="{{ incident.pole.region.region_ru|default_if_none:'' }}">
                   {% if incident.pole %}
                     <span class="copy-text" data-text="{{ incident.pole.pole }}">{{ incident.pole.pole|default:"—" }}</span>

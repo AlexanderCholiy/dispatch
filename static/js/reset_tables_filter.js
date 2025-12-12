@@ -29,7 +29,9 @@ document.addEventListener('DOMContentLoaded', () => {
       deleteCookie('status');
       deleteCookie('pole');
       deleteCookie('base_station');
-      deleteCookie('category')
+      deleteCookie('category');
+      deleteCookie('sla_avr');
+      deleteCookie('sla_rvr');
 
       // Сбрасываем фильтр завершен ли инцидент
       const finishSelect = document.getElementById('finish-select');
@@ -42,6 +44,13 @@ document.addEventListener('DOMContentLoaded', () => {
       // Сбрасываем категорию
       const categorySelect = document.getElementById('category-select');
       if (categorySelect) categorySelect.selectedIndex = 0;
+
+      // Сбрасываем статусы SLA
+      const slaavrSelect = document.getElementById('sla-avr');
+      if (slaavrSelect) slaavrSelect.selectedIndex = 0;
+
+      const slarvrSelect = document.getElementById('sla-rvr');
+      if (slarvrSelect) slarvrSelect.selectedIndex = 0;
       
       // Сбрасываем папку
       const folderSelect = document.getElementById('folder-select');
@@ -68,6 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'search-hidden-category',
         'search-hidden-pole',
         'search-hidden-base-station',
+        'search-hidden-sla-avr',
+        'search-hidden-sla-rvr',
         'search-hidden-folder',
         'search-hidden-role',
         'search-hidden-email-from'

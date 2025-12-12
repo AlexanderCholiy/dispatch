@@ -158,6 +158,7 @@ class IncidentAdmin(admin.ModelAdmin):
             'classes': ('collapse',),
             'fields': (
                 'is_incident_finish',
+                'incident_finish_date',
                 'is_auto_incident',
                 'code',
                 'avr_start_date',
