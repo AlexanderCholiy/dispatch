@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from incidents.models import Incident
+from ts.models import Region
 
 from .utils import conversion_utc_datetime
 
@@ -127,3 +128,46 @@ class IncidentReportSerializer(serializers.ModelSerializer):
                 [cat.name for cat in categories]
             ))
         return
+
+
+class StatisticReportSerializer(serializers.ModelSerializer):
+    total_closed_incidents = serializers.IntegerField(read_only=True)
+    total_open_incidents = serializers.IntegerField(read_only=True)
+    active_contractor_incidents = serializers.IntegerField(read_only=True)
+
+    sla_avr_expired_count = serializers.IntegerField(read_only=True)
+    sla_rvr_expired_count = serializers.IntegerField(read_only=True)
+
+    sla_avr_closed_on_time_count = serializers.IntegerField(read_only=True)
+    sla_rvr_closed_on_time_count = serializers.IntegerField(read_only=True)
+
+    sla_avr_less_than_hour = serializers.IntegerField(read_only=True)
+    sla_rvr_less_than_hour = serializers.IntegerField(read_only=True)
+
+    sla_avr_in_progress = serializers.IntegerField(read_only=True)
+    sla_rvr_in_progress = serializers.IntegerField(read_only=True)
+
+    total_incidents = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Region
+        fields = (
+            'region_ru',
+            'total_incidents',
+            'total_closed_incidents',
+            'total_open_incidents',
+            'active_contractor_incidents',
+            'sla_avr_expired_count',
+            'sla_avr_closed_on_time_count',
+            'sla_avr_less_than_hour',
+            'sla_avr_in_progress',
+            'sla_rvr_expired_count',
+            'sla_rvr_closed_on_time_count',
+            'sla_rvr_less_than_hour',
+            'sla_rvr_in_progress',
+        )
+
+    def get_total_incidents(self, obj: Region):
+        total_closed_incidents = getattr(obj, 'total_closed_incidents', 0)
+        total_open_incidents = getattr(obj, 'total_open_incidents', 0)
+        return total_closed_incidents + total_open_incidents
