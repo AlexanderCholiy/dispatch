@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.core.cache import cache
 from django.db.models import (
     Count,
     F,
@@ -16,6 +17,7 @@ from incidents.constants import NOTIFIED_CONTRACTOR_STATUS_NAME
 from incidents.models import Incident, IncidentStatusHistory
 from ts.models import PoleContractorEmail, Region
 
+from .constants import STATISTIC_CACHE_TIMEOUT
 from .filters import IncidentReportFilter
 from .pagination import IncidentReportPagination
 from .serializers import IncidentReportSerializer, StatisticReportSerializer
@@ -109,6 +111,12 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = None
 
     def get_queryset(self) -> QuerySet:
+        cache_key = 'statistic_report_qs'
+        cached_qs = cache.get(cache_key)
+
+        if cached_qs is not None:
+            return cached_qs
+
         incidents = Incident.objects.select_related('pole', 'incident_type')
         incidents = annotate_sla_avr(incidents)
         incidents = annotate_sla_rvr(incidents)
@@ -126,7 +134,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                     'id', filter=Q(sla_avr_less_than_hour=True)
                 ),
                 sla_avr_in_progress_count=Count(
-                    'id', filter=Q(sla_avr_expired=True)
+                    'id', filter=Q(sla_avr_in_progress=True)
                 ),
                 sla_rvr_expired_count=Count(
                     'id', filter=Q(sla_rvr_expired=True)
@@ -138,7 +146,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                     'id', filter=Q(sla_rvr_less_than_hour=True)
                 ),
                 sla_rvr_in_progress_count=Count(
-                    'id', filter=Q(sla_rvr_expired=True)
+                    'id', filter=Q(sla_rvr_in_progress=True)
                 ),
             )
         )
@@ -204,5 +212,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                 'sla_rvr_in_progress_count',
             ]:
                 setattr(region, field, region_sla.get(field, 0))
+
+        cache.set(cache_key, base_qs, STATISTIC_CACHE_TIMEOUT)
 
         return base_qs
