@@ -87,8 +87,8 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
     уведомлены подрядчики или начат АВР/РВР
 
     SLA АВР:
-    - sla_avr_expired_count: количество инцидентов, где SLA АВР просрочена
-    - sla_avr_closed_on_time_count: количество инцидентов, где SLA АВР
+    - sla_avr_expired: количество инцидентов, где SLA АВР просрочена
+    - sla_avr_closed_on_time: количество инцидентов, где SLA АВР
     выполнена вовремя
     - sla_avr_less_than_hour: количество инцидентов, где до SLA АВР осталось
     меньше часа
@@ -96,8 +96,8 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
     истекла
 
     SLA РВР:
-    - sla_rvr_expired_count: количество инцидентов, где SLA РВР просрочена
-    - sla_rvr_closed_on_time_count: количество инцидентов, где SLA РВР
+    - sla_rvr_expired: количество инцидентов, где SLA РВР просрочена
+    - sla_rvr_closed_on_time: количество инцидентов, где SLA РВР
     выполнена вовремя
     - sla_rvr_less_than_hour: количество инцидентов, где до SLA РВР осталось
     меньше часа
@@ -122,10 +122,10 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                 sla_avr_closed_on_time_count=Count(
                     'id', filter=Q(sla_avr_closed_on_time=True)
                 ),
-                sla_avr_less_than_hour=Count(
+                sla_avr_less_than_hour_count=Count(
                     'id', filter=Q(sla_avr_less_than_hour=True)
                 ),
-                sla_avr_in_progress=Count(
+                sla_avr_in_progress_count=Count(
                     'id', filter=Q(sla_avr_expired=True)
                 ),
                 sla_rvr_expired_count=Count(
@@ -134,10 +134,10 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                 sla_rvr_closed_on_time_count=Count(
                     'id', filter=Q(sla_rvr_closed_on_time=True)
                 ),
-                sla_rvr_less_than_hour=Count(
+                sla_rvr_less_than_hour_count=Count(
                     'id', filter=Q(sla_rvr_less_than_hour=True)
                 ),
-                sla_rvr_in_progress=Count(
+                sla_rvr_in_progress_count=Count(
                     'id', filter=Q(sla_rvr_expired=True)
                 ),
             )
@@ -194,12 +194,12 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
         for region in base_qs:
             region_sla = sla_map.get(region.pk, {})
             for field in [
-                'sla_avr_expired_count',
-                'sla_avr_closed_on_time_count',
+                'sla_avr_expired',
+                'sla_avr_closed_on_time',
                 'sla_avr_less_than_hour',
                 'sla_avr_in_progress',
-                'sla_rvr_expired_count',
-                'sla_rvr_closed_on_time_count',
+                'sla_rvr_expired',
+                'sla_rvr_closed_on_time',
                 'sla_rvr_less_than_hour',
                 'sla_rvr_in_progress',
             ]:
