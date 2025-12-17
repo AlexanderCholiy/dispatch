@@ -40,7 +40,7 @@ def energy_companies(request: HttpRequest) -> HttpResponse:
 
     per_page = int(
         request.GET.get('per_page')
-        or request.COOKIES.get('per_page_root')
+        or request.COOKIES.get('per_page_energy')
         or REQUESTS_PER_PAGE
     )
 

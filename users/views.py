@@ -378,7 +378,7 @@ def users_list(request: HttpRequest) -> HttpResponse:
 
     per_page = int(
         request.GET.get('per_page')
-        or request.COOKIES.get('per_page_emails')
+        or request.COOKIES.get('per_page_users')
         or USERS_PER_PAGE
     )
 
