@@ -16,13 +16,13 @@ class ReadOnlyRouter:
         """
         if getattr(model, 'read_only_monitoring', False):
             return self.read_only_db
-        return 'default'
+        return None
 
     def db_for_write(self, model: Model, **hints):
         """Запрещаем любые операции записи."""
         if getattr(model, 'read_only_monitoring', False):
             return None
-        return 'default'
+        return None
 
     def allow_migrate(self, db, app_label, model_name=None, **hints):
         """Запрещаем миграции на read-only базе."""

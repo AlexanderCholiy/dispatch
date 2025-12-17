@@ -32,7 +32,7 @@
       <select name="status" id="status-select" class="select tooltip" data-title="Последний статус инцидента">
         <option value="" {% if not selected.status %}selected{% endif %}>Статус: Все</option>
         {% for s in statuses %}
-          <option value="{{ s }}" {% if selected.status == s %}selected{% endif %}>Статус: {{ s }}</option>
+          <option value="{{ s }}" {% if selected.status == s %}selected{% endif %}>{{ s }}</option>
         {% endfor %}
       </select>
     </div>

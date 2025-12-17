@@ -33,7 +33,7 @@
               <tr>
                 <td class="tooltip"
                     data-title="{{ incident.incident_type.name|default:'' }}">
-                  <a href="{% url 'incidents:incident_detail' incident.id %}" class="incident-link">
+                  <a href="{% url 'incidents:incident_detail' incident.id %}" class="link">
                     {{ incident }}
                   </a>
                 </td>
@@ -59,7 +59,7 @@
                 <td class="tooltip"
                     data-title="{{ incident.responsible_user.email|default:'' }}">
                   {% if incident.responsible_user %}
-                    <a href="{% url 'users:user_detail' incident.responsible_user.id %}" class="incident-link">
+                    <a href="{% url 'users:user_detail' incident.responsible_user.id %}" class="link">
                       {{ incident.responsible_user.get_full_name|default:"Новый пользователь" }}
                     </a>
                   {% else %}

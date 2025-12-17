@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/includes/tables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/energy/energy_companies.css' %}">
+{% endblock %}
+
+{% block content %}
+ <div class="container-xl">
+    {% include "energy/includes/energy_companies_filter.html" %}
+
+    <div class="card">
+      <div class="table-wrapper">
+        <table class="custom-table {{ selected.type }}">
+          <thead>
+            <tr>
+              <th data-col="number">Номер</th>
+              <th data-col="company">Сетевая компания</th>
+              <th data-col="declarant">Юр. лица</th>
+              <th data-col="status">Статус</th>
+              <th data-col="filial">Филиал</th>
+              <th data-col="pole">Шифр опоры</th>
+              <th data-col="object_adress">Адрес объекта</th>
+              {% if selected.type == 'claims' %}
+                <th data-col="request_date">Дата заявки</th>
+              {% else %}
+                <th data-col="request_date">Дата обращения</th>
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for request in company_requests %}
+              <tr>
+                <td>
+                  <a class="link">
+                    {{ request.number }}
+                  </a>
+                </td>
+                <td>
+                  {% if request.company_link %}
+                    <a href="{{ request.company_link }}" class="success-company-link link" target="_blank">
+                      {{ request.company.name }}
+                    </a>
+                  {% else %}
+                    <span class="bad-company-link">{{ request.company.name }}</span>
+                  {% endif %}
+                </td>
+                <td>{{ request.declarant.name }}</td>
+                <td class="tooltip"
+                  data-title="{{ request.latest_status_date|date:'d.m.Y H:i' }}">
+                  {% if request.latest_status_name %}
+                    {{ request.latest_status_name }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td>{{ request.filial|default:"—" }}</td>
+                <td>
+                  {% if request.pole %}
+                    <span class="copy-text" data-text="{{ request.pole }}">{{ request.pole }}</span>
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td>{{ request.object_adress|default:"—"|truncatechars:64 }}</td>
+                {% if selected.type == 'claims' %}
+                  <td>{{ request.claim_date }}</td>
+                {% else %}
+                  <td>{{ request.appeal_date }}</td>
+                {% endif %}
+              </tr>
+            {% empty %}
+              <tr><td colspan="8" class="empty">Нет данных</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+      {% include "includes/paginator.html" %}
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+{% endblock %}

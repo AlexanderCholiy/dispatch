@@ -1,0 +1,115 @@
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/includes/table_filter.css' %}">
+<link rel="stylesheet" href="{% static 'css/includes/select_table_column.css' %}">
+{% endblock %}
+
+<form method="get" class="table-filter-form" id="filter-form">
+  <div class="left-part">
+    <div class="select-wrapper">
+      <select name="type"
+              id="type-select"
+              class="select tooltip"
+              data-title="Тип">
+        <option value="claims" {% if selected.type == 'claims' or not selected.type %}selected{% endif %}>Заявки</option>
+        <option value="appeals" {% if selected.type == 'appeals' %}selected{% endif %}>Обращения</option>
+      </select>
+    </div>
+
+    <div class="select-wrapper">
+      <select name="company" id="company-select" class="select tooltip" data-title="Сетевая компания">
+        <option value="" {% if not selected.company %}selected{% endif %}>Компания: Все</option>
+        {% for c in companies %}
+          <option value="{{ c.id }}" {% if selected.company.id == c.id %}selected{% endif %}>
+            {{ c.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="select-wrapper">
+      <select name="declarant" id="declarant-select" class="select tooltip" data-title="Юр. лица">
+        <option value="" {% if not selected.declarant %}selected{% endif %}>Балансодежатель: Все</option>
+        {% for dc in declarants %}
+          <option value="{{ dc.id }}" {% if selected.declarant.id == dc.id %}selected{% endif %}>
+            {{ dc.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+  </div>
+    
+  <div class="right-parts">
+    <div class="column-select-wrapper">
+      <div class="column-select-trigger tooltip" data-title="Настроить столбцы">
+        Столбцы
+      </div>
+
+      <div class="column-select-dropdown">
+        <label class="column-option">
+          <i class="bx check-icon"></i>
+          <input type="checkbox" data-col="status">
+          <span>Статус</span>
+        </label>
+        <label class="column-option">
+          <i class="bx check-icon"></i>
+          <input type="checkbox" data-col="filial">
+          <span>Филиал</span>
+        </label>
+        <label class="column-option">
+          <i class="bx check-icon"></i>
+          <input type="checkbox" data-col="pole">
+          <span>Шифр опоры</span>
+        </label>
+        <label class="column-option">
+          <i class="bx check-icon"></i>
+          <input type="checkbox" data-col="object_adress">
+          <span>Адрес объекта</span>
+        </label>
+        <label class="column-option">
+          <i class="bx check-icon"></i>
+          <input type="checkbox" data-col="request_date">
+          <span>Дата заявки / обращения</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="select-wrapper">
+      <select name="per_page" id="per-page" class="select tooltip" data-title="Кол-во инцидентов на странице">
+        {% for size in page_size_choices %}
+        <option value="{{ size }}" {% if selected.per_page == size %}selected{% endif %}>Показать: {{ size }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <button type="button" id="reset-filters" class="btn btn-secondary tooltip" data-title="Сбросить фильтры">
+      <i class="bx bx-x-circle"></i>
+    </button>
+
+    {% if selected.sort == "asc" %}
+    <button type="button" class="btn btn-secondary sort-energy-company-btn tooltip" data-sort="desc" data-param="sort_energy_companies" data-cookie="sort_energy_companies" data-title="Сначала новые">
+      <i class='bx bx-chevrons-down'></i>
+    </button>
+    {% else %}
+    <button type="button" class="btn btn-secondary sort-energy-company-btn tooltip" data-sort="asc" data-param="sort_energy_companies" data-cookie="sort_energy_companies" data-title="Сначала старые">
+      <i class='bx bx-chevrons-up'></i>
+    </button>
+    {% endif %}
+
+    <button type="submit" class="btn btn-primary tooltip" data-title="Применить фильтр">
+      <i class="bx bx-filter"></i>
+    </button>
+  </div>
+
+  <input type="hidden" name="q" value="{{ search_query }}" id="filter-hidden-q">
+</form>
+
+{% block extra_js %}
+<script src="{% static 'js/energy/search_filter.js' %}"></script>
+<script src="{% static 'js/save_elements_per_page.js' %}"></script>
+<script src="{% static 'js/reset_tables_filter.js' %}"></script>
+<script src="{% static 'js/sort_table.js' %}"></script>
+<script src="{% static 'js/select_table_column.js' %}"></script>
+{% endblock %}

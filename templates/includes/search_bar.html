@@ -34,6 +34,29 @@
     <input type="hidden" name="per_page" value="{{ selected.per_page }}" id="search-hidden-per-page">
 
     <button type="submit" class="tooltip" data-title="Поиск по коду инцидента, ID письма или теме" tabindex="-1"><i class="bx bx-search"></i></button>
+  {% elif view_name in 'energy:energy_companies' %}
+    <form method="get" action="{% url 'energy:energy_companies' %}" class="header-search" id="search-form" autocomplete="off">
+      <input
+        type="text"
+        name="q"
+        value="{{ search_query|default:'' }}"
+        placeholder="{% if selected.type == 'claims' %}Поиск заявок{% else %}Поиск обращений{% endif %}"
+        aria-label="Поиск"
+        id="search-input"
+        maxlength="256"
+        autocomplete="off"
+      >
+
+    <input type="hidden" name="type" value="{{ selected.type }}" id="search-hidden-type">
+    <input type="hidden" name="company" value="{{ selected.company.id }}" id="search-hidden-company">
+    <input type="hidden" name="declarant" value="{{ selected.declarant.id }}" id="search-hidden-declarant">
+    <input type="hidden" name="per_page" value="{{ selected.per_page }}" id="search-hidden-per-page">
+
+    <button type="submit" class="tooltip" 
+            data-title="{% if selected.type == 'claims' %}Поиск по номеру заявки{% else %}Поиск по номеру обращения{% endif %}" 
+            tabindex="-1">
+      <i class="bx bx-search"></i>
+    </button>
   {% else %}
     <form method="get" action="{% url 'incidents:index' %}" class="header-search" id="search-form" autocomplete="off">
       <input

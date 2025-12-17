@@ -6,7 +6,7 @@ function setCookie(name, value, days = 365) {
 }
 
 // универсальный обработчик сортировки
-document.querySelectorAll('.sort-emails-btn, .sort-users-btn, .sort-incidents-btn').forEach(btn => {
+document.querySelectorAll('.sort-emails-btn, .sort-users-btn, .sort-incidents-btn, .sort-energy-company-btn').forEach(btn => {
     btn.addEventListener('click', function () {
         const sortValue = this.dataset.sort;
         const cookieName = this.dataset.cookie || 'sort_generic';

@@ -1,0 +1,15 @@
+.custom-table.claims {
+  border-left: var(--space-xs) solid var(--priority-color);
+}
+
+.custom-table.appeals {
+  border-left: var(--space-xs) solid var(--red-color);
+}
+
+.success-company-link {
+  color: var(--green-color);
+}
+
+.bad-company-link {
+  color: var(--gray-color);
+}

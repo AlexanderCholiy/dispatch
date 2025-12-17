@@ -4,9 +4,13 @@ from logging import Filter
 from pathlib import Path
 
 from celery.schedules import crontab
+from django.db.backends.postgresql.base import DatabaseWrapper
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
+
+# Отключаем проверку версии БД:
+DatabaseWrapper.check_database_version_supported = lambda self: None
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -57,6 +61,7 @@ INSTALLED_APPS = [
     'yandex_tracker.apps.YandexTrackerConfig',
     'api.apps.ApiConfig',
     'monitoring.apps.MonitoringConfig',
+    'energy.apps.EnergyConfig',
     'rest_framework',
     'django_filters',
     'djoser',
@@ -85,7 +90,9 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 ROOT_URLCONF = 'backend.urls'
+
 LOGIN_REDIRECT_URL = 'incidents:index'
+
 LOGIN_URL = 'login'
 
 TEMPLATES_DIR = os.path.join(BASE_DIR, 'templates')
@@ -137,9 +144,22 @@ DATABASES = {
         'USER': os.environ.get('TS_DB_USER'),
         'PASSWORD': os.environ.get('TS_DB_PASSWORD'),
         'HOST': os.environ.get('TS_DB_HOST'),
-        'PORT': os.environ.get('TS_DB_PORT'),
+        'PORT': int(os.environ.get('TS_DB_PORT', 5432)),
     },
+    'energy': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('ENERGY_DB_NAME'),
+        'USER': os.environ.get('ENERGY_DB_USER'),
+        'PASSWORD': os.environ.get('ENERGY_DB_PASSWORD'),
+        'HOST': os.environ.get('ENERGY_DB_HOST'),
+        'PORT': int(os.environ.get('ENERGY_DB_PORT', 5432)),
+    }
 }
+
+DATABASE_ROUTERS = [
+    'monitoring.routers.ReadOnlyRouter',
+    'energy.routers.WithoutMigrationsRouter',
+]
 
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL')
 CELERY_RESULT_BACKEND = 'django-db'
@@ -195,8 +215,6 @@ CACHES = {
 }
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
-
-DATABASE_ROUTERS = ['monitoring.routers.ReadOnlyRouter']
 
 MIGRATION_MODULES = {
     'monitoring': None,

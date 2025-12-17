@@ -31,6 +31,7 @@ class Roles(models.TextChoices):
     GUEST = ('guest', 'Гость')
     USER = ('user', 'Пользователь')
     DISPATCH = ('dispatch', 'Диспетчер')
+    ENERGY = ('energy', 'Энергетик')
 
 
 class User(AbstractUser):

@@ -101,12 +101,13 @@ auth_urlpatterns = [
 ]
 
 app_urls = [
+    path('admin/', admin.site.urls),
+    path('api/v1/', include('api.urls')),
+    path('users/', include('users.urls')),
     path('', include('incidents.urls')),
     path('emails/', include('emails.urls')),
-    path('users/', include('users.urls')),
-    path('admin/', admin.site.urls),
+    path('energy/', include('energy.urls')),
     path('pages/', include('pages.urls')),
-    path('api/v1/', include('api.urls')),
 ]
 
 urlpatterns = swagger_urls + auth_urlpatterns + app_urls

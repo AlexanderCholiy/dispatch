@@ -52,12 +52,13 @@
   border-bottom: none;
 }
 
-.incident-link {
+.link {
   color: var(--add-color);
   text-decoration: none;
+  cursor: pointer;
 }
 
-.incident-link:hover {
+.link:hover {
   text-decoration: underline;
 }
 

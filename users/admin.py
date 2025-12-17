@@ -59,9 +59,9 @@ class BaseUserAdmin(UserAdmin):
                     'is_active',
                     'is_staff',
                     'is_superuser',
+                    'role',
                     'groups',
                     'user_permissions',
-                    'role',
                 )
             }
         ),

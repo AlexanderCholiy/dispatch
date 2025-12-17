@@ -33,6 +33,10 @@ document.addEventListener('DOMContentLoaded', () => {
       deleteCookie('sla_avr');
       deleteCookie('sla_rvr');
 
+      // deleteCookie('type');
+      deleteCookie('company');
+      deleteCookie('declarant');
+
       // Сбрасываем фильтр завершен ли инцидент
       const finishSelect = document.getElementById('finish-select');
       if (finishSelect) finishSelect.selectedIndex = 0;
@@ -60,6 +64,18 @@ document.addEventListener('DOMContentLoaded', () => {
       const roleSelect = document.getElementById('role-select');
       if (roleSelect) roleSelect.selectedIndex = 0;
 
+      // Сбрасываем тип
+      // const typeSelect = document.getElementById('type-select');
+      // if (typeSelect) typeSelect.selectedIndex = 0;
+
+      // Сбрасываем компанию
+      const companySelect = document.getElementById('company-select');
+      if (companySelect) companySelect.selectedIndex = 0;
+
+      // Сбрасываем балансодержателя
+      const declarantSelect = document.getElementById('declarant-select');
+      if (declarantSelect) declarantSelect.selectedIndex = 0;
+
       // Восстанавливаем per_page
       if (perPageSelect && perPageValue) {
         perPageSelect.value = perPageValue;
@@ -80,8 +96,11 @@ document.addEventListener('DOMContentLoaded', () => {
         'search-hidden-sla-avr',
         'search-hidden-sla-rvr',
         'search-hidden-folder',
-        'search-hidden-role',
-        'search-hidden-email-from'
+        'search-hidden-email-from',
+        // 'search-hidden-type',
+        'search-hidden-company',
+        'search-hidden-declarant',
+        'search-hidden-role'
       ];
 
       const hiddenInputs = document.querySelectorAll(
