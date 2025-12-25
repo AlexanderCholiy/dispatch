@@ -30,7 +30,7 @@
 
     <div class="select-wrapper">
       <select name="declarant" id="declarant-select" class="select tooltip" data-title="Юр. лица">
-        <option value="" {% if not selected.declarant %}selected{% endif %}>Балансодежатель: Все</option>
+        <option value="" {% if not selected.declarant %}selected{% endif %}>Заявитель Все</option>
         {% for dc in declarants %}
           <option value="{{ dc.id }}" {% if selected.declarant.id == dc.id %}selected{% endif %}>
             {{ dc.name }}

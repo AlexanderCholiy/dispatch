@@ -1,9 +1,9 @@
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.core.paginator import Paginator
-from django.db.models import OuterRef, Subquery
-from django.http import HttpRequest, HttpResponse
-from django.shortcuts import redirect, render
+from django.db.models import OuterRef, Subquery, Prefetch
+from django.http import HttpRequest, HttpResponse, Http404
+from django.shortcuts import redirect, render, get_object_or_404
 from django_ratelimit.decorators import ratelimit
 
 from users.models import Roles
@@ -13,6 +13,7 @@ from .constants import (
     MAX_ENERGY_INFO_CACHE_SEC,
     PAGE_SIZE_REQUESTS_CHOICES,
     REQUESTS_PER_PAGE,
+    AttrTypes,
 )
 from .models import (
     Appeal,
@@ -117,73 +118,73 @@ def energy_companies(request: HttpRequest) -> HttpResponse:
         grid=Subquery(
             AttrModel.objects.filter(
                 **{relation_field: OuterRef('id')},
-                attr_type__attribute_id=1010
+                attr_type__attribute_id=AttrTypes.GRID
             ).values('text')[:1]
         ),
         filial=Subquery(
             AttrModel.objects.filter(
                 **{relation_field: OuterRef('id')},
-                attr_type__attribute_id=1020
+                attr_type__attribute_id=AttrTypes.FILIAL
             ).values('text')[:1]
         ),
         claim_date=Subquery(
             AttrModel.objects.filter(
                 **{relation_field: OuterRef('id')},
-                attr_type__attribute_id=1030
+                attr_type__attribute_id=AttrTypes.CLAIM_DATE
             ).values('text')[:1]
         ),
         company_link=Subquery(
             AttrModel.objects.filter(
                 **{relation_field: OuterRef('id')},
-                attr_type__attribute_id=1040
+                attr_type__attribute_id=AttrTypes.LINK
             ).values('text')[:1]
         ),
         appeal_date=Subquery(
             AttrModel.objects.filter(
                 **{relation_field: OuterRef('id')},
-                attr_type__attribute_id=2030
+                attr_type__attribute_id=AttrTypes.APPEAL_DATE
             ).values('text')[:1]
         ),
         appeal_subject=Subquery(
             AttrModel.objects.filter(
                 **{relation_field: OuterRef('id')},
-                attr_type__attribute_id=2050
+                attr_type__attribute_id=AttrTypes.APPEAL_SUBJECT
             ).values('text')[:1]
         ),
         appeal_text=Subquery(
             AttrModel.objects.filter(
                 **{relation_field: OuterRef('id')},
-                attr_type__attribute_id=2060
+                attr_type__attribute_id=AttrTypes.APPEAL_TEXT
             ).values('text')[:1]
         ),
         pole=Subquery(
             AttrModel.objects.filter(
                 **{relation_field: OuterRef('id')},
-                attr_type__attribute_id=1000
+                attr_type__attribute_id=AttrTypes.POLE
             ).values('text')[:1]
         ),
         claim_for_appeal=Subquery(
             AttrModel.objects.filter(
                 **{relation_field: OuterRef('id')},
-                attr_type__attribute_id=2070
+                attr_type__attribute_id=AttrTypes.CLAIM_FOR_APPEAL
             ).values('text')[:1]
         ),
         inner_claim_number=Subquery(
             AttrModel.objects.filter(
                 **{relation_field: OuterRef('id')},
-                attr_type__attribute_id=1080
+                attr_type__attribute_id=AttrTypes.CLAIM_EXT_NUM
             ).values('text')[:1]
         ),
         claim_comment=Subquery(
             AttrModel.objects.filter(
                 **{relation_field: OuterRef('id')},
-                attr_type__attribute_id=1090
+                attr_type__attribute_id=AttrTypes.CLAIM_COMMENT
             ).values('text')[:1]
         ),
         object_adress=Subquery(
             AttrModel.objects.filter(
                 **{relation_field: OuterRef('id')},
-                attr_type__attribute_id=1100
+                attr_type__attribute_id=AttrTypes.ADDRESS
             ).values('text')[:1]
         ),
     )
@@ -228,3 +229,147 @@ def energy_companies(request: HttpRequest) -> HttpResponse:
     }
 
     return render(request, 'energy/energy_companies.html', context)
+
+
+@login_required
+@role_required([Roles.ENERGY])
+@ratelimit(key='user_or_ip', rate='20/m', block=True)
+def claim_detail(request: HttpRequest, claim_id: int) -> HttpResponse:
+    statuses_prefetch = Prefetch(
+        'claim_statuses',
+        queryset=ClaimStatus.objects.order_by('-created_at'),
+        to_attr='statuses'
+    )
+
+    attrs_prefetch = Prefetch(
+        'claim_attrs',
+        queryset=ClaimAttr.objects.select_related('attr_type'),
+        to_attr='attrs'
+    )
+
+    claim = (
+        Claim.objects
+        .select_related('declarant', 'company')
+        .prefetch_related(
+            statuses_prefetch,
+            attrs_prefetch,
+        )
+        .filter(pk=claim_id)
+        .first()
+    )
+
+    if not claim:
+        raise Http404(f'Заявка с ID: {claim_id} не найдено')
+
+    claim.last_status = claim.statuses[0] if claim.statuses else None
+
+    attrs_map = {}
+    for attr in claim.attrs:
+        attrs_map.setdefault(attr.attr_type.attribute_id, []).append(attr)
+
+    def first_attr(attr_id):
+        return attrs_map.get(attr_id, [None])[0]
+
+    claim.company_link = first_attr(AttrTypes.LINK)
+    claim.filial = first_attr(AttrTypes.FILIAL)
+    claim.pole = first_attr(AttrTypes.POLE)
+    claim.address = first_attr(AttrTypes.ADDRESS)
+    claim.date = first_attr(AttrTypes.CLAIM_DATE)
+    claim.comment = first_attr(AttrTypes.CLAIM_COMMENT)
+
+    appeal_attr = (
+        AppealAttr.objects
+        .select_related('appeal')
+        .filter(
+            text=claim.number,
+            attr_type__attribute_id=AttrTypes.CLAIM_FOR_APPEAL
+        )
+        .first()
+    )
+
+    claim.appeal = appeal_attr.appeal if appeal_attr else None
+
+    context = {
+        'obj': claim,
+        'is_claim': True,
+        'selected': {
+            'type': 'claims',
+        },
+    }
+
+    return render(request, 'energy/energy_detail.html', context)
+
+
+@login_required
+@role_required([Roles.ENERGY])
+@ratelimit(key='user_or_ip', rate='20/m', block=True)
+def appeal_detail(request: HttpRequest, appeal_id: int) -> HttpResponse:
+    statuses_prefetch = Prefetch(
+        'appeal_statuses',
+        queryset=AppealStatus.objects.order_by('-created_at'),
+        to_attr='statuses'
+    )
+
+    attrs_prefetch = Prefetch(
+        'appeal_attrs',
+        queryset=AppealAttr.objects.select_related('attr_type'),
+        to_attr='attrs'
+    )
+
+    appeal = (
+        Appeal.objects
+        .select_related('declarant', 'company')
+        .prefetch_related(
+            statuses_prefetch,
+            attrs_prefetch,
+        )
+        .filter(pk=appeal_id)
+        .first()
+    )
+
+    if not appeal:
+        raise Http404(f'Обращения с ID: {appeal_id} не найдено')
+
+    appeal.last_status = appeal.statuses[0] if appeal.statuses else None
+
+    attrs_map = {}
+    for attr in appeal.attrs:
+        attrs_map.setdefault(attr.attr_type.attribute_id, []).append(attr)
+
+    def first_attr(attr_id):
+        return attrs_map.get(attr_id, [None])[0]
+
+    appeal.company_link = first_attr(AttrTypes.LINK)
+    appeal.filial = first_attr(AttrTypes.FILIAL)
+    appeal.pole = first_attr(AttrTypes.POLE)
+    appeal.address = first_attr(AttrTypes.ADDRESS)
+    appeal.date = first_attr(AttrTypes.APPEAL_DATE)
+    appeal.subject = first_attr(AttrTypes.APPEAL_SUBJECT)
+    appeal.text = first_attr(AttrTypes.APPEAL_TEXT)
+
+    claims_numbers: list[str] = [
+        atr.text for atr in attrs_map.get(AttrTypes.CLAIM_FOR_APPEAL)
+        if atr.text
+    ]
+
+    claims = (
+        Claim.objects
+        .filter(
+            number__in=claims_numbers,
+            declarant=appeal.declarant,
+            company=appeal.company,
+        )
+        .order_by('id')
+    ) if claims_numbers else Claim.objects.none()
+
+    appeal.claims = claims
+
+    context = {
+        'obj': appeal,
+        'is_claim': False,
+        'selected': {
+            'type': 'appeals',
+        },
+    }
+
+    return render(request, 'energy/energy_detail.html', context)

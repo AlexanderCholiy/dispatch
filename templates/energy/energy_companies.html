@@ -34,9 +34,15 @@
             {% for request in company_requests %}
               <tr>
                 <td>
-                  <a class="link">
-                    {{ request.number }}
-                  </a>
+                  {% if selected.type == 'claims' %}
+                    <a href="{% url 'energy:claim_detail' request.id %}" class="link">
+                      {{ request.number }}
+                    </a>
+                  {% else %}
+                    <a href="{% url 'energy:appeal_detail' request.id %}" class="link">
+                      {{ request.number }}
+                    </a>
+                  {% endif %}
                 </td>
                 <td>
                   {% if request.company_link %}
