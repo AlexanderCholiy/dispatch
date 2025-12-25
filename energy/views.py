@@ -1,9 +1,9 @@
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.core.paginator import Paginator
-from django.db.models import OuterRef, Subquery, Prefetch
-from django.http import HttpRequest, HttpResponse, Http404
-from django.shortcuts import redirect, render, get_object_or_404
+from django.db.models import OuterRef, Prefetch, Subquery
+from django.http import Http404, HttpRequest, HttpResponse
+from django.shortcuts import redirect, render
 from django_ratelimit.decorators import ratelimit
 
 from users.models import Roles
