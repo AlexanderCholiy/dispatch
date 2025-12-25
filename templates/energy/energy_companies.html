@@ -27,6 +27,7 @@
               {% else %}
                 <th data-col="request_date">Дата обращения</th>
               {% endif %}
+              <th data-col="status_date">Дата статуса</th>
             </tr>
           </thead>
           <tbody>
@@ -47,13 +48,8 @@
                   {% endif %}
                 </td>
                 <td>{{ request.declarant.name }}</td>
-                <td class="tooltip"
-                  data-title="{{ request.latest_status_date|date:'d.m.Y H:i' }}">
-                  {% if request.latest_status_name %}
-                    {{ request.latest_status_name }}
-                  {% else %}
-                    —
-                  {% endif %}
+                <td>
+                  {{ request.latest_status_name|default:"—" }}
                 </td>
                 <td>{{ request.filial|default:"—" }}</td>
                 <td>
@@ -65,13 +61,14 @@
                 </td>
                 <td>{{ request.object_adress|default:"—"|truncatechars:64 }}</td>
                 {% if selected.type == 'claims' %}
-                  <td>{{ request.claim_date }}</td>
+                  <td>{{ request.claim_date|default:"—" }}</td>
                 {% else %}
-                  <td>{{ request.appeal_date }}</td>
+                  <td>{{ request.appeal_date|default:"—" }}</td>
                 {% endif %}
+                <td>{{ request.latest_status_date|default:"—" }}</td>
               </tr>
             {% empty %}
-              <tr><td colspan="8" class="empty">Нет данных</td></tr>
+              <tr><td colspan="9" class="empty">Нет данных</td></tr>
             {% endfor %}
           </tbody>
         </table>

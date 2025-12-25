@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+  <strong id="number">NaN</strong>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const protocol = location.protocol === 'https:' ? 'wss://' : 'ws://';
+const socketUrl = protocol + location.host + '/ws/random/';
+const socket = new WebSocket(socketUrl);
+
+socket.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    document.getElementById('number').textContent = data.number;
+};
+
+socket.onclose = function() { console.log('WebSocket closed'); };
+socket.onerror = function(e) { console.error('WebSocket error', e); };
+</script>
+{% endblock %}

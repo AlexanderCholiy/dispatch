@@ -4,13 +4,13 @@ from logging import Filter
 from pathlib import Path
 
 from celery.schedules import crontab
-from django.db.backends.postgresql.base import DatabaseWrapper
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
 # Отключаем проверку версии БД:
-DatabaseWrapper.check_database_version_supported = lambda self: None
+# from django.db.backends.postgresql.base import DatabaseWrapper
+# DatabaseWrapper.check_database_version_supported = lambda self: None
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -22,6 +22,8 @@ ALLOWED_HOSTS = [
     host.strip() for host in os.getenv('DJANGO_ALLOWED_HOSTS', '*').split(',')
     if host.strip()
 ]
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 INTERNAL_IPS = ['127.0.0.1', 'localhost']
 
@@ -51,6 +53,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'channels',  # до всех приложений
     'debug_toolbar',
     'core.apps.CoreConfig',
     'users.apps.UsersConfig',
@@ -62,6 +65,7 @@ INSTALLED_APPS = [
     'api.apps.ApiConfig',
     'monitoring.apps.MonitoringConfig',
     'energy.apps.EnergyConfig',
+    'stats.apps.StatsConfig',
     'rest_framework',
     'django_filters',
     'djoser',
@@ -113,7 +117,23 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'backend.wsgi.application'
+# WSGI_APPLICATION = 'backend.wsgi.application'
+
+ASGI_APPLICATION = 'backend.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [(
+                f'redis://{os.getenv("REDIS_USER", "default")}:'
+                f'{os.getenv("REDIS_PASSWORD", "")}@'
+                f'{os.getenv("REDIS_HOST", "localhost")}:'
+                f'{os.getenv("REDIS_PORT", 6379)}/2'
+            )],
+        },
+    },
+}
 
 DATABASES = {
     'default': {

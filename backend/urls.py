@@ -108,6 +108,7 @@ app_urls = [
     path('emails/', include('emails.urls')),
     path('energy/', include('energy.urls')),
     path('pages/', include('pages.urls')),
+    path('stats/', include('stats.urls')),
 ]
 
 urlpatterns = swagger_urls + auth_urlpatterns + app_urls

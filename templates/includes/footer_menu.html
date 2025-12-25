@@ -28,6 +28,12 @@
           <span>Пользователи</span>
         </a>
       </li>
+      <li>
+        <a href="{% url 'stats:incidents_stats' %}" 
+          class="{% if view_name == 'stats:incidents_stats' %}active{% endif %}">
+          <span>Статистика</span>
+        </a>
+      </li>
       {% endif %}
       <li>
         <a href="{% url 'pages:about' %}" 

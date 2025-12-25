@@ -69,17 +69,19 @@ def energy_companies(request: HttpRequest) -> HttpResponse:
     if is_claims:
         latest_status_subquery = ClaimStatus.objects.filter(
             claim_id=OuterRef('id')
-        ).order_by('-date', '-created_at', '-id')
+        ).order_by('-created_at', '-id')
     else:
         latest_status_subquery = AppealStatus.objects.filter(
             appeal_id=OuterRef('id')
-        ).order_by('-date', '-created_at', '-id')
+        ).order_by('-created_at', '-id')
 
     base_qs = (
         Claim if is_claims else Appeal
     ).objects.select_related('declarant', 'company').annotate(
         latest_status_name=Subquery(latest_status_subquery.values('name')[:1]),
-        latest_status_date=Subquery(latest_status_subquery.values('date')[:1]),
+        latest_status_date=Subquery(
+            latest_status_subquery.values('created_at')[:1]
+        ),
     )
 
     if company_id:
@@ -109,7 +111,9 @@ def energy_companies(request: HttpRequest) -> HttpResponse:
         'declarant', 'company'
     ).annotate(
         latest_status_name=Subquery(latest_status_subquery.values('name')[:1]),
-        latest_status_date=Subquery(latest_status_subquery.values('date')[:1]),
+        latest_status_date=Subquery(
+            latest_status_subquery.values('created_at')[:1]
+        ),
         grid=Subquery(
             AttrModel.objects.filter(
                 **{relation_field: OuterRef('id')},
