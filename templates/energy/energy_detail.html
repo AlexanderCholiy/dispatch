@@ -14,13 +14,25 @@
   <div class="card {% if is_claim %}claim-card{% else %}appeal-card{% endif %}">
     <div class="card-header">
       <div class="{% if is_claim %}claim-header{% else %}appeal-header{% endif %}">
-        <div class="{% if is_claim %}claim-number{% else %}appeal-number{% endif %} copy-text" data-text="{{ obj.number }}">
-          {% if is_claim %}
-            Заявка
+        <div class="{% if is_claim %}claim-number{% else %}appeal-number{% endif %} {% if obj.number %}copy-text{% endif %}" data-text="{{ obj.number }}">
+          {% if obj.number %}
+            {% if is_claim %}
+              Заявка
+            {% else %}
+              Обращение
+            {% endif %}
+            {{ obj.number }}
           {% else %}
-            Обращение
+            {% if obj.inner_claim_number %}
+              {{ obj.inner_claim_number }}
+            {% else %}
+              {% if is_claim %}
+                Заявка без номера
+              {% else %}
+                Обращение без номера
+              {% endif %}
+            {% endif %}
           {% endif %}
-          {{ obj.number }}
         </div>
 
         <div class="{% if is_claim %}claim-status{% else %}appeal-status{% endif %} tooltip" data-title="{{ obj.last_status.created_at|date:'d.m.Y H:i'|default:'—' }}">
