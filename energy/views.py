@@ -348,7 +348,7 @@ def appeal_detail(request: HttpRequest, appeal_id: int) -> HttpResponse:
     appeal.text = first_attr(AttrTypes.APPEAL_TEXT)
 
     claims_numbers: list[str] = [
-        atr.text for atr in attrs_map.get(AttrTypes.CLAIM_FOR_APPEAL)
+        atr.text for atr in attrs_map.get(AttrTypes.CLAIM_FOR_APPEAL, [])
         if atr.text
     ]
 

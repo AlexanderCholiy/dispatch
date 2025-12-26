@@ -2,14 +2,19 @@
 {% load static %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/energy/incudes/energy_deatail.css' %}">
+<link rel="stylesheet" href="{% static 'css/energy/incudes/energy_source.css' %}">
+<link rel="stylesheet" href="{% static 'css/energy/incudes/energy_attrs.css' %}">
+<link rel="stylesheet" href="{% static 'css/energy/incudes/energy_statuses.css' %}">
+<link rel="stylesheet" href="{% static 'css/energy/incudes/energy_msg.css' %}">
 {% endblock %}
 
 {% block content %}
 <div class="container-sm">
-  <div class="card">
+  <div class="card {% if is_claim %}claim-card{% else %}appeal-card{% endif %}">
     <div class="card-header">
       <div class="{% if is_claim %}claim-header{% else %}appeal-header{% endif %}">
-        <div class="{% if is_claim %}claim-number{% else %}appeal-number{% endif %}">
+        <div class="{% if is_claim %}claim-number{% else %}appeal-number{% endif %} copy-text" data-text="{{ obj.number }}">
           {% if is_claim %}
             Заявка
           {% else %}
@@ -18,7 +23,7 @@
           {{ obj.number }}
         </div>
 
-        <div class="{% if is_claim %}claim-status{% else %}appeal-status{% endif %}">
+        <div class="{% if is_claim %}claim-status{% else %}appeal-status{% endif %} tooltip" data-title="{{ obj.last_status.created_at|date:'d.m.Y H:i'|default:'—' }}">
           {% if obj.last_status %}
             {{ obj.last_status.name }}
           {% else %}
@@ -33,21 +38,23 @@
       <!-- Источник заявки -->
       <section class="source-block">
         <div class="source-info">
-          <p>
-            <strong>Заявитель:</strong>
-            {{ obj.declarant.name }}
-          </p>
+          <div class="attr-item">
+            <div class="attr-name">Заявитель:</div>
+            <div class="attr-value">{{ obj.declarant.name }}</div>
+          </div>
 
-          <p>
-            <strong>Сетевая компания:</strong>
-            {% if obj.company_link %}
-              <a href="{{ obj.company_link.text }}" target="_blank">
-                {{ obj.company.name }}
-              </a>
-            {% else %}
-              <span class="bad-company-link">{{ obj.company.name }}</span>
-            {% endif %}
-          </p>
+          <div class="attr-item">
+            <div class="attr-name">Сетевая компания:</div>
+            <div class="attr-value">
+              {% if obj.company_link %}
+                <a href="{{ obj.company_link.text }}" target="_blank">
+                  {{ obj.company.name }}
+                </a>
+              {% else %}
+                <span class="bad-company-link">{{ obj.company.name }}</span>
+              {% endif %}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -69,59 +76,62 @@
           {% if obj.pole and obj.pole.text %}
             <div class="attr-item">
               <div class="attr-name">Шифр опоры:</div>
-              <div class="attr-value">{{ obj.pole.text }}</div>
+              <div class="attr-value copy-text" data-text="{{ obj.pole.text }}">{{ obj.pole.text }}</div>
             </div>
           {% endif %}
           {% if obj.address and obj.address.text %}
             <div class="attr-item">
-              <div class="attr-name">Адрес объекта:</div>
+              <div class="attr-name" >Адрес объекта:</div>
               <div class="attr-value">{{ obj.address.text }}</div>
-            </div>
-          {% endif %}
-          {% if is_claim and obj.comment and obj.comment.text %}
-            <div class="claim-msg">
-              <div class="attr-item">
-                <div class="attr-name">Комментарий к заявке:</div>
-                <div class="attr-value">{{ obj.comment.text }}</div>
-              </div>
-            </div>
-          {% endif %}
-          {% if not is_claim and obj.subject or obj.text %}
-            <div class="appeal-msg">
-              {% if not is_claim and obj.subject and obj.subject.text %}
-                <div class="attr-item">
-                  <div class="attr-name">Тема обращения:</div>
-                  <div class="attr-value">{{ obj.subject.text }}</div>
-                </div>
-              {% endif %}
-              {% if not is_claim and obj.text and obj.text.text %}
-                <div class="attr-item">
-                  <div class="attr-name">Текст обращения:</div>
-                  <div class="attr-value">{{ obj.text.text }}</div>
-                </div>
-              {% endif %}
             </div>
           {% endif %}
           {% if is_claim and obj.appeal %}
             <div class="attr-item appeal-item">
               <div class="attr-name">Обращение:</div>
-              <div class="attr-value">
-                <a href="{% url 'energy:appeal_detail' obj.appeal.id %}" class="link">
+              <div class="attr-value links-group">
+                <a href="{% url 'energy:appeal_detail' obj.appeal.id %}" class="entity-link appeal-link">
                   {{ obj.appeal.number }}
                 </a>
               </div>
             </div>
           {% endif %}
+
           {% if not is_claim and obj.claims %}
             <div class="attr-item claims-item">
               <div class="attr-name">Заявки:</div>
-              <div class="attr-value">
+              <div class="attr-value links-group">
                 {% for claim in obj.claims %}
-                  <a href="{% url 'energy:claim_detail' claim.id %}" class="link">
+                  <a href="{% url 'energy:claim_detail' claim.id %}" class="entity-link claim-link">
                     {{ claim.number }}
-                  </a>{% if not forloop.last %}, {% endif %}
+                  </a>
                 {% endfor %}
               </div>
+            </div>
+          {% endif %}
+          {% if is_claim and obj.comment and obj.comment.text %}
+            <div class="message-card claim-msg">
+              <div class="message-header">
+                <div class="message-label">Комментарий к заявке</div>
+              </div>
+
+              <div class="message-body">
+                {{ obj.comment.text|linebreaks }}
+              </div>
+            </div>
+          {% endif %}
+          {% if not is_claim and obj.subject or obj.text %}
+            <div class="message-card appeal-msg">
+              {% if obj.subject and obj.subject.text %}
+                <div class="message-header">
+                  <div class="message-label">{{ obj.subject.text }}</div>
+                </div>
+              {% endif %}
+
+              {% if obj.text and obj.text.text %}
+                <div class="message-body">
+                  {{ obj.text.text|linebreaks }}
+                </div>
+              {% endif %}
             </div>
           {% endif %}
         </div>
@@ -149,4 +159,5 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/energy/hide_status_history.js' %}"></script>
 {% endblock %}
