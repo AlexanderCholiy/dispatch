@@ -133,7 +133,7 @@ class Region(models.Model):
         related_name='regions',
         verbose_name='Email подрядчика по РВР',
     )
-    macro_region = models.ForeignKey(
+    macroregion = models.ForeignKey(
         'MacroRegion',
         on_delete=models.SET_NULL,
         null=True,

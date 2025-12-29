@@ -15,7 +15,7 @@ from rest_framework.request import Request
 from incidents.annotations import annotate_sla_avr, annotate_sla_rvr
 from incidents.constants import NOTIFIED_CONTRACTOR_STATUS_NAME
 from incidents.models import Incident, IncidentStatusHistory
-from ts.models import PoleContractorEmail, Region
+from ts.models import PoleContractorEmail, MacroRegion
 
 from .constants import STATISTIC_CACHE_TIMEOUT
 from .filters import IncidentReportFilter
@@ -77,11 +77,11 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
 
 class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    Возвращает статистику по регионам.
+    Возвращает статистику по макрорегионам.
 
     Поля:
 
-    - region_ru: название региона
+    - macroregion: название макрорегиона региона
     - total_incidents: общее количество инцидентов (закрытых + открытых)
     - total_closed_incidents: количество закрытых инцидентов
     - total_open_incidents: количество открытых инцидентов
@@ -121,8 +121,8 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
         incidents = annotate_sla_avr(incidents)
         incidents = annotate_sla_rvr(incidents)
 
-        region_sla_counts = (
-            incidents.values('pole__region')
+        macroregion_sla_counts = (
+            incidents.values('pole__region__macroregion')
             .annotate(
                 sla_avr_expired_count=Count(
                     'id', filter=Q(sla_avr_expired=True)
@@ -151,56 +151,59 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
             )
         )
 
-        sla_map = {item['pole__region']: item for item in region_sla_counts}
+        sla_map = {
+            item['pole__region__macroregion']: item
+            for item in macroregion_sla_counts
+        }
 
         dt = timedelta(hours=1)
 
         base_qs = (
-            Region.objects
+            MacroRegion.objects
             .annotate(
-                total_poles=Count('poles', distinct=True),
+                total_poles=Count('regions__poles', distinct=True),
                 total_closed_incidents=Count(
-                    'poles__incidents',
+                    'regions__poles__incidents',
                     filter=Q(
-                        poles__incidents__code__isnull=False,
-                        poles__incidents__is_incident_finish=True,
-                        poles__incidents__incident_finish_date__isnull=False,
-                        poles__incidents__incident_finish_date__gt=(
-                            F('poles__incidents__incident_date') + dt
+                        regions__poles__incidents__code__isnull=False,
+                        regions__poles__incidents__is_incident_finish=True,
+                        regions__poles__incidents__incident_finish_date__isnull=False,
+                        regions__poles__incidents__incident_finish_date__gt=(
+                            F('regions__poles__incidents__incident_date') + dt
                         ),
                     ),
                     distinct=True
                 ),
                 total_open_incidents=Count(
-                    'poles__incidents',
+                    'regions__poles__incidents',
                     filter=Q(
-                        poles__incidents__code__isnull=False,
-                        poles__incidents__is_incident_finish=False,
+                        regions__poles__incidents__code__isnull=False,
+                        regions__poles__incidents__is_incident_finish=False,
                     ),
                     distinct=True
                 ),
                 active_contractor_incidents=Count(
-                    'poles__incidents',
+                    'regions__poles__incidents',
                     filter=Q(
-                        poles__incidents__isnull=False,
-                        poles__incidents__is_incident_finish=False
+                        regions__poles__incidents__isnull=False,
+                        regions__poles__incidents__is_incident_finish=False
                     ) & (
                         Q(
-                            poles__incidents__status_history__status__name=(
+                            regions__poles__incidents__status_history__status__name=(
                                 NOTIFIED_CONTRACTOR_STATUS_NAME
                             )
                         )
-                        | Q(poles__incidents__avr_start_date__isnull=False)
-                        | Q(poles__incidents__rvr_start_date__isnull=False)
+                        | Q(regions__poles__incidents__avr_start_date__isnull=False)
+                        | Q(regions__poles__incidents__rvr_start_date__isnull=False)
                     ),
                     distinct=True
                 ),
             )
-            .order_by('region_ru', 'id')
+            .order_by('name', 'id')
         )
 
-        for region in base_qs:
-            region_sla = sla_map.get(region.pk, {})
+        for macroregion in base_qs:
+            macroregion_sla = sla_map.get(macroregion.pk, {})
             for field in [
                 'sla_avr_expired_count',
                 'sla_avr_closed_on_time_count',
@@ -211,7 +214,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                 'sla_rvr_less_than_hour_count',
                 'sla_rvr_in_progress_count',
             ]:
-                setattr(region, field, region_sla.get(field, 0))
+                setattr(macroregion, field, macroregion_sla.get(field, 0))
 
         cache.set(cache_key, base_qs, STATISTIC_CACHE_TIMEOUT)
 

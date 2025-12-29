@@ -160,14 +160,14 @@ class Api(SocialValidators):
         }
         regions_cache = {
             r.region_en: r
-            for r in Region.objects.select_related('macro_region')
+            for r in Region.objects.select_related('macroregion')
         }
-        macro_regions_cache = {
+        macroregions_cache = {
             mr.name: mr
             for mr in MacroRegion.objects.all()
         }
 
-        bulk_macro_regions_to_create: list[MacroRegion] = []
+        bulk_macroregions_to_create: list[MacroRegion] = []
 
         bulk_regions_to_create: list[Region] = []
         bulk_regions_to_update: list[Region] = []
@@ -195,7 +195,7 @@ class Api(SocialValidators):
             anchor_operator = row['Якорный оператор'] or None
             region_en = row['Регион'] or None
             region_ru = row['RegionRu'] or None
-            macro_region_name = row['Макрорегион НБ'] or None
+            macroregion_name = row['Макрорегион НБ'] or None
 
             if (
                 not isinstance(site_id, int)
@@ -210,34 +210,34 @@ class Api(SocialValidators):
                 or not isinstance(anchor_operator, (str, NoneType))
                 or not isinstance(region_en, str)
                 or not isinstance(region_ru, (str, NoneType))
-                or not isinstance(macro_region_name, (str, NoneType))
+                or not isinstance(macroregion_name, (str, NoneType))
             ):
                 find_unvalid_values = True
                 continue
 
-            if macro_region_name:
-                macro_region_name = macro_region_name.strip()
+            if macroregion_name:
+                macroregion_name = macroregion_name.strip()
 
-            macro_region_obj = None
-            if macro_region_name:
-                macro_region_obj = macro_regions_cache.get(macro_region_name)
-                if not macro_region_obj:
-                    macro_region_obj = MacroRegion(name=macro_region_name)
-                    macro_regions_cache[macro_region_name] = macro_region_obj
-                    bulk_macro_regions_to_create.append(macro_region_obj)
+            macroregion_obj = None
+            if macroregion_name:
+                macroregion_obj = macroregions_cache.get(macroregion_name)
+                if not macroregion_obj:
+                    macroregion_obj = MacroRegion(name=macroregion_name)
+                    macroregions_cache[macroregion_name] = macroregion_obj
+                    bulk_macroregions_to_create.append(macroregion_obj)
 
             region_obj = regions_cache.get(region_en)
             if not region_obj:
                 region_obj = Region(
                     region_en=region_en,
                     region_ru=region_ru,
-                    macro_region=None,
+                    macroregion=None,
                 )
                 regions_cache[region_en] = region_obj
                 bulk_regions_to_create.append(region_obj)
             else:
-                if region_obj.macro_region != macro_region_obj:
-                    region_obj.macro_region = macro_region_obj
+                if region_obj.macroregion != macroregion_obj:
+                    region_obj.macroregion = macroregion_obj
                     bulk_regions_to_update.append(region_obj)
 
             pole_obj = poles_cache.get(site_id)
@@ -275,21 +275,21 @@ class Api(SocialValidators):
         if find_unvalid_values:
             ts_logger.warning(f'Проверьте данные в {TS_POLES_TL_URL}')
 
-        if bulk_macro_regions_to_create:
+        if bulk_macroregions_to_create:
             MacroRegion.objects.bulk_create(
-                bulk_macro_regions_to_create,
+                bulk_macroregions_to_create,
                 ignore_conflicts=True,
                 batch_size=DB_CHUNK_UPDATE,
             )
-            macro_regions_cache.update({
+            macroregions_cache.update({
                 mr.name: mr
                 for mr in MacroRegion.objects.filter(
-                    name__in=[m.name for m in bulk_macro_regions_to_create]
+                    name__in=[m.name for m in bulk_macroregions_to_create]
                 )
             })
 
             ts_logger.debug(
-                f'MacroRegion добавлены: {len(bulk_macro_regions_to_create)}'
+                f'MacroRegion добавлены: {len(bulk_macroregions_to_create)}'
             )
 
         if bulk_regions_to_create:
@@ -317,13 +317,13 @@ class Api(SocialValidators):
 
         for region in bulk_regions_to_update:
             macro_name = region_to_macro_name.get(region.region_en)
-            region.macro_region = macro_regions_cache.get(macro_name)
+            region.macroregion = macroregions_cache.get(macro_name)
             bulk_regions_to_update_final.append(region)
 
         if bulk_regions_to_update_final:
             Region.objects.bulk_update(
                 bulk_regions_to_update_final,
-                fields=['macro_region'],
+                fields=['macroregion'],
                 batch_size=DB_CHUNK_UPDATE,
             )
 
