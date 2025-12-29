@@ -117,13 +117,13 @@ class Region(models.Model):
     region_en = models.CharField(
         max_length=MAX_ST_DESCRIPTION,
         verbose_name='Регион',
-        unique=True
+        unique=True,
     )
     region_ru = models.CharField(
         max_length=MAX_ST_DESCRIPTION,
         null=True,
         blank=True,
-        verbose_name='Регион (ru)'
+        verbose_name='Регион (ru)',
     )
     rvr_email = models.ForeignKey(
         ContractorEmail,
@@ -133,6 +133,14 @@ class Region(models.Model):
         related_name='regions',
         verbose_name='Email подрядчика по РВР',
     )
+    macro_region = models.ForeignKey(
+        'MacroRegion',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='regions',
+        verbose_name='Макрорегион',
+    )
 
     class Meta:
         verbose_name = 'регион'
@@ -140,6 +148,21 @@ class Region(models.Model):
 
     def __str__(self):
         return self.region_ru or self.region_en
+
+
+class MacroRegion(models.Model):
+    name = models.CharField(
+        max_length=MAX_ST_DESCRIPTION,
+        verbose_name='Макрорегион НБ',
+        unique=True,
+    )
+
+    class Meta:
+        verbose_name = 'макрорегион'
+        verbose_name_plural = 'Макрорегионы'
+
+    def __str__(self):
+        return self.name
 
 
 class Pole(models.Model):
