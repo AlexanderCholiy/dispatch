@@ -31,11 +31,11 @@ from .models import (
     BaseStationOperator,
     ContractorEmail,
     ContractorPhone,
+    MacroRegion,
     Pole,
     PoleContractorEmail,
     PoleContractorPhone,
     Region,
-    MacroRegion,
 )
 from .validators import SocialValidators
 

@@ -15,7 +15,7 @@ from rest_framework.request import Request
 from incidents.annotations import annotate_sla_avr, annotate_sla_rvr
 from incidents.constants import NOTIFIED_CONTRACTOR_STATUS_NAME
 from incidents.models import Incident, IncidentStatusHistory
-from ts.models import PoleContractorEmail, MacroRegion
+from ts.models import MacroRegion, PoleContractorEmail
 
 from .constants import STATISTIC_CACHE_TIMEOUT
 from .filters import IncidentReportFilter
@@ -167,7 +167,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                     filter=Q(
                         regions__poles__incidents__code__isnull=False,
                         regions__poles__incidents__is_incident_finish=True,
-                        regions__poles__incidents__incident_finish_date__isnull=False,
+                        regions__poles__incidents__incident_finish_date__isnull=False,  # noqa: E501
                         regions__poles__incidents__incident_finish_date__gt=(
                             F('regions__poles__incidents__incident_date') + dt
                         ),
@@ -189,12 +189,12 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                         regions__poles__incidents__is_incident_finish=False
                     ) & (
                         Q(
-                            regions__poles__incidents__status_history__status__name=(
+                            regions__poles__incidents__status_history__status__name=(  # noqa: E501
                                 NOTIFIED_CONTRACTOR_STATUS_NAME
                             )
                         )
-                        | Q(regions__poles__incidents__avr_start_date__isnull=False)
-                        | Q(regions__poles__incidents__rvr_start_date__isnull=False)
+                        | Q(regions__poles__incidents__avr_start_date__isnull=False)  # noqa: E501
+                        | Q(regions__poles__incidents__rvr_start_date__isnull=False)  # noqa: E501
                     ),
                     distinct=True
                 ),
