@@ -31,6 +31,7 @@ from .models import (
     BaseStationOperator,
     ContractorEmail,
     ContractorPhone,
+    MacroRegion,
     Pole,
     PoleContractorEmail,
     PoleContractorPhone,
@@ -42,10 +43,9 @@ from .validators import SocialValidators
 class Api(SocialValidators):
     """Загрузка данных из TS и добавление их в БД"""
 
-    @staticmethod
     @timer(ts_logger)
     def download_json(
-        self, json_file_path: str, url: str, chunk_size: int = 1000
+        json_file_path: str, url: str, chunk_size: int = 1000
     ):
         response = requests.get(url, stream=True)
 
@@ -158,17 +158,30 @@ class Api(SocialValidators):
         poles_cache = {
             p.site_id: p for p in Pole.objects.select_related('region')
         }
-        regions_cache = {r.region_en: r for r in Region.objects.all()}
+        regions_cache = {
+            r.region_en: r
+            for r in Region.objects.select_related('macroregion')
+        }
+        macroregions_cache = {
+            mr.name: mr
+            for mr in MacroRegion.objects.all()
+        }
 
-        bulk_poles_to_create = []
-        bulk_regions_to_create = []
-        poles_to_update = []
+        bulk_macroregions_to_create: list[MacroRegion] = []
+
+        bulk_regions_to_create: list[Region] = []
+        bulk_regions_to_update: list[Region] = []
+
+        bulk_poles_to_create: list[Pole] = []
+        poles_to_update: list[Pole] = []
 
         # Обновляем актуальные записи:
         find_unvalid_values = False
 
         for index, row in poles.iterrows():
-            PrettyPrint.progress_bar_debug(index, total, 'Обновление Pole:')
+            PrettyPrint.progress_bar_debug(
+                index, total, 'Обновление Pole, Region, MacroRegion:'
+            )
 
             site_id = row['SiteId']
             pole = row['Шифр']
@@ -182,6 +195,7 @@ class Api(SocialValidators):
             anchor_operator = row['Якорный оператор'] or None
             region_en = row['Регион'] or None
             region_ru = row['RegionRu'] or None
+            macroregion_name = row['Макрорегион НБ'] or None
 
             if (
                 not isinstance(site_id, int)
@@ -196,15 +210,35 @@ class Api(SocialValidators):
                 or not isinstance(anchor_operator, (str, NoneType))
                 or not isinstance(region_en, str)
                 or not isinstance(region_ru, (str, NoneType))
+                or not isinstance(macroregion_name, (str, NoneType))
             ):
                 find_unvalid_values = True
                 continue
 
+            if macroregion_name:
+                macroregion_name = macroregion_name.strip()
+
+            macroregion_obj = None
+            if macroregion_name:
+                macroregion_obj = macroregions_cache.get(macroregion_name)
+                if not macroregion_obj:
+                    macroregion_obj = MacroRegion(name=macroregion_name)
+                    macroregions_cache[macroregion_name] = macroregion_obj
+                    bulk_macroregions_to_create.append(macroregion_obj)
+
             region_obj = regions_cache.get(region_en)
             if not region_obj:
-                region_obj = Region(region_en=region_en, region_ru=region_ru)
+                region_obj = Region(
+                    region_en=region_en,
+                    region_ru=region_ru,
+                    macroregion=None,
+                )
                 regions_cache[region_en] = region_obj
                 bulk_regions_to_create.append(region_obj)
+            else:
+                if region_obj.macroregion != macroregion_obj:
+                    region_obj.macroregion = macroregion_obj
+                    bulk_regions_to_update.append(region_obj)
 
             pole_obj = poles_cache.get(site_id)
             if pole_obj:
@@ -241,16 +275,61 @@ class Api(SocialValidators):
         if find_unvalid_values:
             ts_logger.warning(f'Проверьте данные в {TS_POLES_TL_URL}')
 
+        if bulk_macroregions_to_create:
+            MacroRegion.objects.bulk_create(
+                bulk_macroregions_to_create,
+                ignore_conflicts=True,
+                batch_size=DB_CHUNK_UPDATE,
+            )
+            macroregions_cache.update({
+                mr.name: mr
+                for mr in MacroRegion.objects.filter(
+                    name__in=[m.name for m in bulk_macroregions_to_create]
+                )
+            })
+
+            ts_logger.debug(
+                f'MacroRegion добавлены: {len(bulk_macroregions_to_create)}'
+            )
+
         if bulk_regions_to_create:
             new_created_regions = Region.objects.bulk_create(
                 bulk_regions_to_create,
-                ignore_conflicts=True, batch_size=DB_CHUNK_UPDATE
+                ignore_conflicts=True,
+                batch_size=DB_CHUNK_UPDATE,
             )
             created_regions = {r.region_en: r for r in new_created_regions}
             regions_cache.update(created_regions)
             ts_logger.debug(
                 'Region добавлены: '
                 f'{len(new_created_regions)} из {len(bulk_regions_to_create)}'
+            )
+
+        # Обновляем FK макрорегионов у регионов:
+        region_to_macro_name = dict(
+            poles[['Регион', 'Макрорегион НБ']]
+            .dropna(subset=['Макрорегион НБ'])
+            .drop_duplicates('Регион')
+            .values
+        )
+
+        bulk_regions_to_update_final = []
+
+        for region in bulk_regions_to_update:
+            macro_name = region_to_macro_name.get(region.region_en)
+            region.macroregion = macroregions_cache.get(macro_name)
+            bulk_regions_to_update_final.append(region)
+
+        if bulk_regions_to_update_final:
+            Region.objects.bulk_update(
+                bulk_regions_to_update_final,
+                fields=['macroregion'],
+                batch_size=DB_CHUNK_UPDATE,
+            )
+
+            ts_logger.debug(
+                f'Region обновлены: {len(bulk_regions_to_update)} '
+                f'из {len(bulk_regions_to_update)}'
             )
 
         for p in bulk_poles_to_create:

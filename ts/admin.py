@@ -180,8 +180,9 @@ class ContractorEmailAdmin(admin.ModelAdmin):
 @admin.register(Region)
 class RegionAdmin(admin.ModelAdmin):
     list_per_page = REGIONS_PER_PAGE
-    list_display = ('region_en', 'region_ru', 'rvr_email')
+    list_display = ('region_en', 'region_ru', 'rvr_email', 'macroregion')
     search_fields = ('region_en', 'region_ru', 'rvr_email__email')
     ordering = ('rvr_email', 'region_en',)
     autocomplete_fields = ('rvr_email',)
     list_editable = ('rvr_email',)
+    list_filter = ('macroregion',)

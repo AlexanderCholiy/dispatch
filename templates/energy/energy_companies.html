@@ -36,11 +36,19 @@
                 <td>
                   {% if selected.type == 'claims' %}
                     <a href="{% url 'energy:claim_detail' request.id %}" class="link">
-                      {{ request.number }}
+                      {% if request.number %}
+                        {{ request.number }}
+                      {% else %}
+                        {{ request.inner_claim_number|default:"Без номера" }}
+                      {% endif %}
                     </a>
                   {% else %}
                     <a href="{% url 'energy:appeal_detail' request.id %}" class="link">
-                      {{ request.number }}
+                      {% if request.number %}
+                        {{ request.number }}
+                      {% else %}
+                        {{ request.inner_claim_number|default:"без номера" }}
+                      {% endif %}
                     </a>
                   {% endif %}
                 </td>

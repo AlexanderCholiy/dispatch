@@ -276,6 +276,7 @@ def claim_detail(request: HttpRequest, claim_id: int) -> HttpResponse:
     claim.address = first_attr(AttrTypes.ADDRESS)
     claim.date = first_attr(AttrTypes.CLAIM_DATE)
     claim.comment = first_attr(AttrTypes.CLAIM_COMMENT)
+    claim.inner_claim_number = first_attr(AttrTypes.CLAIM_EXT_NUM)
 
     appeal_attr = (
         AppealAttr.objects

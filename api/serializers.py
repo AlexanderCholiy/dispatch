@@ -131,6 +131,8 @@ class IncidentReportSerializer(serializers.ModelSerializer):
 
 
 class StatisticReportSerializer(serializers.ModelSerializer):
+    macroregion = serializers.CharField(source='name', read_only=True)
+
     total_closed_incidents = serializers.IntegerField(read_only=True)
     total_open_incidents = serializers.IntegerField(read_only=True)
     active_contractor_incidents = serializers.IntegerField(read_only=True)
@@ -152,7 +154,7 @@ class StatisticReportSerializer(serializers.ModelSerializer):
     class Meta:
         model = Region
         fields = (
-            'region_ru',
+            'macroregion',
             'total_incidents',
             'total_closed_incidents',
             'total_open_incidents',

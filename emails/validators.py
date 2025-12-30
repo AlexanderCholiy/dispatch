@@ -1,11 +1,10 @@
-import email
 import os
 import re
 import unicodedata
 from datetime import datetime
 from email import header, message
 from email.header import decode_header
-from email.utils import getaddresses
+from email.utils import getaddresses, parseaddr
 from typing import Optional
 
 import html2text
@@ -53,18 +52,28 @@ class EmailValidator:
         return subject
 
     def prepare_email_from(self, email_from_original: header.Header) -> str:
-        email_from_parser: str = email.utils.parseaddr(email_from_original)[-1]
-        email_from = email_from_parser if email_from_parser else (
-            str(email_from_original)
-            .split()[-1]
+        raw_value = str(email_from_original)
+
+        raw_value = ' '.join(raw_value.splitlines())
+
+        decoded_from = self._decode_mime_header(raw_value)
+
+        _, addr = parseaddr(decoded_from)
+
+        if addr:
+            return addr.strip().lower()
+
+        raise ValueError(
+            f'Не удалось извлечь email из From: {decoded_from}'
         )
-        return email_from
 
     def _decode_mime_header(self, value: str) -> str:
         """Декодирует MIME-заголовки вроде =?utf-8?B?...?="""
         if not value:
             return ''
+
         decoded_parts = decode_header(value)
+
         return ''.join(
             part.decode(encoding or 'utf-8') if isinstance(
                 part, bytes
