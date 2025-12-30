@@ -9,6 +9,7 @@ from emails.models import EmailMessage
 from .constants import (
     INCIDENT_CATEGORIES_PER_PAGE,
     INCIDENT_STATUSES_PER_PAGE,
+    INCIDENT_SUBTYPES_PER_PAGE,
     INCIDENT_TYPES_PER_PAGE,
     INCIDENTS_PER_PAGE,
 )
@@ -19,8 +20,10 @@ from .models import (
     IncidentHistory,
     IncidentStatus,
     IncidentStatusHistory,
+    IncidentSubType,
     IncidentType,
     StatusType,
+    TypeSubTypeRelation,
 )
 
 admin.site.empty_value_display = EMPTY_VALUE
@@ -60,9 +63,10 @@ class IncidentStatusHistoryInline(admin.TabularInline):
 class IncidentCategoryRelationInline(admin.TabularInline):
     model = IncidentCategoryRelation
     extra = 0
-    autocomplete_fields = ['category']
+    autocomplete_fields = ('category',)
     verbose_name = 'Категория инцидента'
     verbose_name_plural = 'Категории инцидента'
+    max_num = 3
 
 
 class IncidentCategoryFilter(admin.SimpleListFilter):
@@ -146,6 +150,7 @@ class IncidentAdmin(admin.ModelAdmin):
                 'pole',
                 'base_station',
                 'incident_type',
+                'incident_subtype',
                 'responsible_user',
                 'avr_contractor',
                 'sla_avr_deadline',
@@ -170,12 +175,30 @@ class IncidentAdmin(admin.ModelAdmin):
     )
 
 
+class TypeSubTypeRelationInline(admin.TabularInline):
+    model = TypeSubTypeRelation
+    extra = 0
+    autocomplete_fields = ('incident_subtype',)
+    verbose_name = 'Подтип инцидента'
+    verbose_name_plural = 'Подтипы инцидента'
+
+
 @admin.register(IncidentType)
 class IncidentTypeAdmin(admin.ModelAdmin):
     list_per_page = INCIDENT_TYPES_PER_PAGE
     list_display = ('name', 'sla_deadline')
     list_editable = ('sla_deadline',)
     search_fields = ('name',)
+    inlines = (TypeSubTypeRelationInline,)
+
+
+@admin.register(IncidentSubType)
+class IncidentSubCategoryAdmin(admin.ModelAdmin):
+    list_per_page = INCIDENT_SUBTYPES_PER_PAGE
+    list_display = ('name', 'description',)
+    list_editable = ('description',)
+    search_fields = ('name', 'description',)
+    ordering = ('name',)
 
 
 @admin.register(StatusType)

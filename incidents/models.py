@@ -105,6 +105,14 @@ class Incident(models.Model):
         related_name='incidents',
         verbose_name='Тип инцидента',
     )
+    incident_subtype = models.ForeignKey(
+        'IncidentSubType',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='incidents',
+        verbose_name='Подтип инцидента',
+    )
     statuses = models.ManyToManyField(
         'IncidentStatus',
         through='IncidentStatusHistory',
@@ -227,6 +235,22 @@ class Incident(models.Model):
         incident_date = self.incident_date or insert_date
         min_date = min(insert_date, incident_date)
         max_future_date = now + MAX_FUTURE_END_DELTA
+
+        if self.incident_subtype and not self.incident_type:
+            errors['incident_subtype'] = (
+                'Нельзя выбрать подтип без типа инцидента.'
+            )
+
+        if self.incident_type and self.incident_subtype:
+            exists = TypeSubTypeRelation.objects.filter(
+                incident_type=self.incident_type,
+                incident_subtype=self.incident_subtype
+            ).exists()
+
+            if not exists:
+                errors['incident_subtype'] = (
+                    'Выбранный подтип не относится к данному типу инцидента.'
+                )
 
         if self.avr_start_date and self.avr_end_date:
             if self.avr_end_date < self.avr_start_date:
@@ -415,9 +439,21 @@ class IncidentHistory(models.Model):
 
 class IncidentCategory(Detail):
     """Категории инцидентов"""
+
     class Meta:
         verbose_name = 'категория инцидента'
         verbose_name_plural = 'Категории инцидентов'
+
+    def __str__(self):
+        return self.name
+
+
+class IncidentSubType(Detail):
+    """Подкатегории инцидентов"""
+
+    class Meta:
+        verbose_name = 'подтип инцидента'
+        verbose_name_plural = 'Подтипы инцидентов'
 
     def __str__(self):
         return self.name
@@ -450,6 +486,35 @@ class IncidentCategoryRelation(models.Model):
 
     def __str__(self):
         return f'{self.incident} - {self.category}'
+
+
+class TypeSubTypeRelation(models.Model):
+    """Связь типа и подтипа инцидента"""
+    incident_type = models.ForeignKey(
+        'IncidentType',
+        on_delete=models.CASCADE,
+        related_name='type_subtype_links',
+        verbose_name=' Тип инцидента'
+    )
+    incident_subtype = models.ForeignKey(
+        IncidentSubType,
+        on_delete=models.CASCADE,
+        related_name='type_subtype_links',
+        verbose_name='Подтип инцидента'
+    )
+
+    class Meta:
+        verbose_name = 'связь типа и подтипа инцидента'
+        verbose_name_plural = 'Связи типов и подтипов инцидентов'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['incident_type', 'incident_subtype'],
+                name='unique_subtype_per_type'
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.incident_type} - {self.incident_subtype}'
 
 
 class IncidentType(Detail):
