@@ -1,9 +1,11 @@
-from datetime import timedelta
+from datetime import date, timedelta
+from typing import Optional
 
 from django.core.cache import cache
 from django.db.models import (
     Count,
     F,
+    FilteredRelation,
     Prefetch,
     Q,
     QuerySet,
@@ -21,6 +23,7 @@ from .constants import STATISTIC_CACHE_TIMEOUT
 from .filters import IncidentReportFilter
 from .pagination import IncidentReportPagination
 from .serializers import IncidentReportSerializer, StatisticReportSerializer
+from .validators import validate_date_range
 
 
 class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
@@ -78,8 +81,10 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
 class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Возвращает статистику по макрорегионам.
+    Статистика формируется на основе инцидентов и агрегируется
+    по макрорегионам, связанным через регионы и опоры.
 
-    Поля:
+    ПОЛЯ:
 
     - macroregion: название макрорегиона региона
     - total_incidents: общее количество инцидентов (закрытых + открытых)
@@ -105,19 +110,60 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
     меньше часа
     - sla_rvr_in_progress: количество инцидентов с РВР в процессе и SLA еще
     не истекла
+
+    ФИЛЬТРАЦИЯ ПО ДАТЕ:
+    Поддерживается фильтрация по дате инцидента.
+
+    Поддерживаемые query-параметры:
+
+    - start_date (YYYY-MM-DD):
+        Начальная дата инцидента (включительно).
+        Если не указана — фильтрация снизу не применяется.
+
+    - end_date (YYYY-MM-DD):
+        Конечная дата инцидента (включительно).
+        Если не указана — фильтрация сверху не применяется.
+
+    ПРИМЕРЫ ЗАПРОСОВ:
+    Получить статистику за всё время:
+        GET /api/v1/report/statistics/
+
+    Получить статистику с указанной даты:
+        GET /api/v1/report/statistics/?start_date=2025-01-01
+
+    Получить статистику до указанной даты:
+        GET /api/v1/report/statistics/?end_date=2025-01-31
+
+    Получить статистику за период:
+        GET /api/v1/report/statistics/?start_date=2025-01-01&end_date=
+        2025-01-31
     """
     serializer_class = StatisticReportSerializer
     permission_classes = (permissions.AllowAny,)
     pagination_class = None
 
     def get_queryset(self) -> QuerySet:
-        cache_key = 'statistic_report_qs'
-        cached_qs = cache.get(cache_key)
+        params = self.request.query_params
 
-        if cached_qs is not None:
-            return cached_qs
+        start, end = validate_date_range(
+            params.get('start_date'),
+            params.get('end_date'),
+        )
 
-        incidents = Incident.objects.select_related('pole', 'incident_type')
+        cache_key = self._build_statistic_cache_key(start, end)
+        cached = cache.get(cache_key)
+
+        if cached:
+            return cached
+
+        incident_date_filter = self._get_incident_date_filter(start, end)
+
+        incidents = self.filter_queryset(
+            Incident.objects
+            .select_related('pole', 'incident_type')
+            .filter(incident_date_filter)
+        )
+
         incidents = annotate_sla_avr(incidents)
         incidents = annotate_sla_rvr(incidents)
 
@@ -158,43 +204,51 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
 
         dt = timedelta(hours=1)
 
+        macroregion_incident_filter = self._get_macroregion_incident_filter(
+            start, end
+        )
+
         base_qs = (
             MacroRegion.objects
             .annotate(
-                total_poles=Count('regions__poles', distinct=True),
-                total_closed_incidents=Count(
+                incidents_filtered=FilteredRelation(
                     'regions__poles__incidents',
+                    condition=macroregion_incident_filter
+                )
+            )
+            .annotate(
+                total_closed_incidents=Count(
+                    'incidents_filtered',
                     filter=Q(
-                        regions__poles__incidents__code__isnull=False,
-                        regions__poles__incidents__is_incident_finish=True,
-                        regions__poles__incidents__incident_finish_date__isnull=False,  # noqa: E501
-                        regions__poles__incidents__incident_finish_date__gt=(
-                            F('regions__poles__incidents__incident_date') + dt
+                        incidents_filtered__code__isnull=False,
+                        incidents_filtered__is_incident_finish=True,
+                        incidents_filtered__incident_finish_date__isnull=False,
+                        incidents_filtered__incident_finish_date__gt=(
+                            F('incidents_filtered__incident_date') + dt
                         ),
                     ),
                     distinct=True
                 ),
                 total_open_incidents=Count(
-                    'regions__poles__incidents',
+                    'incidents_filtered',
                     filter=Q(
-                        regions__poles__incidents__code__isnull=False,
-                        regions__poles__incidents__is_incident_finish=False,
+                        incidents_filtered__code__isnull=False,
+                        incidents_filtered__is_incident_finish=False,
                     ),
                     distinct=True
                 ),
                 active_contractor_incidents=Count(
-                    'regions__poles__incidents',
+                    'incidents_filtered',
                     filter=Q(
-                        regions__poles__incidents__isnull=False,
-                        regions__poles__incidents__is_incident_finish=False
+                        incidents_filtered__is_incident_finish=False
                     ) & (
                         Q(
-                            regions__poles__incidents__status_history__status__name=(  # noqa: E501
+                            incidents_filtered__status_history__status__name=(
                                 NOTIFIED_CONTRACTOR_STATUS_NAME
                             )
                         )
-                        | Q(regions__poles__incidents__avr_start_date__isnull=False)  # noqa: E501
-                        | Q(regions__poles__incidents__rvr_start_date__isnull=False)  # noqa: E501
+                        | Q(incidents_filtered__avr_start_date__isnull=False)
+                        | Q(incidents_filtered__rvr_start_date__isnull=False)
                     ),
                     distinct=True
                 ),
@@ -216,6 +270,43 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
             ]:
                 setattr(macroregion, field, macroregion_sla.get(field, 0))
 
-        cache.set(cache_key, base_qs, STATISTIC_CACHE_TIMEOUT)
+        result = list(base_qs)
 
-        return base_qs
+        cache.set(cache_key, result, STATISTIC_CACHE_TIMEOUT)
+
+        return result
+
+    def _get_incident_date_filter(
+        self, start: Optional[date], end: Optional[date]
+    ) -> Q:
+        q = Q()
+
+        if start:
+            q &= Q(incident_date__date__gte=start)
+        if end:
+            q &= Q(incident_date__date__lte=end)
+
+        return q
+
+    def _get_macroregion_incident_filter(
+        self, start: Optional[date], end: Optional[date]
+    ) -> Q:
+        q = Q()
+
+        if start:
+            q &= Q(
+                regions__poles__incidents__incident_date__date__gte=start
+            )
+        if end:
+            q &= Q(
+                regions__poles__incidents__incident_date__date__lte=end
+            )
+
+        return q
+
+    def _build_statistic_cache_key(
+        self, start: Optional[date], end: Optional[date]
+    ) -> str:
+        start_key = start.isoformat() if start else 'none'
+        end_key = end.isoformat() if end else 'none'
+        return f'statistic_report:{start_key}:{end_key}'
