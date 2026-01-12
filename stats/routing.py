@@ -1,7 +1,7 @@
 from django.urls import path
 
-from .consumers import RandomNumberConsumer
+from .consumers import IncidentStatsConsumer
 
 websocket_urlpatterns = [
-    path('ws/random/', RandomNumberConsumer.as_asgi()),
+    path('ws/incidents/stats/', IncidentStatsConsumer.as_asgi()),
 ]
