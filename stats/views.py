@@ -5,6 +5,6 @@ from users.utils import role_required
 
 
 @login_required
-@role_required([])  # Пока только для админа
+@role_required()
 def incidents_stats(request):
     return render(request, 'stats/incidents_stats.html')

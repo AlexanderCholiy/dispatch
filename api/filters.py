@@ -1,14 +1,18 @@
-import django_filters
 from dateutil.relativedelta import relativedelta
 from django.db.models import QuerySet
 from django.utils import timezone
+from django_filters import (
+    BooleanFilter,
+    DateFromToRangeFilter,
+    FilterSet,
+)
 
 from incidents.models import Incident
 
 
-class IncidentReportFilter(django_filters.FilterSet):
-    incident_date = django_filters.DateFromToRangeFilter()
-    last_month = django_filters.BooleanFilter(
+class IncidentReportFilter(FilterSet):
+    incident_date = DateFromToRangeFilter()
+    last_month = BooleanFilter(
         method='filter_last_month',
         label='Последний месяц',
         help_text=(

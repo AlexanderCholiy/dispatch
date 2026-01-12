@@ -1,24 +1,31 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/stats/charts.css' %}">
+  <link rel="stylesheet" href="{% static 'css/stats/sla_charts.css' %}">
+{% endblock %}
+
 {% block content %}
 <div class="container">
-  <strong id="number">NaN</strong>
+  <div class="stats">
+    <div class="dashboard-top">
+      <div class="chart-card">
+        <canvas id="all-incidents-chart"></canvas>
+      </div>
+      <div class="chart-card">
+        <canvas id="all-incidents-chart-period"></canvas>
+      </div>
+    </div>
+  
+    <div id="avr-sla-grid"></div>
+    <div id="rvr-sla-grid"></div>
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script>
-const protocol = location.protocol === 'https:' ? 'wss://' : 'ws://';
-const socketUrl = protocol + location.host + '/ws/random/';
-const socket = new WebSocket(socketUrl);
-
-socket.onmessage = function(e) {
-    const data = JSON.parse(e.data);
-    document.getElementById('number').textContent = data.number;
-};
-
-socket.onclose = function() { console.log('WebSocket closed'); };
-socket.onerror = function(e) { console.error('WebSocket error', e); };
-</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- <script type="module" src="{% static 'js/stats/init_api_dashboard.js' %}"></script> -->
+<script type="module" src="{% static 'js/stats/init_ws_dashboard.js' %}"></script>
 {% endblock %}
