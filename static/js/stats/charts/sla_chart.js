@@ -2,6 +2,7 @@ function getThemeVars() {
     const s = getComputedStyle(document.documentElement);
 
     return {
+        baseBg: s.getPropertyValue('--background-color').trim(),
         text: s.getPropertyValue('--add-color').trim(),
         bg: s.getPropertyValue('--add-background-color').trim(),
         grid: s.getPropertyValue('--extra-color').trim(),
@@ -33,7 +34,8 @@ export function renderSlaDonut(canvas, title, values) {
             backgroundColor: isEmpty
                 ? [theme.empty]
                 : [theme.red, theme.green, theme.yellow, theme.blue],
-            borderWidth: 0
+            borderColor: theme.baseBg,
+            borderWidth: isEmpty ? 0 : 1
         }]
     };
 
@@ -41,7 +43,7 @@ export function renderSlaDonut(canvas, title, values) {
         type: 'doughnut',
         data,
         options: {
-            cutout: '0%',
+            cutout: '45%',
             plugins: {
                 title: {
                     display: true,
@@ -82,9 +84,13 @@ export function renderSlaDonut(canvas, title, values) {
     const observer = new MutationObserver(() => {
         const t = getThemeVars();
 
-        chart.data.datasets[0].backgroundColor = isEmpty
+        const dataset = chart.data.datasets[0];
+
+        dataset.backgroundColor = isEmpty
             ? [t.empty]
             : [t.red, t.green, t.yellow, t.blue];
+
+        dataset.borderColor = t.baseBg;
 
         chart.options.plugins.legend.labels.color = t.text;
         chart.options.plugins.title.color = t.text;
