@@ -1,10 +1,26 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/stats/charts.css' %}">
+  <link rel="stylesheet" href="{% static 'css/stats/sla_charts.css' %}">
+{% endblock %}
+
 {% block content %}
 <div class="container">
-  <canvas id="all-incidents-chart"></canvas>
-  <canvas id="all-incidents-chart-period"></canvas>
+  <div class="stats">
+    <div class="dashboard-top">
+      <div class="chart-card">
+        <canvas id="all-incidents-chart"></canvas>
+      </div>
+      <div class="chart-card">
+        <canvas id="all-incidents-chart-period"></canvas>
+      </div>
+    </div>
+  
+    <div id="avr-sla-grid"></div>
+    <div id="rvr-sla-grid"></div>
+  </div>
 </div>
 {% endblock %}
 

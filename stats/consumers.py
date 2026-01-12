@@ -1,13 +1,15 @@
 import asyncio
 import json
 
-from channels.generic.websocket import AsyncWebsocketConsumer
-from django.urls import reverse
 from asgiref.sync import sync_to_async
-from rest_framework.test import APIRequestFactory, force_authenticate
-from core.loggers import django_logger
-from django.utils import timezone
+from channels.generic.websocket import AsyncWebsocketConsumer
 from dateutil.relativedelta import relativedelta
+from django.urls import reverse
+from django.utils import timezone
+from rest_framework.test import APIRequestFactory, force_authenticate
+
+from core.loggers import django_logger
+
 from .constants import STATS_INTERVAL_SECONDS
 
 

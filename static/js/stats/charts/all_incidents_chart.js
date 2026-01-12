@@ -13,6 +13,7 @@ function getThemeVars() {
     const styles = getComputedStyle(document.documentElement);
 
     return {
+        titleColor: styles.getPropertyValue('--color').trim(),
         textColor: styles.getPropertyValue('--add-color').trim(),
         gridColor: styles.getPropertyValue('--extra-color').trim(),
         bgColor: styles.getPropertyValue('--background-color').trim(),
@@ -54,9 +55,14 @@ export function renderAllIncidentsChart(
         options: {
             responsive: true,
             plugins: {
+                title: { 
+                    display: false,
+                    text: title, 
+                },
+
                 legend: {
                     labels: {
-                        color: theme.textColor,
+                        color: theme.titleColor,
                         font: {
                             size: theme.fontSm
                         }
@@ -108,7 +114,7 @@ export function renderAllIncidentsChart(
 
     canvas._chartInstance = chart;
 
-    // 🔁 Реакция на смену темы
+    // Реакция на смену темы
     const observer = new MutationObserver(() => {
         const theme = getThemeVars();
 
