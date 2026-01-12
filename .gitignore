@@ -227,3 +227,6 @@ logs/supervisor/*
 logs/cron/*
 !logs/django/
 !logs/celery/
+
+# Django
+collected_static
