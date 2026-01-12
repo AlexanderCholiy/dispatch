@@ -1,0 +1,144 @@
+import { renderAllIncidentsChart } from './charts/all_incidents_chart.js';
+import { renderSlaDonut } from './charts/sla_chart.js';
+
+function formatDateDDMMYYYY(dateStr) {
+    const [year, month] = dateStr.split('-');
+    return `01.${month}.${year}`;
+}
+
+// Функция для глубокого сравнения объектов
+function isEqual(obj1, obj2) {
+    return JSON.stringify(obj1) === JSON.stringify(obj2);
+}
+
+function initWsDashboard() {
+    const protocol = location.protocol === 'https:' ? 'wss://' : 'ws://';
+    const socketUrl = protocol + location.host + '/ws/incidents/stats/';
+    const socket = new WebSocket(socketUrl);
+
+    let lastData = null; // хранение предыдущих данных
+
+    socket.onopen = () => console.log('WebSocket connected');
+    socket.onclose = () => console.log('WebSocket closed');
+    socket.onerror = (e) => console.error('WebSocket error', e);
+
+    socket.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+
+            if (data.error) {
+                console.error('Error from server:', data.error);
+                return;
+            }
+
+            // Сравниваем новые данные с предыдущими
+            if (lastData && isEqual(data, lastData)) {
+                return;
+            }
+
+            lastData = data; // обновляем "последние данные"
+
+            const rootStyles = getComputedStyle(document.documentElement);
+
+            // -----------------------------
+            // Графики "Все инциденты" и "С текущего месяца"
+            // -----------------------------
+            renderAllIncidentsChart(
+                document.getElementById('all-incidents-chart'),
+                data.all_period,
+                {
+                    title: 'Инциденты за всё время',
+                    label: 'Всего инцидентов',
+                    valueKey: 'total_incidents',
+                    color: rootStyles.getPropertyValue('--blue-color').trim() || '#3b82f6'
+                }
+            );
+
+            const periodStart = data.meta.period.from;
+            const formattedDate = formatDateDDMMYYYY(periodStart);
+
+            renderAllIncidentsChart(
+                document.getElementById('all-incidents-chart-period'),
+                data.current_month,
+                {
+                    title: `Инциденты с ${formattedDate}`,
+                    label: `Открытые инциденты с ${formattedDate}`,
+                    valueKey: 'total_open_incidents',
+                    color: rootStyles.getPropertyValue('--red-color').trim() || '#c02f1cff'
+                }
+            );
+
+            // -----------------------------
+            // SLA Сетки
+            // -----------------------------
+            const avrGridContainer = document.getElementById('avr-sla-grid');
+            const rvrGridContainer = document.getElementById('rvr-sla-grid');
+
+            // Очистим старые данные
+            avrGridContainer.innerHTML = '';
+            rvrGridContainer.innerHTML = '';
+
+            // Заголовки
+            const avrTitle = document.createElement('h3');
+            avrTitle.className = 'dashboard-group-title';
+            avrTitle.textContent = `SLA АВР с ${formattedDate}`;
+            avrGridContainer.appendChild(avrTitle);
+
+            const rvrTitle = document.createElement('h3');
+            rvrTitle.className = 'dashboard-group-title';
+            rvrTitle.textContent = `SLA РВР с ${formattedDate}`;
+            rvrGridContainer.appendChild(rvrTitle);
+
+            // Grid контейнеры
+            const avrGrid = document.createElement('div');
+            avrGrid.className = 'sla-grid';
+            avrGridContainer.appendChild(avrGrid);
+
+            const rvrGrid = document.createElement('div');
+            rvrGrid.className = 'sla-grid';
+            rvrGridContainer.appendChild(rvrGrid);
+
+            // Карточки
+            data.current_month.forEach(region => {
+                // АВР
+                const avrCard = document.createElement('div');
+                avrCard.className = 'sla-card';
+                avrCard.innerHTML = `<canvas></canvas>`;
+                avrGrid.appendChild(avrCard);
+
+                renderSlaDonut(
+                    avrCard.querySelector('canvas'),
+                    region.macroregion,
+                    [
+                        region.sla_avr_expired_count,
+                        region.sla_avr_closed_on_time_count,
+                        region.sla_avr_less_than_hour_count,
+                        region.sla_avr_in_progress_count
+                    ]
+                );
+
+                // РВР
+                const rvrCard = document.createElement('div');
+                rvrCard.className = 'sla-card';
+                rvrCard.innerHTML = `<canvas></canvas>`;
+                rvrGrid.appendChild(rvrCard);
+
+                renderSlaDonut(
+                    rvrCard.querySelector('canvas'),
+                    region.macroregion,
+                    [
+                        region.sla_rvr_expired_count,
+                        region.sla_rvr_closed_on_time_count,
+                        region.sla_rvr_less_than_hour_count,
+                        region.sla_rvr_in_progress_count
+                    ]
+                );
+            });
+
+        } catch (e) {
+            console.error('Ошибка обработки WebSocket данных', e);
+        }
+    };
+}
+
+initWsDashboard();

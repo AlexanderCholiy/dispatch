@@ -1,0 +1,111 @@
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: linear-gradient(
+    320deg,
+    var(--add-background-color) 0%,
+    var(--background-color) 100%
+  );
+  box-shadow: 0 var(--space-xs) var(--space-sm) var(--extra-color);
+  position: relative;
+  z-index: 10;
+  transition: background-color var(--transition-value), box-shadow var(--transition-value);
+}
+
+.empty-line {
+  height: var(--space-md);
+  background: linear-gradient(
+    320deg,
+    var(--add-background-color) 0%,
+    var(--background-color) 100%
+  );
+}
+
+.header-left,
+.header-center,
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.header-center {
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
+}
+
+.btn-toggle,
+#theme-toggle,
+#user-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  font-size: var(--font-xl);
+  border-radius: 20%;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-value);
+}
+
+.btn-toggle:hover,
+#theme-toggle:hover {
+  color: var(--priority-color);
+}
+
+.btn-toggle:active,
+#theme-toggle:active,
+#user-toggle:active {
+  transform: scale(0.95);
+}
+
+.user-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--gray-color);
+  color: var(--background-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-lg);
+  font-weight: 500;
+}
+
+.user-menu-wrapper {
+  position: relative;
+}
+
+@media (max-width: 768px) {
+  .site-header {
+    flex-wrap: wrap;
+    height: auto;
+    gap: 0;
+  }
+
+  .header-left,
+  .header-right {
+    flex: 1 1 50%;
+    justify-content: flex-start;
+    align-items: center;
+  }
+
+  .header-right {
+    justify-content: flex-end;
+  }
+
+  .header-center {
+    flex-basis: 100%;
+    order: 2;
+    justify-content: stretch;
+    width: 100%;
+  }
+}

@@ -1,0 +1,46 @@
+.form-controls {
+display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  padding: var(--space-sm) 0;
+}
+
+.form-controls-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+  max-width: 70%;
+}
+
+.form-controls-right {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.form-controls-right input,
+.form-controls-right button {
+  display: flex;
+  align-items: center;
+  font-size: var(--font-xs);
+  line-height: 1;
+}
+
+.form-controls-right .form-actions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.cancel-move-email,
+.submit-move-email,
+#move-emails-btn,
+.sort-emails-btn {
+  padding: 0.16rem;
+  font-size: var(--font-xs);
+}

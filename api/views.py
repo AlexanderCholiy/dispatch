@@ -13,6 +13,7 @@ from django.db.models import (
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, viewsets
 from rest_framework.request import Request
+from rest_framework.throttling import ScopedRateThrottle
 
 from incidents.annotations import annotate_sla_avr, annotate_sla_rvr
 from incidents.constants import NOTIFIED_CONTRACTOR_STATUS_NAME
@@ -142,6 +143,9 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (permissions.AllowAny,)
     pagination_class = None
 
+    throttle_classes = (ScopedRateThrottle,)
+    throttle_scope = 'stats_request'
+
     def get_queryset(self) -> QuerySet:
         params = self.request.query_params
 
@@ -240,6 +244,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                 active_contractor_incidents=Count(
                     'incidents_filtered',
                     filter=Q(
+                        incidents_filtered__code__isnull=False,
                         incidents_filtered__is_incident_finish=False
                     ) & (
                         Q(

@@ -1,0 +1,24 @@
+.default,
+.new {
+  background-color: var(--gray-color);
+}
+
+.in-progress {
+  background-color: var(--blue-color);
+}
+
+.closed {
+  background-color: var(--green-color);
+}
+
+.waiting {
+  background-color: var(--yellow-color);
+}
+
+.canceled {
+  background-color: var(--red-color);
+}
+
+.unknown {
+  background-color: var(--extra-color);
+}

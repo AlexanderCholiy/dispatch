@@ -14,9 +14,16 @@ from .constants import STATS_INTERVAL_SECONDS
 
 
 class IncidentStatsConsumer(AsyncWebsocketConsumer):
+
+    _last_data = None
+
     async def connect(self):
         await self.accept()
         self.running = True
+
+        if self._last_data:
+            await self.send(text_data=json.dumps(self._last_data))
+
         self.task = asyncio.create_task(self.send_statistics_loop())
 
     async def disconnect(self, close_code: int):
@@ -28,7 +35,10 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
         while self.running:
             try:
                 data = await self.get_statistics()
-                await self.send(text_data=json.dumps(data))
+                if data != self._last_data:
+                    await self.send(text_data=json.dumps(data))
+                    self._last_data = data
+
             except Exception as e:
                 django_logger.debug(e, exc_info=True)
                 await self.send(text_data=json.dumps({
@@ -66,7 +76,6 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
 
         request_month = factory.get(url, {
             'start_date': first_day_prev_month.isoformat(),
-            'end_date': now.date().isoformat(),
         })
         force_authenticate(request_month, user=None)
         response_month = view(request_month)

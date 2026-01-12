@@ -1,0 +1,92 @@
+.email-three {
+  margin-top: var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.email-tree {
+  border-radius: var(--radius-md);
+  background-color: var(--add-background-color);
+  transition: background-color var(--transition-value);
+}
+
+.email-tree-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-sm);
+  background-color: var(--add-background-color);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  border-bottom: 1px solid var(--extra-color);
+  transition: background-color var(--transition-value), border-color var(--transition-value);
+}
+
+.email-tree.chosen > .email-tree-header {
+  border-color: var(--add-color);
+  border-bottom: 1px solid var(--green-color);
+}
+
+.email-tree-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.toggle-tree-btn {
+  padding: var(--space-xs);
+  font-size: var(--font-xs);
+  min-width: 140px;
+}
+
+.email-tree-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.email-tree-dates {
+  font-size: var(--font-xs);
+  color: var(--gray-color);
+  white-space: nowrap;
+}
+
+.email-tree-checkbox-label {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--space-sm);
+}
+
+.email-tree-ids strong {
+  color: var(--add-color);
+  transition: color var(--transition-value);
+}
+
+.email-tree.chosen .email-tree-ids strong,
+.email-tree.chosen .email-tree-ids a.email-link {
+  color: var(--color);
+}
+
+.email-tree-ids {
+  font-size: var(--font-xs);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
+  width: 100%;
+}
+
+.email-tree-ids a.email-link::after {
+  content: ",";
+}
+
+.email-tree-ids a.email-link:last-child::after {
+  content: "";
+}
+
+.email-tree-body.hidden {
+  display: none;
+}

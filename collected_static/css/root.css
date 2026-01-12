@@ -1,0 +1,125 @@
+:root {
+    --transition-value: 0.3s ease;
+
+    --sidebar-width: 220px;
+    --sidebar-collapsed-width: 60px;
+
+    --color: rgb(27, 27, 31);                /* основной текст */
+    --add-color: rgb(46, 46, 51);            /* второстепенный текст */
+    --extra-color: rgba(27, 27, 31, 0.2); /* тени, границы */
+
+    --gray-color: #949497;           /* нейтральные элементы */
+    --red-color: #d93f3f;            /* ошибки / отменено */
+    --green-color: #36b37e;          /* закрыто / успешно */
+    --blue-color: #5a7fff;           /* в работе / активный */
+    --yellow-color: #bb9f4e;        /* ожидание / на паузе */
+    --magenta-color: #b23ae8;        /* кастомный статус */
+    --cyan-color: #17a2b8;           /* инфо / уведомления */
+
+    --priority-color: var(--blue-color);
+
+    --background-color: rgb(244, 245, 247);        /* лёгкая нотка */
+    --add-background-color: rgb(225, 228, 235);    /* чуть темнее, мягкая градация */
+
+    --space-xxs: 0.125rem;
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2rem;
+    --space-xxl: 3rem;
+
+    --font-xxs: 0.625rem;
+    --font-xs: 0.75rem;
+    --font-sm: 0.875rem;
+    --font-md: 1rem;
+    --font-lg: 1.25rem;
+    --font-xl: 1.5rem;
+    --font-xxl: 2rem;
+
+    --radius-xxs: 1px;
+    --radius-xs: 2px;
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 20px;
+    --radius-xxl: 32px;
+}
+
+
+html.dark {
+    --color: rgb(245, 245, 247);
+    --add-color: rgb(198, 198, 200);
+    --extra-color: rgba(245, 245, 247, 0.2);
+
+    --gray-color: #a0a0a5;
+    --red-color: #dc5757;
+    --green-color: #36b37e;
+    --blue-color: #5a7fff;
+    --yellow-color: #ffd966;
+    --magenta-color: #b23ae8;
+    --cyan-color: #17a2b8;
+
+    --priority-color: var(--blue-color);
+
+    --background-color: rgb(31, 32, 39);     /* тёмный фон с синеватой ноткой */
+    --add-background-color: rgb(44, 46, 54); /* чуть светлее для карточек */
+
+}
+
+@media (max-width: 1024px) and (min-width: 769px) {
+    :root {
+        --sidebar-width: 180px;
+        --sidebar-collapsed-width: 54px;
+
+        --space-xxs: 0.12rem;
+        --space-xs: 0.22rem;
+        --space-sm: 0.45rem;
+        --space-md: 0.85rem;
+        --space-lg: 1.25rem;
+        --space-xl: 1.6rem;
+        --space-xxl: 2.5rem;
+
+        --font-xxs: 0.6rem;
+        --font-xs: 0.7rem;
+        --font-sm: 0.85rem;
+        --font-md: 0.95rem;
+        --font-lg: 1.15rem;
+        --font-xl: 1.35rem;
+        --font-xxl: 1.9rem;
+
+        --radius-xs: 1.5px;
+        --radius-sm: 3.5px;
+        --radius-md: 7px;
+        --radius-lg: 11px;
+        --radius-xl: 18px;
+    }
+}
+
+@media (max-width: 768px) {
+    :root {
+        --space-xxs: 0.1rem;
+        --space-xs: 0.2rem;
+        --space-sm: 0.35rem;
+        --space-md: 0.75rem;
+        --space-lg: 1rem;
+        --space-xl: 1.25rem;
+        --space-xxl: 2rem;
+
+        --font-xxs: 0.55rem;
+        --font-xs: 0.65rem;
+        --font-sm: 0.8rem;
+        --font-md: 0.9rem;
+        --font-lg: 1.1rem;
+        --font-xl: 1.3rem;
+        --font-xxl: 1.8rem;
+
+        --radius-xxs: 0.5px;
+        --radius-xs: 1px;
+        --radius-sm: 3px;
+        --radius-md: 6px;
+        --radius-lg: 10px;
+        --radius-xl: 16px;
+        --radius-xxl: 24px;
+    }
+}
