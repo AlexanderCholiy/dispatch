@@ -65,10 +65,6 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
         view = StatisticReportViewSet.as_view({'get': 'list'})
         url = reverse('statistics_report-list')
 
-        request_all = factory.get(url)
-        force_authenticate(request_all, user=None)
-        response_all = view(request_all)
-
         now = timezone.localtime()
         first_day_prev_month = (
             now.replace(day=1) - relativedelta(months=1)
@@ -81,8 +77,7 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
         response_month = view(request_month)
 
         return {
-            'all_period': response_all.data,
-            'current_month': response_month.data,
+            'period': response_month.data,
             'meta': {
                 'generated_at': now.isoformat(),
                 'period': {

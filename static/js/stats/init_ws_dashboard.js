@@ -2,7 +2,7 @@ import { renderAllIncidentsChart } from './charts/all_incidents_chart.js';
 import { renderSlaDonut } from './charts/sla_chart.js';
 
 function formatDateDDMMYYYY(dateStr) {
-    const [year, month, day] = dateStr.split('-');
+    const [year, month] = dateStr.split('-');
     return `01.${month}.${year}`;
 }
 
@@ -11,103 +11,145 @@ function initWsDashboard() {
     const socketUrl = protocol + location.host + '/ws/incidents/stats/';
     const socket = new WebSocket(socketUrl);
 
-    // Кеш предыдущих данных
-    let previousData = {
-        all_period: null,
-        current_month: null
+    let previousPayloadKey = null;
+
+    // Экземпляры графиков
+    const charts = {
+        closed: null,
+        open: null,
+        slaAvr: [],
+        slaRvr: []
     };
 
-    socket.onopen = () => console.log('WebSocket connected');
-    socket.onclose = () => console.log('WebSocket closed');
+    socket.onopen = () => console.log('WebSocket dashboard connected');
+    socket.onclose = () => console.log('WebSocket dashboard closed');
     socket.onerror = (e) => console.error('WebSocket error', e);
 
     socket.onmessage = (event) => {
         try {
-            const data = JSON.parse(event.data);
+            const payload = JSON.parse(event.data);
+            if (payload.error) return console.error('WS error:', payload.error);
 
-            if (data.error) {
-                console.error('Error from server:', data.error);
-                return;
-            }
+            const periodStats = Array.isArray(payload.period) ? payload.period : [];
+            const fromDate = payload.meta?.period?.from;
+            const formattedDate = fromDate ? formatDateDDMMYYYY(fromDate) : '';
 
-            // Сравниваем данные, если не изменились — не обновляем графики
-            const allPeriodStr = JSON.stringify(data.all_period);
-            const currentMonthStr = JSON.stringify(data.current_month);
-
-            if (
-                allPeriodStr === previousData.all_period &&
-                currentMonthStr === previousData.current_month
-            ) {
-                return; // Данные не изменились
-            }
-
-            // Сохраняем новые данные
-            previousData.all_period = allPeriodStr;
-            previousData.current_month = currentMonthStr;
+            // ключ для сравнения (только from и данные)
+            const newPayloadKey = JSON.stringify({ from: fromDate, period: periodStats });
+            if (newPayloadKey === previousPayloadKey) return;
+            previousPayloadKey = newPayloadKey;
 
             const rootStyles = getComputedStyle(document.documentElement);
-            const periodStart = data.meta.period.from;
-            const formattedDate = formatDateDDMMYYYY(periodStart);
 
             // -----------------------------
-            // Графики "Все инциденты" и "С текущего месяца"
+            // Заголовок
             // -----------------------------
-            renderAllIncidentsChart(
-                document.getElementById('all-incidents-chart'),
-                data.all_period,
+            const container = document.querySelector('.stats');
+            let h3 = container.querySelector('.dashboard-group-title');
+            if (!h3) {
+                h3 = document.createElement('h3');
+                h3.className = 'dashboard-group-title';
+                container.prepend(h3);
+            }
+            h3.textContent = `Статистика по инцидентам с ${formattedDate}`;
+
+            // -----------------------------
+            // Бар-чарты
+            // -----------------------------
+            const closedCanvas = document.getElementById('all-closed-incidents-chart');
+            const openCanvas = document.getElementById('all-open-incidents-chart');
+
+            const closedDatasets = [
                 {
-                    title: 'Инциденты за всё время',
-                    label: 'Всего инцидентов',
-                    valueKey: 'total_incidents',
-                    color: rootStyles.getPropertyValue('--blue-color').trim() || '#3b82f6'
+                    label: 'Закрытые инциденты',
+                    valueKey: 'total_closed_incidents',
+                    color: rootStyles.getPropertyValue('--green-color').trim()
+                },
+                {
+                    label: 'Без питания',
+                    valueKey: 'closed_incidents_with_power_issue',
+                    color: rootStyles.getPropertyValue('--red-color').trim()
                 }
-            );
+            ];
 
-            renderAllIncidentsChart(
-                document.getElementById('all-incidents-chart-period'),
-                data.current_month,
+            const openDatasets = [
                 {
-                    title: `Инциденты с ${formattedDate}`,
-                    label: `Открытые инциденты с ${formattedDate}`,
+                    label: 'Открытые инциденты',
                     valueKey: 'total_open_incidents',
-                    color: rootStyles.getPropertyValue('--red-color').trim() || '#c02f1cff'
+                    color: rootStyles.getPropertyValue('--blue-color').trim()
+                },
+                {
+                    label: 'Без питания',
+                    valueKey: 'open_incidents_with_power_issue',
+                    color: rootStyles.getPropertyValue('--red-color').trim()
                 }
-            );
+            ];
+
+            // создаём чарты один раз, потом обновляем данные
+            if (!charts.closed) {
+                charts.closed = renderAllIncidentsChart(closedCanvas, periodStats, { datasets: closedDatasets });
+            } else {
+                charts.closed.data.labels = periodStats.map(i => i.macroregion);
+                charts.closed.data.datasets.forEach((ds, idx) => {
+                    ds.data = periodStats.map(i => i[closedDatasets[idx].valueKey] ?? 0);
+                });
+                charts.closed.update();
+            }
+
+            if (!charts.open) {
+                charts.open = renderAllIncidentsChart(openCanvas, periodStats, { datasets: openDatasets });
+            } else {
+                charts.open.data.labels = periodStats.map(i => i.macroregion);
+                charts.open.data.datasets.forEach((ds, idx) => {
+                    ds.data = periodStats.map(i => i[openDatasets[idx].valueKey] ?? 0);
+                });
+                charts.open.update();
+            }
 
             // -----------------------------
-            // SLA Сетки
+            // SLA
             // -----------------------------
-            const avrGridContainer = document.getElementById('avr-sla-grid');
-            const rvrGridContainer = document.getElementById('rvr-sla-grid');
+            const avrContainer = document.getElementById('avr-sla-grid');
+            const rvrContainer = document.getElementById('rvr-sla-grid');
 
-            avrGridContainer.innerHTML = '';
-            rvrGridContainer.innerHTML = '';
+            // полностью очищаем контейнеры
+            avrContainer.innerHTML = '';
+            rvrContainer.innerHTML = '';
 
+            // создаём заголовки
             const avrTitle = document.createElement('h3');
             avrTitle.className = 'dashboard-group-title';
             avrTitle.textContent = `SLA АВР с ${formattedDate}`;
-            avrGridContainer.appendChild(avrTitle);
+            avrContainer.appendChild(avrTitle);
 
             const rvrTitle = document.createElement('h3');
             rvrTitle.className = 'dashboard-group-title';
             rvrTitle.textContent = `SLA РВР с ${formattedDate}`;
-            rvrGridContainer.appendChild(rvrTitle);
+            rvrContainer.appendChild(rvrTitle);
 
+            // создаём сетки
             const avrGrid = document.createElement('div');
             avrGrid.className = 'sla-grid';
-            avrGridContainer.appendChild(avrGrid);
+            avrContainer.appendChild(avrGrid);
 
             const rvrGrid = document.createElement('div');
             rvrGrid.className = 'sla-grid';
-            rvrGridContainer.appendChild(rvrGrid);
+            rvrContainer.appendChild(rvrGrid);
 
-            data.current_month.forEach(region => {
+            // уничтожаем старые чарты
+            charts.slaAvr.forEach(c => c.destroy?.());
+            charts.slaRvr.forEach(c => c.destroy?.());
+            charts.slaAvr = [];
+            charts.slaRvr = [];
+
+            // создаём новые чарты
+            periodStats.forEach(region => {
                 const avrCard = document.createElement('div');
                 avrCard.className = 'sla-card';
                 avrCard.innerHTML = `<canvas></canvas>`;
                 avrGrid.appendChild(avrCard);
 
-                renderSlaDonut(
+                charts.slaAvr.push(renderSlaDonut(
                     avrCard.querySelector('canvas'),
                     region.macroregion,
                     [
@@ -116,14 +158,14 @@ function initWsDashboard() {
                         region.sla_avr_less_than_hour_count,
                         region.sla_avr_in_progress_count
                     ]
-                );
+                ));
 
                 const rvrCard = document.createElement('div');
                 rvrCard.className = 'sla-card';
                 rvrCard.innerHTML = `<canvas></canvas>`;
                 rvrGrid.appendChild(rvrCard);
 
-                renderSlaDonut(
+                charts.slaRvr.push(renderSlaDonut(
                     rvrCard.querySelector('canvas'),
                     region.macroregion,
                     [
@@ -132,7 +174,7 @@ function initWsDashboard() {
                         region.sla_rvr_less_than_hour_count,
                         region.sla_rvr_in_progress_count
                     ]
-                );
+                ));
             });
 
         } catch (e) {

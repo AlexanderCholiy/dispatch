@@ -1,5 +1,4 @@
 import {
-    loadStatisticsAll,
     loadStatisticsFromDate
 } from './data/stats_data_from_api.js';
 
@@ -9,89 +8,113 @@ import { renderSlaDonut } from './charts/sla_chart.js';
 function getFirstDayOfPreviousMonth() {
     const now = new Date();
     const year = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
-    const month = now.getMonth() === 0 ? 12 : now.getMonth(); // январь -> декабрь прошлого года
-    // формируем строку YYYY-MM-DD
-    const monthStr = month.toString().padStart(2, '0');
-    return `${year}-${monthStr}-01`;
+    const month = now.getMonth() === 0 ? 12 : now.getMonth();
+    return `${year}-${month.toString().padStart(2, '0')}-01`;
 }
 
 function formatDateDDMMYYYY(dateStr) {
-    const [year, month, day] = dateStr.split('-');
+    const [year, month] = dateStr.split('-');
     return `01.${month}.${year}`;
 }
 
-async function initDashboard() {
+function clearContainer(id) {
+    document.getElementById(id).innerHTML = '';
+}
+
+export async function initApiDashboard() {
     try {
-        const rootStyles = getComputedStyle(document.documentElement);
-        const allStats = await loadStatisticsAll();
-
-        // -----------------------------
-        // Все инциденты
-        // -----------------------------
-        renderAllIncidentsChart(
-            document.getElementById('all-incidents-chart'),
-            allStats,
-            {
-                title: 'Инциденты за всё время',
-                label: 'Всего инцидентов',
-                valueKey: 'total_incidents',
-                color: rootStyles.getPropertyValue('--blue-color').trim() || '#3b82f6'
-            }
-        );
-
-        // -----------------------------
-        // Открытые инциденты с 1 числа предыдущего месяца
-        // -----------------------------
         const startDate = getFirstDayOfPreviousMonth();
         const formattedDate = formatDateDDMMYYYY(startDate);
+        const stats = await loadStatisticsFromDate(startDate);
 
-        const periodStats = await loadStatisticsFromDate(startDate);
+        const root = getComputedStyle(document.documentElement);
+        const red = root.getPropertyValue('--red-color').trim();
+        const green = root.getPropertyValue('--green-color').trim();
+        const blue = root.getPropertyValue('--blue-color').trim();
 
+        // -----------------------------
+        // Общий заголовок перед графиками
+        // -----------------------------
+        const container = document.querySelector('.stats');
+        let h3 = container.querySelector('.dashboard-group-title');
+        if (!h3) {
+            h3 = document.createElement('h3');
+            h3.className = 'dashboard-group-title';
+            container.prepend(h3);
+        }
+        h3.textContent = `Статистика по инцидентам с ${formattedDate}`;
+
+        // Закрытые
         renderAllIncidentsChart(
-            document.getElementById('all-incidents-chart-period'),
-            periodStats,
+            document.getElementById('all-closed-incidents-chart'),
+            stats,
             {
-                title: `Инциденты с ${formattedDate}`,
-                label: `Открытые инциденты с ${formattedDate}`,
-                valueKey: 'total_open_incidents',
-                color: rootStyles.getPropertyValue('--red-color').trim() || '#c02f1cff'
+                title: `Закрытые инциденты с ${formattedDate}`,
+                datasets: [
+                    {
+                        label: 'Всего закрытых',
+                        valueKey: 'total_closed_incidents',
+                        color: green
+                    },
+                    {
+                        label: 'Без питания',
+                        valueKey: 'closed_incidents_with_power_issue',
+                        color: red
+                    }
+                ]
             }
         );
 
-        // -----------------------------
-        // SLA Сетки
-        // -----------------------------
-        const avrGridContainer = document.getElementById('avr-sla-grid');
-        const rvrGridContainer = document.getElementById('rvr-sla-grid');
+        // Открытые
+        renderAllIncidentsChart(
+            document.getElementById('all-open-incidents-chart'),
+            stats,
+            {
+                title: `Открытые инциденты с ${formattedDate}`,
+                datasets: [
+                    {
+                        label: 'Всего открытых',
+                        valueKey: 'total_open_incidents',
+                        color: blue
+                    },
+                    {
+                        label: 'Без питания',
+                        valueKey: 'open_incidents_with_power_issue',
+                        color: red
+                    }
+                ]
+            }
+        );
 
-        // Заголовки динамически
+        // SLA
+        clearContainer('avr-sla-grid');
+        clearContainer('rvr-sla-grid');
+
+        const avrContainer = document.getElementById('avr-sla-grid');
+        const rvrContainer = document.getElementById('rvr-sla-grid');
+
         const avrTitle = document.createElement('h3');
         avrTitle.className = 'dashboard-group-title';
         avrTitle.textContent = `SLA АВР с ${formattedDate}`;
-        avrGridContainer.appendChild(avrTitle);
+        avrContainer.appendChild(avrTitle);
 
         const rvrTitle = document.createElement('h3');
         rvrTitle.className = 'dashboard-group-title';
         rvrTitle.textContent = `SLA РВР с ${formattedDate}`;
-        rvrGridContainer.appendChild(rvrTitle);
+        rvrContainer.appendChild(rvrTitle);
 
-        // Grid для карточек
         const avrGrid = document.createElement('div');
         avrGrid.className = 'sla-grid';
-        avrGridContainer.appendChild(avrGrid);
+        avrContainer.appendChild(avrGrid);
 
         const rvrGrid = document.createElement('div');
         rvrGrid.className = 'sla-grid';
-        rvrGridContainer.appendChild(rvrGrid);
+        rvrContainer.appendChild(rvrGrid);
 
-        // -----------------------------
-        // Добавление карточек
-        // -----------------------------
-        periodStats.forEach(region => {
-            // АВР
+        stats.forEach(region => {
             const avrCard = document.createElement('div');
             avrCard.className = 'sla-card';
-            avrCard.innerHTML = `<canvas></canvas>`;
+            avrCard.innerHTML = '<canvas></canvas>';
             avrGrid.appendChild(avrCard);
 
             renderSlaDonut(
@@ -105,10 +128,9 @@ async function initDashboard() {
                 ]
             );
 
-            // РВР
             const rvrCard = document.createElement('div');
             rvrCard.className = 'sla-card';
-            rvrCard.innerHTML = `<canvas></canvas>`;
+            rvrCard.innerHTML = '<canvas></canvas>';
             rvrGrid.appendChild(rvrCard);
 
             renderSlaDonut(
@@ -123,9 +145,9 @@ async function initDashboard() {
             );
         });
 
-    } catch (error) {
-        console.error('Dashboard init error:', error);
+    } catch (e) {
+        console.error('Dashboard init error:', e);
     }
 }
 
-initDashboard();
+initApiDashboard();

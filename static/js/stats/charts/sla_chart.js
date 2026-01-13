@@ -16,6 +16,28 @@ function getThemeVars() {
     };
 }
 
+const centerTextPlugin = {
+    id: 'centerText',
+    afterDraw(chart) {
+        const { ctx, chartArea } = chart;
+        if (!chartArea) return;
+
+        const x = (chartArea.left + chartArea.right) / 2;
+        const y = (chartArea.top + chartArea.bottom) / 2;
+
+        const opts = chart.options.plugins.centerText;
+        if (!opts || !opts.text) return;
+
+        ctx.save();
+        ctx.fillStyle = opts.color;
+        ctx.font = opts.font || 'bold 18px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(opts.text, x, y);
+        ctx.restore();
+    }
+};
+
 export function renderSlaDonut(canvas, title, values) {
     if (!canvas || !window.Chart) return;
 
@@ -23,6 +45,10 @@ export function renderSlaDonut(canvas, title, values) {
     const total = values.reduce((a, b) => a + b, 0);
 
     const isEmpty = total === 0;
+
+    // считаем количество ненулевых сегментов
+    const nonZeroCount = values.filter(v => v > 0).length;
+    const borderWidth = isEmpty || nonZeroCount === 1 ? 0 : 1;
 
     const data = {
         labels: isEmpty
@@ -35,13 +61,14 @@ export function renderSlaDonut(canvas, title, values) {
                 ? [theme.empty]
                 : [theme.red, theme.green, theme.yellow, theme.blue],
             borderColor: theme.baseBg,
-            borderWidth: isEmpty ? 0 : 1
+            borderWidth: borderWidth
         }]
     };
 
     const chart = new Chart(canvas, {
         type: 'doughnut',
         data,
+        plugins: [centerTextPlugin],
         options: {
             cutout: '45%',
             plugins: {
@@ -76,9 +103,14 @@ export function renderSlaDonut(canvas, title, values) {
                                 : `${ctx.label}: ${ctx.parsed}`;
                         }
                     }
+                },
+                centerText: {
+                    text: isEmpty ? '0' : total,
+                    color: isEmpty ? theme.empty : theme.text,
+                    font: 'bold 16px sans-serif'
                 }
             }
-        }
+        },
     });
 
     const observer = new MutationObserver(() => {
@@ -97,6 +129,12 @@ export function renderSlaDonut(canvas, title, values) {
         chart.options.plugins.tooltip.backgroundColor = t.bg;
         chart.options.plugins.tooltip.titleColor = t.text;
         chart.options.plugins.tooltip.bodyColor = t.text;
+
+        if (chart.options.plugins.centerText) {
+            chart.options.plugins.centerText.color = isEmpty
+                ? t.empty
+                : t.text;
+        }
 
         chart.update();
     });

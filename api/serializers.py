@@ -149,6 +149,11 @@ class StatisticReportSerializer(serializers.ModelSerializer):
     sla_avr_in_progress_count = serializers.IntegerField(read_only=True)
     sla_rvr_in_progress_count = serializers.IntegerField(read_only=True)
 
+    open_incidents_with_power_issue = serializers.IntegerField(read_only=True)
+    closed_incidents_with_power_issue = serializers.IntegerField(
+        read_only=True
+    )
+
     total_incidents = serializers.SerializerMethodField()
 
     class Meta:
@@ -159,6 +164,8 @@ class StatisticReportSerializer(serializers.ModelSerializer):
             'total_closed_incidents',
             'total_open_incidents',
             'active_contractor_incidents',
+            'open_incidents_with_power_issue',
+            'closed_incidents_with_power_issue',
             'sla_avr_expired_count',
             'sla_avr_closed_on_time_count',
             'sla_avr_less_than_hour_count',

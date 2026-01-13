@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.core.cache import cache
 from django.db.models import (
     BooleanField,
     Case,
@@ -7,16 +8,22 @@ from django.db.models import (
     DurationField,
     ExpressionWrapper,
     F,
+    Q,
     QuerySet,
     Value,
     When,
 )
 from django.utils import timezone
 
-from .constants import RVR_SLA_DEADLINE_IN_HOURS
+from monitoring.constants import NORMAL_POLES_CACHE_TIMEOUT
+from monitoring.models import DeviceStatus, MSysPoles
+from ts.constants import UNDEFINED_CASE
+
+from .constants import POWER_ISSUE_TYPES, RVR_SLA_DEADLINE_IN_HOURS
+from .models import Incident
 
 
-def annotate_sla_avr(qs: QuerySet) -> QuerySet:
+def annotate_sla_avr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
     """Аннотация SLA для АВР."""
     now = timezone.now()
     return qs.annotate(
@@ -98,7 +105,7 @@ def annotate_sla_avr(qs: QuerySet) -> QuerySet:
     )
 
 
-def annotate_sla_rvr(qs: QuerySet) -> QuerySet:
+def annotate_sla_rvr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
     """Аннотация SLA для РВР."""
     now = timezone.now()
     return qs.annotate(
@@ -168,4 +175,56 @@ def annotate_sla_rvr(qs: QuerySet) -> QuerySet:
             default=Value(False),
             output_field=BooleanField()
         ),
+    )
+
+
+def annotate_is_power_issue(
+    qs: QuerySet[Incident], monitoring_check: bool = True
+) -> QuerySet[Incident]:
+    """
+    Аннотация для инцидента, у которого проблема с питанием на опоре, с
+    дополнительной проверкой в мониторинге.
+    """
+    qs = qs.annotate(
+        is_power_issue_candidate=Case(
+            When(
+                Q(incident_type__name__in=POWER_ISSUE_TYPES)
+                & Q(pole__isnull=False)
+                & ~Q(pole__pole=UNDEFINED_CASE),
+                then=Value(True),
+            ),
+            default=Value(False),
+            output_field=BooleanField(),
+        )
+    )
+
+    if not monitoring_check:
+        return qs.annotate(
+            is_power_issue=F('is_power_issue_candidate')
+        )
+
+    normal_poles = cache.get('normal_poles')
+    if normal_poles is None:
+        normal_poles = frozenset(
+            MSysPoles.objects.filter(
+                status_id=DeviceStatus.POLE_NORMAL_0
+            ).values_list('pole', flat=True)
+        )
+
+        cache.set(
+            'normal_poles', normal_poles, timeout=NORMAL_POLES_CACHE_TIMEOUT
+        )
+
+    candidate_ids = list(
+        qs.filter(is_power_issue_candidate=True)
+        .exclude(pole__pole__in=normal_poles)
+        .values_list('id', flat=True)
+    )
+
+    return qs.annotate(
+        is_power_issue=Case(
+            When(id__in=candidate_ids, then=Value(True)),
+            default=Value(False),
+            output_field=BooleanField(),
+        )
     )
