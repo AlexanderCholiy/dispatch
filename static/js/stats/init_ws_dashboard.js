@@ -2,109 +2,120 @@ import { renderAllIncidentsChart } from './charts/all_incidents_chart.js';
 import { renderSlaDonut } from './charts/sla_chart.js';
 
 function formatDateDDMMYYYY(dateStr) {
-    const [year, month, day] = dateStr.split('-');
+    const [year, month] = dateStr.split('-');
     return `01.${month}.${year}`;
 }
 
-function initWsDashboard() {
+function clearContainer(id) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '';
+}
+
+export function initWsDashboard() {
     const protocol = location.protocol === 'https:' ? 'wss://' : 'ws://';
-    const socketUrl = protocol + location.host + '/ws/incidents/stats/';
+    const socketUrl = `${protocol}${location.host}/ws/incidents/stats/`;
     const socket = new WebSocket(socketUrl);
 
-    // Кеш предыдущих данных
-    let previousData = {
-        all_period: null,
-        current_month: null
+    // кеш для защиты от лишних обновлений
+    let previousPayloadHash = null;
+
+    socket.onopen = () => {
+        console.log('WebSocket dashboard connected');
     };
 
-    socket.onopen = () => console.log('WebSocket connected');
-    socket.onclose = () => console.log('WebSocket closed');
-    socket.onerror = (e) => console.error('WebSocket error', e);
+    socket.onclose = () => {
+        console.log('WebSocket dashboard closed');
+    };
+
+    socket.onerror = (e) => {
+        console.error('WebSocket error', e);
+    };
 
     socket.onmessage = (event) => {
         try {
-            const data = JSON.parse(event.data);
+            const payload = JSON.parse(event.data);
 
-            if (data.error) {
-                console.error('Error from server:', data.error);
+            if (payload.error) {
+                console.error('WS error:', payload.error);
                 return;
             }
 
-            // Сравниваем данные, если не изменились — не обновляем графики
-            const allPeriodStr = JSON.stringify(data.all_period);
-            const currentMonthStr = JSON.stringify(data.current_month);
-
-            if (
-                allPeriodStr === previousData.all_period &&
-                currentMonthStr === previousData.current_month
-            ) {
-                return; // Данные не изменились
-            }
-
-            // Сохраняем новые данные
-            previousData.all_period = allPeriodStr;
-            previousData.current_month = currentMonthStr;
+            // 🔹 hash всего payload (дешево и надёжно)
+            const currentHash = JSON.stringify(payload);
+            if (currentHash === previousPayloadHash) return;
+            previousPayloadHash = currentHash;
 
             const rootStyles = getComputedStyle(document.documentElement);
-            const periodStart = data.meta.period.from;
-            const formattedDate = formatDateDDMMYYYY(periodStart);
+
+            const periodStart = payload.meta?.period?.from;
+            const formattedDate = periodStart
+                ? formatDateDDMMYYYY(periodStart)
+                : '';
 
             // -----------------------------
-            // Графики "Все инциденты" и "С текущего месяца"
+            // Все инциденты
             // -----------------------------
             renderAllIncidentsChart(
                 document.getElementById('all-incidents-chart'),
-                data.all_period,
+                payload.all_period,
                 {
                     title: 'Инциденты за всё время',
                     label: 'Всего инцидентов',
                     valueKey: 'total_incidents',
-                    color: rootStyles.getPropertyValue('--blue-color').trim() || '#3b82f6'
+                    color:
+                        rootStyles.getPropertyValue('--blue-color').trim() ||
+                        '#3b82f6'
                 }
             );
 
+            // -----------------------------
+            // Инциденты за период
+            // -----------------------------
             renderAllIncidentsChart(
                 document.getElementById('all-incidents-chart-period'),
-                data.current_month,
+                payload.current_month,
                 {
                     title: `Инциденты с ${formattedDate}`,
                     label: `Открытые инциденты с ${formattedDate}`,
                     valueKey: 'total_open_incidents',
-                    color: rootStyles.getPropertyValue('--red-color').trim() || '#c02f1cff'
+                    color:
+                        rootStyles.getPropertyValue('--red-color').trim() ||
+                        '#ef4444'
                 }
             );
 
             // -----------------------------
-            // SLA Сетки
+            // SLA
             // -----------------------------
-            const avrGridContainer = document.getElementById('avr-sla-grid');
-            const rvrGridContainer = document.getElementById('rvr-sla-grid');
+            clearContainer('avr-sla-grid');
+            clearContainer('rvr-sla-grid');
 
-            avrGridContainer.innerHTML = '';
-            rvrGridContainer.innerHTML = '';
+            const avrContainer = document.getElementById('avr-sla-grid');
+            const rvrContainer = document.getElementById('rvr-sla-grid');
 
             const avrTitle = document.createElement('h3');
             avrTitle.className = 'dashboard-group-title';
             avrTitle.textContent = `SLA АВР с ${formattedDate}`;
-            avrGridContainer.appendChild(avrTitle);
+            avrContainer.appendChild(avrTitle);
 
             const rvrTitle = document.createElement('h3');
             rvrTitle.className = 'dashboard-group-title';
             rvrTitle.textContent = `SLA РВР с ${formattedDate}`;
-            rvrGridContainer.appendChild(rvrTitle);
+            rvrContainer.appendChild(rvrTitle);
 
             const avrGrid = document.createElement('div');
             avrGrid.className = 'sla-grid';
-            avrGridContainer.appendChild(avrGrid);
+            avrContainer.appendChild(avrGrid);
 
             const rvrGrid = document.createElement('div');
             rvrGrid.className = 'sla-grid';
-            rvrGridContainer.appendChild(rvrGrid);
+            rvrContainer.appendChild(rvrGrid);
 
-            data.current_month.forEach(region => {
+            payload.current_month.forEach(region => {
+                // АВР
                 const avrCard = document.createElement('div');
                 avrCard.className = 'sla-card';
-                avrCard.innerHTML = `<canvas></canvas>`;
+                avrCard.innerHTML = '<canvas></canvas>';
                 avrGrid.appendChild(avrCard);
 
                 renderSlaDonut(
@@ -118,9 +129,10 @@ function initWsDashboard() {
                     ]
                 );
 
+                // РВР
                 const rvrCard = document.createElement('div');
                 rvrCard.className = 'sla-card';
-                rvrCard.innerHTML = `<canvas></canvas>`;
+                rvrCard.innerHTML = '<canvas></canvas>';
                 rvrGrid.appendChild(rvrCard);
 
                 renderSlaDonut(
@@ -141,4 +153,5 @@ function initWsDashboard() {
     };
 }
 
+// автостарт
 initWsDashboard();
