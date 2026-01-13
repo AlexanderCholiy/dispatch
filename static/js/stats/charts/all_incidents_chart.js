@@ -1,11 +1,13 @@
 function remToPx(value) {
     if (!value) return 14;
+
     if (value.endsWith('rem')) {
         const base = parseFloat(
             getComputedStyle(document.documentElement).fontSize
         );
         return parseFloat(value) * base;
     }
+
     return parseFloat(value);
 }
 
@@ -23,10 +25,18 @@ function getThemeVars() {
     };
 }
 
+function getCssVar(name, fallback) {
+    return (
+        getComputedStyle(document.documentElement)
+            .getPropertyValue(name)
+            .trim() || fallback
+    );
+}
+
 export function renderAllIncidentsChart(
     canvas,
     stats,
-    { title, label, valueKey, color }
+    { title, datasets }
 ) {
     if (!canvas || !window.Chart) return;
 
@@ -35,37 +45,33 @@ export function renderAllIncidentsChart(
     }
 
     const labels = stats.map(i => i.macroregion);
-    const values = stats.map(i => i[valueKey] ?? 0);
-
     const theme = getThemeVars();
+
+    const chartDatasets = datasets.map(ds => ({
+        label: ds.label,
+        data: stats.map(i => i[ds.valueKey] ?? 0),
+        backgroundColor: getCssVar(ds.colorVar, ds.color),
+        borderRadius: theme.radius,
+    }));
 
     const chart = new Chart(canvas, {
         type: 'bar',
         data: {
             labels,
-            datasets: [
-                {
-                    label,
-                    data: values,
-                    backgroundColor: color,
-                    borderRadius: theme.radius,
-                }
-            ]
+            datasets: chartDatasets
         },
         options: {
             responsive: true,
             plugins: {
-                title: { 
+                title: {
                     display: false,
-                    text: title, 
+                    text: title
                 },
 
                 legend: {
                     labels: {
                         color: theme.titleColor,
-                        font: {
-                            size: theme.fontSm
-                        }
+                        font: { size: theme.fontSm }
                     }
                 },
 
@@ -114,7 +120,7 @@ export function renderAllIncidentsChart(
 
     canvas._chartInstance = chart;
 
-    // Реакция на смену темы
+    // реакция на смену темы
     const observer = new MutationObserver(() => {
         const theme = getThemeVars();
 
@@ -126,6 +132,15 @@ export function renderAllIncidentsChart(
         chart.options.scales.y.ticks.color = theme.textColor;
         chart.options.scales.x.grid.color = theme.gridColor;
         chart.options.scales.y.grid.color = theme.gridColor;
+
+        // обновляем цвета датасетов из CSS-переменных
+        chart.data.datasets.forEach((ds, idx) => {
+            const source = datasets[idx];
+            ds.backgroundColor = getCssVar(
+                source.colorVar,
+                source.color
+            );
+        });
 
         chart.update();
     });

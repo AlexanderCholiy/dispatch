@@ -6,93 +6,117 @@ function formatDateDDMMYYYY(dateStr) {
     return `01.${month}.${year}`;
 }
 
-function clearContainer(id) {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = '';
-}
-
-export function initWsDashboard() {
+function initWsDashboard() {
     const protocol = location.protocol === 'https:' ? 'wss://' : 'ws://';
-    const socketUrl = `${protocol}${location.host}/ws/incidents/stats/`;
+    const socketUrl = protocol + location.host + '/ws/incidents/stats/';
     const socket = new WebSocket(socketUrl);
 
-    // кеш для защиты от лишних обновлений
-    let previousPayloadHash = null;
+    let previousPayloadKey = null;
 
-    socket.onopen = () => {
-        console.log('WebSocket dashboard connected');
+    // Экземпляры графиков
+    const charts = {
+        closed: null,
+        open: null,
+        slaAvr: [],
+        slaRvr: []
     };
 
-    socket.onclose = () => {
-        console.log('WebSocket dashboard closed');
-    };
-
-    socket.onerror = (e) => {
-        console.error('WebSocket error', e);
-    };
+    socket.onopen = () => console.log('WebSocket dashboard connected');
+    socket.onclose = () => console.log('WebSocket dashboard closed');
+    socket.onerror = (e) => console.error('WebSocket error', e);
 
     socket.onmessage = (event) => {
         try {
             const payload = JSON.parse(event.data);
+            if (payload.error) return console.error('WS error:', payload.error);
 
-            if (payload.error) {
-                console.error('WS error:', payload.error);
-                return;
-            }
+            const periodStats = Array.isArray(payload.period) ? payload.period : [];
+            const fromDate = payload.meta?.period?.from;
+            const formattedDate = fromDate ? formatDateDDMMYYYY(fromDate) : '';
 
-            // 🔹 hash всего payload (дешево и надёжно)
-            const currentHash = JSON.stringify(payload);
-            if (currentHash === previousPayloadHash) return;
-            previousPayloadHash = currentHash;
+            // ключ для сравнения (только from и данные)
+            const newPayloadKey = JSON.stringify({ from: fromDate, period: periodStats });
+            if (newPayloadKey === previousPayloadKey) return;
+            previousPayloadKey = newPayloadKey;
 
             const rootStyles = getComputedStyle(document.documentElement);
 
-            const periodStart = payload.meta?.period?.from;
-            const formattedDate = periodStart
-                ? formatDateDDMMYYYY(periodStart)
-                : '';
+            // -----------------------------
+            // Заголовок
+            // -----------------------------
+            const container = document.querySelector('.stats');
+            let h3 = container.querySelector('.dashboard-group-title');
+            if (!h3) {
+                h3 = document.createElement('h3');
+                h3.className = 'dashboard-group-title';
+                container.prepend(h3);
+            }
+            h3.textContent = `Статистика по инцидентам с ${formattedDate}`;
 
             // -----------------------------
-            // Все инциденты
+            // Бар-чарты
             // -----------------------------
-            renderAllIncidentsChart(
-                document.getElementById('all-incidents-chart'),
-                payload.all_period,
+            const closedCanvas = document.getElementById('all-closed-incidents-chart');
+            const openCanvas = document.getElementById('all-open-incidents-chart');
+
+            const closedDatasets = [
                 {
-                    title: 'Инциденты за всё время',
-                    label: 'Всего инцидентов',
-                    valueKey: 'total_incidents',
-                    color:
-                        rootStyles.getPropertyValue('--blue-color').trim() ||
-                        '#3b82f6'
+                    label: 'Закрытые инциденты',
+                    valueKey: 'total_closed_incidents',
+                    color: rootStyles.getPropertyValue('--green-color').trim()
+                },
+                {
+                    label: 'Без питания',
+                    valueKey: 'closed_incidents_with_power_issue',
+                    color: rootStyles.getPropertyValue('--red-color').trim()
                 }
-            );
+            ];
 
-            // -----------------------------
-            // Инциденты за период
-            // -----------------------------
-            renderAllIncidentsChart(
-                document.getElementById('all-incidents-chart-period'),
-                payload.current_month,
+            const openDatasets = [
                 {
-                    title: `Инциденты с ${formattedDate}`,
-                    label: `Открытые инциденты с ${formattedDate}`,
+                    label: 'Открытые инциденты',
                     valueKey: 'total_open_incidents',
-                    color:
-                        rootStyles.getPropertyValue('--red-color').trim() ||
-                        '#ef4444'
+                    color: rootStyles.getPropertyValue('--blue-color').trim()
+                },
+                {
+                    label: 'Без питания',
+                    valueKey: 'open_incidents_with_power_issue',
+                    color: rootStyles.getPropertyValue('--red-color').trim()
                 }
-            );
+            ];
+
+            // создаём чарты один раз, потом обновляем данные
+            if (!charts.closed) {
+                charts.closed = renderAllIncidentsChart(closedCanvas, periodStats, { datasets: closedDatasets });
+            } else {
+                charts.closed.data.labels = periodStats.map(i => i.macroregion);
+                charts.closed.data.datasets.forEach((ds, idx) => {
+                    ds.data = periodStats.map(i => i[closedDatasets[idx].valueKey] ?? 0);
+                });
+                charts.closed.update();
+            }
+
+            if (!charts.open) {
+                charts.open = renderAllIncidentsChart(openCanvas, periodStats, { datasets: openDatasets });
+            } else {
+                charts.open.data.labels = periodStats.map(i => i.macroregion);
+                charts.open.data.datasets.forEach((ds, idx) => {
+                    ds.data = periodStats.map(i => i[openDatasets[idx].valueKey] ?? 0);
+                });
+                charts.open.update();
+            }
 
             // -----------------------------
             // SLA
             // -----------------------------
-            clearContainer('avr-sla-grid');
-            clearContainer('rvr-sla-grid');
-
             const avrContainer = document.getElementById('avr-sla-grid');
             const rvrContainer = document.getElementById('rvr-sla-grid');
 
+            // полностью очищаем контейнеры
+            avrContainer.innerHTML = '';
+            rvrContainer.innerHTML = '';
+
+            // создаём заголовки
             const avrTitle = document.createElement('h3');
             avrTitle.className = 'dashboard-group-title';
             avrTitle.textContent = `SLA АВР с ${formattedDate}`;
@@ -103,6 +127,7 @@ export function initWsDashboard() {
             rvrTitle.textContent = `SLA РВР с ${formattedDate}`;
             rvrContainer.appendChild(rvrTitle);
 
+            // создаём сетки
             const avrGrid = document.createElement('div');
             avrGrid.className = 'sla-grid';
             avrContainer.appendChild(avrGrid);
@@ -111,14 +136,20 @@ export function initWsDashboard() {
             rvrGrid.className = 'sla-grid';
             rvrContainer.appendChild(rvrGrid);
 
-            payload.current_month.forEach(region => {
-                // АВР
+            // уничтожаем старые чарты
+            charts.slaAvr.forEach(c => c.destroy?.());
+            charts.slaRvr.forEach(c => c.destroy?.());
+            charts.slaAvr = [];
+            charts.slaRvr = [];
+
+            // создаём новые чарты
+            periodStats.forEach(region => {
                 const avrCard = document.createElement('div');
                 avrCard.className = 'sla-card';
-                avrCard.innerHTML = '<canvas></canvas>';
+                avrCard.innerHTML = `<canvas></canvas>`;
                 avrGrid.appendChild(avrCard);
 
-                renderSlaDonut(
+                charts.slaAvr.push(renderSlaDonut(
                     avrCard.querySelector('canvas'),
                     region.macroregion,
                     [
@@ -127,15 +158,14 @@ export function initWsDashboard() {
                         region.sla_avr_less_than_hour_count,
                         region.sla_avr_in_progress_count
                     ]
-                );
+                ));
 
-                // РВР
                 const rvrCard = document.createElement('div');
                 rvrCard.className = 'sla-card';
-                rvrCard.innerHTML = '<canvas></canvas>';
+                rvrCard.innerHTML = `<canvas></canvas>`;
                 rvrGrid.appendChild(rvrCard);
 
-                renderSlaDonut(
+                charts.slaRvr.push(renderSlaDonut(
                     rvrCard.querySelector('canvas'),
                     region.macroregion,
                     [
@@ -144,7 +174,7 @@ export function initWsDashboard() {
                         region.sla_rvr_less_than_hour_count,
                         region.sla_rvr_in_progress_count
                     ]
-                );
+                ));
             });
 
         } catch (e) {
@@ -153,5 +183,4 @@ export function initWsDashboard() {
     };
 }
 
-// автостарт
 initWsDashboard();

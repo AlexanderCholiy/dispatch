@@ -1,10 +1,10 @@
 import { renderAllIncidentsChart } from './charts/all_incidents_chart.js';
 import { renderSlaDonut } from './charts/sla_chart.js';
 
-function getThemeColor(varName, fallback) {
+function getCssVar(name, fallback = '#999') {
     return (
         getComputedStyle(document.documentElement)
-            .getPropertyValue(varName)
+            .getPropertyValue(name)
             .trim() || fallback
     );
 }
@@ -37,28 +37,58 @@ function renderEmptySlaBlock(containerId, titleText) {
 }
 
 export function initFirstDashboard() {
+    const mutedColor = getCssVar('--extra-color');
+
     // -----------------------------
-    // Основные графики (skeleton)
+    // Общий заголовок перед графиками
+    // -----------------------------
+    const container = document.querySelector('.stats');
+    const h3 = document.createElement('h3');
+    h3.className = 'dashboard-group-title';
+    h3.textContent = 'Статистика по инцидентам';
+    container.prepend(h3);
+
+    // -----------------------------
+    // Закрытые инциденты
     // -----------------------------
     renderAllIncidentsChart(
-        document.getElementById('all-incidents-chart'),
-        [],
+        document.getElementById('all-closed-incidents-chart'),
+        [], // пустые данные
         {
-            title: 'Инциденты за всё время',
-            label: 'Всего инцидентов',
-            valueKey: 'total_incidents',
-            color: getThemeColor('--blue-color', '#3b82f6')
+            datasets: [
+                {
+                    label: 'Всего закрытых',
+                    valueKey: 'total_closed_incidents',
+                    color: mutedColor
+                },
+                {
+                    label: 'Без питания',
+                    valueKey: 'closed_incidents_with_power_issue',
+                    color: mutedColor
+                }
+            ]
         }
     );
 
+    // -----------------------------
+    // Открытые инциденты
+    // -----------------------------
     renderAllIncidentsChart(
-        document.getElementById('all-incidents-chart-period'),
-        [],
+        document.getElementById('all-open-incidents-chart'),
+        [], // пустые данные
         {
-            title: 'Инциденты за период',
-            label: 'Открытые инциденты',
-            valueKey: 'total_open_incidents',
-            color: getThemeColor('--red-color', '#ef4444')
+            datasets: [
+                {
+                    label: 'Всего открытых',
+                    valueKey: 'total_open_incidents',
+                    color: mutedColor
+                },
+                {
+                    label: 'Без питания',
+                    valueKey: 'open_incidents_with_power_issue',
+                    color: mutedColor
+                }
+            ]
         }
     );
 

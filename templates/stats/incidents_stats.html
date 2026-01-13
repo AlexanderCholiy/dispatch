@@ -11,10 +11,10 @@
   <div class="stats">
     <div class="dashboard-top">
       <div class="chart-card">
-        <canvas id="all-incidents-chart"></canvas>
+        <canvas id="all-closed-incidents-chart"></canvas>
       </div>
       <div class="chart-card">
-        <canvas id="all-incidents-chart-period"></canvas>
+        <canvas id="all-open-incidents-chart"></canvas>
       </div>
     </div>
   
@@ -27,6 +27,6 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script type="module" src="{% static 'js/stats/init_first_dashboard.js' %}"></script>
-<script type="module" src="{% static 'js/stats/init_api_dashboard.js' %}"></script>
-<!-- <script type="module" src="{% static 'js/stats/init_ws_dashboard.js' %}"></script> -->
+<!-- <script type="module" src="{% static 'js/stats/init_api_dashboard.js' %}"></script> -->
+<script type="module" src="{% static 'js/stats/init_ws_dashboard.js' %}"></script>
 {% endblock %}

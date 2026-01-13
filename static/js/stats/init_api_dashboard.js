@@ -1,5 +1,4 @@
 import {
-    loadStatisticsAll,
     loadStatisticsFromDate
 } from './data/stats_data_from_api.js';
 
@@ -24,46 +23,70 @@ function clearContainer(id) {
 
 export async function initApiDashboard() {
     try {
-        const rootStyles = getComputedStyle(document.documentElement);
-
-        // -----------------------------
-        // Все инциденты
-        // -----------------------------
-        const allStats = await loadStatisticsAll();
-
-        renderAllIncidentsChart(
-            document.getElementById('all-incidents-chart'),
-            allStats,
-            {
-                title: 'Инциденты за всё время',
-                label: 'Всего инцидентов',
-                valueKey: 'total_incidents',
-                color: rootStyles.getPropertyValue('--blue-color').trim()
-            }
-        );
-
-        // -----------------------------
-        // Инциденты за период
-        // -----------------------------
         const startDate = getFirstDayOfPreviousMonth();
         const formattedDate = formatDateDDMMYYYY(startDate);
+        const stats = await loadStatisticsFromDate(startDate);
 
-        const periodStats = await loadStatisticsFromDate(startDate);
+        const root = getComputedStyle(document.documentElement);
+        const red = root.getPropertyValue('--red-color').trim();
+        const green = root.getPropertyValue('--green-color').trim();
+        const blue = root.getPropertyValue('--blue-color').trim();
 
+        // -----------------------------
+        // Общий заголовок перед графиками
+        // -----------------------------
+        const container = document.querySelector('.stats');
+        let h3 = container.querySelector('.dashboard-group-title');
+        if (!h3) {
+            h3 = document.createElement('h3');
+            h3.className = 'dashboard-group-title';
+            container.prepend(h3);
+        }
+        h3.textContent = `Статистика по инцидентам с ${formattedDate}`;
+
+        // Закрытые
         renderAllIncidentsChart(
-            document.getElementById('all-incidents-chart-period'),
-            periodStats,
+            document.getElementById('all-closed-incidents-chart'),
+            stats,
             {
-                title: `Инциденты с ${formattedDate}`,
-                label: 'Открытые инциденты',
-                valueKey: 'total_open_incidents',
-                color: rootStyles.getPropertyValue('--red-color').trim()
+                title: `Закрытые инциденты с ${formattedDate}`,
+                datasets: [
+                    {
+                        label: 'Всего закрытых',
+                        valueKey: 'total_closed_incidents',
+                        color: green
+                    },
+                    {
+                        label: 'Без питания',
+                        valueKey: 'closed_incidents_with_power_issue',
+                        color: red
+                    }
+                ]
             }
         );
 
-        // -----------------------------
+        // Открытые
+        renderAllIncidentsChart(
+            document.getElementById('all-open-incidents-chart'),
+            stats,
+            {
+                title: `Открытые инциденты с ${formattedDate}`,
+                datasets: [
+                    {
+                        label: 'Всего открытых',
+                        valueKey: 'total_open_incidents',
+                        color: blue
+                    },
+                    {
+                        label: 'Без питания',
+                        valueKey: 'open_incidents_with_power_issue',
+                        color: red
+                    }
+                ]
+            }
+        );
+
         // SLA
-        // -----------------------------
         clearContainer('avr-sla-grid');
         clearContainer('rvr-sla-grid');
 
@@ -88,7 +111,7 @@ export async function initApiDashboard() {
         rvrGrid.className = 'sla-grid';
         rvrContainer.appendChild(rvrGrid);
 
-        periodStats.forEach(region => {
+        stats.forEach(region => {
             const avrCard = document.createElement('div');
             avrCard.className = 'sla-card';
             avrCard.innerHTML = '<canvas></canvas>';
@@ -127,5 +150,4 @@ export async function initApiDashboard() {
     }
 }
 
-// автоинициализация
 initApiDashboard();
