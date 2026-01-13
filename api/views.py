@@ -1,11 +1,10 @@
-from datetime import date, timedelta
+from datetime import date
 from typing import Optional
 
 from django.core.cache import cache
 from django.db.models import (
     Count,
     F,
-    FilteredRelation,
     Prefetch,
     Q,
     QuerySet,
@@ -15,12 +14,16 @@ from rest_framework import filters, permissions, viewsets
 from rest_framework.request import Request
 from rest_framework.throttling import ScopedRateThrottle
 
-from incidents.annotations import annotate_sla_avr, annotate_sla_rvr
+from incidents.annotations import (
+    annotate_is_power_issue,
+    annotate_sla_avr,
+    annotate_sla_rvr,
+)
 from incidents.constants import NOTIFIED_CONTRACTOR_STATUS_NAME
 from incidents.models import Incident, IncidentStatusHistory
 from ts.models import MacroRegion, PoleContractorEmail
 
-from .constants import STATISTIC_CACHE_TIMEOUT
+from .constants import CLOSED_INCIDENT_CHECK_TIMER, STATISTIC_CACHE_TIMEOUT
 from .filters import IncidentReportFilter
 from .pagination import IncidentReportPagination
 from .serializers import IncidentReportSerializer, StatisticReportSerializer
@@ -93,6 +96,10 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
     - total_open_incidents: количество открытых инцидентов
     - active_contractor_incidents: количество активных инцидентов, где
     уведомлены подрядчики или начат АВР/РВР
+    - open_incidents_with_power_issue: количество открытых инцидентов, у
+    которых выявлена проблема с питанием на опоре с проверкой по мониторингу
+    - closed_incidents_with_power_issue: количество закрытых инцидентов, у
+    которых выявлена проблема с питанием на опоре с проверкой по мониторингу
 
     SLA АВР:
     - sla_avr_expired: количество инцидентов, где SLA АВР просрочена
@@ -168,12 +175,50 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
             .filter(incident_date_filter)
         )
 
-        incidents = annotate_sla_avr(incidents)
-        incidents = annotate_sla_rvr(incidents)
+        base_incidents = annotate_sla_avr(incidents)
+        base_incidents = annotate_sla_rvr(base_incidents)
 
-        macroregion_sla_counts = (
-            incidents.values('pole__region__macroregion')
+        incident_stats = (
+            base_incidents
+            .values('pole__region__macroregion')
             .annotate(
+                total_closed_incidents=Count(
+                    'id',
+                    filter=Q(
+                        is_incident_finish=True,
+                        code__isnull=False,
+                        incident_finish_date__isnull=False,
+                        incident_finish_date__gt=(
+                            F('incident_date') + CLOSED_INCIDENT_CHECK_TIMER
+                        ),
+                    )
+                ),
+                total_open_incidents=Count(
+                    'id',
+                    filter=Q(
+                        is_incident_finish=False,
+                        code__isnull=False,
+                    )
+                ),
+                active_contractor_incidents=Count(
+                    'id',
+                    distinct=True,
+                    filter=(
+                        Q(
+                            is_incident_finish=False,
+                            code__isnull=False,
+                        )
+                        & (
+                            Q(
+                                status_history__status__name=(
+                                    NOTIFIED_CONTRACTOR_STATUS_NAME
+                                )
+                            )
+                            | Q(avr_start_date__isnull=False)
+                            | Q(rvr_start_date__isnull=False)
+                        )
+                    )
+                ),
                 sla_avr_expired_count=Count(
                     'id', filter=Q(sla_avr_expired=True)
                 ),
@@ -201,69 +246,55 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
             )
         )
 
-        sla_map = {
-            item['pole__region__macroregion']: item
-            for item in macroregion_sla_counts
-        }
-
-        dt = timedelta(hours=1)
-
-        macroregion_incident_filter = self._get_macroregion_incident_filter(
-            start, end
-        )
-
-        base_qs = (
-            MacroRegion.objects
-            .annotate(
-                incidents_filtered=FilteredRelation(
-                    'regions__poles__incidents',
-                    condition=macroregion_incident_filter
+        # Отдельно считаем открытые и закрытые с проблемой питания
+        power_base = base_incidents.filter(
+            code__isnull=False
+        ).filter(
+            Q(is_incident_finish=False)
+            | Q(
+                is_incident_finish=True,
+                incident_finish_date__isnull=False,
+                incident_finish_date__gt=(
+                    F('incident_date') + CLOSED_INCIDENT_CHECK_TIMER
                 )
             )
-            .annotate(
-                total_closed_incidents=Count(
-                    'incidents_filtered',
-                    filter=Q(
-                        incidents_filtered__code__isnull=False,
-                        incidents_filtered__is_incident_finish=True,
-                        incidents_filtered__incident_finish_date__isnull=False,
-                        incidents_filtered__incident_finish_date__gt=(
-                            F('incidents_filtered__incident_date') + dt
-                        ),
-                    ),
-                    distinct=True
-                ),
-                total_open_incidents=Count(
-                    'incidents_filtered',
-                    filter=Q(
-                        incidents_filtered__code__isnull=False,
-                        incidents_filtered__is_incident_finish=False,
-                    ),
-                    distinct=True
-                ),
-                active_contractor_incidents=Count(
-                    'incidents_filtered',
-                    filter=Q(
-                        incidents_filtered__code__isnull=False,
-                        incidents_filtered__is_incident_finish=False
-                    ) & (
-                        Q(
-                            incidents_filtered__status_history__status__name=(
-                                NOTIFIED_CONTRACTOR_STATUS_NAME
-                            )
-                        )
-                        | Q(incidents_filtered__avr_start_date__isnull=False)
-                        | Q(incidents_filtered__rvr_start_date__isnull=False)
-                    ),
-                    distinct=True
-                ),
-            )
-            .order_by('name', 'id')
+        )
+        power_incidents = annotate_is_power_issue(power_base).filter(
+            is_power_issue=True
         )
 
-        for macroregion in base_qs:
-            macroregion_sla = sla_map.get(macroregion.pk, {})
+        open_power_map = {
+            item['pole__region__macroregion']: item['c']
+            for item in (
+                power_incidents
+                .filter(is_incident_finish=False)
+                .values('pole__region__macroregion')
+                .annotate(c=Count('id'))
+            )
+        }
+
+        closed_power_map = {
+            item['pole__region__macroregion']: item['c']
+            for item in (
+                power_incidents
+                .filter(is_incident_finish=True)
+                .values('pole__region__macroregion')
+                .annotate(c=Count('id'))
+            )
+        }
+
+        stats_map = {
+            item['pole__region__macroregion']: item for item in incident_stats
+        }
+
+        macroregions = list(MacroRegion.objects.order_by('name', 'id'))
+
+        for macro in macroregions:
+            macro_stats = stats_map.get(macro.pk, {})
             for field in [
+                'total_closed_incidents',
+                'total_open_incidents',
+                'active_contractor_incidents',
                 'sla_avr_expired_count',
                 'sla_avr_closed_on_time_count',
                 'sla_avr_less_than_hour_count',
@@ -273,13 +304,18 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                 'sla_rvr_less_than_hour_count',
                 'sla_rvr_in_progress_count',
             ]:
-                setattr(macroregion, field, macroregion_sla.get(field, 0))
+                setattr(macro, field, macro_stats.get(field, 0))
 
-        result = list(base_qs)
+            macro.open_incidents_with_power_issue = open_power_map.get(
+                macro.pk, 0
+            )
+            macro.closed_incidents_with_power_issue = closed_power_map.get(
+                macro.pk, 0
+            )
 
-        cache.set(cache_key, result, STATISTIC_CACHE_TIMEOUT)
+        cache.set(cache_key, macroregions, STATISTIC_CACHE_TIMEOUT)
 
-        return result
+        return macroregions
 
     def _get_incident_date_filter(
         self, start: Optional[date], end: Optional[date]
@@ -290,22 +326,6 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
             q &= Q(incident_date__date__gte=start)
         if end:
             q &= Q(incident_date__date__lte=end)
-
-        return q
-
-    def _get_macroregion_incident_filter(
-        self, start: Optional[date], end: Optional[date]
-    ) -> Q:
-        q = Q()
-
-        if start:
-            q &= Q(
-                regions__poles__incidents__incident_date__date__gte=start
-            )
-        if end:
-            q &= Q(
-                regions__poles__incidents__incident_date__date__lte=end
-            )
 
         return q
 
