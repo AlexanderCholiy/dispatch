@@ -203,6 +203,7 @@ def annotate_is_power_issue(
             is_power_issue=F('is_power_issue_candidate')
         )
 
+    # Данные берутся из сторонней БД:
     normal_poles = cache.get('normal_poles')
     if normal_poles is None:
         normal_poles = frozenset(
@@ -215,15 +216,13 @@ def annotate_is_power_issue(
             'normal_poles', normal_poles, timeout=NORMAL_POLES_CACHE_TIMEOUT
         )
 
-    candidate_ids = list(
-        qs.filter(is_power_issue_candidate=True)
-        .exclude(pole__pole__in=normal_poles)
-        .values_list('id', flat=True)
-    )
-
     return qs.annotate(
         is_power_issue=Case(
-            When(id__in=candidate_ids, then=Value(True)),
+            When(
+                Q(is_power_issue_candidate=True)
+                & ~Q(pole__pole__in=normal_poles),
+                then=Value(True)
+            ),
             default=Value(False),
             output_field=BooleanField(),
         )

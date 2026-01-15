@@ -33,6 +33,7 @@ class IncidentReportSerializer(serializers.ModelSerializer):
     incident_finish_datetime = serializers.SerializerMethodField()
     operator_group = serializers.SerializerMethodField()
     categories = serializers.SerializerMethodField()
+    macroregion = serializers.SerializerMethodField()
 
     class Meta:
         model = Incident
@@ -55,6 +56,7 @@ class IncidentReportSerializer(serializers.ModelSerializer):
             'rvr_deadline',
             'pole',
             'region_ru',
+            'macroregion',
             'base_station',
             'operator_group',
         )
@@ -128,6 +130,15 @@ class IncidentReportSerializer(serializers.ModelSerializer):
                 [cat.name for cat in categories]
             ))
         return
+
+    def get_macroregion(self, obj: Incident):
+        if (
+            not obj.pole
+            or not obj.pole.region
+            or not obj.pole.region.macroregion
+        ):
+            return None
+        return obj.pole.region.macroregion.name
 
 
 class StatisticReportSerializer(serializers.ModelSerializer):

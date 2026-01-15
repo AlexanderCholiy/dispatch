@@ -4,7 +4,8 @@ from typing import Optional
 from django.core.cache import cache
 from django.db.models import (
     Count,
-    F,
+    Exists,
+    OuterRef,
     Prefetch,
     Q,
     QuerySet,
@@ -23,7 +24,12 @@ from incidents.constants import NOTIFIED_CONTRACTOR_STATUS_NAME
 from incidents.models import Incident, IncidentStatusHistory
 from ts.models import MacroRegion, PoleContractorEmail
 
-from .constants import CLOSED_INCIDENT_CHECK_TIMER, STATISTIC_CACHE_TIMEOUT
+from .constants import (
+    CLOSED_INCIDENTS_VALID_FILTER,
+    OPEN_INCIDENTS_VALID_FILTER,
+    STATISTIC_CACHE_TIMEOUT,
+    TOTAL_VALID_INCIDENTS_FILTER,
+)
 from .filters import IncidentReportFilter
 from .pagination import IncidentReportPagination
 from .serializers import IncidentReportSerializer, StatisticReportSerializer
@@ -34,8 +40,16 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Возвращает подробную информации по инцидентам.
 
-    Доступна фильтрация по дате инцидента начиная с первого числа предыдущего
-    месяца по текущее число. GET: api/v1/incidents/?last_month=true
+    Доступна фильтрация:
+    - по дате инцидента начиная с первого числа предыдущего месяца
+      по текущее число:
+      GET /api/v1/report/incidents/?last_month=true
+
+    - получение всех инцидентов без пагинации:
+      GET /api/v1/report/incidents/?all=true
+
+    - Возвращает все инциденты за последний месяц без пагинации:
+      GET /api/v1/report/incidents/?last_month=true&all=true
     """
     queryset = Incident.objects.all().select_related(
         'incident_type',
@@ -44,6 +58,7 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
         'base_station',
         'responsible_user',
         'pole__region',
+        'pole__region__macroregion',
     ).prefetch_related(
         'base_station__operator',
         'statuses',
@@ -169,117 +184,98 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
 
         incident_date_filter = self._get_incident_date_filter(start, end)
 
-        incidents = self.filter_queryset(
+        incidents = (
             Incident.objects
-            .select_related('pole', 'incident_type')
+            .filter(TOTAL_VALID_INCIDENTS_FILTER)
             .filter(incident_date_filter)
+            .select_related('pole', 'incident_type')
         )
 
-        base_incidents = annotate_sla_avr(incidents)
-        base_incidents = annotate_sla_rvr(base_incidents)
+        # -------- EXISTS вместо JOIN --------
+        notified_exists = IncidentStatusHistory.objects.filter(
+            incident_id=OuterRef('pk'),
+            status__name=NOTIFIED_CONTRACTOR_STATUS_NAME
+        )
+        incidents = incidents.annotate(
+            has_notified_contractor=Exists(notified_exists)
+        )
 
+        # -------- SLA аннотации --------
+        incidents = annotate_sla_avr(incidents)
+        incidents = annotate_sla_rvr(incidents)
+
+        # -------- Агрегация --------
         incident_stats = (
-            base_incidents
+            incidents
             .values('pole__region__macroregion')
             .annotate(
                 total_closed_incidents=Count(
-                    'id',
-                    filter=Q(
-                        is_incident_finish=True,
-                        code__isnull=False,
-                        incident_finish_date__isnull=False,
-                        incident_finish_date__gt=(
-                            F('incident_date') + CLOSED_INCIDENT_CHECK_TIMER
-                        ),
-                    )
+                    'id', distinct=True, filter=CLOSED_INCIDENTS_VALID_FILTER
                 ),
                 total_open_incidents=Count(
-                    'id',
-                    filter=Q(
-                        is_incident_finish=False,
-                        code__isnull=False,
-                    )
+                    'id', distinct=True, filter=OPEN_INCIDENTS_VALID_FILTER
                 ),
                 active_contractor_incidents=Count(
                     'id',
                     distinct=True,
                     filter=(
-                        Q(
-                            is_incident_finish=False,
-                            code__isnull=False,
-                        )
+                        OPEN_INCIDENTS_VALID_FILTER
                         & (
-                            Q(
-                                status_history__status__name=(
-                                    NOTIFIED_CONTRACTOR_STATUS_NAME
-                                )
-                            )
+                            Q(has_notified_contractor=True)
                             | Q(avr_start_date__isnull=False)
                             | Q(rvr_start_date__isnull=False)
                         )
                     )
                 ),
                 sla_avr_expired_count=Count(
-                    'id', filter=Q(sla_avr_expired=True)
+                    'id', distinct=True, filter=Q(sla_avr_expired=True)
                 ),
                 sla_avr_closed_on_time_count=Count(
-                    'id', filter=Q(sla_avr_closed_on_time=True)
+                    'id', distinct=True, filter=Q(sla_avr_closed_on_time=True)
                 ),
                 sla_avr_less_than_hour_count=Count(
-                    'id', filter=Q(sla_avr_less_than_hour=True)
+                    'id', distinct=True, filter=Q(sla_avr_less_than_hour=True)
                 ),
                 sla_avr_in_progress_count=Count(
-                    'id', filter=Q(sla_avr_in_progress=True)
+                    'id', distinct=True, filter=Q(sla_avr_in_progress=True)
                 ),
                 sla_rvr_expired_count=Count(
-                    'id', filter=Q(sla_rvr_expired=True)
+                    'id', distinct=True, filter=Q(sla_rvr_expired=True)
                 ),
                 sla_rvr_closed_on_time_count=Count(
-                    'id', filter=Q(sla_rvr_closed_on_time=True)
+                    'id', distinct=True, filter=Q(sla_rvr_closed_on_time=True)
                 ),
                 sla_rvr_less_than_hour_count=Count(
-                    'id', filter=Q(sla_rvr_less_than_hour=True)
+                    'id', distinct=True, filter=Q(sla_rvr_less_than_hour=True)
                 ),
                 sla_rvr_in_progress_count=Count(
-                    'id', filter=Q(sla_rvr_in_progress=True)
+                    'id', distinct=True, filter=Q(sla_rvr_in_progress=True)
                 ),
             )
         )
 
         # Отдельно считаем открытые и закрытые с проблемой питания
-        power_base = base_incidents.filter(
-            code__isnull=False
-        ).filter(
-            Q(is_incident_finish=False)
-            | Q(
-                is_incident_finish=True,
-                incident_finish_date__isnull=False,
-                incident_finish_date__gt=(
-                    F('incident_date') + CLOSED_INCIDENT_CHECK_TIMER
-                )
-            )
-        )
-        power_incidents = annotate_is_power_issue(power_base).filter(
-            is_power_issue=True
-        )
+        power_qs = annotate_is_power_issue(
+            incidents, monitoring_check=True
+        ).filter(is_power_issue=True)
 
         open_power_map = {
-            item['pole__region__macroregion']: item['c']
-            for item in (
-                power_incidents
-                .filter(is_incident_finish=False)
+            row['pole__region__macroregion']: row['c']
+            for row in (
+                power_qs
+                .filter(OPEN_INCIDENTS_VALID_FILTER)
                 .values('pole__region__macroregion')
-                .annotate(c=Count('id'))
+                .annotate(c=Count('id', distinct=True))
             )
         }
 
         closed_power_map = {
-            item['pole__region__macroregion']: item['c']
-            for item in (
-                power_incidents
-                .filter(is_incident_finish=True)
+            row['pole__region__macroregion']: row['c']
+            for row in (
+                power_qs
+                .filter(CLOSED_INCIDENTS_VALID_FILTER)
                 .values('pole__region__macroregion')
-                .annotate(c=Count('id'))
+                .annotate(c=Count('id', distinct=True))
             )
         }
 
@@ -295,10 +291,12 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                 'total_closed_incidents',
                 'total_open_incidents',
                 'active_contractor_incidents',
+
                 'sla_avr_expired_count',
                 'sla_avr_closed_on_time_count',
                 'sla_avr_less_than_hour_count',
                 'sla_avr_in_progress_count',
+
                 'sla_rvr_expired_count',
                 'sla_rvr_closed_on_time_count',
                 'sla_rvr_less_than_hour_count',

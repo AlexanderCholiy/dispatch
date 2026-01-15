@@ -56,8 +56,8 @@ class Command(BaseCommand):
 
         # self.restore_database(
         #     (
-        #         '/home/a.choliy/dispatch/data/backup_db/'
-        #         + 'backup_dispatch_backend_2025-11-26_12-08.sql'
+        #         '/home/a.choliy/dispatch/data/remote_backup_db/'
+        #         + 'backup_dispatch_2026-01-15_09-00.sql'
         #     ),
         #     f'dump_{self.db_name}'
         # )
