@@ -70,6 +70,8 @@ export function renderSlaDonut(canvas, title, values) {
         data,
         plugins: [centerTextPlugin],
         options: {
+            responsive: true,
+            maintainAspectRatio: false,
             cutout: '45%',
             plugins: {
                 title: {
