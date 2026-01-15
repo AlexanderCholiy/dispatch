@@ -44,20 +44,12 @@ export function renderAllIncidentsChart(
 
     const theme = getThemeVars();
 
-    // ===== внутреннее состояние =====
-    let hiddenRegions = new Set();
-    let isFocused = false;
-
     function buildData() {
-        const filtered = stats.filter(
-            i => !hiddenRegions.has(i.macroregion)
-        );
-
         return {
-            labels: filtered.map(i => i.macroregion),
+            labels: stats.map(i => i.macroregion),
             datasets: datasets.map(ds => ({
                 label: ds.label,
-                data: filtered.map(i => i[ds.valueKey] ?? 0),
+                data: stats.map(i => i[ds.valueKey] ?? 0),
                 backgroundColor: getCssVar(ds.colorVar, ds.color),
                 borderRadius: theme.radius,
             }))
@@ -106,24 +98,7 @@ export function renderAllIncidentsChart(
                     callbacks: {
                         label(ctx) {
                             return `${ctx.dataset.label}: ${ctx.parsed.y}`;
-                        },
-                    }
-                },
-
-                // 🔍 zoom + pan
-                zoom: {
-                    pan: {
-                        enabled: true,
-                        mode: 'x'
-                    },
-                    zoom: {
-                        wheel: {
-                            enabled: true
-                        },
-                        pinch: {
-                            enabled: true
-                        },
-                        mode: 'x'
+                        }
                     }
                 }
             },
@@ -146,34 +121,11 @@ export function renderAllIncidentsChart(
                 }
             },
 
-            // 🎯 клик по региону = фокус
-            onClick(evt, elements) {
-                if (!elements.length) return;
-
-                const index = elements[0].index;
-                const region = chart.data.labels[index];
-
-                if (!isFocused) {
-                    hiddenRegions = new Set(
-                        stats
-                            .map(i => i.macroregion)
-                            .filter(r => r !== region)
-                    );
-                    isFocused = true;
-                } else {
-                    hiddenRegions.clear();
-                    isFocused = false;
-                }
-
-                chart.data = buildData();
-                chart.update();
+            // ❌ отключаем клик по региону
+            onClick() {
+                // ничего не делаем
             }
         }
-    });
-
-    // 🔄 double click = reset zoom
-    canvas.addEventListener('dblclick', () => {
-        chart.resetZoom();
     });
 
     canvas._chartInstance = chart;
