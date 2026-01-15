@@ -1,6 +1,10 @@
 import { renderAllIncidentsChart } from './charts/all_incidents_chart.js';
 import { renderSlaDonut } from './charts/sla_chart.js';
 
+if (window.Chart && window.ChartZoom) {
+    Chart.register(window.ChartZoom);
+}
+
 function getCssVar(name, fallback = '#999') {
     return (
         getComputedStyle(document.documentElement)
