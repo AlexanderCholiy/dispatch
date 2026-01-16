@@ -25,7 +25,7 @@ from emails.utils import EmailManager
 
 
 class Command(BaseCommand):
-    help = 'Запись писем с указанной почты в базу данных.'
+    help = 'Удаление влоожений у которых или нет записи в базе, или файла.'
 
     def _remove_unknown_files(
         self, file_path: Path, valid_files: set[Path], threshold: dt.datetime
