@@ -6,7 +6,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from core.constants import EMAIL_MIME_DIR, INCIDENT_DIR, SUBFOLDER_DATE_FORMAT
-from core.loggers import email_parser_logger
+from core.loggers import incident_logger
 from core.pretty_print import PrettyPrint
 from core.wraps import timer
 from emails.constants import EMAILS_FILES_2_DEL_BATCH_SIZE
@@ -16,7 +16,7 @@ from emails.models import EmailAttachment, EmailInTextAttachment, EmailMime
 class Command(BaseCommand):
     help = 'Удаление вложений без файла или без записи и пустых папок.'
 
-    @timer(email_parser_logger)
+    @timer(incident_logger)
     def handle(self, *args, **kwargs):
         now = timezone.now()
         threshold = now - dt.timedelta(days=1)
@@ -28,7 +28,7 @@ class Command(BaseCommand):
 
         for _, directory in attachment_dirs.items():
             if not directory.exists():
-                email_parser_logger.warning(
+                incident_logger.warning(
                     f'Папки {directory} не существует.'
                 )
                 continue
@@ -61,12 +61,12 @@ class Command(BaseCommand):
                     file_path.unlink()
                     deleted_count += 1
             except OSError:
-                email_parser_logger.warning(
+                incident_logger.warning(
                     f'Не удалось удалить пустой файл: {file_path}'
                 )
 
         if deleted_count:
-            email_parser_logger.info(
+            incident_logger.info(
                 f'Удалено {deleted_count} пустых файлов в {directory}'
             )
 
@@ -109,12 +109,12 @@ class Command(BaseCommand):
                     deleted_count += 1
 
                 except OSError:
-                    email_parser_logger.warning(
+                    incident_logger.warning(
                         f'Не удалось удалить файл {file_path}'
                     )
 
         if deleted_count:
-            email_parser_logger.info(
+            incident_logger.info(
                 f'Удалено {deleted_count} файлов без записи в {directory}'
             )
 
@@ -151,12 +151,12 @@ class Command(BaseCommand):
                         deleted_count += 1
 
             except OSError:
-                email_parser_logger.warning(
+                incident_logger.warning(
                     f'Не удалось удалить папку {dir_path}'
                 )
 
         if deleted_count:
-            email_parser_logger.info(
+            incident_logger.info(
                 f'Удалено {deleted_count} пустых подпапок в {directory}'
             )
 
@@ -198,7 +198,7 @@ class Command(BaseCommand):
                 model.objects.filter(id__in=to_delete_ids).delete()
 
             if deleted_count:
-                email_parser_logger.info(
+                incident_logger.info(
                     f'Удалено {deleted_count} записей без файлов для '
                     f'{model.__name__}'
                 )
