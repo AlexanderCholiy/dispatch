@@ -8,19 +8,24 @@ from dateutil import parser
 from django.db import models, transaction
 from django.utils import timezone
 
-from incidents.constants import AVR_CATEGORY, MAX_FUTURE_END_DELTA
+from incidents.constants import (
+    AVR_CATEGORY,
+    MAX_FUTURE_END_DELTA,
+    POWER_ISSUE_TYPES,
+)
 from incidents.models import (
     Incident,
     IncidentCategory,
     IncidentCategoryRelation,
     IncidentType,
+    TypeSubTypeRelation,
 )
 from monitoring.models import DeviceStatus, DeviceType
 from ts.constants import UNDEFINED_CASE
 from ts.models import AVRContractor, BaseStation, BaseStationOperator, Pole
 from users.models import User
 
-from .constants import MAX_MONITORING_DEVICES
+from .constants import INCIDENT_SUBTYPES_PREFIX, MAX_MONITORING_DEVICES
 from .utils import YandexTrackerManager
 
 
@@ -295,6 +300,75 @@ def check_yt_type_of_incident(
         )
 
     return True, f'Тип инцидента "{type_of_incident}" валиден.'
+
+
+def normalize_incident_subtype(
+    subtype: str,
+    type_of_incident: Optional[str],
+) -> str:
+    """
+    Приводит подтип инцидента к каноническому виду,
+    удаляя префиксы, используемые в Yandex Tracker.
+
+    Возвращает нормализованный подтип (строку).
+    """
+    if not subtype or not type_of_incident:
+        return subtype
+
+    if type_of_incident in POWER_ISSUE_TYPES:
+        prefix = INCIDENT_SUBTYPES_PREFIX.get('power_issue_types')
+        if prefix and subtype.startswith(prefix):
+            return subtype.replace(prefix, '', 1).strip()
+
+    return subtype
+
+
+def check_yt_subtype_of_incident(
+    issue: dict,
+    subtype_of_incident_field: Optional[dict],
+    type_of_incident: Optional[str],
+    valid_subtypes_by_type: dict[str, set[str]],
+) -> tuple[bool, str]:
+    """
+    Проверяет корректность подтипа инцидента и его соответствие типу.
+
+    Returns:
+        (is_valid, message):
+            - is_valid: bool — результат проверки.
+            - message: str — описание результата (успех или ошибка).
+    """
+    subtype_field_key = (
+        subtype_of_incident_field['id']
+        if subtype_of_incident_field else None
+    )
+    raw_subtype: Optional[str] = (
+        issue.get(subtype_field_key) if subtype_field_key else None
+    )
+
+    # Подтип не указан — ок
+    if not raw_subtype:
+        return True, 'Подтип инцидента не указан — проверка не требуется.'
+
+    # Тип не указан, а подтип указан — ошибка
+    if not type_of_incident:
+        return False, (
+            f'Указан подтип "{raw_subtype}", но не указан тип инцидента.'
+        )
+
+    normalized_subtype = normalize_incident_subtype(
+        raw_subtype, type_of_incident
+    )
+
+    valid_subtypes = valid_subtypes_by_type.get(type_of_incident, set())
+
+    if normalized_subtype not in valid_subtypes:
+        return False, (
+            f'Подтип "{normalized_subtype}" не соответствует типу '
+            f'"{type_of_incident}". '
+            f'Допустимые значения: {", ".join(sorted(valid_subtypes))}.'
+        )
+
+    return True, f'Подтип инцидента "{normalized_subtype}" валиден.'
 
 
 def check_yt_category(
@@ -666,8 +740,10 @@ def check_yt_incident_data(
     issue: dict,
     yt_users: dict,
     type_of_incident_field: dict,
-    valid_names_of_types: list[str],
+    subtype_of_incident_field: dict,
     category_field: dict,
+    valid_names_of_types: list[str],
+    valid_subtypes_by_type: dict[str, set[str]],
     valid_names_of_categories: list[str],
     usernames_in_db: list[str],
     pole_names_sorted: list[str, Pole],
@@ -695,6 +771,8 @@ def check_yt_incident_data(
             убрал).
         - Имя оператора и подрядчика по АВР всегда берем из БД.
         - Если установлен известный тип инцидента, выставим дедлайн SLA.
+        - Если установлен подтип инцидента, полвеояем что он соответствует
+        основному типу инцидента.
     """
     update_incident_data_func = None
     update_issue_status_func = None
@@ -710,6 +788,11 @@ def check_yt_incident_data(
 
     type_of_incident_field_key = type_of_incident_field['id']
     type_of_incident: Optional[str] = issue.get(type_of_incident_field_key)
+
+    subtype_of_incident_field_key = subtype_of_incident_field['id']
+    subtype_of_incident: Optional[str] = (
+        issue.get(subtype_of_incident_field_key)
+    )
 
     category_field_key = category_field['id']
     category: Optional[list[str]] = issue.get(category_field_key)
@@ -769,6 +852,21 @@ def check_yt_incident_data(
         valid_names_of_types,
     )
 
+    # Проверяем, что подтип инцидента соответствует типу в базе данных, а также
+    # самому подтипу (перед проверкой типа инцидента, чтобы если что обнулить
+    # подтип):
+    is_valid_subtype_of_incident, _ = (
+        check_yt_subtype_of_incident(
+            issue=issue,
+            subtype_of_incident_field=subtype_of_incident_field,
+            type_of_incident=type_of_incident,
+            valid_subtypes_by_type=valid_subtypes_by_type,
+        )
+    )
+    normalized_subtype = (
+        normalize_incident_subtype(subtype_of_incident, type_of_incident)
+    ) if is_valid_subtype_of_incident else None
+
     # Синхронизируем тип инцидента в базе:
     if is_valid_type_of_incident:
         if type_of_incident:
@@ -779,6 +877,9 @@ def check_yt_incident_data(
                 )
                 or not incident.incident_type
             ):
+                if not is_valid_subtype_of_incident or not normalized_subtype:
+                    incident.incident_subtype = None
+
                 logger.debug(
                     f'Меняем тип инцидента {incident.id} '
                     f'с {incident.incident_type} на {type_of_incident}'
@@ -788,6 +889,9 @@ def check_yt_incident_data(
                 )
                 incident.save()
         elif incident.incident_type:
+            if not is_valid_subtype_of_incident or not normalized_subtype:
+                incident.incident_subtype = None
+
             logger.debug(
                 f'Меняем тип инцидента {incident.id} '
                 f'с {incident.incident_type} на {None}'
@@ -804,6 +908,32 @@ def check_yt_incident_data(
             yt_manager.error_status_key,
             incident_comment
         )
+
+    # Синхронизируем подтип инцидента в базе:
+    if is_valid_subtype_of_incident:
+        if normalized_subtype and (
+            not incident.incident_subtype
+            or incident.incident_subtype.name != normalized_subtype
+        ):
+            logger.debug(
+                f'Меняем подтип инцидента {incident.id} '
+                f'с "{incident.incident_subtype}" на "{normalized_subtype}"'
+            )
+            relation = TypeSubTypeRelation.objects.select_related(
+                'incident_subtype'
+            ).get(
+                incident_type=incident.incident_type,
+                incident_subtype__name=normalized_subtype,
+            )
+            incident.incident_subtype = relation.incident_subtype
+            incident.save()
+        elif incident.incident_subtype and not normalized_subtype:
+            logger.debug(
+                f'Удаляем подтип инцидента {incident.id} '
+                f'({incident.incident_subtype})'
+            )
+            incident.incident_subtype = None
+            incident.save()
 
     # Проверка, что категория валидна и если ничего не выбрано то АВР:
     is_valid_category, incident_comment = check_yt_category(
@@ -847,7 +977,9 @@ def check_yt_incident_data(
                 yt_manager.update_incident_data,
                 issue=issue,
                 type_of_incident_field=type_of_incident_field,
-                types_of_incident=type_of_incident,
+                type_of_incident=type_of_incident,
+                subtype_of_incident_field=subtype_of_incident_field,
+                subtype_of_incident=subtype_of_incident,
                 category_field=category_field,
                 category=[AVR_CATEGORY],
                 email_datetime=incident.incident_date,
@@ -888,7 +1020,8 @@ def check_yt_incident_data(
 
     # Проверка даты и времени регистрации инциденты:
     is_valid_incident_datetime = check_yt_datetime_incident(
-        yt_manager, issue, incident)
+        yt_manager, issue, incident
+    )
 
     # Проверка дедлайна SLA (АВР):
     is_valid_avr_incident_deadline = check_yt_avr_deadline_incident(
@@ -1002,7 +1135,9 @@ def check_yt_incident_data(
             yt_manager.update_incident_data,
             issue=issue,
             type_of_incident_field=type_of_incident_field,
-            types_of_incident=type_of_incident,
+            type_of_incident=type_of_incident,
+            subtype_of_incident_field=subtype_of_incident_field,
+            subtype_of_incident=subtype_of_incident,
             category_field=category_field,
             category=category,
             email_datetime=incident.incident_date,
@@ -1099,7 +1234,9 @@ def check_yt_incident_data(
             yt_manager.update_incident_data,
             issue=issue,
             type_of_incident_field=type_of_incident_field,
-            types_of_incident=type_of_incident,
+            type_of_incident=type_of_incident,
+            subtype_of_incident_field=subtype_of_incident_field,
+            subtype_of_incident=subtype_of_incident,
             category_field=category_field,
             category=category,
             email_datetime=incident.incident_date,
@@ -1218,6 +1355,7 @@ def check_yt_incident_data(
         (is_valid_operator_bs, 'оператор базовой станции'),
         (is_valid_incident_datetime, 'дата и время инцидента'),
         (is_valid_type_of_incident, 'тип инцидента'),
+        (is_valid_subtype_of_incident, 'подтип инцидента'),
         (is_valid_category, 'категория инцидента'),
         (is_valid_avr_incident_deadline, 'дедлайн SLA АВР'),
         (is_valid_avr_expired_incident, 'статус SLA АВР'),
@@ -1239,9 +1377,11 @@ def check_yt_incident_data(
             yt_manager.update_incident_data,
             issue=issue,
             type_of_incident_field=type_of_incident_field,
-            types_of_incident=(
+            type_of_incident=(
                 incident.incident_type.name
             ) if incident.incident_type else None,
+            subtype_of_incident_field=subtype_of_incident_field,
+            subtype_of_incident=None,
             category_field=category_field,
             category=category if is_valid_category else [AVR_CATEGORY],
             email_datetime=incident.incident_date,

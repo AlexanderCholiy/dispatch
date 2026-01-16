@@ -31,6 +31,7 @@ from incidents.models import (
     IncidentCategory,
     IncidentStatusHistory,
     IncidentType,
+    TypeSubTypeRelation,
 )
 from incidents.utils import IncidentManager
 from monitoring.models import MSysModem
@@ -60,6 +61,9 @@ class Command(BaseCommand):
 
     _valid_names_of_types_cache = None
     _valid_names_of_types_cache_last_update = 0
+
+    _valid_names_of_subtypes_cache = None
+    _valid_names_of_subtypes_cache_last_update = 0
 
     _valid_names_of_categories_cache = None
     _valid_names_of_categories_cache_last_update = 0
@@ -154,6 +158,31 @@ class Command(BaseCommand):
             )
             self._valid_names_of_types_cache_last_update = time.time()
         return self._valid_names_of_types_cache
+
+    def _get_valid_subtypes_by_type_from_cache(self) -> dict[str, set[str]]:
+        if (
+            self._valid_names_of_subtypes_cache is None
+            or (
+                time.time()
+                - self._valid_names_of_subtypes_cache_last_update
+                > self.cache_timer
+            )
+        ):
+            qs = (
+                TypeSubTypeRelation.objects
+                .select_related('incident_type', 'incident_subtype')
+                .values_list(
+                    'incident_type__name',
+                    'incident_subtype__name'
+                )
+            )
+            data: dict[str, set[str]] = {}
+            for type_name, subtype_name in qs:
+                data.setdefault(type_name, set()).add(subtype_name)
+
+            self._valid_names_of_subtypes_cache = data
+            self._valid_names_of_subtypes_cache_last_update = time.time()
+        return self._valid_names_of_subtypes_cache
 
     def _get_valid_names_of_categories_from_cache(self):
         if (
@@ -257,12 +286,19 @@ class Command(BaseCommand):
             yt_manager
             .select_local_field(yt_manager.type_of_incident_local_field_id)
         )
+        subtype_of_incident_field: dict = (
+            yt_manager
+            .select_local_field(yt_manager.subtype_of_incident_local_field_id)
+        )
         category_field: dict = (
             yt_manager.select_local_field(yt_manager.category_local_field_id)
         )
 
         pole_names_sorted = self._get_pole_names_sorted_from_cache()
         valid_names_of_types = self._get_valid_names_of_types_from_cache()
+        valid_subtypes_by_type = (
+            self._get_valid_subtypes_by_type_from_cache()
+        )
         valid_names_of_categories = (
             self._get_valid_names_of_categories_from_cache()
         )
@@ -286,8 +322,10 @@ class Command(BaseCommand):
                     unclosed_issues=unclosed_issues,
                     yt_users=yt_users,
                     type_of_incident_field=type_of_incident_field,
-                    valid_names_of_types=valid_names_of_types,
+                    subtype_of_incident_field=subtype_of_incident_field,
                     category_field=category_field,
+                    valid_names_of_types=valid_names_of_types,
+                    valid_subtypes_by_type=valid_subtypes_by_type,
                     valid_names_of_categories=valid_names_of_categories,
                     usernames_in_db=usernames_in_db,
                     pole_names_sorted=pole_names_sorted,
@@ -311,8 +349,10 @@ class Command(BaseCommand):
         unclosed_issues: list[dict],
         yt_users: dict,
         type_of_incident_field: dict,
-        valid_names_of_types: list[str],
+        subtype_of_incident_field: dict,
         category_field: dict,
+        valid_names_of_types: list[str],
+        valid_subtypes_by_type: dict[str, set[str]],
         valid_names_of_categories: list[str],
         usernames_in_db: list[str],
         pole_names_sorted: list[str],
@@ -356,6 +396,7 @@ class Command(BaseCommand):
             id__in=database_ids
         ).select_related(
             'incident_type',
+            'incident_subtype',
             'pole',
             'pole__avr_contractor',
             'base_station',
@@ -456,8 +497,10 @@ class Command(BaseCommand):
                     issue=issue,
                     yt_users=yt_users,
                     type_of_incident_field=type_of_incident_field,
-                    valid_names_of_types=valid_names_of_types,
+                    subtype_of_incident_field=subtype_of_incident_field,
                     category_field=category_field,
+                    valid_names_of_types=valid_names_of_types,
+                    valid_subtypes_by_type=valid_subtypes_by_type,
                     valid_names_of_categories=valid_names_of_categories,
                     usernames_in_db=usernames_in_db,
                     pole_names_sorted=pole_names_sorted,

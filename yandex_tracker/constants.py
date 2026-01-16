@@ -26,3 +26,9 @@ class IsNewMsg:
 
 
 MAX_MONITORING_DEVICES = 10
+
+
+# Префиксы к подтипу инцидента:
+INCIDENT_SUBTYPES_PREFIX = {
+    'power_issue_types': 'АВАРИЯ ПО ПИТАНИЮ:',
+}

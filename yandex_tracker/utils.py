@@ -52,6 +52,7 @@ yt_manager_config = {
     'YT_AVR_NAME_GLOBAL_FIELD_ID': os.getenv('YT_AVR_NAME_GLOBAL_FIELD_ID'),  # noqa: E501
     'YT_MONITORING_GLOBAL_FIELD_ID': os.getenv('YT_MONITORING_GLOBAL_FIELD_ID'),  # noqa: E501
     'YT_TYPE_OF_INCIDENT_LOCAL_FIELD_ID': os.getenv('YT_TYPE_OF_INCIDENT_LOCAL_FIELD_ID'),  # noqa: E501
+    'YT_SUBTYPE_OF_INCIDENT_LOCAL_FIELD_ID': os.getenv('YT_SUBTYPE_OF_INCIDENT_LOCAL_FIELD_ID'),  # noqa: E501
     'YT_CATEGORY_LOCAL_FIELD_ID': os.getenv('YT_CATEGORY_LOCAL_FIELD_ID'),  # noqa: E501
     'YT_ON_GENERATION_STATUS_KEY': os.getenv('YT_ON_GENERATION_STATUS_KEY'),  # noqa: E501
     'YT_NOTIFY_OPERATOR_ISSUE_IN_WORK_STATUS_KEY': os.getenv('YT_NOTIFY_OPERATOR_ISSUE_IN_WORK_STATUS_KEY'),  # noqa: E501
@@ -123,6 +124,7 @@ class YandexTrackerManager:
         avr_name_global_field_id: str,
         monitoring_global_field_id: str,
         type_of_incident_local_field_id: str,
+        subtype_of_incident_local_field_id: str,
         category_local_field_id: str,
         on_generation_status_key: str,
         notify_op_issue_in_work_status_key: str,
@@ -167,6 +169,9 @@ class YandexTrackerManager:
         self.rvr_end_date_global_field_id = rvr_end_date_global_field_id
 
         self.type_of_incident_local_field_id = type_of_incident_local_field_id
+        self.subtype_of_incident_local_field_id = (
+            subtype_of_incident_local_field_id
+        )
         self.category_local_field_id = category_local_field_id
 
         self.notify_op_issue_in_work_status_key = (
@@ -1218,7 +1223,9 @@ class YandexTrackerManager:
         self,
         issue: dict,
         type_of_incident_field: dict,
-        types_of_incident: Optional[str],
+        type_of_incident: Optional[str],
+        subtype_of_incident_field: dict,
+        subtype_of_incident: Optional[str],
         category_field: dict,
         category: Optional[list[str]],
         email_datetime: Optional[datetime],
@@ -1239,6 +1246,7 @@ class YandexTrackerManager:
         issue_key = issue['key']
 
         type_of_incident_field_key = type_of_incident_field['id']
+        subtype_of_incident_field_key = subtype_of_incident_field['id']
         category_filed_key = category_field['id']
 
         email_datetime = email_datetime.isoformat() if isinstance(
@@ -1258,7 +1266,8 @@ class YandexTrackerManager:
             rvr_end_date, datetime) else None
 
         payload = {
-            type_of_incident_field_key: types_of_incident,
+            type_of_incident_field_key: type_of_incident,
+            subtype_of_incident_field_key: subtype_of_incident,
             category_filed_key: category,
             self.sla_avr_deadline_global_field_id: sla_avr_deadline,
             self.is_sla_avr_expired_global_field_id: is_sla_avr_expired,
@@ -1517,6 +1526,7 @@ yt_manager = YandexTrackerManager(
     avr_name_global_field_id=yt_manager_config['YT_AVR_NAME_GLOBAL_FIELD_ID'],  # noqa: E501
     monitoring_global_field_id=yt_manager_config['YT_MONITORING_GLOBAL_FIELD_ID'],  # noqa: E501
     type_of_incident_local_field_id=yt_manager_config['YT_TYPE_OF_INCIDENT_LOCAL_FIELD_ID'],  # noqa: E501
+    subtype_of_incident_local_field_id=yt_manager_config['YT_SUBTYPE_OF_INCIDENT_LOCAL_FIELD_ID'],  # noqa: E501
     category_local_field_id=yt_manager_config['YT_CATEGORY_LOCAL_FIELD_ID'],  # noqa: E501
     on_generation_status_key=yt_manager_config['YT_ON_GENERATION_STATUS_KEY'],
     notify_op_issue_in_work_status_key=yt_manager_config['YT_NOTIFY_OPERATOR_ISSUE_IN_WORK_STATUS_KEY'],  # noqa: E501
