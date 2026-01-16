@@ -130,16 +130,16 @@ class Api(SocialValidators):
         poles['Высота опоры'] = poles['Высота опоры'].astype(float)
         total = len(poles)
 
-        # Удаляем не актуальные записи:
+        # 1. УДАЛЕНИЕ НЕАКТУАЛЬНЫХ ЗАПИСЕЙ (Poles, Regions, MacroRegions):
         new_site_ids: set[int] = set(poles['SiteId'])
+        new_region_names: set[str] = set(poles['Регион'])
+        new_macroregion_names: set[str] = set(poles['Макрорегион НБ'])
+
+        # Удаление Pole (которых нет в новом списке)
         existing_site_ids: set[int] = set(
             Pole.objects.values_list('site_id', flat=True)
         )
-        poles_2_delete = (
-            existing_site_ids
-            - new_site_ids
-            - {UNDEFINED_ID}
-        )
+        poles_2_delete = existing_site_ids - new_site_ids - {UNDEFINED_ID}
         if poles_2_delete:
             deleted_poles = 0
             for chunk in self.chunked(poles_2_delete, DB_CHUNK_UPDATE):
@@ -147,10 +147,33 @@ class Api(SocialValidators):
                     Pole.objects.filter(site_id__in=chunk).delete()
                 )
                 deleted_poles += del_poles_i
-            ts_logger.debug(
-                'Pole удалены: '
-                f'{deleted_poles} из {len(poles_2_delete)}'
+
+            ts_logger.debug(f'Pole удалены: {deleted_poles}')
+
+        # Удаление Region (которых нет в новом списке)
+        existing_regions = set(
+            Region.objects.exclude(region_en='Moscow')
+            .values_list('region_en', flat=True)
+        )
+        regions_2_delete = existing_regions - new_region_names
+        if regions_2_delete:
+            deleted_count, _ = (
+                Region.objects.filter(region_en__in=regions_2_delete).delete()
             )
+            ts_logger.debug(f'Region удалены: {deleted_count}')
+
+        # Удаление MacroRegion (которых нет в новом списке)
+        existing_macroregions = set(
+            MacroRegion.objects.values_list('name', flat=True)
+        )
+        macroregions_2_delete = existing_macroregions - new_macroregion_names
+        if macroregions_2_delete:
+            deleted_count, _ = MacroRegion.objects.filter(
+                name__in=macroregions_2_delete
+            ).delete()
+            ts_logger.debug(f'MacroRegion удалены: {deleted_count}')
+
+        # 2. ПОДГОТОВКА КЭША И ОБНОВЛЕНИЕ
 
         # Добавляем опору по умолчанию:
         Pole.add_default_value()
