@@ -68,7 +68,7 @@ function initWsDashboard() {
                 {
                     label: 'Без питания',
                     valueKey: 'closed_incidents_with_power_issue',
-                    color: rootStyles.getPropertyValue('--red-color').trim()
+                    color: rootStyles.getPropertyValue('--gray-color').trim()
                 }
             ];
 
@@ -81,7 +81,7 @@ function initWsDashboard() {
                 {
                     label: 'Без питания',
                     valueKey: 'open_incidents_with_power_issue',
-                    color: rootStyles.getPropertyValue('--red-color').trim()
+                    color: rootStyles.getPropertyValue('--gray-color').trim()
                 }
             ];
 

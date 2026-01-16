@@ -31,6 +31,7 @@ export async function initApiDashboard() {
         const red = root.getPropertyValue('--red-color').trim();
         const green = root.getPropertyValue('--green-color').trim();
         const blue = root.getPropertyValue('--blue-color').trim();
+        const gray = root.getPropertyValue('--gray-color').trim();
 
         // -----------------------------
         // Общий заголовок перед графиками
@@ -59,7 +60,7 @@ export async function initApiDashboard() {
                     {
                         label: 'Без питания',
                         valueKey: 'closed_incidents_with_power_issue',
-                        color: red
+                        color: gray
                     }
                 ]
             }
@@ -80,7 +81,7 @@ export async function initApiDashboard() {
                     {
                         label: 'Без питания',
                         valueKey: 'open_incidents_with_power_issue',
-                        color: red
+                        color: gray
                     }
                 ]
             }
