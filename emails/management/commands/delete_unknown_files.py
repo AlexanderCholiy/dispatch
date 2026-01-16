@@ -5,253 +5,200 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from core.constants import (
-    EMAIL_MIME_DIR,
-    INCIDENT_DIR,
-    SUBFOLDER_DATE_FORMAT,
-)
+from core.constants import EMAIL_MIME_DIR, INCIDENT_DIR, SUBFOLDER_DATE_FORMAT
 from core.loggers import email_parser_logger
 from core.pretty_print import PrettyPrint
-from core.tg_bot import tg_manager
 from core.wraps import timer
-from emails.constants import MAX_EMAILS_ATTACHMENT_DAYS
-from emails.models import (
-    EmailAttachment,
-    EmailInTextAttachment,
-    EmailMessage,
-    EmailMime
-)
-from emails.utils import EmailManager
+from emails.constants import EMAILS_FILES_2_DEL_BATCH_SIZE
+from emails.models import EmailAttachment, EmailInTextAttachment, EmailMime
 
 
 class Command(BaseCommand):
-    help = 'Удаление влоожений у которых или нет записи в базе, или файла.'
+    help = 'Удаление вложений без файла или без записи и пустых папок.'
 
-    def _remove_unknown_files(
-        self, file_path: Path, valid_files: set[Path], threshold: dt.datetime
-    ):
-        if not file_path.is_file():
-            return
+    @timer(email_parser_logger)
+    def handle(self, *args, **kwargs):
+        now = timezone.now()
+        threshold = now - dt.timedelta(days=1)
 
-        # Сразу удаляем пустые файлы:
-        try:
-            size = file_path.stat().st_size
-        except OSError:
-            email_parser_logger.warning(
-                f'Не удалось получить размер файла {file_path}'
-            )
-            return
+        attachment_dirs = {
+            'attachments': Path(INCIDENT_DIR),
+            'mimes': Path(EMAIL_MIME_DIR)
+        }
 
-        if size == 0:
-            try:
-                file_path.unlink()
-                email_parser_logger.info(
-                    f'Удалён пустой файл вложения: {file_path}'
+        for _, directory in attachment_dirs.items():
+            if not directory.exists():
+                email_parser_logger.warning(
+                    f'Папки {directory} не существует.'
                 )
+                continue
+
+            # Шаг 1: удалить пустые файлы
+            self._remove_empty_files(directory)
+
+            # Шаг 2: удалить старые файлы без записи
+            self._remove_files_without_db_record(directory, threshold)
+
+            # Шаг 3: удалить пустые подпапки старше 1 дня
+            self._remove_old_empty_dirs(directory, now)
+
+        # Шаг 4: удалить записи без файлов
+        self._remove_db_records_without_files()
+
+    def _remove_empty_files(self, directory: Path):
+        all_dirs = [p for p in directory.rglob('*') if p.is_file()]
+
+        deleted_count = 0
+        total = len(all_dirs)
+
+        for index, file_path in enumerate(all_dirs):
+            PrettyPrint.progress_bar_debug(
+                index, total, f'Удаление пустых файлов ({directory.name}):'
+            )
+
+            try:
+                if file_path.stat().st_size == 0:
+                    file_path.unlink()
+                    deleted_count += 1
             except OSError:
                 email_parser_logger.warning(
-                    f'Не удалось удалить пустой файл {file_path}'
+                    f'Не удалось удалить пустой файл: {file_path}'
                 )
-            return
 
-        # Проверяем, есть ли файл в базе:
-        relative_path = str(file_path.relative_to(settings.MEDIA_ROOT))
+        if deleted_count:
+            email_parser_logger.info(
+                f'Удалено {deleted_count} пустых файлов в {directory}'
+            )
 
-        if relative_path not in valid_files:
+    def _remove_files_without_db_record(
+        self, directory: Path, threshold: dt.datetime
+    ):
+        valid_files = set(
+            list(EmailAttachment.objects.values_list('file_url', flat=True))
+            + list(
+                EmailInTextAttachment.objects
+                .values_list('file_url', flat=True)
+            )
+            + list(EmailMime.objects.values_list('file_url', flat=True))
+        )
+        all_dirs = [p for p in directory.rglob('*') if p.is_file()]
+
+        deleted_count = 0
+        total = len(all_dirs)
+
+        for index, file_path in enumerate(all_dirs):
+            PrettyPrint.progress_bar_info(
+                index, total,
+                f'Проверка файлов без записи в базе ({directory.name}):'
+            )
+
+            relative_path = str(file_path.relative_to(settings.MEDIA_ROOT))
+
             try:
                 mtime = dt.datetime.fromtimestamp(
                     file_path.stat().st_mtime,
                     tz=timezone.get_current_timezone()
                 )
             except OSError:
-                email_parser_logger.warning(
-                    'Не удалось получить время модификации '
-                    f'{file_path}'
-                )
-                return
+                continue
 
-            if mtime < threshold:
+            # Если нет записи в базе и файл старше threshold — удаляем
+            if relative_path not in valid_files and mtime < threshold:
                 try:
                     file_path.unlink()
+                    deleted_count += 1
+
                 except OSError:
                     email_parser_logger.warning(
-                        f'Не удалось удалить {file_path}')
+                        f'Не удалось удалить файл {file_path}'
+                    )
 
-    @timer(email_parser_logger)
-    def handle(self, *args, **kwargs):
-        tg_manager.send_startup_notification(__name__)
-
-        attachment_dir = Path(INCIDENT_DIR)
-        mime_dir = Path(EMAIL_MIME_DIR)
-        if not attachment_dir.exists():
-            email_parser_logger.warning(
-                f'Папки {attachment_dir} не существует.')
-            return
-
-        if not mime_dir.exists():
-            email_parser_logger.warning(
-                f'Папки {mime_dir} не существует.')
-            return
-
-        valid_attachment_files = set(
-            EmailAttachment.objects.values_list('file_url', flat=True)
-        )
-        valid_intext_attachment_files = set(
-            EmailInTextAttachment.objects.values_list('file_url', flat=True)
-        )
-        valid_mime_files = set(
-            EmailMime.objects.values_list('file_url', flat=True)
-        )
-
-        valid_files = valid_attachment_files.union(
-            valid_intext_attachment_files, valid_mime_files
-        )
-
-        now = timezone.now()
-        threshold = now - dt.timedelta(days=max(MAX_EMAILS_ATTACHMENT_DAYS, 0))
-        total = sum(1 for _ in attachment_dir.rglob('*'))
-
-        for index, file_path in enumerate(attachment_dir.rglob('*')):
-            PrettyPrint.progress_bar_debug(
-                index, total,
-                'Удаление старых вложений без записи в базе:'
+        if deleted_count:
+            email_parser_logger.info(
+                f'Удалено {deleted_count} файлов без записи в {directory}'
             )
-            self._remove_unknown_files(file_path, valid_files, threshold)
 
-        for index, file_path in enumerate(mime_dir.rglob('*')):
-            PrettyPrint.progress_bar_debug(
-                index, total,
-                'Удаление старых mime файлов без записи в базе:'
-            )
-            self._remove_unknown_files(file_path, valid_files, threshold)
+    def _remove_old_empty_dirs(self, directory: Path, now: dt.datetime):
+        all_dirs = [p for p in directory.rglob('*') if p.is_dir()]
+        all_dirs.sort(key=lambda p: -len(p.parts))
 
-        total = sum(1 for _ in attachment_dir.rglob('*'))
-        for index, dir_path in enumerate(sorted(
-            attachment_dir.rglob('*'), key=lambda p: -p.parts.__len__()
-        )):
-            PrettyPrint.progress_bar_info(
-                index, total,
-                'Удаление пустых папок для вложений:'
+        total = len(all_dirs)
+        deleted_count = 0
+
+        for index, dir_path in enumerate(all_dirs):
+            PrettyPrint.progress_bar_error(
+                index, total, f'Удаление пустых подпапок ({directory.name}):'
             )
-            if dir_path.is_dir():
-                try:
-                    if not any(dir_path.iterdir()):
-                        folder_name = dir_path.name
+
+            try:
+                if not any(dir_path.iterdir()):
+                    folder_name = dir_path.name
+                    try:
                         folder_date = timezone.make_aware(
                             dt.datetime.strptime(
-                                folder_name, SUBFOLDER_DATE_FORMAT),
+                                folder_name, SUBFOLDER_DATE_FORMAT
+                            ),
                             timezone.get_current_timezone()
                         )
-                        if folder_date < now - dt.timedelta(days=1):
-                            dir_path.rmdir()
-                except OSError:
-                    email_parser_logger.warning(
-                        f'Не удалось удалить папку {dir_path}.')
-                except ValueError:
-                    continue
+                    except ValueError:
+                        folder_date = None
 
-        total = sum(1 for _ in mime_dir.rglob('*'))
-        for index, dir_path in enumerate(sorted(
-            mime_dir.rglob('*'), key=lambda p: -p.parts.__len__()
-        )):
-            PrettyPrint.progress_bar_info(
-                index, total,
-                'Удаление пустых папок для mime файлов:'
-            )
-            if dir_path.is_dir():
-                try:
-                    if not any(dir_path.iterdir()):
-                        folder_name = dir_path.name
-                        folder_date = timezone.make_aware(
-                            dt.datetime.strptime(
-                                folder_name, SUBFOLDER_DATE_FORMAT),
-                            timezone.get_current_timezone()
-                        )
-                        if folder_date < now - dt.timedelta(days=1):
-                            dir_path.rmdir()
-                except OSError:
-                    email_parser_logger.warning(
-                        f'Не удалось удалить папку {dir_path}.')
-                except ValueError:
-                    continue
+                    if (
+                        folder_date is None
+                        or folder_date < now - dt.timedelta(days=1)
+                    ):
+                        dir_path.rmdir()
+                        deleted_count += 1
 
-        emails = EmailMessage.objects.filter(email_date__lt=threshold)
-        total = len(emails)
-        for index, email in enumerate(emails):
-            PrettyPrint.progress_bar_error(
-                index, total,
-                'Удаление записей вложений без файла:'
-            )
-            EmailManager.get_email_attachments(email)
-            EmailManager.get_email_mimes(email)
+            except OSError:
+                email_parser_logger.warning(
+                    f'Не удалось удалить папку {dir_path}'
+                )
 
-        self._remove_orphan_attachments()
-
-        tg_manager.send_success_notification(__name__)
-
-    def _remove_orphan_attachments(self):
-        attachments_to_delete = []
-        attachments = EmailAttachment.objects.all()
-        total = len(attachments)
-
-        for index, attachment in enumerate(attachments):
-            PrettyPrint.progress_bar_error(
-                index, total,
-                'Проверка записей, без файла в базе для EmailAttachment:'
-            )
-
-            file_path = Path(settings.MEDIA_ROOT) / attachment.file_url.name
-            if not file_path.exists():
-                attachments_to_delete.append(attachment.id)
-
-        intext_to_delete = []
-        intexts = EmailInTextAttachment.objects.all()
-        total = len(intexts)
-
-        for index, attachment in enumerate(intexts):
-            PrettyPrint.progress_bar_warning(
-                index, total,
-                'Проверка записей, без файла в базе для EmailInTextAttachment:'
-            )
-
-            file_path = Path(settings.MEDIA_ROOT) / attachment.file_url.name
-            if not file_path.exists():
-                intext_to_delete.append(attachment.id)
-
-        mime_to_delete = []
-        mimes = EmailMime.objects.all()
-        total = len(mimes)
-
-        for index, attachment in enumerate(mimes):
-            PrettyPrint.progress_bar_success(
-                index, total,
-                'Проверка записей, без файла в базе для EmailMime:'
-            )
-
-            file_path = Path(settings.MEDIA_ROOT) / attachment.file_url.name
-            if not file_path.exists():
-                mime_to_delete.append(attachment.id)
-
-        if attachments_to_delete:
+        if deleted_count:
             email_parser_logger.info(
-                f'Удаляем {len(attachments_to_delete)} записей '
-                'EmailAttachment без файлов'
+                f'Удалено {deleted_count} пустых подпапок в {directory}'
             )
-            EmailAttachment.objects.filter(
-                id__in=attachments_to_delete
-            ).delete()
 
-        if intext_to_delete:
-            email_parser_logger.info(
-                f'Удаляем {len(intext_to_delete)} записей '
-                'EmailInTextAttachment без файлов'
-            )
-            EmailInTextAttachment.objects.filter(
-                id__in=intext_to_delete
-            ).delete()
+    def _remove_db_records_without_files(self):
+        models: list[EmailAttachment | EmailInTextAttachment | EmailMime] = [
+            EmailAttachment, EmailInTextAttachment, EmailMime
+        ]
+        for model in models:
+            qs = model.objects.all()
 
-        if mime_to_delete:
-            email_parser_logger.info(
-                f'Удаляем {len(mime_to_delete)} записей EmailMime без файлов'
-            )
-            EmailMime.objects.filter(id__in=mime_to_delete).delete()
+            total = qs.count()
+            to_delete_ids: list[int] = []
+            deleted_count = 0
+
+            for index, attachment in enumerate(
+                qs.iterator(chunk_size=EMAILS_FILES_2_DEL_BATCH_SIZE)
+            ):
+                PrettyPrint.progress_bar_warning(
+                    index,
+                    total,
+                    f'Проверка записей без файлов ({model.__name__}):'
+                )
+
+                file_path = (
+                    Path(settings.MEDIA_ROOT) / attachment.file_url.name
+                )
+
+                if not file_path.exists():
+                    to_delete_ids.append(attachment.id)
+                    deleted_count += 1
+
+                # удаляем батч
+                if len(to_delete_ids) >= EMAILS_FILES_2_DEL_BATCH_SIZE:
+                    model.objects.filter(id__in=to_delete_ids).delete()
+                    to_delete_ids.clear()
+
+            # удалить хвост
+            if to_delete_ids:
+                model.objects.filter(id__in=to_delete_ids).delete()
+
+            if deleted_count:
+                email_parser_logger.info(
+                    f'Удалено {deleted_count} записей без файлов для '
+                    f'{model.__name__}'
+                )

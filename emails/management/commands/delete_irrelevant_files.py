@@ -5,11 +5,17 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from core.pretty_print import PrettyPrint
 from core.loggers import incident_logger
-from emails.constants import MAX_EMAILS_ATTACHMENT_DAYS
+from core.pretty_print import PrettyPrint
+from emails.constants import (
+    EMAILS_FILES_2_DEL_BATCH_SIZE,
+    MAX_EMAILS_ATTACHMENT_DAYS,
+)
 from emails.models import (
-    EmailAttachment, EmailInTextAttachment, EmailMime, Incident
+    EmailAttachment,
+    EmailInTextAttachment,
+    EmailMime,
+    Incident,
 )
 
 
@@ -28,31 +34,37 @@ class Command(BaseCommand):
         threshold = (
             timezone.now() - dt.timedelta(days=MAX_EMAILS_ATTACHMENT_DAYS)
         )
+
         attachment_models: list[
             EmailAttachment | EmailInTextAttachment | EmailMime
         ] = [EmailAttachment, EmailInTextAttachment, EmailMime]
 
         for model in attachment_models:
-            queryset = model.objects.select_related(
+            qs = model.objects.select_related(
                 'email_msg', 'email_msg__email_incident'
             )
-            total = queryset.count()
+            total = qs.count()
+            to_delete_ids: list[int] = []
             deleted_count = 0
 
-            for index, attachment in enumerate(queryset):
-                PrettyPrint.progress_bar_info(
+            for index, attachment in enumerate(
+                qs.iterator(chunk_size=EMAILS_FILES_2_DEL_BATCH_SIZE)
+            ):
+                PrettyPrint.progress_bar_debug(
                     index, total,
                     f'Проверка старых вложений ({model.__name__}):'
                 )
 
                 email = attachment.email_msg
-                incident: Incident = getattr(email, 'email_incident', None)
+                incident: Incident | None = getattr(
+                    email, 'email_incident', None
+                )
 
                 if not incident or not incident.is_incident_finish:
                     continue
                 if (
-                    incident.is_incident_finish and incident.update_date
-                ) >= threshold:
+                    incident.update_date and incident.update_date >= threshold
+                ):
                     continue
 
                 file_path = (
@@ -69,7 +81,15 @@ class Command(BaseCommand):
                         f'{model.__name__}'
                     )
 
-                attachment.delete()
+                to_delete_ids.append(attachment.id)
+
+                if len(to_delete_ids) >= EMAILS_FILES_2_DEL_BATCH_SIZE:
+                    model.objects.filter(id__in=to_delete_ids).delete()
+                    to_delete_ids.clear()
+
+            # удалить хвост
+            if to_delete_ids:
+                model.objects.filter(id__in=to_delete_ids).delete()
 
             if deleted_count:
                 incident_logger.info(

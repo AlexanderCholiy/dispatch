@@ -3,7 +3,11 @@ MAX_EMAIL_LEN = 64
 
 MAX_ATTACHMENT_SIZE = 48 * 1024 * 1024  # (в YandexTracker max 50 MB)
 
+# Кол-во дней через которое для не актуальных инцидентов будут удалены
+# вложения:
 MAX_EMAILS_ATTACHMENT_DAYS = 180
+
+EMAILS_FILES_2_DEL_BATCH_SIZE = 500
 
 MAX_EMAILS_INFO_CACHE_SEC = 3600
 
