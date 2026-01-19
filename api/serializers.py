@@ -14,6 +14,9 @@ class IncidentReportSerializer(serializers.ModelSerializer):
     incident_type = serializers.CharField(
         source='incident_type.name', read_only=True
     )
+    incident_subtype = serializers.CharField(
+        source='incident_subtype.name', read_only=True
+    )
     region_ru = serializers.CharField(
         source='pole.region.region_ru', read_only=True
     )
@@ -41,6 +44,7 @@ class IncidentReportSerializer(serializers.ModelSerializer):
             'code',
             'last_status',
             'incident_type',
+            'incident_subtype',
             'categories',
             'incident_datetime',
             'incident_finish_datetime',

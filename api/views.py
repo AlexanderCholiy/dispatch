@@ -40,6 +40,35 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Возвращает подробную информации по инцидентам.
 
+    ПОЛЯ:
+    - code: Уникальный код инцидента.
+    - last_status: Последний статус инцидента.
+    - incident_type: Тип инцидента.
+    - incident_subtype: Подтип инцидента.
+    - categories: Категории инцидента.
+
+    - incident_datetime: Дата и время возникновения инцидента (UTC, ISO).
+    - incident_finish_datetime: Дата и время завершения инцидента (UTC, ISO).
+
+    - avr_start_datetime: Дата и время начала АВР.
+    - avr_end_datetime: Дата и время завершения АВР.
+    - is_sla_avr_expired: Превышен ли SLA по АВР.
+    - avr_deadline: Дедлайн SLA АВР.
+    - avr_names: Название подрядчика АВР.
+    - avr_emails: Email-адреса подрядчика АВР.
+
+    - rvr_start_datetime: Дата и время начала РВР.
+    - rvr_end_datetime: Дата и время завершения РВР.
+    - is_sla_rvr_expired: Превышен ли SLA по РВР.
+    - rvr_deadline: Дедлайн SLA РВР.
+
+    - pole: Шифр опоры.
+    - region_ru: Регион опоры.
+    - macroregion: Макрорегион опоры.
+
+    - base_station: Базовая станция.
+    - operator_group: Группа операторов базовой станции.
+
     Доступна фильтрация:
     - по дате инцидента начиная с первого числа предыдущего месяца
       по текущее число:
@@ -53,6 +82,7 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = Incident.objects.all().select_related(
         'incident_type',
+        'incident_subtype',
         'pole',
         'pole__avr_contractor',
         'base_station',
