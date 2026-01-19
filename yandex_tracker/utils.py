@@ -15,7 +15,7 @@ from yandex_tracker_client import TrackerClient
 from core.loggers import yt_logger
 from core.utils import Config
 from core.wraps import safe_request
-from emails.models import EmailMessage
+from emails.models import EmailFolder, EmailMessage
 from emails.utils import EmailManager
 from incidents.constants import (
     DEFAULT_STATUS_DESC,
@@ -26,6 +26,7 @@ from incidents.models import Incident, IncidentStatus, IncidentStatusHistory
 
 from .constants import (
     MAX_ATTACHMENT_SIZE_IN_YT,
+    SEND_AUTO_EMAIL_ON_CLOSED_INCIDENT,
     IsExpiredSLA,
     IsNewMsg,
 )
@@ -943,13 +944,18 @@ class YandexTrackerManager:
         if update_incident:
             incident.save()
 
-        # if (
-        #     incident.is_incident_finish
-        #     and email_incident.folder == EmailFolder.get_inbox()
-        # ):
-        #     yt_emails.auto_reply_incident_is_closed(
-        #         issue, email_incident
-        #     )
+        # Отправка автоответа, если оператор пишет в уже закрытую заявку:
+        if (
+            SEND_AUTO_EMAIL_ON_CLOSED_INCIDENT
+            and incident.is_incident_finish
+            and email_incident.folder == EmailFolder.get_inbox()
+        ):
+            from emails.email_parser import email_parser  # noqa: I001
+
+            from .auto_emails import AutoEmailsFromYT  # noqa: I003
+
+            auto_email = AutoEmailsFromYT(self, email_parser, issue, incident)
+            auto_email.auto_reply_incident_is_closed(email_incident)
 
     def add_incident_to_yandex_tracker(
         self,

@@ -645,9 +645,7 @@ class AutoEmailsFromYT:
         return self._prepare_incident_text('avr')
 
     def auto_reply_incident_is_closed(self, email: EmailMessage) -> bool:
-        """
-        Уведомляем заявителя о том, что заявка уже закрыта.
-        """
+        """Уведомляем заявителя о том, что заявка уже закрыта."""
         email_to = [email.email_from]
 
         success_message = 'Уведомили заявителя о том, что заявка уже закрыта.'
