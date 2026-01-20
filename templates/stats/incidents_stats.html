@@ -11,6 +11,9 @@
   <div class="stats">
     <div class="dashboard-top">
       <div class="chart-card">
+        <canvas id="daily-incidents-chart"></canvas>
+      </div>
+      <div class="chart-card">
         <canvas id="all-closed-incidents-chart"></canvas>
       </div>
       <div class="chart-card">
@@ -28,7 +31,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1"></script>
-<script type="module" src="{% static 'js/stats/init_first_dashboard.js' %}"></script>
-<!-- <script type="module" src="{% static 'js/stats/init_api_dashboard.js' %}"></script> -->
-<script type="module" src="{% static 'js/stats/init_ws_dashboard.js' %}"></script>
+<script type="module" src="{% static 'js/stats/init_skeleton_dashboard.js' %}"></script>
+<script type="module" src="{% static 'js/stats/init_api_dashboard.js' %}"></script>
+<!-- <script type="module" src="{% static 'js/stats/init_ws_dashboard.js' %}"></script> -->
 {% endblock %}

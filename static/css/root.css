@@ -16,6 +16,13 @@
     --magenta-color: #b23ae8;        /* кастомный статус */
     --cyan-color: #17a2b8;           /* инфо / уведомления */
 
+    --orange-color: #f2994a;     /* предупреждение / деградация */
+    --purple-color: #6f5bd7;     /* вторичный кастом */
+    --teal-color: #2f9e9e;       /* стабильность / поддержка */
+    --pink-color: #e255a1;       /* внимание / нестандарт */
+    --indigo-color: #3f51b5;     /* фокус / выделение */
+    --brown-color: #8d6e63;      /* архив / устаревшее */
+
     --priority-color: var(--blue-color);
 
     --background-color: rgb(244, 245, 247);        /* лёгкая нотка */
@@ -59,6 +66,13 @@ html.dark {
     --yellow-color: #ffd966;
     --magenta-color: #b23ae8;
     --cyan-color: #17a2b8;
+
+    --orange-color: #f5a85b;
+    --purple-color: #8a7dff;
+    --teal-color: #4db6ac;
+    --pink-color: #f178b6;
+    --indigo-color: #7986cb;
+    --brown-color: #a1887f;
 
     --priority-color: var(--blue-color);
 

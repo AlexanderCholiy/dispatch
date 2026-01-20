@@ -1,9 +1,12 @@
+from datetime import datetime, date
+
 from rest_framework import serializers
 
 from incidents.models import Incident
 from ts.models import Region
 
 from .utils import conversion_utc_datetime
+from .constants import API_DATE_FORMAT
 
 
 class IncidentReportSerializer(serializers.ModelSerializer):
@@ -170,6 +173,7 @@ class StatisticReportSerializer(serializers.ModelSerializer):
     )
 
     total_incidents = serializers.SerializerMethodField()
+    daily_incidents = serializers.SerializerMethodField()
 
     class Meta:
         model = Region
@@ -189,9 +193,24 @@ class StatisticReportSerializer(serializers.ModelSerializer):
             'sla_rvr_closed_on_time_count',
             'sla_rvr_less_than_hour_count',
             'sla_rvr_in_progress_count',
+            'daily_incidents',
         )
 
     def get_total_incidents(self, obj: Region):
         total_closed_incidents = getattr(obj, 'total_closed_incidents', 0)
         total_open_incidents = getattr(obj, 'total_open_incidents', 0)
         return total_closed_incidents + total_open_incidents
+
+    def get_daily_incidents(self, obj: Region):
+        """
+        Возвращает daily_incidents в виде отсортированного словаря с датами.
+        """
+        daily = getattr(obj, 'daily_incidents', {})
+
+        sorted_daily = {
+            day.strftime(API_DATE_FORMAT)
+            if isinstance(day, (date, datetime)) else str(day): count
+            for day, count in sorted(daily.items())
+        }
+
+        return sorted_daily

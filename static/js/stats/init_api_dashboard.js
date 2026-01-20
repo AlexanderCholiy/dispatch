@@ -1,9 +1,10 @@
-import {
-    loadStatisticsFromDate
-} from './data/stats_data_from_api.js';
+import { loadStatisticsFromDate } from './data/stats_data_from_api.js';
 
 import { renderAllIncidentsChart } from './charts/all_incidents_chart.js';
 import { renderSlaDonut } from './charts/sla_chart.js';
+import { renderDailyIncidentsChart } from './charts/daily_incidents_chart.js';
+
+import { getThemeVars } from './charts/utils.js';
 
 function getFirstDayOfPreviousMonth() {
     const now = new Date();
@@ -18,7 +19,8 @@ function formatDateDDMMYYYY(dateStr) {
 }
 
 function clearContainer(id) {
-    document.getElementById(id).innerHTML = '';
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '';
 }
 
 export async function initApiDashboard() {
@@ -27,14 +29,10 @@ export async function initApiDashboard() {
         const formattedDate = formatDateDDMMYYYY(startDate);
         const stats = await loadStatisticsFromDate(startDate);
 
-        const root = getComputedStyle(document.documentElement);
-        const red = root.getPropertyValue('--red-color').trim();
-        const green = root.getPropertyValue('--green-color').trim();
-        const blue = root.getPropertyValue('--blue-color').trim();
-        const gray = root.getPropertyValue('--gray-color').trim();
+        const theme = getThemeVars();
 
         // -----------------------------
-        // Общий заголовок перед графиками
+        // Общий заголовок
         // -----------------------------
         const container = document.querySelector('.stats');
         let h3 = container.querySelector('.dashboard-group-title');
@@ -45,7 +43,20 @@ export async function initApiDashboard() {
         }
         h3.textContent = `Статистика по инцидентам с ${formattedDate}`;
 
+        // -----------------------------
+        // Daily incidents
+        // -----------------------------
+        renderDailyIncidentsChart(
+            document.getElementById('daily-incidents-chart'),
+            stats,
+            {
+                title: `Динамика инцидентов по дням`
+            }
+        );
+
+        // -----------------------------
         // Закрытые
+        // -----------------------------
         renderAllIncidentsChart(
             document.getElementById('all-closed-incidents-chart'),
             stats,
@@ -55,18 +66,20 @@ export async function initApiDashboard() {
                     {
                         label: 'Всего закрытых',
                         valueKey: 'total_closed_incidents',
-                        color: green
+                        colorVar: '--green-color'
                     },
                     {
                         label: 'Без питания',
                         valueKey: 'closed_incidents_with_power_issue',
-                        color: gray
+                        colorVar: '--gray-color'
                     }
                 ]
             }
         );
 
+        // -----------------------------
         // Открытые
+        // -----------------------------
         renderAllIncidentsChart(
             document.getElementById('all-open-incidents-chart'),
             stats,
@@ -76,18 +89,20 @@ export async function initApiDashboard() {
                     {
                         label: 'Всего открытых',
                         valueKey: 'total_open_incidents',
-                        color: blue
+                        colorVar: '--blue-color'
                     },
                     {
                         label: 'Без питания',
                         valueKey: 'open_incidents_with_power_issue',
-                        color: gray
+                        colorVar: '--gray-color'
                     }
                 ]
             }
         );
 
+        // -----------------------------
         // SLA
+        // -----------------------------
         clearContainer('avr-sla-grid');
         clearContainer('rvr-sla-grid');
 

@@ -14,6 +14,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, viewsets
 from rest_framework.request import Request
 from rest_framework.throttling import ScopedRateThrottle
+from django.db.models.functions import TruncDate
 
 from incidents.annotations import (
     annotate_is_power_issue,
@@ -145,6 +146,8 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
     которых выявлена проблема с питанием на опоре с проверкой по мониторингу
     - closed_incidents_with_power_issue: количество закрытых инцидентов, у
     которых выявлена проблема с питанием на опоре с проверкой по мониторингу
+    - daily_incidents: разбивка количества инцидентов по дням
+    в формате {"YYYY-MM-DD": количество}, включает все инциденты за период
 
     SLA АВР:
     - sla_avr_expired: количество инцидентов, где SLA АВР просрочена
@@ -286,7 +289,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Отдельно считаем открытые и закрытые с проблемой питания
         power_qs = annotate_is_power_issue(
-            incidents, monitoring_check=True
+            incidents, monitoring_check=False # 111111111111111111111111111111111
         ).filter(is_power_issue=True)
 
         open_power_map = {
@@ -315,6 +318,23 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
 
         macroregions = list(MacroRegion.objects.order_by('name', 'id'))
 
+        # -------- Считаем инциденты по дням --------
+        daily_qs = (
+            incidents
+            .annotate(day=TruncDate('incident_date'))
+            .values('pole__region__macroregion', 'day')
+            .annotate(count=Count('id'))
+            .order_by('pole__region__macroregion', 'day')
+        )
+
+        daily_map = {}
+        for row in daily_qs:
+            macro_id = row['pole__region__macroregion']
+            day = row['day']
+            count = row['count']
+            daily_map.setdefault(macro_id, {})[day] = count
+
+        # -------- Заполняем макрорегионы данными --------
         for macro in macroregions:
             macro_stats = stats_map.get(macro.pk, {})
             for field in [
@@ -340,6 +360,8 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
             macro.closed_incidents_with_power_issue = closed_power_map.get(
                 macro.pk, 0
             )
+
+            macro.daily_incidents = daily_map.get(macro.pk, {})
 
         cache.set(cache_key, macroregions, STATISTIC_CACHE_TIMEOUT)
 

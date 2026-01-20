@@ -1,20 +1,4 @@
-function getThemeVars() {
-    const s = getComputedStyle(document.documentElement);
-
-    return {
-        baseBg: s.getPropertyValue('--background-color').trim(),
-        text: s.getPropertyValue('--add-color').trim(),
-        bg: s.getPropertyValue('--add-background-color').trim(),
-        grid: s.getPropertyValue('--extra-color').trim(),
-
-        red: s.getPropertyValue('--red-color').trim(),
-        green: s.getPropertyValue('--green-color').trim(),
-        yellow: s.getPropertyValue('--yellow-color').trim(),
-        blue: s.getPropertyValue('--blue-color').trim(),
-
-        empty: s.getPropertyValue('--extra-color').trim()
-    };
-}
+import { getThemeVars } from './utils.js';
 
 const centerTextPlugin = {
     id: 'centerText',
@@ -30,7 +14,8 @@ const centerTextPlugin = {
 
         ctx.save();
         ctx.fillStyle = opts.color;
-        ctx.font = opts.font || 'bold 18px sans-serif';
+        // Используем шрифт из настроек или дефолт
+        ctx.font = opts.font || 'bold 16px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(opts.text, x, y);
@@ -38,29 +23,29 @@ const centerTextPlugin = {
     }
 };
 
-export function renderSlaDonut(canvas, title, values) {
+export function renderSlaDonut(canvas, title, values = [0, 0, 0, 0]) {
     if (!canvas || !window.Chart) return;
+
+    if (canvas._chartInstance) {
+        canvas._chartInstance.destroy();
+    }
 
     const theme = getThemeVars();
     const total = values.reduce((a, b) => a + b, 0);
-
     const isEmpty = total === 0;
 
-    // считаем количество ненулевых сегментов
+    // Считаем количество ненулевых сегментов для красивых границ
     const nonZeroCount = values.filter(v => v > 0).length;
     const borderWidth = isEmpty || nonZeroCount === 1 ? 0 : 1;
 
     const data = {
-        labels: isEmpty
-            ? ['Нет данных']
-            : ['Просрочено', 'Закрыто вовремя', 'Меньше часа', 'В работе'],
-
+        labels: ['Просрочено', 'Закрыто вовремя', 'Меньше часа', 'В работе'],
         datasets: [{
             data: isEmpty ? [1] : values,
             backgroundColor: isEmpty
-                ? [theme.empty]
+                ? [theme.gridColor] // серый цвет для пустого графика
                 : [theme.red, theme.green, theme.yellow, theme.blue],
-            borderColor: theme.baseBg,
+            borderColor: theme.addBackground, // Цвет границы между сегментами
             borderWidth: borderWidth
         }]
     };
@@ -72,70 +57,70 @@ export function renderSlaDonut(canvas, title, values) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            cutout: '45%',
+            cutout: '65%',
             plugins: {
                 title: {
                     display: true,
                     text: title,
-                    color: theme.text,
-                    font: { weight: '400', size: 12 },
-                    position: 'top'
+                    color: theme.titleColor,
+                    font: { 
+                        size: theme.fontSm,
+                        weight: 'normal' 
+                    },
+                    padding: { bottom: 10 }
                 },
                 legend: {
                     display: true,
                     position: 'bottom',
-                    align: 'start',
                     labels: {
-                        color: theme.text,
+                        color: theme.addTextColor,
                         usePointStyle: true,
-                        padding: 16
+                        pointStyle: 'circle',
+                        padding: 15,
+                        font: { size: theme.fontXs }
                     }
                 },
                 tooltip: {
-                    enabled: true,
-                    backgroundColor: theme.bg,
-                    titleColor: theme.text,
-                    bodyColor: theme.text,
-                    borderColor: theme.grid,
+                    enabled: !isEmpty, // Отключаем тултип для пустых данных
+                    backgroundColor: theme.addBackground,
+                    titleColor: theme.textColor,
+                    bodyColor: theme.addTextColor,
+                    borderColor: theme.gridColor,
                     borderWidth: 1,
-                    callbacks: {
-                        label(ctx) {
-                            return isEmpty
-                                ? 'Нет SLA-данных'
-                                : `${ctx.label}: ${ctx.parsed}`;
-                        }
-                    }
                 },
                 centerText: {
-                    text: isEmpty ? '0' : total,
-                    color: isEmpty ? theme.empty : theme.text,
-                    font: 'bold 16px sans-serif'
+                    text: total.toString(),
+                    color: theme.textColor,
+                    font: `bold ${theme.fontMd}px sans-serif`
                 }
             }
         },
     });
 
+    // Реакция на смену темы (dark/light)
     const observer = new MutationObserver(() => {
         const t = getThemeVars();
-
         const dataset = chart.data.datasets[0];
 
+        // Обновляем цвета сегментов
         dataset.backgroundColor = isEmpty
-            ? [t.empty]
+            ? [t.gridColor]
             : [t.red, t.green, t.yellow, t.blue];
+        dataset.borderColor = t.addBackground;
 
-        dataset.borderColor = t.baseBg;
+        // Обновляем цвета шрифтов и элементов
+        chart.options.plugins.legend.labels.color = t.addTextColor;
+        chart.options.plugins.title.color = t.titleColor;
+        
+        // Обновляем тултипы
+        chart.options.plugins.tooltip.backgroundColor = t.addBackground;
+        chart.options.plugins.tooltip.titleColor = t.textColor;
+        chart.options.plugins.tooltip.bodyColor = t.addTextColor;
+        chart.options.plugins.tooltip.borderColor = t.gridColor;
 
-        chart.options.plugins.legend.labels.color = t.text;
-        chart.options.plugins.title.color = t.text;
-        chart.options.plugins.tooltip.backgroundColor = t.bg;
-        chart.options.plugins.tooltip.titleColor = t.text;
-        chart.options.plugins.tooltip.bodyColor = t.text;
-
+        // Обновляем центральный текст
         if (chart.options.plugins.centerText) {
-            chart.options.plugins.centerText.color = isEmpty
-                ? t.empty
-                : t.text;
+            chart.options.plugins.centerText.color = t.textColor;
         }
 
         chart.update();
@@ -146,5 +131,6 @@ export function renderSlaDonut(canvas, title, values) {
         attributeFilter: ['class']
     });
 
+    canvas._chartInstance = chart;
     return chart;
 }
