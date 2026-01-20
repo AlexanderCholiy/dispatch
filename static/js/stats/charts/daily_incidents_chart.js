@@ -1,15 +1,15 @@
 import { getThemeVars, getCssVar } from './utils.js';
 
 const regionColorVars = [
-    '--green-color',
+    '--pink-color',
+    '--cyan-color',
     '--blue-color',
     '--red-color',
     '--yellow-color',
+    '--brown-color',
     '--gray-color',
     '--magenta-color',
-    '--cyan-color',
-    '--brown-color',
-    '--pink-color',
+    '--green-color',
     '--orange-color',
 ];
 

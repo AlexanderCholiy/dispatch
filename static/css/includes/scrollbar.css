@@ -12,12 +12,12 @@ body::-webkit-scrollbar-track {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: var(--extra-color);
-  border-radius: var(--radius-xs);
+  background-color: var(--gray-color);
+  border-radius: var(--radius-xxl);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: var(--gray-color)
+  background-color: var(--add-color)
 }
 
 /* Стрелки в начале и конце */
