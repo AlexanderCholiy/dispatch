@@ -17,7 +17,7 @@ body::-webkit-scrollbar-track {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: var(--add-color)
+  background-color: var(--extra-color)
 }
 
 /* Стрелки в начале и конце */

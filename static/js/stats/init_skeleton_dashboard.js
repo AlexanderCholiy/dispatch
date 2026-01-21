@@ -1,137 +1,195 @@
-import { renderAllIncidentsChart } from './charts/all_incidents_chart.js';
-import { renderSlaDonut } from './charts/sla_chart.js';
-import { renderDailyIncidentsChart } from './charts/daily_incidents_chart.js';
-import { getThemeVars } from './charts/utils.js'; // Используем общую функцию темы
+import { createDailyIncidentsChart, updateDailyIncidentsChartColors } from './charts/daily_incidents.js';
+import { createAllIncidentsChart, updateAllIncidentsChartColors } from './charts/all_incidents.js';
+import { createSlaDonutChart, updateSlaDonutChartColors } from './charts/sla_donut.js';
+import { getDatesSincePreviousMonth, getFirstDayOfPreviousMonth, formatDateRu } from './charts_utils.js';
+import { startStatisticsPolling } from './dashboard_api_updater.js';
+import { getChartColors, observeThemeChange } from './theme_colors.js';
 
 if (window.Chart && window.ChartZoom) {
     Chart.register(window.ChartZoom);
 }
 
-function renderEmptySlaBlock(containerId, titleText) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
+window.dashboardCharts = {};
 
-    container.innerHTML = ''; // Очистка
+document.addEventListener('DOMContentLoaded', () => {
+    const colors = getChartColors();
 
-    const title = document.createElement('h3');
-    title.className = 'dashboard-group-title';
-    title.textContent = titleText;
-    container.appendChild(title);
+    /* ---------- DASHBOARD TITLE ---------- */
+    const startDate = getFirstDayOfPreviousMonth();
+    const formattedDate = formatDateRu(startDate);
+    const titleEl = document.createElement('p');
 
-    const grid = document.createElement('div');
-    grid.className = 'sla-grid';
-    container.appendChild(grid);
+    titleEl.className = 'dashboard-title';
+    titleEl.textContent = `Статистика по инцидентам от ${formattedDate}`;
 
-    for (let i = 0; i < 3; i++) {
-        const card = document.createElement('div');
-        card.className = 'sla-card';
-        card.innerHTML = '<canvas></canvas>';
-        grid.appendChild(card);
+    const root = document.getElementById('dashboard-root') || document.body;
+    root.prepend(titleEl);
 
-        renderSlaDonut(
-            card.querySelector('canvas'),
-            'Загрузка…',
-            [0, 0, 0, 0]
+    /* ---------- DAILY LINE ---------- */
+
+    const regionColors = [
+        colors.pink,
+        colors.cyan,
+        colors.blue,
+        colors.red,
+        colors.yellow,
+        colors.brown,
+        colors.gray,
+        colors.magenta,
+        colors.green,
+    ];
+
+    const dailyDatasets = regionColors.map((color, idx) => ({
+        label: `МР-${idx + 1}`,
+        data: [],
+        borderColor: color,
+        backgroundColor: color,
+        fill: false,
+    }));
+
+    const dailyChart = createDailyIncidentsChart(
+        document.getElementById('daily-incidents-chart').getContext('2d'),
+        {
+            labels: getDatesSincePreviousMonth(),
+            datasets: dailyDatasets,
+        }
+    );
+
+    window.dashboardCharts.daily = dailyChart;
+
+    /* ---------- CLOSED BAR ---------- */
+    const MACROREGION_LABELS = [
+        'МР-1', 'МР-2', 'МР-3', 'МР-4', 'МР-5',
+        'МР-6', 'МР-7', 'МР-8', 'МР-9',
+    ];
+
+    const closedDatasets = [
+        { label: 'Всего', color: colors.green },
+        { label: 'Без питания', color: colors.gray },
+    ];
+
+    const closedChart = createAllIncidentsChart(
+        document.getElementById('all-closed-incidents-chart').getContext('2d'),
+        {
+            labels: MACROREGION_LABELS,
+            datasets: closedDatasets.map(d => ({
+                label: d.label,
+                data: [],
+                backgroundColor: d.color,
+            }))
+        },
+        'Закрытые инциденты'
+    );
+
+    window.dashboardCharts.closed = closedChart;
+
+    /* ---------- OPEN BAR ---------- */
+
+    const openDatasets = [
+        { label: 'Всего', color: colors.blue },
+        { label: 'Без питания', color: colors.gray },
+    ];
+
+    const openChart = createAllIncidentsChart(
+        document.getElementById('all-open-incidents-chart').getContext('2d'),
+        {
+            labels: MACROREGION_LABELS,
+            datasets: openDatasets.map(d => ({
+                label: d.label,
+                data: [],
+                backgroundColor: d.color,
+            }))
+        },
+        'Открытые инциденты'
+    );
+
+    window.dashboardCharts.open = openChart;
+
+    /* ---------- SLA DONUTS (SKELETON) ---------- */
+    const initSlaSkeleton = (containerId, bar_title) => {
+        const container = document.getElementById(containerId);
+        const charts = [];
+
+        // очищаем контейнер (на случай повторной инициализации)
+        container.innerHTML = '';
+
+        /* ---- TITLE ---- */
+        const titleEl = document.createElement('p');
+        titleEl.className = 'sla-title';
+        titleEl.textContent = bar_title;
+        container.appendChild(titleEl);
+
+        /* ---- GRID ---- */
+        const grid = document.createElement('div');
+        grid.className = 'sla-grid';
+        container.appendChild(grid);
+
+        for (let i = 1; i <= 9; i++) {
+            // ОБЁРТКА
+            const item = document.createElement('div');
+            item.className = 'sla-item';
+
+            // CANVAS
+            const canvas = document.createElement('canvas');
+            item.appendChild(canvas);
+
+            // добавляем в grid
+            grid.appendChild(item);
+
+            // создаём график
+            const chart = createSlaDonutChart(
+                canvas.getContext('2d'),
+                {
+                    title: `МР-${i}`,
+                    single: true,
+                    data: [],
+                    datasetColors: [],
+                    total: 0
+                }
+            );
+
+            charts.push(chart);
+        }
+
+        return charts;
+    };
+
+    window.dashboardCharts.sla = {
+        avr: initSlaSkeleton('avr-sla-grid', 'SLA АВР'),
+        rvr: initSlaSkeleton('rvr-sla-grid', 'SLA РВР'),
+    };
+
+    // Обновление данных
+    startStatisticsPolling(
+        window.dashboardCharts.daily,
+        window.dashboardCharts.closed,
+        window.dashboardCharts.open,
+        window.dashboardCharts.sla
+    );
+
+    /* ---------- THEME CHANGE ---------- */
+
+    observeThemeChange(() => {
+        const colors = getChartColors();
+
+        updateDailyIncidentsChartColors(window.dashboardCharts.daily);
+
+        updateAllIncidentsChartColors(
+            window.dashboardCharts.closed,
+            [colors.green, colors.gray]
         );
-    }
-}
 
+        updateAllIncidentsChartColors(
+            window.dashboardCharts.open,
+            [colors.blue, colors.gray]
+        );
 
-// Генерирует массив дат от 1-го числа предыдущего месяца до сегодня
-function getSkeletonLabels() {
-    const labels = [];
-    const today = new Date();
-    
-    // 1-е число предыдущего месяца по местному времени
-    const startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        updateSlaDonutChartColors(
+            window.dashboardCharts.sla.avr,
+        );
 
-    let currentDate = new Date(startDate);
-    
-    // Сбрасываем время у today в 00:00, чтобы сравнение в while было корректным
-    const targetDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-
-    while (currentDate <= targetDate) {
-        // Форматируем дату в YYYY-MM-DD по локальному времени
-        const year = currentDate.getFullYear();
-        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-        const day = String(currentDate.getDate()).padStart(2, '0');
-        
-        labels.push(`${year}-${month}-${day}`);
-        
-        // Переходим к следующему дню
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
-    
-    return labels;
-}
-
-export function initFirstDashboard() {
-    const theme = getThemeVars();
-    const mutedColor = theme.gray
-
-    // -----------------------------
-    // Общий заголовок (проверка на дубликаты)
-    // -----------------------------
-    const container = document.querySelector('.stats');
-    if (!container) return;
-
-    // Удаляем старый заголовок, если он был, чтобы не дублировать
-    const oldTitle = container.querySelector('.dashboard-group-title.main-title');
-    if (oldTitle) oldTitle.remove();
-
-    const h3 = document.createElement('h3');
-    h3.className = 'dashboard-group-title main-title';
-    h3.textContent = 'Статистика по инцидентам';
-    container.prepend(h3);
-
-    // -----------------------------
-    // Daily incidents (skeleton)
-    // -----------------------------
-    const dailyCanvas = document.getElementById('daily-incidents-chart');
-    if (dailyCanvas) {
-        const dateRange = getSkeletonLabels();
-        renderDailyIncidentsChart(dailyCanvas, [], {
-            title: 'Загрузка динамики инцидентов по дням…',
-            empty: true,
-            skeletonLabels: dateRange,
-            yMin: 0,
-            yMax: 10,
-            lineColor: mutedColor
-        });
-    }
-
-    // -----------------------------
-    // Закрытые инциденты (скелетон)
-    // -----------------------------
-    const closedCanvas = document.getElementById('all-closed-incidents-chart');
-    if (closedCanvas) {
-        renderAllIncidentsChart(closedCanvas, [], {
-            datasets: [
-                { label: 'Всего закрытых', valueKey: 'total_closed_incidents', color: mutedColor },
-                { label: 'Без питания', valueKey: 'closed_incidents_with_power_issue', color: mutedColor }
-            ]
-        });
-    }
-
-    // -----------------------------
-    // Открытые инциденты (скелетон)
-    // -----------------------------
-    const openCanvas = document.getElementById('all-open-incidents-chart');
-    if (openCanvas) {
-        renderAllIncidentsChart(openCanvas, [], {
-            datasets: [
-                { label: 'Всего открытых', valueKey: 'total_open_incidents', color: mutedColor },
-                { label: 'Без питания', valueKey: 'open_incidents_with_power_issue', color: mutedColor }
-            ]
-        });
-    }
-
-    // -----------------------------
-    // SLA skeleton
-    // -----------------------------
-    renderEmptySlaBlock('avr-sla-grid', 'SLA АВР');
-    renderEmptySlaBlock('rvr-sla-grid', 'SLA РВР');
-}
-
-// Автоинициализация при загрузке
-document.addEventListener('DOMContentLoaded', initFirstDashboard);
+        updateSlaDonutChartColors(
+            window.dashboardCharts.sla.rvr,
+        );
+    });
+});

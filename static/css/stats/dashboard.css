@@ -1,0 +1,29 @@
+.stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-lg);
+}
+
+.dashboard-title {
+    grid-column: 1 / -1;
+    font-size: var(--font-lg);
+    font-weight: 550;
+    color: var(--color);
+    text-align: right;
+}
+
+@media (max-width: 1024px) {
+    .stats {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .stats {
+        gap: var(--space-md);
+    }
+
+    .dashboard-title {
+        text-align: center;
+    }
+}

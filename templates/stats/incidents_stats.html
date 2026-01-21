@@ -2,25 +2,23 @@
 {% load static %}
 
 {% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/stats/charts.css' %}">
-  <link rel="stylesheet" href="{% static 'css/stats/sla_charts.css' %}">
+<link rel="stylesheet" href="{% static 'css/stats/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/stats/charts.css' %}">
+<link rel="stylesheet" href="{% static 'css/stats/donuts.css' %}">
 {% endblock %}
 
 {% block content %}
 <div class="container">
-  <div class="stats">
-    <div class="dashboard-top">
-      <div class="chart-card">
-        <canvas id="daily-incidents-chart"></canvas>
-      </div>
-      <div class="chart-card">
-        <canvas id="all-closed-incidents-chart"></canvas>
-      </div>
-      <div class="chart-card">
-        <canvas id="all-open-incidents-chart"></canvas>
-      </div>
+  <div class="stats" id="dashboard-root">
+    <div class="chart-card">
+      <canvas id="daily-incidents-chart"></canvas>
     </div>
-  
+    <div class="chart-card">
+      <canvas id="all-closed-incidents-chart"></canvas>
+    </div>
+    <div class="chart-card">
+      <canvas id="all-open-incidents-chart"></canvas>
+    </div>
     <div id="avr-sla-grid"></div>
     <div id="rvr-sla-grid"></div>
   </div>
@@ -29,9 +27,8 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
 <script type="module" src="{% static 'js/stats/init_skeleton_dashboard.js' %}"></script>
-<script type="module" src="{% static 'js/stats/init_api_dashboard.js' %}"></script>
+<!-- <script type="module" src="{% static 'js/stats/init_api_dashboard.js' %}"></script> -->
 <!-- <script type="module" src="{% static 'js/stats/init_ws_dashboard.js' %}"></script> -->
 {% endblock %}
