@@ -10,11 +10,11 @@ from django.db.models import (
     Q,
     QuerySet,
 )
+from django.db.models.functions import TruncDate
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, viewsets
 from rest_framework.request import Request
 from rest_framework.throttling import ScopedRateThrottle
-from django.db.models.functions import TruncDate
 
 from incidents.annotations import (
     annotate_is_power_issue,
@@ -289,7 +289,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Отдельно считаем открытые и закрытые с проблемой питания
         power_qs = annotate_is_power_issue(
-            incidents, monitoring_check=False # 111111111111111111111111111111111
+            incidents, monitoring_check=True
         ).filter(is_power_issue=True)
 
         open_power_map = {

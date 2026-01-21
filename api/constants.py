@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from django.db.models import F, Q
 
-STATISTIC_CACHE_TIMEOUT = 1  # сек
+STATISTIC_CACHE_TIMEOUT = 10  # сек
 
 CLOSED_INCIDENTS_CHECK_TIMER = timedelta(hours=1)
 

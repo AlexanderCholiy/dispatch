@@ -1,12 +1,12 @@
-from datetime import datetime, date
+from datetime import date, datetime
 
 from rest_framework import serializers
 
 from incidents.models import Incident
 from ts.models import Region
 
-from .utils import conversion_utc_datetime
 from .constants import API_DATE_FORMAT
+from .utils import conversion_utc_datetime
 
 
 class IncidentReportSerializer(serializers.ModelSerializer):
