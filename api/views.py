@@ -142,12 +142,22 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
     - total_open_incidents: количество открытых инцидентов
     - active_contractor_incidents: количество активных инцидентов, где
     уведомлены подрядчики или начат АВР/РВР
-    - open_incidents_with_power_issue: количество открытых инцидентов, у
-    которых выявлена проблема с питанием на опоре с проверкой по мониторингу
-    - closed_incidents_with_power_issue: количество закрытых инцидентов, у
-    которых выявлена проблема с питанием на опоре с проверкой по мониторингу
     - daily_incidents: разбивка количества инцидентов по дням
     в формате {"YYYY-MM-DD": количество}, включает все инциденты за период
+
+    ПРОБЛЕМЫ С ПИТАНИЕМ:
+    - open_incidents_with_power_issue:
+        количество открытых инцидентов, у которых выявлена проблема с питанием.
+    - closed_incidents_with_power_issue:
+        количество закрытых инцидентов с проблемой по питанию.
+
+    По умолчанию проверка по системе мониторинга ОТКЛЮЧЕНА, так как она требует
+    обращения к сторонней БД и может значительно замедлять выполнение запроса.
+
+    Для включения проверки мониторинга необходимо передать
+    query-параметр:
+        monitoring_check=true
+
 
     SLA АВР:
     - sla_avr_expired: количество инцидентов, где SLA АВР просрочена
@@ -167,10 +177,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
     - sla_rvr_in_progress: количество инцидентов с РВР в процессе и SLA еще
     не истекла
 
-    ФИЛЬТРАЦИЯ ПО ДАТЕ:
-    Поддерживается фильтрация по дате инцидента.
-
-    Поддерживаемые query-параметры:
+    Query-параметры:
 
     - start_date (YYYY-MM-DD):
         Начальная дата инцидента (включительно).
@@ -179,6 +186,11 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
     - end_date (YYYY-MM-DD):
         Конечная дата инцидента (включительно).
         Если не указана — фильтрация сверху не применяется.
+
+    - monitoring_check (bool, default=false):
+        Включает дополнительную проверку проблемы питания по данным
+        мониторинга (сторонняя БД). Если false — используется только
+        эвристика по типу инцидента и данным инцидента.
 
     ПРИМЕРЫ ЗАПРОСОВ:
     Получить статистику за всё время:
@@ -209,7 +221,13 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
             params.get('end_date'),
         )
 
-        cache_key = self._build_statistic_cache_key(start, end)
+        monitoring_check = params.get('monitoring_check', 'false').lower() in (
+            '1', 'true', 'yes'
+        )
+
+        cache_key = self._build_statistic_cache_key(
+            start, end, monitoring_check
+        )
         cached = cache.get(cache_key)
 
         if cached:
@@ -289,7 +307,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Отдельно считаем открытые и закрытые с проблемой питания
         power_qs = annotate_is_power_issue(
-            incidents, monitoring_check=True
+            incidents, monitoring_check=monitoring_check
         ).filter(is_power_issue=True)
 
         open_power_map = {
@@ -380,8 +398,12 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
         return q
 
     def _build_statistic_cache_key(
-        self, start: Optional[date], end: Optional[date]
+        self,
+        start: Optional[date],
+        end: Optional[date],
+        monitoring_check: bool,
     ) -> str:
         start_key = start.isoformat() if start else 'none'
         end_key = end.isoformat() if end else 'none'
-        return f'statistic_report:{start_key}:{end_key}'
+        monitoring_key = 'mon1' if monitoring_check else 'mon0'
+        return f'statistic_report:{start_key}:{end_key}:{monitoring_key}'
