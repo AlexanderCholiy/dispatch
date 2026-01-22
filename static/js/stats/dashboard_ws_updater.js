@@ -1,78 +1,97 @@
+import { getFirstDayOfPreviousMonth, formatDate, showMessage, validateDateRange } from './charts_utils.js';
 import { updateDailyChart, updateBarChart, updateSlaCharts } from './data/charts_updater.js';
 
-export function startStatisticsWebSocket(dashboardCharts) {
-    if (!window.WebSocket) return console.error('WebSocket not supported');
+let ws = null;
+const lastMsgRef = { current: null };
+
+export function startStatisticsWebSocket(charts) {
+    const startInput = document.getElementById('start-date');
+    const endInput = document.getElementById('end-date');
+    const applyBtn = document.getElementById('apply-period');
+    const resetBtn = document.getElementById('reset-period');
+    const messagesContainer = document.querySelector('.messages-container');
 
     const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
     const wsUrl = `${wsScheme}://${window.location.host}/ws/incidents/stats/`;
 
-    let socket;
-    let reconnectTimeout = 10000; // 10 секунд перед новой попыткой
+    const defaultStart = formatDate(getFirstDayOfPreviousMonth());
+    const defaultEnd = '';
 
-    const connect = () => {
-        socket = new WebSocket(wsUrl);
+    startInput.value = defaultStart;
+    endInput.value = defaultEnd;
+    endInput.max = new Date().toISOString().split('T')[0];
 
-        socket.onopen = () => {
-            console.log('WS connected');
-        };
+    let confirmedStart = defaultStart;
+    let confirmedEnd = null;
 
-        socket.onclose = (e) => {
-            console.warn('WS disconnected, retrying in 10s', e);
-            setTimeout(connect, reconnectTimeout);
-        };
+    /* ---------- CONNECT ---------- */
 
-        socket.onerror = (err) => {
-            console.error('WS error:', err);
-            // закрываем соединение чтобы запустился onclose и попытка reconnect
-            socket.close();
-        };
+    ws = new WebSocket(wsUrl);
 
-        socket.onmessage = (event) => {
-            let data;
-            try {
-                data = JSON.parse(event.data);
-            } catch (e) {
-                console.error('WS parse error:', e);
-                return;
-            }
+    ws.onopen = () => {
+        console.log("WS connected");
+        sendParams(confirmedStart, confirmedEnd);
+    };
 
+    ws.onmessage = (e) => {
+        try {
+            const data = JSON.parse(e.data);
             if (data.error) {
-                console.error('WS error:', data.error);
-                return;
+                return showMessage(data.error, 'error', messagesContainer, lastMsgRef);
             }
-
-            try {
-                const stats = data.period;
-
-                // daily
-                updateDailyChart(dashboardCharts.daily, stats);
-
-                // closed
-                updateBarChart(dashboardCharts.closed, stats, [
-                    'total_closed_incidents',
-                    'closed_incidents_with_power_issue'
-                ]);
-
-                // open
-                updateBarChart(dashboardCharts.open, stats, [
-                    'total_open_incidents',
-                    'open_incidents_with_power_issue'
-                ]);
-
-                // SLA
-                updateSlaCharts(dashboardCharts.sla.avr, stats, 'avr');
-                updateSlaCharts(dashboardCharts.sla.rvr, stats, 'rvr');
-
-            } catch (e) {
-                console.error('WS update error:', e);
-                // данные не обновляются, но старые остаются видимыми
-            }
-        };
+            const apiData = data.period ?? data;
+            updateCharts(apiData);
+        } catch (err) {
+            console.error("WS parse error", err);
+        }
     };
 
-    connect();
+    ws.onerror = e => console.error("WS error", e);
+    ws.onclose = () => console.warn("WS closed");
 
-    return {
-        close: () => socket?.close(),
-    };
+    function sendParams(start, end) {
+        const payload = { start_date: start };
+        if (end) payload.end_date = end;
+        console.log("SEND FILTER", payload);
+        ws.send(JSON.stringify(payload));
+    }
+
+    function updateCharts(apiData) {
+        updateDailyChart(charts.daily, apiData);
+        updateBarChart(charts.closed, apiData, ['total_closed_incidents', 'closed_incidents_with_power_issue']);
+        updateBarChart(charts.open, apiData, ['total_open_incidents', 'open_incidents_with_power_issue']);
+        updateSlaCharts(charts.sla.avr, apiData, 'avr');
+        updateSlaCharts(charts.sla.rvr, apiData, 'rvr');
+    }
+
+    /* ---------- APPLY ---------- */
+
+    applyBtn.addEventListener('click', () => {
+        const start = startInput.value;
+        const end = endInput.value || null;
+
+        if (!validateDateRange(start, end)) {
+            return showMessage('Дата начала больше даты конца', 'warning', messagesContainer, lastMsgRef);
+        }
+
+        confirmedStart = start;
+        confirmedEnd = end;
+
+        sendParams(confirmedStart, confirmedEnd);
+    });
+
+    /* ---------- RESET ---------- */
+
+    resetBtn.addEventListener('click', () => {
+        startInput.value = defaultStart;
+        endInput.value = defaultEnd;
+
+        confirmedStart = defaultStart;
+        confirmedEnd = null;
+
+        messagesContainer.querySelectorAll('.message').forEach(m => m.remove());
+        lastMsgRef.current = null;
+
+        sendParams(confirmedStart, confirmedEnd);
+    });
 }

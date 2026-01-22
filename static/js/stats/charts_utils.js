@@ -53,3 +53,29 @@ export function formatDateRu(date) {
         timeZone: 'UTC',
     });
 }
+
+/**
+ * Показывает сообщение пользователю
+ */
+export function showMessage(text, type = 'error', container, lastMsgRef) {
+    if (lastMsgRef.current === text) return;
+    lastMsgRef.current = text;
+
+    const msg = document.createElement('div');
+    msg.className = `message alert-${type}`;
+    msg.innerText = text;
+    container.appendChild(msg);
+
+    setTimeout(() => {
+        msg.remove();
+        lastMsgRef.current = null;
+    }, 5000);
+}
+
+/**
+ * Проверяет корректность диапазона дат
+ */
+export function validateDateRange(start, end) {
+    if (end && start > end) return false;
+    return true;
+}

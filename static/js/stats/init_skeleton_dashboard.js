@@ -1,7 +1,7 @@
 import { createDailyIncidentsChart, updateDailyIncidentsChartColors } from './charts/daily_incidents.js';
 import { createAllIncidentsChart, updateAllIncidentsChartColors } from './charts/all_incidents.js';
 import { createSlaDonutChart, updateSlaDonutChartColors } from './charts/sla_donut.js';
-import { getDatesSincePreviousMonth, getFirstDayOfPreviousMonth, formatDateRu } from './charts_utils.js';
+import { getDatesSincePreviousMonth } from './charts_utils.js';
 import { startStatisticsPolling } from './dashboard_api_updater.js';
 import { getChartColors, observeThemeChange } from './theme_colors.js';
 import { startStatisticsWebSocket } from './dashboard_ws_updater.js';
@@ -150,15 +150,15 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Обновление данных через API:
-    startStatisticsPolling(
-        window.dashboardCharts.daily,
-        window.dashboardCharts.closed,
-        window.dashboardCharts.open,
-        window.dashboardCharts.sla
-    );
+    // startStatisticsPolling(
+    //     window.dashboardCharts.daily,
+    //     window.dashboardCharts.closed,
+    //     window.dashboardCharts.open,
+    //     window.dashboardCharts.sla
+    // );
 
     // Обновление данных через WS:
-    // startStatisticsWebSocket(window.dashboardCharts);
+    startStatisticsWebSocket(window.dashboardCharts);
 
     /* ---------- THEME CHANGE ---------- */
 

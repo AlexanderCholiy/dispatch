@@ -60,17 +60,16 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
 
         self.query_params = payload
 
+        data = await self.get_statistics()
+        await self.send(text_data=json.dumps(data))
+
     async def send_statistics_loop(self):
         while self.running:
             try:
                 data = await self.get_statistics()
                 await self.send(text_data=json.dumps(data))
-
             except Exception as e:
                 django_logger.debug(e, exc_info=True)
-                await self.send(text_data=json.dumps({
-                    'error': 'Failed to load statistics'
-                }))
 
             await asyncio.sleep(STATS_INTERVAL_SECONDS)
 
