@@ -161,15 +161,15 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Обновление данных через API:
-    // startStatisticsPolling(
-    //     window.dashboardCharts.daily,
-    //     window.dashboardCharts.closed,
-    //     window.dashboardCharts.open,
-    //     window.dashboardCharts.sla
-    // );
+    startStatisticsPolling(
+        window.dashboardCharts.daily,
+        window.dashboardCharts.closed,
+        window.dashboardCharts.open,
+        window.dashboardCharts.sla
+    );
 
     // Обновление данных через WS:
-    startStatisticsWebSocket(window.dashboardCharts);
+    // startStatisticsWebSocket(window.dashboardCharts);
 
     /* ---------- THEME CHANGE ---------- */
 

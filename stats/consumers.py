@@ -1,5 +1,7 @@
 import asyncio
 import json
+from typing import Optional
+from http import HTTPStatus
 
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -14,15 +16,25 @@ from .constants import STATS_INTERVAL_SECONDS
 
 
 class IncidentStatsConsumer(AsyncWebsocketConsumer):
+    """
+    WebSocket consumer для отправки статистики инцидентов.
 
-    _last_data = None
+    Поддерживаемые параметры от клиента (JSON):
+    - start_date (YYYY-MM-DD, optional)
+    - end_date (YYYY-MM-DD, optional)
+    - monitoring_check (bool, optional)
+
+    Если параметры не переданы, используются значения по умолчанию:
+    - start_date: первый день предыдущего месяца
+    - end_date: сегодня
+    - monitoring_check: False
+    """
 
     async def connect(self):
         await self.accept()
         self.running = True
-
-        if self._last_data:
-            await self.send(text_data=json.dumps(self._last_data))
+        self._last_data = None
+        self.query_params = {}
 
         self.task = asyncio.create_task(self.send_statistics_loop())
 
@@ -31,13 +43,28 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
         if hasattr(self, 'task'):
             self.task.cancel()
 
+    async def receive(
+        self,
+        text_data: Optional[str] = None,
+        bytes_data: Optional[bytes] = None,
+    ):
+        """Обновление параметров запроса, присланных клиентом"""
+        if not text_data:
+            return
+
+        try:
+            payload = json.loads(text_data)
+        except json.JSONDecodeError:
+            await self.send(text_data=json.dumps({'error': 'Invalid JSON'}))
+            return
+
+        self.query_params = payload
+
     async def send_statistics_loop(self):
         while self.running:
             try:
                 data = await self.get_statistics()
-                if data != self._last_data:
-                    await self.send(text_data=json.dumps(data))
-                    self._last_data = data
+                await self.send(text_data=json.dumps(data))
 
             except Exception as e:
                 django_logger.debug(e, exc_info=True)
@@ -49,15 +76,15 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
 
     async def get_statistics(self):
         """
-        Получаем статистику за два периода:
-        1) весь период (без фильтра)
-        2) с первого числа предыдущего месяца по текущий день
+        Получаем статистику через синхронный ViewSet с query params
         """
-        return await sync_to_async(self._fetch_statistics)()
+        return await sync_to_async(self._fetch_statistics)(self.query_params)
 
-    def _fetch_statistics(self):
+    def _fetch_statistics(self, params: dict = None):
         """
-        Синхронный код для вызова DRF ViewSet через внутренний GET-запрос.
+        Синхронный вызов DRF ViewSet для получения статистики с query params.
+        Любые ошибки валидации (например, неверный формат дат) ловятся и
+        возвращаются клиенту в JSON.
         """
         from api.views import StatisticReportViewSet
 
@@ -70,19 +97,55 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
             now.replace(day=1) - relativedelta(months=1)
         ).date()
 
-        request_month = factory.get(url, {
+        # Дефолтные параметры
+        query = {
             'start_date': first_day_prev_month.isoformat(),
-        })
-        force_authenticate(request_month, user=None)
-        response_month = view(request_month)
+            'end_date': now.date().isoformat(),
+            'monitoring_check': False,
+        }
+
+        if params:
+            if 'start_date' in params:
+                query['start_date'] = params['start_date']
+            if 'end_date' in params:
+                query['end_date'] = params['end_date']
+            if 'monitoring_check' in params:
+                query['monitoring_check'] = (
+                    str(params['monitoring_check']).lower()
+                    in ('1', 'true', 'yes')
+                )
+
+        request = factory.get(url, query)
+        force_authenticate(request, user=None)
+
+        try:
+            response = view(request)
+            data = response.data
+        except Exception as e:
+            django_logger.debug(e, exc_info=True)
+            return {
+                'error': str(e),
+                'status_code': HTTPStatus.BAD_REQUEST,
+                'query': query
+            }
+
+        if getattr(
+            response, 'status_code', HTTPStatus.OK
+        ) >= HTTPStatus.BAD_REQUEST:
+            return {
+                'error': data,
+                'status_code': response.status_code,
+                'query': query
+            }
 
         return {
-            'period': response_month.data,
+            'period': data,
             'meta': {
                 'generated_at': now.isoformat(),
                 'period': {
-                    'from': first_day_prev_month.isoformat(),
-                    'to': now.date().isoformat(),
-                }
+                    'from': query['start_date'],
+                    'to': query['end_date'],
+                },
+                'query': query,
             }
         }

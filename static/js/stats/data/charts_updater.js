@@ -11,7 +11,7 @@ export function updateDailyChart(chart, apiData) {
     chart.data.labels = adapted.labels;
 
     adapted.datasets.forEach((incoming, idx) => {
-        const tension = 0.3; // плавность линий
+        const tension = 0.2; // плавность линий
 
         if (!chart.data.datasets[idx]) {
             // новый датасет — добавляем с tension
