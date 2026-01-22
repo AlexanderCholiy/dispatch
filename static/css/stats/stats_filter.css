@@ -1,0 +1,49 @@
+.input-group {
+    display: flex;
+    gap: var(--space-xs);
+    flex-direction: column;
+    width: 100%;
+}
+
+.input-group .input-label {
+    color: var(--add-color);
+    font-size: var(--font-xs);
+    align-self: flex-start;
+}
+
+.input-group .input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-group input[type="date"] {
+    width: 100%;
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--font-sm);
+    border: 1px solid var(--extra-color);
+    border-radius: var(--radius-md);
+    background-color: var(--add-background-color);
+    color: var(--add-color);
+    cursor: pointer;
+    transition: border-color var(--transition-value), box-shadow var(--transition-value), background-color var(--transition-value);
+    box-shadow: 0 0 var(--space-xs) var(--extra-color);
+    
+    /* Для корректной инверсии стрелки календаря в темной теме */
+    color-scheme: light dark;
+}
+
+.input-group input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    filter: invert(1); /* светлая тема */
+    transition: filter var(--transition-value);
+}
+
+html.dark .input-group input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0); /* темная тема - белый календарь */
+}
+
+.input-group input[type="date"]:focus {
+    outline: none;
+    box-shadow: 0 0 var(--space-sm) var(--extra-color);
+}

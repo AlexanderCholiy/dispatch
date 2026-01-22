@@ -15,17 +15,6 @@ window.dashboardCharts = {};
 document.addEventListener('DOMContentLoaded', () => {
     const colors = getChartColors();
 
-    /* ---------- DASHBOARD TITLE ---------- */
-    const startDate = getFirstDayOfPreviousMonth();
-    const formattedDate = formatDateRu(startDate);
-    const titleEl = document.createElement('p');
-
-    titleEl.className = 'dashboard-title';
-    titleEl.textContent = `Статистика по инцидентам от ${formattedDate}`;
-
-    const root = document.getElementById('dashboard-root') || document.body;
-    root.prepend(titleEl);
-
     /* ---------- DAILY LINE ---------- */
 
     const regionColors = [
@@ -79,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 backgroundColor: d.color,
             }))
         },
-        'Закрытые инциденты'
+        'Закрытые'
     );
 
     window.dashboardCharts.closed = closedChart;
@@ -101,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 backgroundColor: d.color,
             }))
         },
-        'Открытые инциденты'
+        'Открытые'
     );
 
     window.dashboardCharts.open = openChart;

@@ -2,6 +2,8 @@
 {% load static %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/includes/table_filter.css' %}">
+<link rel="stylesheet" href="{% static 'css/stats/stats_filter.css' %}">
 <link rel="stylesheet" href="{% static 'css/stats/dashboard.css' %}">
 <link rel="stylesheet" href="{% static 'css/stats/charts.css' %}">
 <link rel="stylesheet" href="{% static 'css/stats/donuts.css' %}">
@@ -9,7 +11,38 @@
 
 {% block content %}
 <div class="container">
-  <div class="stats" id="dashboard-root">
+  <div class="table-filter-form">
+    <div class="left-part">
+      <div>
+        <div class="input-group">
+          <label for="start-date" class="input-label">Начало периода:</label>
+          <div class="input-wrapper">
+            <input type="date" id="start-date" max="{{ today|date:'Y-m-d' }}">
+          </div>
+        </div>
+      </div>
+      
+      <div>
+        <div class="input-group">
+          <label for="end-date" class="input-label">Конец периода:</label>
+          <div class="input-wrapper">
+            <input type="date" id="end-date" max="{{ today|date:'Y-m-d' }}">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-parts">
+      <button type="button" id="reset-period" class="btn btn-secondary tooltip" data-title="Сбросить фильтры">
+        <i class="bx bx-x-circle"></i>
+      </button>
+      <button type="submit" id="apply-period" class="btn btn-primary tooltip" data-title="Применить фильтр">
+        <i class="bx bx-filter"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="stats">
     <div class="chart-card">
       <canvas id="daily-incidents-chart"></canvas>
     </div>

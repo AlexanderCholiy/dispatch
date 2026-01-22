@@ -1,7 +1,7 @@
 import asyncio
 import json
-from typing import Optional
 from http import HTTPStatus
+from typing import Optional
 
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
