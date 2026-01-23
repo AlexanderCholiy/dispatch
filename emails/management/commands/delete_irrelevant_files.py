@@ -22,7 +22,7 @@ from emails.models import (
 class Command(BaseCommand):
     help = (
         'Удаление старых вложений писем для закрытых инцидентов, а также '
-        'старых писем без инцидента.'
+        'старых писем без инцидента'
     )
 
     def handle(self, *args, **kwargs):
@@ -30,9 +30,10 @@ class Command(BaseCommand):
 
     def _remove_old_attachments_with_closed_incident(self):
         """
-        Удаляем EmailAttachment, EmailInTextAttachment, EmailMime,
-        если у письма есть закрытый инцидент, и дата закрытия
-        старше MAX_EMAILS_ATTACHMENT_DAYS.
+        Удаляем EmailAttachment, EmailInTextAttachment, EmailMime если:
+
+        - нет инцидента и пиьсмо пришло раньше вчерашнего дня;
+        - есть инцидент, он закрыт и с момента закрытия прошло больше N дней.
         """
         threshold_for_incident = (
             timezone.now() - dt.timedelta(days=MAX_EMAILS_ATTACHMENT_DAYS)

@@ -15,12 +15,10 @@ from emails.models import EmailAttachment, EmailInTextAttachment, EmailMime
 
 class Command(BaseCommand):
     help = 'Удаление вложений без файла или без записи и пустых папок.'
+    dt = dt.timedelta(days=1)
 
     @timer(incident_logger)
     def handle(self, *args, **kwargs):
-        now = timezone.now()
-        threshold = now - dt.timedelta(days=1)
-
         attachment_dirs = {
             'attachments': Path(INCIDENT_DIR),
             'mimes': Path(EMAIL_MIME_DIR)
@@ -37,15 +35,16 @@ class Command(BaseCommand):
             self._remove_empty_files(directory)
 
             # Шаг 2: удалить старые файлы без записи
-            self._remove_files_without_db_record(directory, threshold)
+            self._remove_files_without_db_record(directory)
 
-            # Шаг 3: удалить пустые подпапки старше 1 дня
-            self._remove_old_empty_dirs(directory, now)
+            # Шаг 3: удалить пустые подпапки
+            self._remove_old_empty_dirs(directory)
 
         # Шаг 4: удалить записи без файлов
         self._remove_db_records_without_files()
 
     def _remove_empty_files(self, directory: Path):
+        """Рекурсивно удаляет файлы с нулевым размером (0 байт)."""
         all_dirs = [p for p in directory.rglob('*') if p.is_file()]
 
         deleted_count = 0
@@ -53,7 +52,8 @@ class Command(BaseCommand):
 
         for index, file_path in enumerate(all_dirs):
             PrettyPrint.progress_bar_debug(
-                index, total, f'Удаление пустых файлов ({directory.name}):'
+                index, total,
+                f'Удаление файлов с нулевым размером ({directory.name}):'
             )
 
             try:
@@ -70,9 +70,12 @@ class Command(BaseCommand):
                 f'Удалено {deleted_count} пустых файлов в {directory}'
             )
 
-    def _remove_files_without_db_record(
-        self, directory: Path, threshold: dt.datetime
-    ):
+    def _remove_files_without_db_record(self, directory: Path):
+        """
+        Удаляет файлы с диска, если на них нет ссылки в БД и они старше порога.
+        """
+        threshold = timezone.now() - self.dt
+
         valid_files = set(
             list(EmailAttachment.objects.values_list('file_url', flat=True))
             + list(
@@ -118,7 +121,13 @@ class Command(BaseCommand):
                 f'Удалено {deleted_count} файлов без записи в {directory}'
             )
 
-    def _remove_old_empty_dirs(self, directory: Path, now: dt.datetime):
+    def _remove_old_empty_dirs(self, directory: Path):
+        """
+        Удаляет пустые папки, если их имя-дата старше threshold или не
+        соответствует формату.
+        """
+        threshold = timezone.now() - self.dt
+
         all_dirs = [p for p in directory.rglob('*') if p.is_dir()]
         all_dirs.sort(key=lambda p: -len(p.parts))
 
@@ -145,7 +154,7 @@ class Command(BaseCommand):
 
                     if (
                         folder_date is None
-                        or folder_date < now - dt.timedelta(days=1)
+                        or folder_date < threshold
                     ):
                         dir_path.rmdir()
                         deleted_count += 1
@@ -161,11 +170,18 @@ class Command(BaseCommand):
             )
 
     def _remove_db_records_without_files(self):
+        """
+        Удаляет записи из базы данных, если физический файл на диске
+        отсутствует и запись создана более threshold.
+        """
+        threshold = timezone.now() - self.dt
+
         models: list[EmailAttachment | EmailInTextAttachment | EmailMime] = [
             EmailAttachment, EmailInTextAttachment, EmailMime
         ]
+
         for model in models:
-            qs = model.objects.all()
+            qs = model.objects.filter(email_msg__email_date__lt=threshold)
 
             total = qs.count()
             to_delete_ids: list[int] = []

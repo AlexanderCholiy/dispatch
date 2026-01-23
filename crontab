@@ -2,8 +2,19 @@ SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 CRON_TZ=Europe/Moscow
 
-0 1 * * * /usr/local/bin/python /app/manage.py delete_unknown_files >> /app/logs/cron/cron.log 2>&1
-30 1 * * * /usr/local/bin/python /app/manage.py delete_irrelevant_files >> /app/logs/cron/cron.log 2>&1
+# Общие настройки: 
+# Используем ionice -c 3 (запуск только когда диск свободен) 
+# и nice -n 19 (самый низкий приоритет для процессора).
 
-*/20 * * * * /usr/local/bin/python /app/manage.py update_data_from_ts >> /app/logs/cron/cron.log 2>&1
-0 */6 * * * /usr/local/bin/python /app/manage.py database_backup >> /app/logs/cron/cron.log 2>&1
+# Работа с файловой системой:
+0 1 * * * nice -n 19 ionice -c 3 /usr/local/bin/python /app/manage.py delete_unknown_files >> /app/logs/cron/cron.log 2>&1
+30 2 * * * nice -n 19 ionice -c 3 /usr/local/bin/python /app/manage.py delete_irrelevant_files >> /app/logs/cron/cron.log 2>&1
+0 4 * * * nice -n 19 ionice -c 3 /usr/local/bin/python /app/manage.py cleanup_users_avatars >> /app/logs/cron/cron.log 2>&1
+
+# Обновление данных:
+# Добавляем небольшую задержку (sleep), чтобы не стартовать ровно в 00 секунд вместе с другими системными задачами
+*/20 * * * * sleep 15 && nice -n 15 /usr/local/bin/python /app/manage.py update_data_from_ts >> /app/logs/cron/cron.log 2>&1
+
+# Резервное копирование:
+# Сдвигаем на 45-ю минуту, чтобы не пересекаться с началом часа, когда срабатывают многие скрипты
+45 */6 * * * nice -n 10 ionice -c 2 -n 7 /usr/local/bin/python /app/manage.py database_backup >> /app/logs/cron/cron.log 2>&1
