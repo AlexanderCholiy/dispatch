@@ -126,6 +126,7 @@ def index(request: HttpRequest) -> HttpResponse:
 
     base_qs = Incident.objects.select_related(
         'incident_type',
+        'incident_subtype',
         'responsible_user',
         'pole',
         'pole__region',
@@ -203,6 +204,7 @@ def index(request: HttpRequest) -> HttpResponse:
 
     incidents_qs = Incident.objects.filter(id__in=page_ids).select_related(
         'incident_type',
+        'incident_subtype',
         'responsible_user',
         'pole',
         'pole__region',

@@ -36,6 +36,15 @@
   </p>
 
   <p>
+    <strong>Подтип:</strong>
+    {% if incident.incident_subtype %}
+      <span>{{ incident.incident_subtype }}</span>
+    {% else %}
+      —
+    {% endif %}
+  </p>
+
+  <p>
     <strong>Категории:</strong>
     {% if incident.categories.all %}
       <span>{{ incident.categories.all|join:', ' }}</span>

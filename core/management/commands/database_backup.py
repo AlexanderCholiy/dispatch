@@ -24,11 +24,11 @@ class Command(BaseCommand):
 
     database_conf: dict = settings.DATABASES['default']
 
-    db_host = database_conf['HOST']
-    db_port = database_conf['PORT']
-    db_name = database_conf['NAME']
-    db_user = database_conf['USER']
-    db_pswd = database_conf['PASSWORD']
+    db_host: str = database_conf['HOST']
+    db_port: int = database_conf['PORT']
+    db_name: str = database_conf['NAME']
+    db_user: str = database_conf['USER']
+    db_pswd: str = database_conf['PASSWORD']
 
     reserve_host = os.getenv('RESERVE_SERVER_HOST')
     reserve_port = int(os.getenv('RESERVE_SERVER_PORT', 22))
@@ -57,9 +57,11 @@ class Command(BaseCommand):
         # self.restore_database(
         #     (
         #         '/home/a.choliy/dispatch/data/remote_backup_db/'
-        #         + 'backup_dispatch_2026-01-22_09-00.sql'
+        #         + 'backup_dispatch_2026-01-23_09-00.sql'
         #     ),
-        #     f'dump_{self.db_name}'
+        #     f'dump_{self.db_name}' if (
+        #         not self.db_name.startswith('dump_')
+        #     ) else self.db_name
         # )
 
     def backup_db(self):

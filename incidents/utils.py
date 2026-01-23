@@ -1112,6 +1112,7 @@ class IncidentManager(IncidentValidator):
             Incident.objects
             .select_related(
                 'incident_type',
+                'incident_subtype',
                 'responsible_user',
                 'pole',
                 'pole__region',
