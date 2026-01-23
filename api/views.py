@@ -1,6 +1,11 @@
-from datetime import date
+import json
+from datetime import date, datetime
+from pathlib import Path
 from typing import Optional
+from urllib.parse import quote
 
+from dateutil.relativedelta import relativedelta
+from django.conf import settings
 from django.core.cache import cache
 from django.db.models import (
     Count,
@@ -11,8 +16,11 @@ from django.db.models import (
     QuerySet,
 )
 from django.db.models.functions import TruncDate
+from django.http import FileResponse, HttpResponse
+from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, viewsets
+from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.throttling import ScopedRateThrottle
 
@@ -26,7 +34,14 @@ from incidents.models import Incident, IncidentStatusHistory
 from ts.models import MacroRegion, PoleContractorEmail
 
 from .constants import (
+    ALL_CLOSED_INCIDENT_AGE_LIMIT,
+    BASE_INCIDENT_VALID_FILTER,
+    CACHE_INCIDENTS_FILE,
+    CACHE_INCIDENTS_LAST_MONTH_FILE,
+    CACHE_INCIDENTS_TTL,
     CLOSED_INCIDENTS_VALID_FILTER,
+    INCIDENTS_CACHE_PUBLIC_URL,
+    JSON_EXPORT_CHUNK_SIZE,
     OPEN_INCIDENTS_VALID_FILTER,
     STATISTIC_CACHE_TIMEOUT,
     TOTAL_VALID_INCIDENTS_FILTER,
@@ -70,16 +85,19 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
     - base_station: Базовая станция.
     - operator_group: Группа операторов базовой станции.
 
-    Доступна фильтрация:
-    - по дате инцидента начиная с первого числа предыдущего месяца
-      по текущее число:
-      GET /api/v1/report/incidents/?last_month=true
+    ДОСТУПНЫЕ ЭНДПОИНТЫ:
 
-    - получение всех инцидентов без пагинации:
-      GET /api/v1/report/incidents/?all=true
+    1) Пагинированный список инцидентов:
+       GET /api/v1/report/incidents/
 
-    - Возвращает все инциденты за последний месяц без пагинации:
-      GET /api/v1/report/incidents/?last_month=true&all=true
+    2) Фильтрация по последнему месяцу:
+       GET /api/v1/report/incidents/?last_month=true
+
+    3) Полная выгрузка для Excel (без пагинации):
+       GET /api/v1/report/incidents/excel_export/
+
+    4) Полная выгрузка за последний месяц:
+       GET /api/v1/report/incidents/excel_export/?last_month=true
     """
     queryset = Incident.objects.all().select_related(
         'incident_type',
@@ -119,13 +137,118 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
     ordering_fields = ('incident_date', 'id')
     ordering = ('-incident_date', '-id')
 
-    def get_queryset(self):
-        """Если передан all=true, возвращаем все записи без пагинации"""
+    def get_queryset(self) -> QuerySet:
         qs = super().get_queryset()
-        self.request: Request
-        if self.request.query_params.get('all', '').lower() == 'true':
-            self.pagination_class = None
-        return qs
+
+        closed_last_year_filter = BASE_INCIDENT_VALID_FILTER & Q(
+            is_incident_finish=True,
+            incident_finish_date__isnull=False,
+            incident_finish_date__gte=(
+                timezone.now() - ALL_CLOSED_INCIDENT_AGE_LIMIT
+            )
+        )
+
+        return qs.filter(
+            OPEN_INCIDENTS_VALID_FILTER | closed_last_year_filter
+        )
+
+    @action(detail=False, methods=['get'], url_path='excel_export')
+    def excel_export(self, request: Request):
+        """Полная выгрузка инцидентов для Excel без пагинации."""
+        self.pagination_class = None
+
+        last_month = request.query_params.get(
+            'last_month', ''
+        ).lower() == 'true'
+
+        cache_file = (
+            CACHE_INCIDENTS_LAST_MONTH_FILE
+            if last_month
+            else CACHE_INCIDENTS_FILE
+        )
+
+        if cache_file.exists():
+            modified_time = datetime.fromtimestamp(
+                cache_file.stat().st_mtime, tz=timezone.get_current_timezone()
+            )
+            if timezone.now() - modified_time < CACHE_INCIDENTS_TTL:
+                return self._send_file(cache_file)
+
+        queryset = self.get_queryset()
+        if last_month:
+            queryset = queryset.filter(
+                incident_date__gte=self._get_first_day_prev_month()
+            )
+
+        # Потоковая сериализация JSON:
+        def stream_json_chunks(qs: QuerySet):
+            """Потоковая сериализация JSON по блокам."""
+            yield '['
+            first = True
+            chunk = []
+            for obj in qs.iterator():
+                chunk.append(self.get_serializer(obj).data)
+                if len(chunk) >= JSON_EXPORT_CHUNK_SIZE:
+                    for item in chunk:
+                        if first:
+                            first = False
+                        else:
+                            yield ','
+                        yield json.dumps(item, ensure_ascii=False)
+                    chunk = []
+            # Последний неполный блок
+            if chunk:
+                for item in chunk:
+                    if first:
+                        first = False
+                    else:
+                        yield ','
+                    yield json.dumps(item, ensure_ascii=False)
+            yield ']'
+
+        tmp_file = cache_file.with_suffix('.tmp')
+        with tmp_file.open('w', encoding='utf-8') as f:
+            for chunk in stream_json_chunks(queryset):
+                f.write(chunk)
+        tmp_file.replace(cache_file)
+
+        return self._send_file(cache_file)
+
+    def _get_first_day_prev_month(self) -> datetime:
+        now = timezone.localtime(timezone.now())
+        return (
+            now.replace(day=1) - relativedelta(months=1)
+        ).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    def _send_file(self, cache_file: Path):
+        """
+        Отправка файла: Django в DEBUG, иначе Nginx через X-Accel-Redirect.
+        """
+        filename = cache_file.name
+
+        if settings.DEBUG:
+            return FileResponse(cache_file.open('rb'), filename=filename)
+        else:
+            response = HttpResponse()
+            redirect_url = f'{INCIDENTS_CACHE_PUBLIC_URL}{filename}'
+
+            filename_ascii = filename.encode(
+                'ascii', 'ignore'
+            ).decode() or 'file'
+            filename_rfc5987 = quote(filename)
+
+            disposition_type = 'attachment'
+            disposition = (
+                f'{disposition_type}; '
+                f'filename="{filename_ascii}"; '
+                f'filename*=UTF-8\'\'{filename_rfc5987}'
+            )
+
+            response['Content-Disposition'] = disposition
+            response['Content-Type'] = ''
+            response['X-Accel-Redirect'] = redirect_url
+
+            return response
 
 
 class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):

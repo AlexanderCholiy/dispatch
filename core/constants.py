@@ -16,10 +16,14 @@ from .exceptions import (
 BASE_DIR = settings.BASE_DIR
 LOG_DIR = os.path.join(BASE_DIR, 'logs')
 DATA_DIR = os.path.join(BASE_DIR, 'data')
+
+TMP_DATA_DIR = os.path.join(DATA_DIR, 'tmp')
+os.makedirs(TMP_DATA_DIR, exist_ok=True)
+
 DEBUG_MODE: bool = settings.DEBUG
 
 DEFAULT_LOG_FILE = os.path.join(LOG_DIR, 'log.log')
-DEFAULT_ROTATING_LOG_FILE = os.path.join(LOG_DIR, 'default', 'rt_log.log')
+DEFAULT_ROTATING_LOG_FILE = os.path.join(LOG_DIR, 'default', 'log.log')
 DEFAULT_LOG_MODE = 4 if DEBUG_MODE else 1
 DEFAULT_LOG_LEVEL = DEBUG if DEBUG_MODE else INFO
 
@@ -56,7 +60,8 @@ os.makedirs(os.path.dirname(DJANGO_LOG_ROTATING_FILE), exist_ok=True)
 os.makedirs(os.path.dirname(CELLERY_LOG_ROTATING_FILE), exist_ok=True)
 
 UPDATE_DATA_FROM_TS_LOCK_FILE = os.path.join(
-    DATA_DIR, 'lock', 'update_data_from_ts.lock')
+    DATA_DIR, 'lock', 'update_data_from_ts.lock'
+)
 
 os.makedirs(os.path.dirname(UPDATE_DATA_FROM_TS_LOCK_FILE), exist_ok=True)
 
