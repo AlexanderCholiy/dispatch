@@ -3,6 +3,7 @@ from pathlib import Path
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.db.models import Q
 from django.utils import timezone
 
 from core.loggers import incident_logger
@@ -15,12 +16,14 @@ from emails.models import (
     EmailAttachment,
     EmailInTextAttachment,
     EmailMime,
-    Incident,
 )
 
 
 class Command(BaseCommand):
-    help = 'Удаление старых вложений писем для закрытых инцидентов.'
+    help = (
+        'Удаление старых вложений писем для закрытых инцидентов, а также '
+        'старых писем без инцидента.'
+    )
 
     def handle(self, *args, **kwargs):
         self._remove_old_attachments_with_closed_incident()
@@ -31,8 +34,11 @@ class Command(BaseCommand):
         если у письма есть закрытый инцидент, и дата закрытия
         старше MAX_EMAILS_ATTACHMENT_DAYS.
         """
-        threshold = (
+        threshold_for_incident = (
             timezone.now() - dt.timedelta(days=MAX_EMAILS_ATTACHMENT_DAYS)
+        )
+        threshold_for_email = (
+            timezone.now() - dt.timedelta(days=1)
         )
 
         attachment_models: list[
@@ -40,9 +46,22 @@ class Command(BaseCommand):
         ] = [EmailAttachment, EmailInTextAttachment, EmailMime]
 
         for model in attachment_models:
-            qs = model.objects.select_related(
-                'email_msg', 'email_msg__email_incident'
+            qs = (
+                model.objects
+                .filter(
+                    Q(
+                        email_msg__email_incident__isnull=True,
+                        email_msg__email_date__lt=threshold_for_email,
+                    )
+                    | Q(
+                        email_msg__email_incident__is_incident_finish=True,
+                        email_msg__email_incident__update_date__lt=(
+                            threshold_for_incident
+                        ),
+                    )
+                )
             )
+
             total = qs.count()
             to_delete_ids: list[int] = []
             deleted_count = 0
@@ -54,18 +73,6 @@ class Command(BaseCommand):
                     index, total,
                     f'Проверка старых вложений ({model.__name__}):'
                 )
-
-                email = attachment.email_msg
-                incident: Incident | None = getattr(
-                    email, 'email_incident', None
-                )
-
-                if not incident or not incident.is_incident_finish:
-                    continue
-                if (
-                    incident.update_date and incident.update_date >= threshold
-                ):
-                    continue
 
                 file_path = (
                     Path(settings.MEDIA_ROOT) / attachment.file_url.name
