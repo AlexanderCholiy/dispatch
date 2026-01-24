@@ -1,6 +1,4 @@
-from dateutil.relativedelta import relativedelta
 from django.db.models import QuerySet
-from django.utils import timezone
 from django_filters import (
     BooleanFilter,
     DateFromToRangeFilter,
@@ -8,6 +6,8 @@ from django_filters import (
 )
 
 from incidents.models import Incident
+
+from .utils import get_first_day_prev_month
 
 
 class IncidentReportFilter(FilterSet):
@@ -28,14 +28,8 @@ class IncidentReportFilter(FilterSet):
     def filter_last_month(
         self, queryset: QuerySet[Incident], name: str, value: bool
     ):
-        """Заявки с первого числа предыдущего месяца по сегодня"""
+        """В Заявки с первого числа предыдущего месяца по сегодня"""
         if value:
-            now = timezone.localtime(timezone.now())
-            first_day_prev_month = (
-                now.replace(day=1) - relativedelta(months=1)
-            ).replace(hour=0, minute=0, second=0, microsecond=0)
-            return queryset.filter(
-                incident_date__gte=first_day_prev_month,
-                incident_date__lte=now
-            )
+            first_day_prev_month = get_first_day_prev_month()
+            return queryset.filter(incident_date__gte=first_day_prev_month)
         return queryset

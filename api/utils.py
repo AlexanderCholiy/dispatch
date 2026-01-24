@@ -1,7 +1,9 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from dateutil.relativedelta import relativedelta
 from django.conf import settings
+from django.utils import timezone
 
 
 def conversion_utc_datetime(value: datetime) -> str:
@@ -12,3 +14,10 @@ def conversion_utc_datetime(value: datetime) -> str:
         .replace(microsecond=0)
         .isoformat()
     )
+
+
+def get_first_day_prev_month() -> datetime:
+    now = timezone.localtime(timezone.now())
+    return (
+        now.replace(day=1) - relativedelta(months=1)
+    ).replace(hour=0, minute=0, second=0, microsecond=0)

@@ -1,7 +1,7 @@
-import os
 from http import HTTPStatus
+from pathlib import Path
 from typing import Optional
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -60,59 +60,62 @@ def too_many_requests(
     )
 
 
-@login_required
-@role_required()
-def protected_media(request: HttpRequest, file_path: str):
-    """Отдача защищённых файлов через X-Accel-Redirect для продакшена."""
-    normalized_path = os.path.normpath(file_path)
+def send_x_accel_file(file_path: Path | str) -> HttpResponse:
+    file_path = Path(unquote(str(file_path)))
+    media_root = Path(settings.MEDIA_ROOT).resolve()
 
-    if normalized_path.startswith('public/'):
-        raise Http404('Файл публичный, используйте прямую ссылку')
+    if file_path.is_absolute():
+        full_path = file_path.resolve()
+        try:
+            normalized_path = full_path.relative_to(media_root).as_posix()
+        except ValueError:
+            django_logger.warning(
+                'Попытка доступа к абсолютному пути вне MEDIA_ROOT: '
+                f'{full_path}'
+            )
+            raise Http404('Некорректный путь к файлу')
+    else:
+        normalized_path = file_path.as_posix().lstrip('/')
+        full_path = (media_root / normalized_path).resolve()
 
-    full_path = os.path.join(settings.MEDIA_ROOT, normalized_path)
+    try:
+        full_path.relative_to(media_root)
+    except ValueError:
+        django_logger.warning(f'Попытка обхода путей: {file_path}')
+        raise Http404('Некорректный путь к файлу')
 
-    if not full_path.startswith(os.path.abspath(settings.MEDIA_ROOT)):
-        django_logger.warning(
-            f'Попытка доступа за пределы MEDIA_ROOT: {full_path}'
-        )
+    if not full_path.exists():
+        django_logger.warning(f'Файл не найден: {file_path}')
         raise Http404('Файл не найден')
 
-    if not os.path.exists(full_path):
-        django_logger.warning(f'Файл {full_path} не найден')
-        raise Http404('Файл не найден')
+    filename = full_path.name
+    is_inline = full_path.suffix.lower() in INLINE_EXTS
 
-    ext = os.path.splitext(normalized_path)[1].lower()
-    is_inline = ext in INLINE_EXTS
-    filename = os.path.basename(normalized_path)
-
-    # В разработке отдаем файл напрямую через Django:
     if settings.DEBUG:
-        return FileResponse(
-            open(full_path, 'rb'),
-            as_attachment=not is_inline,
-            filename=filename
-        )
+        return FileResponse(open(full_path, 'rb'), as_attachment=not is_inline)
 
-    # Кодируем каждый сегмент пути для URL
     safe_path = '/'.join(quote(part) for part in normalized_path.split('/'))
-    redirect_url = f'/media/{safe_path}'
+    redirect_url = f"{settings.MEDIA_URL}{safe_path}"
 
-    # В продакшене отдаём файл через Nginx:
     response = HttpResponse()
     response['X-Accel-Redirect'] = redirect_url
 
-    # Кодируем имя файла для Content-Disposition
     filename_ascii = filename.encode('ascii', 'ignore').decode() or 'file'
     filename_rfc5987 = quote(filename)
 
-    disposition_type = 'inline' if is_inline else 'attachment'
     disposition = (
-        f'{disposition_type}; '
+        f'{"inline" if is_inline else "attachment"}; '
         f'filename="{filename_ascii}"; '
-        f'filename*=UTF-8\'\'{filename_rfc5987}'
+        f"filename*=UTF-8''{filename_rfc5987}"
     )
 
     response['Content-Disposition'] = disposition
     response['Content-Type'] = ''
 
     return response
+
+
+@login_required
+@role_required()
+def protected_media(request: HttpRequest, file_path: Path | str):
+    return send_x_accel_file(file_path)

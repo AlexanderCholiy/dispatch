@@ -1,11 +1,9 @@
 import json
 from datetime import date, datetime
+from http import HTTPStatus
 from pathlib import Path
 from typing import Optional
-from urllib.parse import quote
 
-from dateutil.relativedelta import relativedelta
-from django.conf import settings
 from django.core.cache import cache
 from django.db.models import (
     Count,
@@ -16,14 +14,16 @@ from django.db.models import (
     QuerySet,
 )
 from django.db.models.functions import TruncDate
-from django.http import FileResponse, HttpResponse
+from django.http import HttpResponse
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
+from redis.exceptions import LockError
 from rest_framework import filters, permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.throttling import ScopedRateThrottle
 
+from core.views import send_x_accel_file
 from incidents.annotations import (
     annotate_is_power_issue,
     annotate_sla_avr,
@@ -40,7 +40,6 @@ from .constants import (
     CACHE_INCIDENTS_LAST_MONTH_FILE,
     CACHE_INCIDENTS_TTL,
     CLOSED_INCIDENTS_VALID_FILTER,
-    INCIDENTS_CACHE_PUBLIC_URL,
     JSON_EXPORT_CHUNK_SIZE,
     OPEN_INCIDENTS_VALID_FILTER,
     STATISTIC_CACHE_TIMEOUT,
@@ -49,6 +48,7 @@ from .constants import (
 from .filters import IncidentReportFilter
 from .pagination import IncidentReportPagination
 from .serializers import IncidentReportSerializer, StatisticReportSerializer
+from .utils import get_first_day_prev_month
 from .validators import validate_date_range
 
 
@@ -93,11 +93,11 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
     2) Фильтрация по последнему месяцу:
        GET /api/v1/report/incidents/?last_month=true
 
-    3) Полная выгрузка для Excel (без пагинации):
-       GET /api/v1/report/incidents/excel_export/
+    3) Полная выгрузка для JSON (без пагинации):
+       GET /api/v1/report/incidents/json_export/
 
     4) Полная выгрузка за последний месяц:
-       GET /api/v1/report/incidents/excel_export/?last_month=true
+       GET /api/v1/report/incidents/json_export/?last_month=true
     """
     queryset = Incident.objects.all().select_related(
         'incident_type',
@@ -152,103 +152,96 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
             OPEN_INCIDENTS_VALID_FILTER | closed_last_year_filter
         )
 
-    @action(detail=False, methods=['get'], url_path='excel_export')
-    def excel_export(self, request: Request):
-        """Полная выгрузка инцидентов для Excel без пагинации."""
+    @action(detail=False, methods=['get'], url_path='json_export')
+    def json_export(self, request: Request):
+        """
+        Полная выгрузка инцидентов ввиде .json без пагинации с кешированием 5
+        мин.
+        """
         self.pagination_class = None
 
-        last_month = request.query_params.get(
-            'last_month', ''
-        ).lower() == 'true'
+        last_month = (
+            request.query_params.get('last_month', '').lower()
+        ) == 'true'
 
         cache_file = (
             CACHE_INCIDENTS_LAST_MONTH_FILE
-            if last_month
-            else CACHE_INCIDENTS_FILE
+            if last_month else CACHE_INCIDENTS_FILE
         )
 
-        if cache_file.exists():
-            modified_time = datetime.fromtimestamp(
-                cache_file.stat().st_mtime, tz=timezone.get_current_timezone()
-            )
-            if timezone.now() - modified_time < CACHE_INCIDENTS_TTL:
-                return self._send_file(cache_file)
+        response = self._get_cached_file_response(cache_file)
+        if response:
+            return response
 
-        queryset = self.get_queryset()
-        if last_month:
-            queryset = queryset.filter(
-                incident_date__gte=self._get_first_day_prev_month()
+        lock_key = f'lock__{cache_file.name}'
+
+        try:
+            with cache.lock(lock_key, timeout=600, blocking_timeout=60):
+                response = self._get_cached_file_response(cache_file)
+                if response:
+                    return response
+
+                queryset = self.get_queryset()
+                if last_month:
+                    queryset = queryset.filter(
+                        incident_date__gte=get_first_day_prev_month()
+                    )
+
+                tmp_file = cache_file.with_suffix('.tmp')
+                try:
+                    with tmp_file.open('w', encoding='utf-8') as f:
+                        for chunk in self._stream_json_chunks(queryset):
+                            f.write(chunk)
+                    tmp_file.replace(cache_file)
+                finally:
+                    if tmp_file.exists():
+                        tmp_file.unlink()
+
+                return send_x_accel_file(cache_file)
+
+        except LockError:
+            return HttpResponse(
+                'Файл все еще генерируется, попробуйте позже.',
+                status=HTTPStatus.SERVICE_UNAVAILABLE
             )
 
-        # Потоковая сериализация JSON:
-        def stream_json_chunks(qs: QuerySet):
-            """Потоковая сериализация JSON по блокам."""
-            yield '['
-            first = True
-            chunk = []
-            for obj in qs.iterator():
-                chunk.append(self.get_serializer(obj).data)
-                if len(chunk) >= JSON_EXPORT_CHUNK_SIZE:
-                    for item in chunk:
-                        if first:
-                            first = False
-                        else:
-                            yield ','
-                        yield json.dumps(item, ensure_ascii=False)
-                    chunk = []
-            # Последний неполный блок
-            if chunk:
+    def _stream_json_chunks(self, qs: QuerySet):
+        """Потоковая сериализация JSON по блокам."""
+        yield '['
+        first = True
+        chunk = []
+        for obj in qs.iterator():
+            chunk.append(self.get_serializer(obj).data)
+            if len(chunk) >= JSON_EXPORT_CHUNK_SIZE:
                 for item in chunk:
                     if first:
                         first = False
                     else:
                         yield ','
                     yield json.dumps(item, ensure_ascii=False)
-            yield ']'
+                chunk = []
+        # Последний неполный блок:
+        if chunk:
+            for item in chunk:
+                if first:
+                    first = False
+                else:
+                    yield ','
+                yield json.dumps(item, ensure_ascii=False)
+        yield ']'
 
-        tmp_file = cache_file.with_suffix('.tmp')
-        with tmp_file.open('w', encoding='utf-8') as f:
-            for chunk in stream_json_chunks(queryset):
-                f.write(chunk)
-        tmp_file.replace(cache_file)
-
-        return self._send_file(cache_file)
-
-    def _get_first_day_prev_month(self) -> datetime:
-        now = timezone.localtime(timezone.now())
-        return (
-            now.replace(day=1) - relativedelta(months=1)
-        ).replace(hour=0, minute=0, second=0, microsecond=0)
-
-    def _send_file(self, cache_file: Path):
-        """
-        Отправка файла: Django в DEBUG, иначе Nginx через X-Accel-Redirect.
-        """
-        filename = cache_file.name
-
-        if settings.DEBUG:
-            return FileResponse(cache_file.open('rb'), filename=filename)
-        else:
-            response = HttpResponse()
-            redirect_url = f'{INCIDENTS_CACHE_PUBLIC_URL}{filename}'
-
-            filename_ascii = filename.encode(
-                'ascii', 'ignore'
-            ).decode() or 'file'
-            filename_rfc5987 = quote(filename)
-
-            disposition_type = 'attachment'
-            disposition = (
-                f'{disposition_type}; '
-                f'filename="{filename_ascii}"; '
-                f'filename*=UTF-8\'\'{filename_rfc5987}'
+    def _get_cached_file_response(
+        self, cache_file: Path
+    ) -> Optional[HttpResponse]:
+        """Возвращает Response с файлом, если он существует и актуален."""
+        if cache_file.exists():
+            modified_time = datetime.fromtimestamp(
+                cache_file.stat().st_mtime,
+                tz=timezone.get_current_timezone()
             )
-
-            response['Content-Disposition'] = disposition
-            response['Content-Type'] = ''
-            response['X-Accel-Redirect'] = redirect_url
-
-            return response
+            if timezone.now() - modified_time < CACHE_INCIDENTS_TTL:
+                return send_x_accel_file(cache_file)
+        return None
 
 
 class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
