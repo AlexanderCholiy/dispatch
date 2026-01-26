@@ -23,7 +23,7 @@ from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.throttling import ScopedRateThrottle
 
-from core.loggers import django_logger
+from core.loggers import default_logger
 from core.views import send_x_accel_file
 from core.wraps import timer
 from incidents.annotations import (
@@ -246,7 +246,7 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
         yield ']'
 
     @staticmethod
-    @timer(django_logger, False)
+    @timer(default_logger, False)
     def _generate_file(queryset: QuerySet, file_path: Path):
         tmp_file = file_path.with_suffix('.tmp')
         try:
@@ -257,7 +257,7 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
                     f.write(chunk)
             tmp_file.replace(file_path)
         except Exception as e:
-            django_logger.exception(e)
+            default_logger.exception(e)
         finally:
             if tmp_file.exists():
                 tmp_file.unlink()
