@@ -1,5 +1,5 @@
 import json
-from datetime import date, datetime
+from datetime import date
 from http import HTTPStatus
 from pathlib import Path
 from typing import Optional
@@ -23,7 +23,9 @@ from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.throttling import ScopedRateThrottle
 
+from core.loggers import django_logger
 from core.views import send_x_accel_file
+from core.wraps import timer
 from incidents.annotations import (
     annotate_is_power_issue,
     annotate_sla_avr,
@@ -40,7 +42,12 @@ from .constants import (
     CACHE_INCIDENTS_LAST_MONTH_FILE,
     CACHE_INCIDENTS_TTL,
     CLOSED_INCIDENTS_VALID_FILTER,
+    INCIDENT_DB_CHUNK_SIZE,
     JSON_EXPORT_CHUNK_SIZE,
+    LOCK_INCIDENTS_BLOCKING_TIMEOUT_SEC,
+    LOCK_INCIDENTS_TIMEOUT_SEC,
+    LOCK_KEY_CACHE_INCIDENTS_FILE,
+    LOCK_KEY_CACHE_INCIDENTS_LAST_MONTH_FILE,
     OPEN_INCIDENTS_VALID_FILTER,
     STATISTIC_CACHE_TIMEOUT,
     TOTAL_VALID_INCIDENTS_FILTER,
@@ -48,7 +55,7 @@ from .constants import (
 from .filters import IncidentReportFilter
 from .pagination import IncidentReportPagination
 from .serializers import IncidentReportSerializer, StatisticReportSerializer
-from .utils import get_first_day_prev_month
+from .utils import get_first_day_prev_month, is_file_fresh
 from .validators import validate_date_range
 
 
@@ -173,10 +180,17 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
         if response:
             return response
 
-        lock_key = f'lock__{cache_file.name}'
+        lock_key = (
+            LOCK_KEY_CACHE_INCIDENTS_LAST_MONTH_FILE
+            if last_month else LOCK_KEY_CACHE_INCIDENTS_FILE
+        )
 
         try:
-            with cache.lock(lock_key, timeout=600, blocking_timeout=60):
+            with cache.lock(
+                lock_key,
+                timeout=LOCK_INCIDENTS_TIMEOUT_SEC,
+                blocking_timeout=LOCK_INCIDENTS_BLOCKING_TIMEOUT_SEC
+            ):
                 response = self._get_cached_file_response(cache_file)
                 if response:
                     return response
@@ -187,16 +201,7 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
                         incident_date__gte=get_first_day_prev_month()
                     )
 
-                tmp_file = cache_file.with_suffix('.tmp')
-                try:
-                    with tmp_file.open('w', encoding='utf-8') as f:
-                        for chunk in self._stream_json_chunks(queryset):
-                            f.write(chunk)
-                    tmp_file.replace(cache_file)
-                finally:
-                    if tmp_file.exists():
-                        tmp_file.unlink()
-
+                self._generate_file(queryset, cache_file)
                 return send_x_accel_file(cache_file)
 
         except LockError:
@@ -205,13 +210,23 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
                 status=HTTPStatus.SERVICE_UNAVAILABLE
             )
 
-    def _stream_json_chunks(self, qs: QuerySet):
+    def _get_cached_file_response(
+        self, cache_file: Path
+    ) -> Optional[HttpResponse]:
+        """Возвращает Response с файлом, если он существует и актуален."""
+        fresh, _ = is_file_fresh(cache_file, CACHE_INCIDENTS_TTL)
+        if fresh:
+            return send_x_accel_file(cache_file)
+        return None
+
+    @staticmethod
+    def _stream_json_chunks(qs: QuerySet):
         """Потоковая сериализация JSON по блокам."""
         yield '['
         first = True
         chunk = []
-        for obj in qs.iterator():
-            chunk.append(self.get_serializer(obj).data)
+        for obj in qs.iterator(chunk_size=INCIDENT_DB_CHUNK_SIZE):
+            chunk.append(IncidentReportSerializer(obj).data)
             if len(chunk) >= JSON_EXPORT_CHUNK_SIZE:
                 for item in chunk:
                     if first:
@@ -230,18 +245,22 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
                 yield json.dumps(item, ensure_ascii=False)
         yield ']'
 
-    def _get_cached_file_response(
-        self, cache_file: Path
-    ) -> Optional[HttpResponse]:
-        """Возвращает Response с файлом, если он существует и актуален."""
-        if cache_file.exists():
-            modified_time = datetime.fromtimestamp(
-                cache_file.stat().st_mtime,
-                tz=timezone.get_current_timezone()
-            )
-            if timezone.now() - modified_time < CACHE_INCIDENTS_TTL:
-                return send_x_accel_file(cache_file)
-        return None
+    @staticmethod
+    @timer(django_logger, False)
+    def _generate_file(queryset: QuerySet, file_path: Path):
+        tmp_file = file_path.with_suffix('.tmp')
+        try:
+            with tmp_file.open('w', encoding='utf-8') as f:
+                for chunk in IncidentReportViewSet._stream_json_chunks(
+                    queryset
+                ):
+                    f.write(chunk)
+            tmp_file.replace(file_path)
+        except Exception as e:
+            django_logger.exception(e)
+        finally:
+            if tmp_file.exists():
+                tmp_file.unlink()
 
 
 class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):

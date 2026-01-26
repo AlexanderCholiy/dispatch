@@ -215,7 +215,11 @@ CELERY_BEAT_SCHEDULE = {
     'cleanup_old_task_results': {
         'task': 'core.tasks.cleanup_old_task_results',
         'schedule': crontab(hour=0, minute=0),
-    }
+    },
+    'rebuild_incidents_json': {
+        "task": "api.tasks.rebuild_incidents_json",
+        "schedule": 180,  # каждые 3 мин (cache 5 мин)
+    },
 }
 
 CACHES = {
