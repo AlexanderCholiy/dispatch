@@ -1,0 +1,61 @@
+.chart-card.collapsed > :not(.toggle-chart-btn),
+#avr-sla-grid.collapsed > :not(.toggle-chart-btn),
+#rvr-sla-grid.collapsed > :not(.toggle-chart-btn) {
+    opacity: 0;
+    overflow: hidden;
+    display: none !important;
+    transition: max-height var(--transition-value), opacity var(--transition-value);
+}
+
+.chart-card > :not(.toggle-chart-btn),
+#avr-sla-grid > :not(.toggle-chart-btn),
+#rvr-sla-grid > :not(.toggle-chart-btn) {
+    opacity: 1;
+    transition: max-height var(--transition-value), opacity var(--transition-value);
+}
+
+.chart-card.collapsed,
+#avr-sla-grid.collapsed,
+#rvr-sla-grid.collapsed {
+    grid-column: 1 / -1 !important;
+}
+
+.stats:has(#closed-chart-card.collapsed):has(#open-chart-card:not(.collapsed)) #open-chart-card,
+.stats:has(#open-chart-card.collapsed):has(#closed-chart-card:not(.collapsed)) #closed-chart-card {
+    grid-column: 1 / -1;
+}
+
+.toggle-chart-btn {
+    margin: 0 auto;
+}
+
+/* Кнопки по центру */
+.chart-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#avr-sla-grid .toggle-chart-btn,
+#rvr-sla-grid .toggle-chart-btn {
+    display: block;
+    margin: 0 auto;
+}
+
+.toggle-chart-btn {
+    padding: var(--space-xs) var(--space-md);
+    min-width: 350px;
+    background-color: var(--background-color);
+    border: none;
+    box-shadow: 0 0 var(--space-xxs) var(--extra-color);
+
+    font-size: var(--font-sm);
+    font-weight: 700;
+    color: var(--color);
+    opacity: 1;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.toggle-chart-btn:hover {
+    color: var(--add-color)!important;
+}

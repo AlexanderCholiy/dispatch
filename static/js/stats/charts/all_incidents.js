@@ -1,6 +1,6 @@
 import { getChartColors, getChartFonts, getChartRadius } from '../theme_colors.js';
 
-export function createAllIncidentsChart(ctx, initialData, label) {
+export function createAllIncidentsChart(ctx, initialData, label, horizontal = false) {
     const colors = getChartColors();
     const fonts = getChartFonts();
     const radius = getChartRadius();
@@ -9,11 +9,12 @@ export function createAllIncidentsChart(ctx, initialData, label) {
         type: 'bar',
         data: initialData,
         options: {
+            indexAxis: horizontal ? 'y' : 'x',
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
                 title: {
-                    display: true,
+                    display: false,
                     text: label,
                     color: colors.color,
                     font: { size: fonts.sm, weight: '550' }

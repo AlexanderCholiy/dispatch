@@ -8,6 +8,12 @@
                 transform var(--transition-value);
 }
 
+#daily-incidents-chart,
+#all-closed-incidents-chart,
+#all-open-incidents-chart {
+    margin-top: var(--space-sm);
+}
+
 .chart-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 var(--space-sm) var(--space-lg) var(--extra-color);
@@ -17,11 +23,15 @@
     width: 100% !important;
     height: auto;
     min-height: 380px;
-    max-height: 580px;
+    max-height: 420px;
 }
 
 .chart-card:first-of-type {
     grid-column: 1 / -1;
+}
+
+.chart-card:first-of-type canvas {
+    max-height: 580px;
 }
 
 @media (max-width: 1024px) {

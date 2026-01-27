@@ -14,7 +14,7 @@ export function createDailyIncidentsChart(ctx, initialData) {
             maintainAspectRatio: false,
             plugins: {
                 title: {
-                    display: true,
+                    display: false,
                     text: 'Динамика инцидентов',
                     color: colors.color,
                     font: { size: fonts.sm, weight: '550' }

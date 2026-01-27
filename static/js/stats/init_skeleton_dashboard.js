@@ -95,13 +95,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.dashboardCharts.open = openChart;
 
+    /* ---------- TYPES ---------- */
+    const typesDatasets = [
+        { label: 'Всего', color: colors.blue },
+        { label: 'Без питания', color: colors.gray },
+    ];
+
+    const typesChart = createAllIncidentsChart(
+        document.getElementById('types-incidents-chart').getContext('2d'),
+        {
+            labels: MACROREGION_LABELS,
+            datasets: typesDatasets.map(d => ({
+                label: d.label,
+                data: [],
+                backgroundColor: d.color,
+            }))
+        },
+        'Типы инцидентов',
+        true,
+    );
+
+    window.dashboardCharts.types = typesChart;
+
     /* ---------- SLA DONUTS (SKELETON) ---------- */
     const initSlaSkeleton = (containerId, bar_title) => {
         const container = document.getElementById(containerId);
         const charts = [];
 
-        // очищаем контейнер (на случай повторной инициализации)
-        container.innerHTML = '';
+        // ---- ОЧИЩАЕМ ВСЁ КРОМЕ КНОПКИ (на случай повторной инициализации) ----
+        container.querySelectorAll(':scope > *:not(.toggle-chart-btn)').forEach(el => el.remove());
 
         /* ---- TITLE ---- */
         const titleEl = document.createElement('p');
@@ -150,15 +172,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Обновление данных через API:
-    // startStatisticsPolling(
-    //     window.dashboardCharts.daily,
-    //     window.dashboardCharts.closed,
-    //     window.dashboardCharts.open,
-    //     window.dashboardCharts.sla
-    // );
+    startStatisticsPolling(window.dashboardCharts);
 
     // Обновление данных через WS:
-    startStatisticsWebSocket(window.dashboardCharts);
+    // startStatisticsWebSocket(window.dashboardCharts);
 
     /* ---------- THEME CHANGE ---------- */
 

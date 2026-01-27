@@ -22,7 +22,9 @@ function updateCharts(apiData, dailyChart, closedChart, openChart, slaCharts) {
     updateSlaCharts(slaCharts.rvr, apiData, 'rvr');
 }
 
-export function startStatisticsPolling(dailyChart, closedChart, openChart, slaCharts, interval = 10_000) {
+export function startStatisticsPolling(charts, interval = 10_000) {
+    const { daily, closed, open, sla } = charts;
+
     const startInput = document.getElementById('start-date');
     const endInput = document.getElementById('end-date');
     const applyBtn = document.getElementById('apply-period');
@@ -30,7 +32,7 @@ export function startStatisticsPolling(dailyChart, closedChart, openChart, slaCh
     const messagesContainer = document.querySelector('.messages-container');
 
     const defaultStart = formatDate(getFirstDayOfPreviousMonth());
-    const defaultEnd = ''; // до сегодня
+    const defaultEnd = '';
     startInput.value = defaultStart;
     endInput.value = defaultEnd;
 
@@ -46,7 +48,8 @@ export function startStatisticsPolling(dailyChart, closedChart, openChart, slaCh
         try {
             const apiData = await fetchStatistics(startDate, endDate);
             if (apiData.error) return showMessage(apiData.error, 'error', messagesContainer, lastMsgRef);
-            updateCharts(apiData, dailyChart, closedChart, openChart, slaCharts);
+
+            updateCharts(apiData, daily, closed, open, sla);
         } catch (e) {
             console.error('Polling error:', e);
             showMessage('Ошибка при получении статистики', 'error', messagesContainer, lastMsgRef);
@@ -75,8 +78,10 @@ export function startStatisticsPolling(dailyChart, closedChart, openChart, slaCh
         endInput.value = defaultEnd;
         confirmedStart = defaultStart;
         confirmedEnd = defaultEnd || null;
+
         messagesContainer.querySelectorAll('.message').forEach(msg => msg.remove());
         lastMsgRef.current = null;
+
         load(confirmedStart, confirmedEnd);
     });
 

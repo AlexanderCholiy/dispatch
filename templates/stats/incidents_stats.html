@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="{% static 'css/stats/dashboard.css' %}">
 <link rel="stylesheet" href="{% static 'css/stats/charts.css' %}">
 <link rel="stylesheet" href="{% static 'css/stats/donuts.css' %}">
+<link rel="stylesheet" href="{% static 'css/stats/collapse_charts.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -43,17 +44,33 @@
   </div>
 
   <div class="stats">
-    <div class="chart-card">
+    <div class="chart-card" id="daily-chart-card">
+      <button class="btn btn-secondary toggle-chart-btn">Динамика по инцидентам</button>
       <canvas id="daily-incidents-chart"></canvas>
     </div>
-    <div class="chart-card">
+
+    <div class="chart-card" id="closed-chart-card">
+      <button class="btn btn-secondary toggle-chart-btn">Закрытые инциденты</button>
       <canvas id="all-closed-incidents-chart"></canvas>
     </div>
-    <div class="chart-card">
+
+    <div class="chart-card" id="open-chart-card">
+      <button class="btn btn-secondary toggle-chart-btn">Открытые инциденты</button>
       <canvas id="all-open-incidents-chart"></canvas>
     </div>
-    <div id="avr-sla-grid"></div>
-    <div id="rvr-sla-grid"></div>
+
+    <div id="avr-sla-grid">
+      <button class="btn btn-secondary toggle-chart-btn">SLA АВР</button>
+    </div>
+
+    <div id="rvr-sla-grid">
+      <button class="btn btn-secondary toggle-chart-btn">SLA РВР</button>
+    </div>
+
+    <div class="chart-card" id="types-chart-card">
+      <button class="btn btn-secondary toggle-chart-btn">Классификация аварий</button>
+      <canvas id="types-incidents-chart"></canvas>
+    </div>
   </div>
 </div>
 {% endblock %}
@@ -61,5 +78,6 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+<script src="{% static 'js/stats/collaps_charts.js' %}"></script>
 <script type="module" src="{% static 'js/stats/init_skeleton_dashboard.js' %}"></script>
 {% endblock %}
