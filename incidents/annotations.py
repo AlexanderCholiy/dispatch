@@ -6,14 +6,14 @@ from django.db.models import (
     Case,
     DateTimeField,
     DurationField,
+    Exists,
     ExpressionWrapper,
     F,
+    OuterRef,
     Q,
     QuerySet,
     Value,
     When,
-    OuterRef,
-    Exists,
 )
 from django.utils import timezone
 
@@ -22,16 +22,16 @@ from monitoring.models import DeviceStatus, MSysPoles
 from ts.constants import UNDEFINED_CASE
 
 from .constants import (
-    POWER_ISSUE_TYPES,
-    RVR_SLA_DEADLINE_IN_HOURS,
+    AVR_CATEGORY,
+    DGU_CATEGORY,
+    INCIDENT_ACCESS_TO_OBJECT_TYPE,
     INCIDENT_AMS_STRUCTURE_TYPE,
+    INCIDENT_DESTRUCTION_OBJECT_TYPE,
     INCIDENT_GOVERMENT_REQUEST_TYPE,
     INCIDENT_VOLS_TYPE,
-    INCIDENT_DESTRUCTION_OBJECT_TYPE,
-    INCIDENT_ACCESS_TO_OBJECT_TYPE,
-    AVR_CATEGORY,
+    POWER_ISSUE_TYPES,
     RVR_CATEGORY,
-    DGU_CATEGORY,
+    RVR_SLA_DEADLINE_IN_HOURS,
 )
 from .models import Incident, IncidentCategoryRelation
 

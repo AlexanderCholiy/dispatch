@@ -90,15 +90,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 backgroundColor: d.color,
             }))
         },
-        'Открытые'
+        'Открытые',
     );
 
     window.dashboardCharts.open = openChart;
 
     /* ---------- TYPES ---------- */
     const typesDatasets = [
-        { label: 'Всего', color: colors.blue },
-        { label: 'Без питания', color: colors.gray },
+        { label: 'Авария по питанию', color: colors.blue },
+        { label: 'Инцидент по конструктиву / территорией АМС', color: colors.red },
+        { label: 'Инцидент / запрос гос. органов', color: colors.green },
+        { label: 'Авария ВОЛС', color: colors.yellow },
+        { label: 'Угроза гибели / гибель объекта', color: colors.gray },
+        { label: 'Запрос на организацию доступа к объекту', color: colors.cyan },
     ];
 
     const typesChart = createAllIncidentsChart(
@@ -111,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 backgroundColor: d.color,
             }))
         },
-        'Типы инцидентов',
+        'Классификация аварий',
         true,
     );
 
@@ -172,10 +176,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Обновление данных через API:
-    startStatisticsPolling(window.dashboardCharts);
+    // startStatisticsPolling(window.dashboardCharts);
 
     // Обновление данных через WS:
-    // startStatisticsWebSocket(window.dashboardCharts);
+    startStatisticsWebSocket(window.dashboardCharts);
 
     /* ---------- THEME CHANGE ---------- */
 
@@ -192,6 +196,11 @@ document.addEventListener('DOMContentLoaded', () => {
         updateAllIncidentsChartColors(
             window.dashboardCharts.open,
             [colors.blue, colors.gray]
+        );
+
+        updateAllIncidentsChartColors(
+            window.dashboardCharts.types,
+            [colors.blue, colors.red, colors.green, colors.yellow, colors.gray, colors.cyan]
         );
 
         updateSlaDonutChartColors(

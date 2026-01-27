@@ -14,16 +14,24 @@ async function fetchStatistics(startDate, endDate = null) {
     return res.json();
 }
 
-function updateCharts(apiData, dailyChart, closedChart, openChart, slaCharts) {
+function updateCharts(apiData, dailyChart, closedChart, openChart, typesChart, slaCharts) {
     updateDailyChart(dailyChart, apiData);
     updateBarChart(closedChart, apiData, ['total_closed_incidents', 'closed_incidents_with_power_issue']);
     updateBarChart(openChart, apiData, ['total_open_incidents', 'open_incidents_with_power_issue']);
     updateSlaCharts(slaCharts.avr, apiData, 'avr');
     updateSlaCharts(slaCharts.rvr, apiData, 'rvr');
+    updateBarChart(typesChart, apiData, [
+        'is_power_issue_type',
+        'is_ams_issue_type',
+        'is_goverment_request_issue_type',
+        'is_vols_issue_type',
+        'is_object_destruction_issue_type',
+        'is_object_access_issue_type',
+    ]);
 }
 
 export function startStatisticsPolling(charts, interval = 10_000) {
-    const { daily, closed, open, sla } = charts;
+    const { daily, closed, open, types, sla } = charts;
 
     const startInput = document.getElementById('start-date');
     const endInput = document.getElementById('end-date');
@@ -49,7 +57,7 @@ export function startStatisticsPolling(charts, interval = 10_000) {
             const apiData = await fetchStatistics(startDate, endDate);
             if (apiData.error) return showMessage(apiData.error, 'error', messagesContainer, lastMsgRef);
 
-            updateCharts(apiData, daily, closed, open, sla);
+            updateCharts(apiData, daily, closed, open, types, sla);
         } catch (e) {
             console.error('Polling error:', e);
             showMessage('Ошибка при получении статистики', 'error', messagesContainer, lastMsgRef);

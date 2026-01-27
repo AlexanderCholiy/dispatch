@@ -57,9 +57,30 @@ export function startStatisticsWebSocket(charts) {
     }
 
     function updateCharts(apiData) {
+        // DAILY LINE
         updateDailyChart(charts.daily, apiData);
+
+        // CLOSED BAR
         updateBarChart(charts.closed, apiData, ['total_closed_incidents', 'closed_incidents_with_power_issue']);
+
+        // OPEN BAR
         updateBarChart(charts.open, apiData, ['total_open_incidents', 'open_incidents_with_power_issue']);
+
+        // TYPES BAR (новый график)
+        updateBarChart(
+            charts.types,
+            apiData,
+            [
+                'is_power_issue_type',
+                'is_ams_issue_type',
+                'is_goverment_request_issue_type',
+                'is_vols_issue_type',
+                'is_object_destruction_issue_type',
+                'is_object_access_issue_type'
+            ]
+        );
+
+        // SLA DONUTS
         updateSlaCharts(charts.sla.avr, apiData, 'avr');
         updateSlaCharts(charts.sla.rvr, apiData, 'rvr');
     }

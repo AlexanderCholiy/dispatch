@@ -33,31 +33,48 @@ export function createAllIncidentsChart(ctx, initialData, label, horizontal = fa
                     padding: 8,
                 },
                 zoom: {
-                    zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
-                    pan: { enabled: true, mode: 'x' }
+                    zoom: {
+                        wheel: { enabled: true },
+                        pinch: { enabled: true },
+                        mode: horizontal ? 'y' : 'x',
+                        limits: {
+                            x: { min: 0 },  // минимальное значение по x
+                            y: { min: 0 }   // минимальное значение по y
+                        }
+                    },
+                    pan: {
+                        enabled: true,
+                        mode: horizontal ? 'y' : 'x',
+                        limits: {
+                            x: { min: 0 },
+                            y: { min: 0 }
+                        }
+                    }
                 }
             },
             scales: {
                 x: {
                     title: {
                         display: true,
-                        text: 'Макрорегион',
+                        text: horizontal ? 'Количество инцидентов' : 'Макрорегион',
                         color: colors.add_color,
-                        font: { size: fonts.sm }
+                        font: { size: fonts.sm },
                     },
-                    ticks: { color: colors.add_color },
-                    grid: { color: colors.extra }
+                    ticks: { color: colors.add_color, min: 0 },
+                    grid: { color: colors.extra },
+                    stacked: horizontal
                 },
                 y: {
                     title: {
                         display: true,
-                        text: 'Количество инцидентов',
+                        text: horizontal ? 'Макрорегион' : 'Количество инцидентов',
                         color: colors.add_color,
                         font: { size: fonts.sm }
                     },
-                    ticks: { color: colors.add_color, precision: 0 },
+                    ticks: { color: colors.add_color, precision: 0, min: 0 },
                     beginAtZero: true,
-                    grid: { color: colors.extra }
+                    grid: { color: colors.extra },
+                    stacked: horizontal
                 }
             }
         }

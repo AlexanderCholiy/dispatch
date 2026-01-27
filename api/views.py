@@ -27,11 +27,11 @@ from core.loggers import default_logger
 from core.views import send_x_accel_file
 from core.wraps import timer
 from incidents.annotations import (
+    annotate_incident_categories,
+    annotate_incident_types,
     annotate_is_power_issue,
     annotate_sla_avr,
     annotate_sla_rvr,
-    annotate_incident_categories,
-    annotate_incident_types,
 )
 from incidents.constants import NOTIFIED_CONTRACTOR_STATUS_NAME
 from incidents.models import Incident, IncidentStatusHistory
