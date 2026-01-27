@@ -12,6 +12,8 @@ from django.db.models import (
     QuerySet,
     Value,
     When,
+    OuterRef,
+    Exists,
 )
 from django.utils import timezone
 
@@ -19,8 +21,19 @@ from monitoring.constants import NORMAL_POLES_CACHE_TIMEOUT
 from monitoring.models import DeviceStatus, MSysPoles
 from ts.constants import UNDEFINED_CASE
 
-from .constants import POWER_ISSUE_TYPES, RVR_SLA_DEADLINE_IN_HOURS
-from .models import Incident
+from .constants import (
+    POWER_ISSUE_TYPES,
+    RVR_SLA_DEADLINE_IN_HOURS,
+    INCIDENT_AMS_STRUCTURE_TYPE,
+    INCIDENT_GOVERMENT_REQUEST_TYPE,
+    INCIDENT_VOLS_TYPE,
+    INCIDENT_DESTRUCTION_OBJECT_TYPE,
+    INCIDENT_ACCESS_TO_OBJECT_TYPE,
+    AVR_CATEGORY,
+    RVR_CATEGORY,
+    DGU_CATEGORY,
+)
+from .models import Incident, IncidentCategoryRelation
 
 
 def annotate_sla_avr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
@@ -226,4 +239,83 @@ def annotate_is_power_issue(
             default=Value(False),
             output_field=BooleanField(),
         )
+    )
+
+
+def annotate_incident_types(
+    qs: QuerySet[Incident]
+) -> QuerySet[Incident]:
+    is_power_issue_type_q = Q(pk__isnull=True)
+    for name in POWER_ISSUE_TYPES:
+        is_power_issue_type_q |= Q(incident_type__name=name)
+
+    return qs.annotate(
+        is_power_issue_type=Case(
+            When(is_power_issue_type_q, then=Value(True)),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+        is_ams_issue_type=Case(
+            When(
+                incident_type__name=INCIDENT_AMS_STRUCTURE_TYPE,
+                then=Value(True)
+            ),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+        is_goverment_request_issue_type=Case(
+            When(
+                incident_type__name=INCIDENT_GOVERMENT_REQUEST_TYPE,
+                then=Value(True)
+            ),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+        is_vols_issue_type=Case(
+            When(
+                incident_type__name=INCIDENT_VOLS_TYPE,
+                then=Value(True)
+            ),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+        is_object_destruction_issue_type=Case(
+            When(
+                incident_type__name=INCIDENT_DESTRUCTION_OBJECT_TYPE,
+                then=Value(True)
+            ),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+        is_object_access_issue_type=Case(
+            When(
+                incident_type__name=INCIDENT_ACCESS_TO_OBJECT_TYPE,
+                then=Value(True)
+            ),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+    )
+
+
+def annotate_incident_categories(
+    qs: QuerySet[Incident]
+) -> QuerySet[Incident]:
+    avr_cat = IncidentCategoryRelation.objects.filter(
+        incident_id=OuterRef('pk'),
+        category__name=AVR_CATEGORY
+    )
+    rvr_cat = IncidentCategoryRelation.objects.filter(
+        incident_id=OuterRef('pk'),
+        category__name=RVR_CATEGORY
+    )
+    dgu_cat = IncidentCategoryRelation.objects.filter(
+        incident_id=OuterRef('pk'),
+        category__name=DGU_CATEGORY
+    )
+
+    return qs.annotate(
+        has_avr_category=Exists(avr_cat),
+        has_rvr_category=Exists(rvr_cat),
+        has_dgu_category=Exists(dgu_cat),
     )

@@ -30,6 +30,8 @@ from incidents.annotations import (
     annotate_is_power_issue,
     annotate_sla_avr,
     annotate_sla_rvr,
+    annotate_incident_categories,
+    annotate_incident_types,
 )
 from incidents.constants import NOTIFIED_CONTRACTOR_STATUS_NAME
 from incidents.models import Incident, IncidentStatusHistory
@@ -246,7 +248,7 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
         yield ']'
 
     @staticmethod
-    @timer(default_logger, False)
+    @timer(default_logger)
     def _generate_file(queryset: QuerySet, file_path: Path):
         tmp_file = file_path.with_suffix('.tmp')
         try:
@@ -311,6 +313,19 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
     меньше часа
     - sla_rvr_in_progress: количество инцидентов с РВР в процессе и SLA еще
     не истекла
+
+    ТИПЫ ИНЦИДЕНТОВ:
+    - is_power_issue_type: Инциденты по питанию.
+    - is_ams_issue_type: Инциденты по конструктиву / территории АМС.
+    - is_goverment_request_issue_type: Запросы и инциденты от госорганов.
+    - is_vols_issue_type: Аварии ВОЛС.
+    - is_object_destruction_issue_type: Угроза гибели / гибель объекта.
+    - is_object_access_issue_type: Запросы на доступ к объекту.
+
+    КАТЕГОРИИ ИНЦИДЕНТОВ:
+    - has_avr_category: Инциденты с категорией АВР.
+    - has_rvr_category: Инциденты с категорией РВР.
+    - has_dgu_category: Инциденты с категорией ДГУ.
 
     Query-параметры:
 
@@ -389,12 +404,15 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
         # -------- SLA аннотации --------
         incidents = annotate_sla_avr(incidents)
         incidents = annotate_sla_rvr(incidents)
+        incidents = annotate_incident_types(incidents)
+        incidents = annotate_incident_categories(incidents)
 
         # -------- Агрегация --------
         incident_stats = (
             incidents
             .values('pole__region__macroregion')
             .annotate(
+                # Общее количество:
                 total_closed_incidents=Count(
                     'id', distinct=True, filter=CLOSED_INCIDENTS_VALID_FILTER
                 ),
@@ -413,6 +431,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                         )
                     )
                 ),
+                # SLA АВР:
                 sla_avr_expired_count=Count(
                     'id', distinct=True, filter=Q(sla_avr_expired=True)
                 ),
@@ -425,6 +444,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                 sla_avr_in_progress_count=Count(
                     'id', distinct=True, filter=Q(sla_avr_in_progress=True)
                 ),
+                # SLA РВР
                 sla_rvr_expired_count=Count(
                     'id', distinct=True, filter=Q(sla_rvr_expired=True)
                 ),
@@ -436,6 +456,40 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                 ),
                 sla_rvr_in_progress_count=Count(
                     'id', distinct=True, filter=Q(sla_rvr_in_progress=True)
+                ),
+                # Типы инцидентов:
+                is_power_issue_type=Count(
+                    'id', distinct=True, filter=Q(is_power_issue_type=True)
+                ),
+                is_ams_issue_type=Count(
+                    'id', distinct=True, filter=Q(is_ams_issue_type=True)
+                ),
+                is_goverment_request_issue_type=Count(
+                    'id', distinct=True,
+                    filter=Q(is_goverment_request_issue_type=True)
+                ),
+                is_vols_issue_type=Count(
+                    'id', distinct=True, filter=Q(is_vols_issue_type=True)
+                ),
+                is_object_destruction_issue_type=Count(
+                    'id', distinct=True,
+                    filter=Q(is_object_destruction_issue_type=True)
+                ),
+                is_object_access_issue_type=Count(
+                    'id', distinct=True,
+                    filter=Q(is_object_access_issue_type=True)
+                ),
+                # Категории инцидентов:
+                has_avr_category=Count(
+                    'id', distinct=True, filter=Q(has_avr_category=True)
+                ),
+                has_rvr_category=Count(
+                    'id', distinct=True,
+                    filter=Q(has_rvr_category=True)
+                ),
+                has_dgu_category=Count(
+                    'id', distinct=True,
+                    filter=Q(has_dgu_category=True)
                 ),
             )
         )
@@ -491,19 +545,31 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
         for macro in macroregions:
             macro_stats = stats_map.get(macro.pk, {})
             for field in [
+                # Общее количество:
                 'total_closed_incidents',
                 'total_open_incidents',
                 'active_contractor_incidents',
-
+                # SLA АВР:
                 'sla_avr_expired_count',
                 'sla_avr_closed_on_time_count',
                 'sla_avr_less_than_hour_count',
                 'sla_avr_in_progress_count',
-
+                # SLA РВР:
                 'sla_rvr_expired_count',
                 'sla_rvr_closed_on_time_count',
                 'sla_rvr_less_than_hour_count',
                 'sla_rvr_in_progress_count',
+                # Типы инцидентов:
+                'is_power_issue_type',
+                'is_ams_issue_type',
+                'is_goverment_request_issue_type',
+                'is_vols_issue_type',
+                'is_object_destruction_issue_type',
+                'is_object_access_issue_type',
+                # Категории инцидентов:
+                'has_avr_category',
+                'has_rvr_category',
+                'has_dgu_category',
             ]:
                 setattr(macro, field, macro_stats.get(field, 0))
 

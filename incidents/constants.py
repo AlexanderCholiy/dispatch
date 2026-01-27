@@ -92,9 +92,19 @@ RVR_SLA_DEADLINE_IN_HOURS = 72
 # Ограничение для закрытия SLA в будущем:
 MAX_FUTURE_END_DELTA = timedelta(minutes=5)
 
+# Все основные типы инцидентов:
+INCIDENT_POWER_SUPLY_RF_TYPE = 'Авария по питанию РФ'
+INCIDENT_POWER_SUPLY_MSK_TYPE = 'Авария по питанию для МСК'
+INCIDENT_POWER_SUPLY_NB_EMPLOYEE_TYPE = 'Авария по питанию от сотрудника НБ'
+INCIDENT_AMS_STRUCTURE_TYPE = 'Инцидент по конструктиву / территорией АМС'
+INCIDENT_GOVERMENT_REQUEST_TYPE = 'Инцидент / запрос гос. органов'
+INCIDENT_VOLS_TYPE = 'Авария ВОЛС'
+INCIDENT_DESTRUCTION_OBJECT_TYPE = 'Угроза гибели / гибель объекта'
+INCIDENT_ACCESS_TO_OBJECT_TYPE = 'Запрос на организацию доступа к объекту'
+
 # По данным типам инцидетов, определяются те у которых нет питания:
 POWER_ISSUE_TYPES = (
-    'Авария по питанию РФ',
-    'Авария по питанию для МСК',
-    'Авария по питанию от сотрудника НБ',
+    INCIDENT_POWER_SUPLY_RF_TYPE,
+    INCIDENT_POWER_SUPLY_MSK_TYPE,
+    INCIDENT_POWER_SUPLY_NB_EMPLOYEE_TYPE,
 )

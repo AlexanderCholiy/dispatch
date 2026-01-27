@@ -172,6 +172,17 @@ class StatisticReportSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
+    is_power_issue_type = serializers.IntegerField(read_only=True)
+    is_ams_issue_type = serializers.IntegerField(read_only=True)
+    is_goverment_request_issue_type = serializers.IntegerField(read_only=True)
+    is_vols_issue_type = serializers.IntegerField(read_only=True)
+    is_object_destruction_issue_type = serializers.IntegerField(read_only=True)
+    is_object_access_issue_type = serializers.IntegerField(read_only=True)
+
+    has_avr_category = serializers.IntegerField(read_only=True)
+    has_rvr_category = serializers.IntegerField(read_only=True)
+    has_dgu_category = serializers.IntegerField(read_only=True)
+
     total_incidents = serializers.SerializerMethodField()
     daily_incidents = serializers.SerializerMethodField()
 
@@ -179,20 +190,35 @@ class StatisticReportSerializer(serializers.ModelSerializer):
         model = Region
         fields = (
             'macroregion',
+            # Общее количество:
             'total_incidents',
             'total_closed_incidents',
             'total_open_incidents',
             'active_contractor_incidents',
             'open_incidents_with_power_issue',
             'closed_incidents_with_power_issue',
+            # SLA АВР:
             'sla_avr_expired_count',
             'sla_avr_closed_on_time_count',
             'sla_avr_less_than_hour_count',
             'sla_avr_in_progress_count',
+            # SLA РВР:
             'sla_rvr_expired_count',
             'sla_rvr_closed_on_time_count',
             'sla_rvr_less_than_hour_count',
             'sla_rvr_in_progress_count',
+            # Типы инцидентов:
+            'is_power_issue_type',
+            'is_ams_issue_type',
+            'is_goverment_request_issue_type',
+            'is_vols_issue_type',
+            'is_object_destruction_issue_type',
+            'is_object_access_issue_type',
+            # Категории инцидентов:
+            'has_avr_category',
+            'has_rvr_category',
+            'has_dgu_category',
+            # Динамика по дням:
             'daily_incidents',
         )
 
