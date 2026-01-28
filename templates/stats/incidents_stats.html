@@ -45,30 +45,60 @@
 
   <div class="stats">
     <div class="chart-card" id="daily-chart-card">
-      <button class="btn btn-secondary toggle-chart-btn">Динамика по инцидентам</button>
+      <div class="chart-utils">
+        <button class="btn toggle-chart-btn">Динамика по инцидентам</button>
+        <button class="btn btn-secondary copy-chart-data-btn tooltip copy-text" data-title="Скопировать данные" data-text="">
+          <i class="bx bx-copy"></i>
+        </button>
+      </div>
       <canvas id="daily-incidents-chart"></canvas>
     </div>
 
     <div class="chart-card" id="closed-chart-card">
-      <button class="btn btn-secondary toggle-chart-btn">Закрытые инциденты</button>
+      <div class="chart-utils">
+        <button class="btn toggle-chart-btn">Закрытые инциденты</button>
+        <button class="btn btn-secondary copy-chart-data-btn tooltip copy-text" data-title="Скопировать данные" data-text="">
+          <i class="bx bx-copy"></i>
+        </button>
+      </div>
       <canvas id="all-closed-incidents-chart"></canvas>
     </div>
 
     <div class="chart-card" id="open-chart-card">
-      <button class="btn btn-secondary toggle-chart-btn">Открытые инциденты</button>
+      <div class="chart-utils">
+        <button class="btn toggle-chart-btn">Открытые инциденты</button>
+        <button class="btn btn-secondary copy-chart-data-btn tooltip copy-text" data-title="Скопировать данные" data-text="">
+          <i class="bx bx-copy"></i>
+        </button>
+      </div>
       <canvas id="all-open-incidents-chart"></canvas>
     </div>
 
     <div id="avr-sla-grid">
-      <button class="btn btn-secondary toggle-chart-btn">SLA АВР</button>
+      <div class="chart-utils">
+        <button class="btn toggle-chart-btn">SLA АВР</button>
+        <button class="btn btn-secondary copy-chart-data-btn tooltip copy-text" data-title="Скопировать данные" data-text="">
+          <i class="bx bx-copy"></i>
+        </button>
+      </div>
     </div>
 
     <div id="rvr-sla-grid">
-      <button class="btn btn-secondary toggle-chart-btn">SLA РВР</button>
+      <div class="chart-utils">
+        <button class="btn toggle-chart-btn">SLA РВР</button>
+        <button class="btn btn-secondary copy-chart-data-btn tooltip copy-text" data-title="Скопировать данные" data-text="">
+          <i class="bx bx-copy"></i>
+        </button>
+      </div>
     </div>
 
     <div class="chart-card" id="types-chart-card">
-      <button class="btn btn-secondary toggle-chart-btn">Классификация аварий</button>
+      <div class="chart-utils">
+        <button class="btn toggle-chart-btn">Классификация аварий</button>
+        <button class="btn btn-secondary copy-chart-data-btn tooltip copy-text" data-title="Скопировать данные" data-text="">
+          <i class="bx bx-copy"></i>
+        </button>
+      </div>
       <canvas id="types-incidents-chart"></canvas>
     </div>
   </div>

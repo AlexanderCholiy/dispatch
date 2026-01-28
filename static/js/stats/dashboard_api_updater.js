@@ -1,5 +1,6 @@
 import { getFirstDayOfPreviousMonth, formatDate, showMessage, validateDateRange } from './charts_utils.js';
 import { updateDailyChart, updateBarChart, updateSlaCharts } from './data/charts_updater.js';
+import { updateCopyButton, updateSlaCopyData } from './data/copy_chart_data.js'
 
 let isFetching = false;
 let pollingInterval = null;
@@ -28,6 +29,15 @@ function updateCharts(apiData, dailyChart, closedChart, openChart, typesChart, s
         'is_object_destruction_issue_type',
         'is_object_access_issue_type',
     ]);
+
+    // ===== ОБНОВЛЕНИЕ COPY DATA =====
+    updateCopyButton('daily-chart-card', dailyChart, 'Дата/Регион');
+    updateCopyButton('closed-chart-card', closedChart, 'Регион/Количество инцидентов');
+    updateCopyButton('open-chart-card', openChart, 'Регион/Количество инцидентов');
+    updateCopyButton('types-chart-card', typesChart, 'Регион/Тип аварии');
+    // SLA таблицы
+    updateSlaCopyData('avr-sla-grid', apiData, 'avr');
+    updateSlaCopyData('rvr-sla-grid', apiData, 'rvr');
 }
 
 export function startStatisticsPolling(charts, interval = 10_000) {

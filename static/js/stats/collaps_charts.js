@@ -23,7 +23,10 @@ window.isCollapsed = isCollapsed;
 document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.toggle-chart-btn').forEach(btn => {
-        const container = btn.parentElement;
+        // Новый контейнер — ближайший .chart-card или #avr-sla-grid/#rvr-sla-grid
+        const container = btn.closest('.chart-card, #avr-sla-grid, #rvr-sla-grid');
+        if (!container) return;
+
         let containerId = container.id;
 
         if (!containerId) {
@@ -34,23 +37,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const cookieKey = `chart-${containerId}`;
         const saved = getCookie(cookieKey);
 
-        // ⚠️ TEMP раскрываем, если было collapsed
+        // TEMP раскрываем, если было collapsed
         let shouldCollapseLater = false;
         if (saved === 'collapsed') {
             container.classList.remove('collapsed'); // временно показываем
             shouldCollapseLater = true;
         }
 
-        // Обновляем текст кнопки
+        // сохраняем "базовый текст" без стрелок
+        btn.dataset.baseText = btn.textContent;
+
         const updateButtonText = () => {
             const collapsed = container.classList.contains('collapsed');
             btn.textContent = collapsed
                 ? `▸ ${btn.dataset.baseText}` // свернуто — вправо
                 : `▾ ${btn.dataset.baseText}`; // развернуто — вниз
         };
-
-        // сохраняем "базовый текст" без стрелок
-        btn.dataset.baseText = btn.textContent.replace(/^Свернуть |^Показать /, '');
 
         updateButtonText();
 
@@ -69,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => {
                     container.classList.add('collapsed');
                     updateButtonText();
-                }, 100); // можно 0–100ms
+                }, 100);
             });
         }
     });

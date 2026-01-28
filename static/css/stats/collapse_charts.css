@@ -1,16 +1,17 @@
-.chart-card.collapsed > :not(.toggle-chart-btn),
-#avr-sla-grid.collapsed > :not(.toggle-chart-btn),
-#rvr-sla-grid.collapsed > :not(.toggle-chart-btn) {
-    opacity: 0;
-    overflow: hidden;
-    display: none !important;
+.chart-card > :not(.chart-utils),
+#avr-sla-grid > :not(.chart-utils),
+#rvr-sla-grid > :not(.chart-utils) {
+    opacity: 1;
     transition: max-height var(--transition-value), opacity var(--transition-value);
 }
 
-.chart-card > :not(.toggle-chart-btn),
-#avr-sla-grid > :not(.toggle-chart-btn),
-#rvr-sla-grid > :not(.toggle-chart-btn) {
-    opacity: 1;
+.chart-card.collapsed > :not(.chart-utils),
+#avr-sla-grid.collapsed > :not(.chart-utils),
+#rvr-sla-grid.collapsed > :not(.chart-utils) {
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+    display: none !important;
     transition: max-height var(--transition-value), opacity var(--transition-value);
 }
 
@@ -25,31 +26,24 @@
     grid-column: 1 / -1;
 }
 
-.toggle-chart-btn {
-    margin: 0 auto;
-}
-
-/* Кнопки по центру */
-.chart-card {
+.chart-utils {
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
     align-items: center;
-}
-
-#avr-sla-grid .toggle-chart-btn,
-#rvr-sla-grid .toggle-chart-btn {
-    display: block;
-    margin: 0 auto;
+    padding-inline: var(--space-sm);
+    max-width: 100%;
+    gap: var(--space-sm);
 }
 
 .toggle-chart-btn {
-    padding: var(--space-xs) var(--space-md);
-    min-width: 350px;
+    flex-shrink: 0;
+    min-width: 240px;
+    padding: var(--space-xs) var(--space-sm);
     background-color: var(--background-color);
     border: none;
     box-shadow: 0 0 var(--space-xxs) var(--extra-color);
-
-    font-size: var(--font-sm);
+    justify-content: left;
+    font-size: var(--font-md);
     font-weight: 700;
     color: var(--color);
     opacity: 1;
@@ -58,4 +52,19 @@
 
 .toggle-chart-btn:hover {
     color: var(--add-color)!important;
+}
+
+.copy-chart-data-btn {
+    padding: var(--space-xxs) var(--space-xs);
+    box-sizing: border-box;
+    font-size: var(--font-sm);
+}
+
+.copy-chart-data-btn:hover {
+    text-decoration-line: none;
+}
+
+.copy-chart-data-btn:active {
+    color: var(--add-background-color);
+    transform: scale(0.97);
 }

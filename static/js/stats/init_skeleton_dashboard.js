@@ -2,8 +2,9 @@ import { createDailyIncidentsChart, updateDailyIncidentsChartColors } from './ch
 import { createAllIncidentsChart, updateAllIncidentsChartColors } from './charts/all_incidents.js';
 import { createSlaDonutChart, updateSlaDonutChartColors } from './charts/sla_donut.js';
 import { getDatesSincePreviousMonth } from './charts_utils.js';
-import { startStatisticsPolling } from './dashboard_api_updater.js';
 import { getChartColors, observeThemeChange } from './theme_colors.js';
+import { updateCopyButton, updateSlaCopyData } from './data/copy_chart_data.js';
+import { startStatisticsPolling } from './dashboard_api_updater.js';
 import { startStatisticsWebSocket } from './dashboard_ws_updater.js';
 
 if (window.Chart && window.ChartZoom) {
@@ -15,18 +16,9 @@ window.dashboardCharts = {};
 document.addEventListener('DOMContentLoaded', () => {
     const colors = getChartColors();
 
-    /* ---------- DAILY LINE ---------- */
-
     const regionColors = [
-        colors.pink,
-        colors.cyan,
-        colors.blue,
-        colors.red,
-        colors.yellow,
-        colors.brown,
-        colors.gray,
-        colors.magenta,
-        colors.green,
+        colors.pink, colors.cyan, colors.blue, colors.red,
+        colors.yellow, colors.brown, colors.gray, colors.magenta, colors.green,
     ];
 
     const dailyDatasets = regionColors.map((color, idx) => ({
@@ -39,63 +31,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const dailyChart = createDailyIncidentsChart(
         document.getElementById('daily-incidents-chart').getContext('2d'),
-        {
-            labels: getDatesSincePreviousMonth(),
-            datasets: dailyDatasets,
-        }
+        { labels: getDatesSincePreviousMonth(), datasets: dailyDatasets }
     );
-
     window.dashboardCharts.daily = dailyChart;
+    updateCopyButton('daily-chart-card', dailyChart, 'Дата/Регион');
 
-    /* ---------- CLOSED BAR ---------- */
-    const MACROREGION_LABELS = [
-        'МР-1', 'МР-2', 'МР-3', 'МР-4', 'МР-5',
-        'МР-6', 'МР-7', 'МР-8', 'МР-9',
-    ];
-
-    const closedDatasets = [
-        { label: 'Всего', color: colors.green },
-        { label: 'Без питания', color: colors.gray },
-    ];
+    const MACROREGION_LABELS = ['МР-1','МР-2','МР-3','МР-4','МР-5','МР-6','МР-7','МР-8','МР-9'];
 
     const closedChart = createAllIncidentsChart(
         document.getElementById('all-closed-incidents-chart').getContext('2d'),
-        {
-            labels: MACROREGION_LABELS,
-            datasets: closedDatasets.map(d => ({
-                label: d.label,
-                data: [],
-                backgroundColor: d.color,
-            }))
-        },
+        { labels: MACROREGION_LABELS, datasets: [{ label: 'Всего', data: [], backgroundColor: colors.green }, { label: 'Без питания', data: [], backgroundColor: colors.gray }] },
         'Закрытые'
     );
-
     window.dashboardCharts.closed = closedChart;
-
-    /* ---------- OPEN BAR ---------- */
-
-    const openDatasets = [
-        { label: 'Всего', color: colors.blue },
-        { label: 'Без питания', color: colors.gray },
-    ];
+    updateCopyButton('closed-chart-card', closedChart, 'Регион/Количество инцидентов');
 
     const openChart = createAllIncidentsChart(
         document.getElementById('all-open-incidents-chart').getContext('2d'),
-        {
-            labels: MACROREGION_LABELS,
-            datasets: openDatasets.map(d => ({
-                label: d.label,
-                data: [],
-                backgroundColor: d.color,
-            }))
-        },
-        'Открытые',
+        { labels: MACROREGION_LABELS, datasets: [{ label: 'Всего', data: [], backgroundColor: colors.blue }, { label: 'Без питания', data: [], backgroundColor: colors.gray }] },
+        'Открытые'
     );
-
     window.dashboardCharts.open = openChart;
+    updateCopyButton('open-chart-card', openChart, 'Регион/Количество инцидентов');
 
-    /* ---------- TYPES ---------- */
     const typesDatasets = [
         { label: 'Авария по питанию', color: colors.blue },
         { label: 'Инцидент по конструктиву / территорией АМС', color: colors.red },
@@ -107,64 +65,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const typesChart = createAllIncidentsChart(
         document.getElementById('types-incidents-chart').getContext('2d'),
-        {
-            labels: MACROREGION_LABELS,
-            datasets: typesDatasets.map(d => ({
-                label: d.label,
-                data: [],
-                backgroundColor: d.color,
-            }))
-        },
+        { labels: MACROREGION_LABELS, datasets: typesDatasets.map(d => ({ label: d.label, data: [], backgroundColor: d.color })) },
         'Классификация аварий',
         true,
     );
-
     window.dashboardCharts.types = typesChart;
+    updateCopyButton('types-chart-card', typesChart, 'Регион/Тип аварии');
 
-    /* ---------- SLA DONUTS (SKELETON) ---------- */
     const initSlaSkeleton = (containerId, bar_title) => {
         const container = document.getElementById(containerId);
         const charts = [];
 
-        // ---- ОЧИЩАЕМ ВСЁ КРОМЕ КНОПКИ (на случай повторной инициализации) ----
-        container.querySelectorAll(':scope > *:not(.toggle-chart-btn)').forEach(el => el.remove());
+        // Очищаем всё кроме блока с кнопками
+        container.querySelectorAll(':scope > *:not(.chart-utils)').forEach(el => el.remove());
 
-        /* ---- TITLE ---- */
         const titleEl = document.createElement('p');
         titleEl.className = 'sla-title';
         titleEl.textContent = bar_title;
         container.appendChild(titleEl);
 
-        /* ---- GRID ---- */
         const grid = document.createElement('div');
         grid.className = 'sla-grid';
         container.appendChild(grid);
 
         for (let i = 1; i <= 9; i++) {
-            // ОБЁРТКА
             const item = document.createElement('div');
             item.className = 'sla-item';
 
-            // CANVAS
             const canvas = document.createElement('canvas');
             item.appendChild(canvas);
-
-            // добавляем в grid
             grid.appendChild(item);
 
-            // создаём график
-            const chart = createSlaDonutChart(
-                canvas.getContext('2d'),
-                {
-                    title: `МР-${i}`,
-                    single: true,
-                    data: [],
-                    datasetColors: [],
-                    total: 0
-                }
-            );
-
+            const chart = createSlaDonutChart(canvas.getContext('2d'), { title: `МР-${i}`, single: true, data: [], datasetColors: [], total: 0 });
             charts.push(chart);
+        }
+
+        const copyBtn = container.querySelector('.copy-chart-data-btn');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', () => {
+                if (window.dashboardCharts.lastSlaData) {
+                    updateSlaCopyData(containerId, window.dashboardCharts.lastSlaData, containerId.includes('avr') ? 'avr' : 'rvr');
+                    navigator.clipboard.writeText(copyBtn.dataset.text || '');
+                }
+            });
         }
 
         return charts;
@@ -175,40 +118,18 @@ document.addEventListener('DOMContentLoaded', () => {
         rvr: initSlaSkeleton('rvr-sla-grid', 'SLA РВР'),
     };
 
-    // Обновление данных через API:
+    // Для теста:
     // startStatisticsPolling(window.dashboardCharts);
 
-    // Обновление данных через WS:
     startStatisticsWebSocket(window.dashboardCharts);
-
-    /* ---------- THEME CHANGE ---------- */
 
     observeThemeChange(() => {
         const colors = getChartColors();
-
         updateDailyIncidentsChartColors(window.dashboardCharts.daily);
-
-        updateAllIncidentsChartColors(
-            window.dashboardCharts.closed,
-            [colors.green, colors.gray]
-        );
-
-        updateAllIncidentsChartColors(
-            window.dashboardCharts.open,
-            [colors.blue, colors.gray]
-        );
-
-        updateAllIncidentsChartColors(
-            window.dashboardCharts.types,
-            [colors.blue, colors.red, colors.green, colors.yellow, colors.gray, colors.cyan]
-        );
-
-        updateSlaDonutChartColors(
-            window.dashboardCharts.sla.avr,
-        );
-
-        updateSlaDonutChartColors(
-            window.dashboardCharts.sla.rvr,
-        );
+        updateAllIncidentsChartColors(window.dashboardCharts.closed, [colors.green, colors.gray]);
+        updateAllIncidentsChartColors(window.dashboardCharts.open, [colors.blue, colors.gray]);
+        updateAllIncidentsChartColors(window.dashboardCharts.types, [colors.blue, colors.red, colors.green, colors.yellow, colors.gray, colors.cyan]);
+        updateSlaDonutChartColors(window.dashboardCharts.sla.avr);
+        updateSlaDonutChartColors(window.dashboardCharts.sla.rvr);
     });
 });

@@ -1,4 +1,5 @@
 import os
+
 from django.core.management.base import BaseCommand
 
 from core.constants import LOG_DIR
@@ -41,7 +42,7 @@ class Command(BaseCommand):
                     default_logger.exception(f'Ошибка доступа к {file_path}')
 
         if cleared_logs:
-            default_logger.debug(
+            default_logger.info(
                 f'Логи: найдено={total_logs}, очищено={cleared_logs}, '
                 f'освобождено={total_bytes / 1024 / 1024:.2f} MB'
             )

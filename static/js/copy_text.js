@@ -6,24 +6,27 @@ document.addEventListener('DOMContentLoaded', () => {
     textEl.style.cursor = 'pointer';
 
     textEl.addEventListener('click', () => {
-      const text = textEl.getAttribute('data-text');
+      const text = textEl.getAttribute('data-text') || '';
       navigator.clipboard.writeText(text)
         .then(() => {
           const message = document.createElement('div');
           message.className = 'message alert-info';
-          message.innerText = `${text} скопирован в буфер`;
+
+          if (text.length > 100) {
+            message.innerText = `Данные скопированы в буфер обмена`;
+          } else {
+            message.innerText = `${text} скопирован в буфер`;
+          }
 
           messagesContainer.appendChild(message);
 
-          setTimeout(() => {
-            message.remove();
-          }, 5000);
+          setTimeout(() => message.remove(), 5000);
         })
         .catch(err => {
           console.error('Ошибка копирования: ', err);
           const message = document.createElement('div');
           message.className = 'message alert-error';
-          message.innerText = `Не удалось скопировать ${text}`;
+          message.innerText = `Не удалось скопировать данные`;
           messagesContainer.appendChild(message);
           setTimeout(() => message.remove(), 5000);
         });

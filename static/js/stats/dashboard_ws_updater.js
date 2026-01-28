@@ -1,5 +1,6 @@
 import { getFirstDayOfPreviousMonth, formatDate, showMessage, validateDateRange } from './charts_utils.js';
 import { updateDailyChart, updateBarChart, updateSlaCharts } from './data/charts_updater.js';
+import { updateCopyButton, updateSlaCopyData } from './data/copy_chart_data.js';
 
 let ws = null;
 const lastMsgRef = { current: null };
@@ -56,17 +57,25 @@ export function startStatisticsWebSocket(charts) {
         ws.send(JSON.stringify(payload));
     }
 
+    /* ---------- UPDATE CHARTS + COPY DATA ---------- */
+
     function updateCharts(apiData) {
-        // DAILY LINE
+        // DAILY
         updateDailyChart(charts.daily, apiData);
 
-        // CLOSED BAR
-        updateBarChart(charts.closed, apiData, ['total_closed_incidents', 'closed_incidents_with_power_issue']);
+        // CLOSED
+        updateBarChart(charts.closed, apiData, [
+            'total_closed_incidents',
+            'closed_incidents_with_power_issue'
+        ]);
 
-        // OPEN BAR
-        updateBarChart(charts.open, apiData, ['total_open_incidents', 'open_incidents_with_power_issue']);
+        // OPEN
+        updateBarChart(charts.open, apiData, [
+            'total_open_incidents',
+            'open_incidents_with_power_issue'
+        ]);
 
-        // TYPES BAR (новый график)
+        // TYPES
         updateBarChart(
             charts.types,
             apiData,
@@ -83,9 +92,19 @@ export function startStatisticsWebSocket(charts) {
         // SLA DONUTS
         updateSlaCharts(charts.sla.avr, apiData, 'avr');
         updateSlaCharts(charts.sla.rvr, apiData, 'rvr');
+
+        // ===== COPY DATA (ВАЖНО) =====
+        updateCopyButton('daily-chart-card', charts.daily, 'Дата/Регион');
+        updateCopyButton('closed-chart-card', charts.closed, 'Регион/Количество инцидентов');
+        updateCopyButton('open-chart-card', charts.open, 'Регион/Количество инцидентов');
+        updateCopyButton('types-chart-card', charts.types, 'Регион/Тип аварии');
+
+        // SLA — таблицы из API
+        updateSlaCopyData('avr-sla-grid', apiData, 'avr');
+        updateSlaCopyData('rvr-sla-grid', apiData, 'rvr');
     }
 
-    /* ---------- APPLY ---------- */
+    /* ---------- APPLY FILTER ---------- */
 
     applyBtn.addEventListener('click', () => {
         const start = startInput.value;
@@ -97,7 +116,6 @@ export function startStatisticsWebSocket(charts) {
 
         confirmedStart = start;
         confirmedEnd = end;
-
         sendParams(confirmedStart, confirmedEnd);
     });
 
