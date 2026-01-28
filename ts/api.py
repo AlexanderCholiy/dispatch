@@ -13,17 +13,18 @@ from core.loggers import ts_logger
 from core.pretty_print import PrettyPrint
 from core.wraps import timer
 
-from .constants import (  # AVR_FILE,; BASE_STATIONS_FILE,; POLES_FILE,
+from .constants import (
     COLUMNS_TO_KEEP_AVR_REPORT,
     COLUMNS_TO_KEEP_BS_OPERATORS_REPORT,
     COLUMNS_TO_KEEP_POLES_TL,
     DB_CHUNK_UPDATE,
-    TS_AVR_REPORT_URL,
-    TS_BS_REPORT_URL,
-    TS_POLES_TL_URL,
     UNDEFINED_CASE,
     UNDEFINED_EMAILS,
     UNDEFINED_ID,
+    UNVALID_DEBUG_MSG_LIMIT,
+    TS_BASE_STATION_TABLE,
+    TS_AVR_TABLE,
+    TS_POLE_TABLE,
 )
 from .models import (
     AVRContractor,
@@ -89,7 +90,7 @@ class Api(SocialValidators):
             f'"{col}"' if col != 'RegionRu' else '"Регион ru" AS "RegionRu"'
             for col in COLUMNS_TO_KEEP_POLES_TL
         )
-        query = f'SELECT {columns_quoted} FROM "Таблица опор";'
+        query = f'SELECT {columns_quoted} FROM "{TS_POLE_TABLE}";'
 
         with connections['ts'].cursor() as cursor:
             cursor.execute(query)
@@ -199,7 +200,7 @@ class Api(SocialValidators):
         poles_to_update: list[Pole] = []
 
         # Обновляем актуальные записи:
-        find_unvalid_values = False
+        find_unvalid_values = 0
 
         for index, row in poles.iterrows():
             PrettyPrint.progress_bar_debug(
@@ -235,7 +236,7 @@ class Api(SocialValidators):
                 or not isinstance(region_ru, (str, NoneType))
                 or not isinstance(macroregion_name, (str, NoneType))
             ):
-                find_unvalid_values = True
+                find_unvalid_values += 1
                 continue
 
             if macroregion_name:
@@ -296,7 +297,14 @@ class Api(SocialValidators):
                 )
 
         if find_unvalid_values:
-            ts_logger.warning(f'Проверьте данные в {TS_POLES_TL_URL}')
+            msg = (
+                f'TS: в "{TS_POLE_TABLE}" обнаружено '
+                f'{find_unvalid_values} невалидных записей.'
+            )
+
+            ts_logger.warning(msg) if (
+                find_unvalid_values > UNVALID_DEBUG_MSG_LIMIT
+            ) else ts_logger.debug(msg)
 
         if bulk_macroregions_to_create:
             MacroRegion.objects.bulk_create(
@@ -411,7 +419,7 @@ class Api(SocialValidators):
             )
             for col in COLUMNS_TO_KEEP_AVR_REPORT
         )
-        query = f'SELECT {columns_quoted} FROM "АВР";'
+        query = f'SELECT {columns_quoted} FROM "{TS_AVR_TABLE}";'
 
         with connections['ts'].cursor() as cursor:
             cursor.execute(query)
@@ -501,7 +509,7 @@ class Api(SocialValidators):
         poles_in_avr = set()
         email_and_phones_pairs_to_delete = set()
 
-        find_unvalid_values = False
+        find_unvalid_values = 0
 
         for index, row in avr.iterrows():
             PrettyPrint.progress_bar_info(
@@ -528,7 +536,7 @@ class Api(SocialValidators):
 
                 # Проверка типов
                 if not isinstance(pole_number, str):
-                    find_unvalid_values = True
+                    find_unvalid_values += 1
                     continue
 
                 # Подрядчик
@@ -642,10 +650,17 @@ class Api(SocialValidators):
 
             except Exception:
                 ts_logger.debug(f'Проверьте данные: {row}')
-                find_unvalid_values = True
+                find_unvalid_values += 1
 
         if find_unvalid_values:
-            ts_logger.warning(f'Проверьте данные в {TS_AVR_REPORT_URL}')
+            msg = (
+                f'TS: в "{TS_AVR_TABLE}" обнаружено '
+                f'{find_unvalid_values} невалидных записей.'
+            )
+
+            ts_logger.warning(msg) if (
+                find_unvalid_values > UNVALID_DEBUG_MSG_LIMIT
+            ) else ts_logger.debug(msg)
 
         if updated_poles:
             success_updated_poles = Pole.objects.bulk_update(
@@ -723,7 +738,7 @@ class Api(SocialValidators):
         columns_quoted = ', '.join(
             f'"{col}"' for col in COLUMNS_TO_KEEP_BS_OPERATORS_REPORT
         )
-        query = f'SELECT {columns_quoted} FROM "EI.Размещённые арендаторы";'
+        query = f'SELECT {columns_quoted} FROM "{TS_BASE_STATION_TABLE}";'
 
         with connections['ts'].cursor() as cursor:
             cursor.execute(query)
@@ -822,7 +837,7 @@ class Api(SocialValidators):
         bulk_operators_to_create = []
         relations_to_set = []
 
-        find_unvalid_values = False
+        find_unvalid_values = 0
 
         for index, row in base_stations.iterrows():
             PrettyPrint.progress_bar_error(
@@ -843,7 +858,7 @@ class Api(SocialValidators):
                 or not isinstance(operator_name, str)
                 or not isinstance(operator_group, (str, NoneType))
             ):
-                find_unvalid_values = True
+                find_unvalid_values += 1
                 continue
 
             pole = poles.get(pole_number)
@@ -870,7 +885,14 @@ class Api(SocialValidators):
                 bulk_operators_to_create.append(operators_cache[op_key])
 
         if find_unvalid_values:
-            ts_logger.warning(f'Проверьте данные в {TS_BS_REPORT_URL}')
+            msg = (
+                f'TS: в "{TS_BASE_STATION_TABLE}" обнаружено '
+                f'{find_unvalid_values} невалидных записей.'
+            )
+
+            ts_logger.warning(msg) if (
+                find_unvalid_values > UNVALID_DEBUG_MSG_LIMIT
+            ) else ts_logger.debug(msg)
 
         if bulk_operators_to_create:
             new_operators = BaseStationOperator.objects.bulk_create(

@@ -59,3 +59,8 @@ COLUMNS_TO_KEEP_BS_OPERATORS_REPORT: list[str] = [
 ]
 
 DB_CHUNK_UPDATE = 500
+
+UNVALID_DEBUG_MSG_LIMIT = 10
+TS_BASE_STATION_TABLE = 'EI.Размещённые арендаторы'
+TS_AVR_TABLE = 'АВР'
+TS_POLE_TABLE = 'Таблица опор'
