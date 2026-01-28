@@ -119,9 +119,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Для теста:
-    // startStatisticsPolling(window.dashboardCharts);
+    startStatisticsPolling(window.dashboardCharts);
 
-    startStatisticsWebSocket(window.dashboardCharts);
+    // startStatisticsWebSocket(window.dashboardCharts);
 
     observeThemeChange(() => {
         const colors = getChartColors();

@@ -21,21 +21,19 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
     gap: var(--space-lg);
-    justify-items: center;
-    padding-block: var(--space-lg);
+    margin: var(--space-md) var(--space-sm);
 }
 
 .sla-item {
-    background: var(--add-background-color);
     border-radius: var(--radius-lg);
     padding: var(--space-sm);
-    box-shadow: 0 var(--space-xs) var(--space-md) var(--extra-color);
     position: relative;
-    transition: box-shadow var(--transition-value),
+    border: 1px solid var(--add-background-color);
+    transition: border-color var(--transition-value),
                 transform var(--transition-value);
 }
 
 .sla-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 var(--space-sm) var(--space-lg) var(--extra-color);
+    transform: translateY(-1px);
+    border-color: var(--background-color);
 }

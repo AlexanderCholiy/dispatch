@@ -43,15 +43,14 @@
     border: none;
     box-shadow: 0 0 var(--space-xxs) var(--extra-color);
     justify-content: left;
-    font-size: var(--font-md);
-    font-weight: 700;
-    color: var(--color);
+    font-size: var(--font-sm);
+    font-weight: 500;
+    color: var(--add-color);
     opacity: 1;
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 .toggle-chart-btn:hover {
-    color: var(--add-color)!important;
+    color: var(--gray-color)!important;
 }
 
 .copy-chart-data-btn {
