@@ -16,7 +16,7 @@
 }
 
 .empty-line {
-  height: var(--space-md);
+  height: calc(var(--space-xs) + var(--space-sm));
   background: linear-gradient(
     320deg,
     var(--add-background-color) 0%,

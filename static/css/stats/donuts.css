@@ -34,6 +34,6 @@
 }
 
 .sla-item:hover {
-    transform: translateY(-1px);
-    border-color: var(--background-color);
+    transform: scale(1.01);
+    border-color: transparent;
 }

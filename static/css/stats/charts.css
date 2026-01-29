@@ -23,13 +23,11 @@
     border: 1px solid var(--add-background-color);
     padding: var(--space-sm);
     border-radius: var(--radius-lg);
-    transition: border-color var(--transition-value),
-                transform var(--transition-value);
+    transition: border-color var(--transition-value);
 }
 
 .chart-card canvas:hover {
-    transform: translateY(-1px);
-    border-color: var(--background-color);
+    border-color: transparent;
 }
 
 .chart-card:first-of-type,

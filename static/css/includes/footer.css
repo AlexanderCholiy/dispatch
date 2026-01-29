@@ -27,11 +27,12 @@ footer {
   margin: 0;
   color: var(--priority-color);
   text-decoration: none;
-  transition: color var(--transition-value);
+  opacity: 0.8;
+  transition: color var(--transition-value), opacity var(--transition-value);
 }
 
 .footer-container .logo a:hover {
-  color: var(--priority-color);
+  opacity: 1;
 }
 
 .footer-nav ul {
@@ -81,8 +82,22 @@ footer {
   gap: var(--space-sm);
 }
 
-.bottom p {
+.bottom a {
+  margin-bottom: var(--space-lg);
+  vertical-align: 0;
+  line-height: 1;
   color: var(--gray-color);
+  text-decoration: none;
+  border-bottom: 1px solid var(--gray-color);
+  opacity: 0.8;
+  transition: color var(--transition-value), border-color var(--transition-value), opacity var(--transition-value);
+}
+
+.bottom a:hover,
+.bottom a:focus {
+  color: var(--red-color);
+  border-color: var(--red-color);
+  opacity: 1;
 }
 
 @media (max-width: 768px) {
