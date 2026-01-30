@@ -159,6 +159,12 @@ class Incident(models.Model):
         blank=True,
         verbose_name='Дата и время закрытия РВР',
     )
+    disable_thread_auto_link = models.BooleanField(
+        default=False,
+        verbose_name='Запрет авто-привязки по email цепочке',
+        db_index=True,
+        help_text='Если True, инцидент исключается из авто-матчинга по thread'
+    )
 
     class Meta:
         verbose_name = 'инцидент'

@@ -165,6 +165,7 @@ class IncidentAdmin(admin.ModelAdmin):
                 'is_incident_finish',
                 'incident_finish_date',
                 'is_auto_incident',
+                'disable_thread_auto_link',
                 'code',
                 'avr_start_date',
                 'avr_end_date',

@@ -215,8 +215,10 @@ class YandexTrackerManager:
         self._local_fields_cache = None
         self._local_fields_last_update = 0
 
-    def find_yt_number_in_text(self, text: str) -> list[str]:
-        return re.findall(rf'{self.queue}-\d+', text)
+    def find_yt_number_in_text(self, text: str) -> Optional[str]:
+        """Ищет первое вхождение: названия очереди, дефис и цифры"""
+        match = re.search(rf'{self.queue}-\d+', text)
+        return match.group(0) if match else None
 
     @property
     def headers(self):
