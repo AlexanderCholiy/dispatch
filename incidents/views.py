@@ -32,7 +32,7 @@ from users.models import Roles, User
 from users.utils import role_required
 from yandex_tracker.utils import yt_manager
 
-from .annotations import annotate_sla_avr, annotate_sla_rvr, annotate_sla_dgu
+from .annotations import annotate_sla_avr, annotate_sla_dgu, annotate_sla_rvr
 from .constants import (
     INCIDENTS_PER_PAGE,
     MAX_INCIDENTS_INFO_CACHE_SEC,
@@ -49,7 +49,6 @@ from .models import (
     TimeStatus,
 )
 from .utils import IncidentManager
-from core.utils import get_param
 
 
 @login_required

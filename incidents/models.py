@@ -14,16 +14,16 @@ from core.constants import (
     MAX_ST_DESCRIPTION,
 )
 from core.models import Detail
-from ts.models import AVRContractor, BaseStation, Pole
 from core.utils import timedelta_to_human_time
+from ts.models import AVRContractor, BaseStation, Pole
 
 from .constants import (
     AVR_CATEGORY,
+    DGU_SLA_DEADLINE_IN_HOURS,
     MAX_CODE_LEN,
     MAX_FUTURE_END_DELTA,
     MAX_STATUS_COMMENT_LEN,
     RVR_SLA_DEADLINE_IN_HOURS,
-    DGU_SLA_DEADLINE_IN_HOURS,
 )
 
 User = get_user_model()

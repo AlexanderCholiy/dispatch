@@ -24,6 +24,7 @@ from ts.constants import UNDEFINED_CASE
 from .constants import (
     AVR_CATEGORY,
     DGU_CATEGORY,
+    DGU_SLA_DEADLINE_IN_HOURS,
     INCIDENT_ACCESS_TO_OBJECT_TYPE,
     INCIDENT_AMS_STRUCTURE_TYPE,
     INCIDENT_DESTRUCTION_OBJECT_TYPE,
@@ -32,7 +33,6 @@ from .constants import (
     POWER_ISSUE_TYPES,
     RVR_CATEGORY,
     RVR_SLA_DEADLINE_IN_HOURS,
-    DGU_SLA_DEADLINE_IN_HOURS,
 )
 from .models import Incident, IncidentCategoryRelation
 

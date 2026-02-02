@@ -3,8 +3,8 @@ import os
 from datetime import timedelta
 from typing import Any, Callable, Optional
 
-from django.utils import timezone
 from django.http import HttpRequest
+from django.utils import timezone
 from django.utils.translation import ngettext
 
 from .constants import (
@@ -179,9 +179,16 @@ def sanitize_http_filename(filename: str) -> str:
     return CONTROL_CHARS_RE.sub(' ', filename).strip()
 
 
-def get_param(request: HttpRequest, name: str) -> Optional[str]:
-    if name in request.GET:
-        return request.GET.get(name, '').strip()
+def get_param(
+    request: HttpRequest,
+    get_name: Optional[str] = None,
+    coockie_name: Optional[str] = None,
+) -> Optional[str]:
+    if get_name is not None and request.GET.get(get_name, '').strip():
+        return request.GET.get(get_name, '').strip()
+
+    if coockie_name is None:
+        return
 
     # Возвращаем если поиск был только с тукущей ссылки:
     referer: str = request.META.get('HTTP_REFERER', '')
@@ -189,4 +196,4 @@ def get_param(request: HttpRequest, name: str) -> Optional[str]:
     is_same_page = referer.split('?')[0] == current_url
 
     if is_same_page:
-        return request.COOKIES.get(name, '').strip()
+        return request.COOKIES.get(coockie_name, '').strip()

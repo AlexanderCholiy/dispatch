@@ -85,7 +85,7 @@
     <input type="hidden"
           name="finish"
           id="search-hidden-finish"
-          value="{{ selected.is_incident_finish|yesno:'true,false,' }}">
+          value="{% if selected.is_incident_finish is True %}true{% elif selected.is_incident_finish is False %}false{% else %}{% endif %}">
     <input type="hidden" name="status" value="{{ selected.status }}" id="search-hidden-status">
     <input type="hidden" name="category" value="{{ selected.category }}" id="search-hidden-category">
     <input type="hidden" name="sla_avr" value="{{ selected.sla_avr_status }}" id="search-hidden-sla-avr">
