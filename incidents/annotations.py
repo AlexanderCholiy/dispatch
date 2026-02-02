@@ -32,6 +32,7 @@ from .constants import (
     POWER_ISSUE_TYPES,
     RVR_CATEGORY,
     RVR_SLA_DEADLINE_IN_HOURS,
+    DGU_SLA_DEADLINE_IN_HOURS,
 )
 from .models import Incident, IncidentCategoryRelation
 
@@ -183,6 +184,79 @@ def annotate_sla_rvr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
                 rvr_start_date__isnull=False,
                 rvr_end_date__isnull=False,
                 rvr_end_date__lte=F('rvr_deadline'),
+                then=Value(True)
+            ),
+            default=Value(False),
+            output_field=BooleanField()
+        ),
+    )
+
+
+def annotate_sla_dgu(qs: QuerySet[Incident]) -> QuerySet[Incident]:
+    """Аннотация SLA для ДГУ."""
+    now = timezone.now()
+    return qs.annotate(
+        dgu_has_start=Case(
+            When(dgu_start_date__isnull=False, then=Value(True)),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+        dgu_deadline=ExpressionWrapper(
+            Case(
+                When(
+                    dgu_start_date__isnull=False,
+                    then=(
+                        F('dgu_start_date')
+                        + timedelta(hours=DGU_SLA_DEADLINE_IN_HOURS)
+                    )
+                ),
+                default=None,
+                output_field=DateTimeField()
+            ),
+            output_field=DateTimeField()
+        ),
+        sla_dgu_expired=Case(
+            When(
+                dgu_start_date__isnull=False,
+                dgu_end_date__isnull=False,
+                dgu_end_date__gt=F('dgu_deadline'),
+                then=Value(True)
+            ),
+            When(
+                dgu_start_date__isnull=False,
+                dgu_end_date__isnull=True,
+                dgu_deadline__lt=now,
+                then=Value(True)
+            ),
+            default=Value(False),
+            output_field=BooleanField()
+        ),
+        sla_dgu_less_than_hour=Case(
+            When(
+                dgu_start_date__isnull=False,
+                dgu_end_date__isnull=True,
+                dgu_deadline__gt=now,
+                dgu_deadline__lte=now + timedelta(hours=1),
+                then=Value(True)
+            ),
+            default=Value(False),
+            output_field=BooleanField()
+        ),
+        sla_dgu_in_progress=Case(
+            When(
+                dgu_start_date__isnull=False,
+                dgu_end_date__isnull=True,
+                dgu_deadline__gt=now + timedelta(hours=1),
+                then=Value(True)
+            ),
+            default=Value(False),
+            output_field=BooleanField()
+        ),
+        sla_dgu_closed_on_time=Case(
+            When(
+                dgu_start_date__isnull=False,
+                dgu_end_date__isnull=False,
+                dgu_end_date__lte=F('dgu_deadline'),
                 then=Value(True)
             ),
             default=Value(False),

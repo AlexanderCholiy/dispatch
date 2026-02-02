@@ -32,7 +32,7 @@ from users.models import Roles, User
 from users.utils import role_required
 from yandex_tracker.utils import yt_manager
 
-from .annotations import annotate_sla_avr, annotate_sla_rvr
+from .annotations import annotate_sla_avr, annotate_sla_rvr, annotate_sla_dgu
 from .constants import (
     INCIDENTS_PER_PAGE,
     MAX_INCIDENTS_INFO_CACHE_SEC,
@@ -46,8 +46,10 @@ from .models import (
     IncidentStatus,
     IncidentStatusHistory,
     SLAStatus,
+    TimeStatus,
 )
 from .utils import IncidentManager
+from core.utils import get_param
 
 
 @login_required
@@ -103,6 +105,12 @@ def index(request: HttpRequest) -> HttpResponse:
         or None
     )
 
+    sla_dgu_status = (
+        request.GET.get('sla_dgu', '').strip()
+        or request.COOKIES.get('sla_dgu', '').strip()
+        or None
+    )
+
     sort = (
         request.GET.get('sort_incidents')
         or request.COOKIES.get('sort_incidents')
@@ -139,6 +147,7 @@ def index(request: HttpRequest) -> HttpResponse:
 
     base_qs = annotate_sla_avr(base_qs)
     base_qs = annotate_sla_rvr(base_qs)
+    base_qs = annotate_sla_dgu(base_qs)
 
     if sla_avr_status:
         if sla_avr_status == SLAStatus.EXPIRED.value:
@@ -159,6 +168,16 @@ def index(request: HttpRequest) -> HttpResponse:
             base_qs = base_qs.filter(sla_rvr_in_progress=True)
         elif sla_rvr_status == SLAStatus.CLOSED_ON_TIME.value:
             base_qs = base_qs.filter(sla_rvr_closed_on_time=True)
+
+    if sla_dgu_status:
+        if sla_dgu_status == TimeStatus.EXPIRED.value:
+            base_qs = base_qs.filter(sla_dgu_expired=True)
+        elif sla_dgu_status == TimeStatus.LESS_THAN_HOUR.value:
+            base_qs = base_qs.filter(sla_dgu_less_than_hour=True)
+        elif sla_dgu_status == TimeStatus.IN_PROGRESS.value:
+            base_qs = base_qs.filter(sla_dgu_in_progress=True)
+        elif sla_dgu_status == TimeStatus.CLOSED_ON_TIME.value:
+            base_qs = base_qs.filter(sla_dgu_closed_on_time=True)
 
     if is_incident_finish is not None:
         base_qs = base_qs.filter(is_incident_finish=is_incident_finish)
@@ -227,6 +246,7 @@ def index(request: HttpRequest) -> HttpResponse:
         ),
         sla_avr_status_val=Value('', output_field=CharField()),
         sla_rvr_status_val=Value('', output_field=CharField()),
+        sla_dgu_status_val=Value('', output_field=CharField()),
     )
 
     incidents = sorted(incidents_qs, key=lambda i: page_ids.index(i.id))
@@ -234,6 +254,7 @@ def index(request: HttpRequest) -> HttpResponse:
     for incident in incidents:
         incident.sla_avr_status_val = incident.sla_avr_status
         incident.sla_rvr_status_val = incident.sla_rvr_status
+        incident.sla_dgu_status_val = incident.sla_dgu_status
 
     statuses = cache.get_or_set(
         'incident_filter_statuses',
@@ -266,6 +287,7 @@ def index(request: HttpRequest) -> HttpResponse:
         'statuses': statuses,
         'categories': categories,
         'sla_statuses': SLAStatus,
+        'time_statuses': TimeStatus,
         'selected': {
             'is_incident_finish': is_incident_finish,
             'status': status_name,
@@ -276,6 +298,7 @@ def index(request: HttpRequest) -> HttpResponse:
             'sort': sort,
             'sla_avr_status': sla_avr_status,
             'sla_rvr_status': sla_rvr_status,
+            'sla_dgu_status': sla_dgu_status,
         },
         'page_size_choices': PAGE_SIZE_INCIDENTS_CHOICES,
     }

@@ -15,6 +15,7 @@ from core.constants import (
 )
 from core.models import Detail
 from ts.models import AVRContractor, BaseStation, Pole
+from core.utils import timedelta_to_human_time
 
 from .constants import (
     AVR_CATEGORY,
@@ -22,6 +23,7 @@ from .constants import (
     MAX_FUTURE_END_DELTA,
     MAX_STATUS_COMMENT_LEN,
     RVR_SLA_DEADLINE_IN_HOURS,
+    DGU_SLA_DEADLINE_IN_HOURS,
 )
 
 User = get_user_model()
@@ -41,6 +43,13 @@ class SLAStatus(models.TextChoices):
     LESS_THAN_HOUR = ('waiting', 'Меньше часа')
     EXPIRED = ('canceled', 'Просрочен')
     CLOSED_ON_TIME = ('closed', 'Закрыт')
+
+
+class TimeStatus(models.TextChoices):
+    IN_PROGRESS = ('in-progress', f'Менее {DGU_SLA_DEADLINE_IN_HOURS}ч')
+    LESS_THAN_HOUR = ('waiting', 'Меньше часа')
+    EXPIRED = ('canceled', f'Более {DGU_SLA_DEADLINE_IN_HOURS}ч')
+    CLOSED_ON_TIME = ('closed', f'Закрыт за {DGU_SLA_DEADLINE_IN_HOURS}ч')
 
 
 class Incident(models.Model):
@@ -159,6 +168,16 @@ class Incident(models.Model):
         blank=True,
         verbose_name='Дата и время закрытия РВР',
     )
+    dgu_start_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Дата и время передачи на ДГУ',
+    )
+    dgu_end_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Дата и время закрытия ДГУ',
+    )
     disable_thread_auto_link = models.BooleanField(
         default=False,
         verbose_name='Запрет авто-привязки по email цепочке',
@@ -270,6 +289,12 @@ class Incident(models.Model):
                     'Дата закрытия РВР не может быть раньше даты начала.'
                 )
 
+        if self.dgu_start_date and self.dgu_end_date:
+            if self.dgu_end_date < self.dgu_start_date:
+                errors['dgu_end_date'] = (
+                    'Дата закрытия ДГУ не может быть раньше даты начала.'
+                )
+
         if self.avr_start_date and self.avr_start_date < min_date:
             errors['avr_start_date'] = (
                 'Дата начала АВР не может быть раньше '
@@ -282,6 +307,12 @@ class Incident(models.Model):
                 f'{min_date.strftime(DATETIME_FORMAT)}'
             )
 
+        if self.dgu_start_date and self.dgu_start_date < min_date:
+            errors['dgu_start_date'] = (
+                'Дата начала ДГУ не может быть раньше '
+                f'{min_date.strftime(DATETIME_FORMAT)}'
+            )
+
         if self.avr_end_date and self.avr_end_date > max_future_date:
             errors['avr_end_date'] = (
                 'Дата закрытия АВР не может быть позже '
@@ -291,6 +322,12 @@ class Incident(models.Model):
         if self.rvr_end_date and self.rvr_end_date > max_future_date:
             errors['rvr_end_date'] = (
                 'Дата закрытия РВР не может быть позже '
+                f'{max_future_date.strftime(DATETIME_FORMAT)}'
+            )
+
+        if self.dgu_end_date and self.dgu_end_date > max_future_date:
+            errors['dgu_end_date'] = (
+                'Дата закрытия ДГУ не может быть позже '
                 f'{max_future_date.strftime(DATETIME_FORMAT)}'
             )
 
@@ -326,6 +363,18 @@ class Incident(models.Model):
     is_sla_rvr_expired.fget.short_description = 'Просрочен ли SLA (РВР)'
 
     @property
+    def is_sla_dgu_expired(self) -> Optional[bool]:
+        is_expired = None
+        if self.dgu_start_date:
+            check_date = self.dgu_end_date or timezone.now()
+            sla_deadline = self.dgu_start_date + timedelta(
+                hours=DGU_SLA_DEADLINE_IN_HOURS
+            )
+            is_expired = sla_deadline < check_date
+        return is_expired
+    is_sla_dgu_expired.fget.short_description = 'Просрочен ли SLA (ДГУ)'
+
+    @property
     def avr_contractor(self) -> Optional[AVRContractor]:
         return self.pole.avr_contractor if self.pole else None
     avr_contractor.fget.short_description = 'Подрядчик по АВР'
@@ -353,6 +402,16 @@ class Incident(models.Model):
     sla_rvr_deadline.fget.short_description = 'Срок устранения РВР'
 
     @property
+    def dgu_duration(self) -> Optional[timedelta]:
+        """Длительность дизеления (ДГУ)."""
+        if not self.dgu_start_date:
+            return None
+
+        end_date = self.dgu_end_date or timezone.now()
+        return end_date - self.dgu_start_date
+    dgu_duration.fget.short_description = 'Длительность дизеления'
+
+    @property
     def sla_avr_status(self) -> Optional[SLAStatus]:
         return self._get_sla_status('avr')
 
@@ -360,13 +419,29 @@ class Incident(models.Model):
     def sla_rvr_status(self) -> Optional[SLAStatus]:
         return self._get_sla_status('rvr')
 
-    def _get_sla_status(self, category: str) -> Optional[SLAStatus]:
+    @property
+    def sla_dgu_status(self) -> Optional[TimeStatus]:
+        return self._get_sla_status('dgu')
+
+    @property
+    def dgu_duration_val_label(self) -> Optional[str]:
+        dgu_duration = self.dgu_duration
+        if dgu_duration is None:
+            return
+
+        return timedelta_to_human_time(dgu_duration)
+
+    def _get_sla_status(
+        self, category: str
+    ) -> Optional[SLAStatus | TimeStatus]:
         """Определяет SLA-статус для категории 'avr' или 'rvr'."""
         now = timezone.now()
         is_avr = None
+        is_rvr = None
 
         if category.lower() == 'avr':
             is_avr = True
+            is_rvr = False
             start = self.avr_start_date
             end = self.avr_end_date
             sla_minutes = (
@@ -374,9 +449,16 @@ class Incident(models.Model):
             ) if self.incident_type else None
         elif category.lower() == 'rvr':
             is_avr = False
+            is_rvr = True
             start = self.rvr_start_date
             end = self.rvr_end_date
             sla_minutes = RVR_SLA_DEADLINE_IN_HOURS * 60
+        elif category.lower() == 'dgu':
+            is_avr = False
+            is_rvr = False
+            start = self.dgu_start_date
+            end = self.dgu_end_date
+            sla_minutes = DGU_SLA_DEADLINE_IN_HOURS * 60
         else:
             return
 
@@ -389,12 +471,21 @@ class Incident(models.Model):
                     self.is_sla_avr_expired
                 ) else SLAStatus.CLOSED_ON_TIME
 
-            return SLAStatus.EXPIRED if (
-                self.is_sla_rvr_expired
-            ) else SLAStatus.CLOSED_ON_TIME
+            if is_rvr:
+                return SLAStatus.EXPIRED if (
+                    self.is_sla_rvr_expired
+                ) else SLAStatus.CLOSED_ON_TIME
+
+            return TimeStatus.EXPIRED if (
+                self.is_sla_dgu_expired
+            ) else TimeStatus.CLOSED_ON_TIME
 
         if not sla_minutes:
-            return SLAStatus.CLOSED_ON_TIME if (
+            if is_avr or is_rvr:
+                return SLAStatus.CLOSED_ON_TIME if (
+                    self.is_incident_finish
+                ) else None
+            return TimeStatus.CLOSED_ON_TIME if (
                 self.is_incident_finish
             ) else None
 
@@ -402,11 +493,17 @@ class Incident(models.Model):
         remaining = (deadline - now).total_seconds()
 
         if remaining < 0:
-            return SLAStatus.EXPIRED
+            return SLAStatus.EXPIRED if (
+                is_avr or is_rvr
+            ) else TimeStatus.EXPIRED
         elif remaining <= 3600:
-            return SLAStatus.LESS_THAN_HOUR
+            return SLAStatus.LESS_THAN_HOUR if (
+                is_avr or is_rvr
+            ) else TimeStatus.LESS_THAN_HOUR
         else:
-            return SLAStatus.IN_PROGRESS
+            return SLAStatus.IN_PROGRESS if (
+                is_avr or is_rvr
+            ) else TimeStatus.IN_PROGRESS
 
 
 class IncidentHistory(models.Model):

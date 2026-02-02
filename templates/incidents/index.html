@@ -23,6 +23,7 @@
               <th data-col="category">Категория</th>
               <th data-col="sla_avr">SLA АВР</th>
               <th data-col="sla_rvr">SLA РВР</th>
+              <th data-col="sla_dgu">ВРТ ДГУ</th>
               <th data-col="pole">Шифр опоры</th>
               <th data-col="bs">Номер БС</th>
               <th data-col="created">Дата регистрации</th>
@@ -90,6 +91,15 @@
                   {% if incident.sla_rvr_status_val %}
                     <span class="status-badge {{ incident.sla_rvr_status_val.value|default:'status-unknown' }}">
                       {{ incident.sla_rvr_status_val.label }}
+                    </span>
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td>
+                  {% if incident.sla_dgu_status_val %}
+                    <span class="status-badge {{ incident.sla_dgu_status_val.value|default:'status-unknown' }}">
+                      {{ incident.dgu_duration_val_label }}
                     </span>
                   {% else %}
                     —

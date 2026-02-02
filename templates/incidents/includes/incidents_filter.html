@@ -76,6 +76,20 @@
       </select>
     </div>
 
+    <div class="select-wrapper">
+      <select name="sla_dgu" id="sla-dgu" class="select tooltip" data-title="Статус ВРТ ДГУ">
+        <option value="" {% if not selected.sla_dgu_status %}selected{% endif %}>
+          ВРТ ДГУ: Все
+        </option>
+        {% for item in time_statuses %}
+          <option value="{{ item.value }}"
+                  {% if selected.sla_dgu_status == item.value %}selected{% endif %}>
+            ВРТ ДГУ: {{ item.label }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
     <input
       type="text"
       name="pole"
@@ -139,6 +153,11 @@
           <i class="bx check-icon"></i>
           <input type="checkbox" data-col="sla_rvr">
           <span>SLA РВР</span>
+        </label>
+        <label class="column-option">
+          <i class="bx check-icon"></i>
+          <input type="checkbox" data-col="sla_dgu">
+          <span>ВРТ ДГУ</span>
         </label>
         <label class="column-option">
           <i class="bx check-icon"></i>

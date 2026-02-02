@@ -4,6 +4,8 @@ from datetime import timedelta
 from typing import Any, Callable, Optional
 
 from django.utils import timezone
+from django.http import HttpRequest
+from django.utils.translation import ngettext
 
 from .constants import (
     CONTROL_CHARS_RE,
@@ -84,67 +86,25 @@ def format_seconds(seconds: float) -> str:
 def timedelta_to_human_time(time_delta: timedelta) -> str:
     seconds = int(time_delta.total_seconds())
     if seconds <= 0:
-        raise ValueError('Значение должно быть > 0')
+        return '0 секунд'
 
-    time_units = {
-        'день': 86400,
-        'час': 3600,
-        'минута': 60,
-        'секунда': 1,
-    }
+    days = seconds // 86400
+    hours = (seconds % 86400) // 3600
+    minutes = (seconds % 3600) // 60
+    secs = seconds % 60
 
     parts = []
-    remaining_seconds = seconds
+    if days:
+        parts.append(f'{days} {ngettext("день", "дней", days)}')
+    if hours:
+        parts.append(f'{hours} {ngettext("час", "часов", hours)}')
+    if minutes:
+        parts.append(f'{minutes} {ngettext("минута", "минут", minutes)}')
 
-    for unit_name, unit_seconds in time_units.items():
-        if remaining_seconds >= unit_seconds:
-            unit_value = remaining_seconds // unit_seconds
-            remaining_seconds %= unit_seconds
+    if not parts and secs:
+        parts.append(f'{secs} {ngettext("секунда", "секунд", secs)}')
 
-            if unit_name == 'день':
-                if unit_value % 10 == 1 and unit_value % 100 != 11:
-                    unit_name_formatted = 'день'
-                elif (
-                    2 <= unit_value % 10 <= 4
-                    and (unit_value % 100 < 10 or unit_value % 100 >= 20)
-                ):
-                    unit_name_formatted = 'дня'
-                else:
-                    unit_name_formatted = 'дней'
-            elif unit_name == 'час':
-                if unit_value % 10 == 1 and unit_value % 100 != 11:
-                    unit_name_formatted = 'час'
-                elif (
-                    2 <= unit_value % 10 <= 4
-                    and (unit_value % 100 < 10 or unit_value % 100 >= 20)
-                ):
-                    unit_name_formatted = 'часа'
-                else:
-                    unit_name_formatted = 'часов'
-            elif unit_name == 'минута':
-                if unit_value % 10 == 1 and unit_value % 100 != 11:
-                    unit_name_formatted = 'минута'
-                elif (
-                    2 <= unit_value % 10 <= 4
-                    and (unit_value % 100 < 10 or unit_value % 100 >= 20)
-                ):
-                    unit_name_formatted = 'минуты'
-                else:
-                    unit_name_formatted = 'минут'
-            elif unit_name == 'секунда':
-                if unit_value % 10 == 1 and unit_value % 100 != 11:
-                    unit_name_formatted = 'секунда'
-                elif (
-                    2 <= unit_value % 10 <= 4
-                    and (unit_value % 100 < 10 or unit_value % 100 >= 20)
-                ):
-                    unit_name_formatted = 'секунды'
-                else:
-                    unit_name_formatted = 'секунд'
-
-            parts.append(f'{unit_value} {unit_name_formatted}')
-
-    return ', '.join(parts)
+    return ' '.join(parts)
 
 
 class Config:
@@ -217,3 +177,16 @@ def sanitize_http_filename(filename: str) -> str:
     ТОЛЬКО для использования в HTTP-заголовках
     """
     return CONTROL_CHARS_RE.sub(' ', filename).strip()
+
+
+def get_param(request: HttpRequest, name: str) -> Optional[str]:
+    if name in request.GET:
+        return request.GET.get(name, '').strip()
+
+    # Возвращаем если поиск был только с тукущей ссылки:
+    referer: str = request.META.get('HTTP_REFERER', '')
+    current_url = request.build_absolute_uri(request.path)
+    is_same_page = referer.split('?')[0] == current_url
+
+    if is_same_page:
+        return request.COOKIES.get(name, '').strip()

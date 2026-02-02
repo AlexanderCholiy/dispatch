@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
       deleteCookie('category');
       deleteCookie('sla_avr');
       deleteCookie('sla_rvr');
+      deleteCookie('sla_dgu');
 
       // deleteCookie('type');
       deleteCookie('company');
@@ -55,6 +56,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const slarvrSelect = document.getElementById('sla-rvr');
       if (slarvrSelect) slarvrSelect.selectedIndex = 0;
+
+      const sladguSelect = document.getElementById('sla-dgu');
+      if (sladguSelect) sladguSelect.selectedIndex = 0;
       
       // Сбрасываем папку
       const folderSelect = document.getElementById('folder-select');
@@ -95,6 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'search-hidden-base-station',
         'search-hidden-sla-avr',
         'search-hidden-sla-rvr',
+        'search-hidden-sla-dgu',
         'search-hidden-folder',
         'search-hidden-email-from',
         // 'search-hidden-type',

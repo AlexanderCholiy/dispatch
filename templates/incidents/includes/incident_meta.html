@@ -76,7 +76,7 @@
     </span>
 
     {% if incident.sla_avr_deadline %}
-      <span class="status-tag {{ incident.sla_avr_status_val.value|default:'status-unknown' }}">
+      <span class="status-tag {{ incident.sla_avr_status_val.value|default:'unknown' }}">
         {{ incident.sla_avr_status_val.label }}
       </span>
     {% endif %}
@@ -94,8 +94,30 @@
     </span>
 
     {% if incident.sla_rvr_deadline %}
-      <span class="status-tag {{ incident.sla_rvr_status_val.value|default:'status-unknown' }}">
+      <span class="status-tag {{ incident.sla_rvr_status.value|default:'unknown' }}">
         {{ incident.sla_rvr_status_val.label }}
+      </span>
+    {% endif %}
+  </p>
+
+  <p class="sla-row">
+    <span class="sla-left">
+      <strong>ВРД ДГУ: </strong>
+      {% if incident.dgu_duration %}
+        {{ incident.dgu_start_date|date:"d.m.Y H:i" }} —
+        {% if incident.dgu_end_date %}
+          {{ incident.dgu_end_date|date:"d.m.Y H:i" }}
+        {% else %}
+          {% now "d.m.Y H:i" %}
+        {% endif %}
+      {% else %}
+        —
+      {% endif %}
+    </span>
+
+    {% if incident.dgu_duration %}
+      <span class="status-tag {{ incident.sla_dgu_status.value|default:'unknown' }}">
+        {{ incident.dgu_duration_val_label }}
       </span>
     {% endif %}
   </p>

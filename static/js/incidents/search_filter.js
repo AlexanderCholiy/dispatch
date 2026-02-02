@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const categorySelect = document.getElementById('category-select');
   const slaavrSelect = document.getElementById('sla-avr');
   const slarvrSelect = document.getElementById('sla-rvr');
+  const sladguSelect = document.getElementById('sla-dgu');
   const poleInput = document.getElementById('pole-input');
   const baseStationInput = document.getElementById('base-station-input');
 
@@ -20,6 +21,7 @@ document.addEventListener('DOMContentLoaded', function() {
     category: 'category',
     sla_avr: 'sla_avr',
     sla_rvr: 'sla_rvr',
+    sla_dgu: 'sla_dgu',
     pole: 'pole',
     base_station: 'base_station'
   };
@@ -50,6 +52,7 @@ document.addEventListener('DOMContentLoaded', function() {
   restoreValue(categorySelect, 'category');
   restoreValue(slaavrSelect, 'sla_avr');
   restoreValue(slarvrSelect, 'sla_rvr');
+  restoreValue(sladguSelect, 'sla_dgu');
   restoreValue(poleInput, 'pole');
   restoreValue(baseStationInput, 'base_station');
 
@@ -66,6 +69,7 @@ document.addEventListener('DOMContentLoaded', function() {
   saveOnChange(categorySelect, 'category');
   saveOnChange(slaavrSelect, 'sla_avr');
   saveOnChange(slarvrSelect, 'sla_rvr');
+  saveOnChange(sladguSelect, 'sla_dgu');
   saveOnChange(poleInput, 'pole');
   saveOnChange(baseStationInput, 'base_station');
 
@@ -89,6 +93,7 @@ document.addEventListener('DOMContentLoaded', function() {
   syncHiddenField(categorySelect, 'category');
   syncHiddenField(slaavrSelect, 'sla_avr');
   syncHiddenField(slarvrSelect, 'sla_rvr');
+  syncHiddenField(sladguSelect, 'sla_dgu');
   syncHiddenField(poleInput, 'pole');
   syncHiddenField(baseStationInput, 'base_station');
   syncHiddenField(perPageSelect, 'per_page')
