@@ -13,12 +13,14 @@ from django.core.exceptions import ValidationError
 from tabulate import tabulate
 
 from core.constants import INCIDENT_DIR, SUBFOLDER_DATE_FORMAT
+from core.loggers import email_parser_logger
 
 from .constants import (
     ALLOWED_EXTENSIONS,
     ALLOWED_MIME_PREFIXES,
     MAX_ATTACHMENT_SIZE,
     MAX_EMAIL_LEN,
+    EMAIL_RE,
 )
 
 
@@ -74,28 +76,39 @@ class EmailValidator:
 
         decoded_parts = decode_header(value)
 
-        return ''.join(
+        decoded = ''.join(
             part.decode(encoding or 'utf-8') if isinstance(
                 part, bytes
             ) else part
             for part, encoding in decoded_parts
         )
 
+        return ' '.join(decoded.replace('\r', '').split('\n'))
+
     def prepare_email_to(self, to_recipients: list[str]) -> list[str]:
         """Нормализуем список e-mail адресов из заголовков письма."""
         decoded = [self._decode_mime_header(addr) for addr in to_recipients]
         parsed = getaddresses(decoded)
-        emails = []
+        emails: list[str] = []
 
-        for _, addr in parsed:
+        for name, addr in parsed:
             addr = addr.strip()
 
             if (
                 addr
                 and addr not in emails
+                and EMAIL_RE.match(addr)
                 and len(addr) <= MAX_EMAIL_LEN
             ):
                 emails.append(addr)
+            elif (
+                addr
+                and addr not in emails
+                and not EMAIL_RE.match(addr)
+            ):
+                email_parser_logger.warning(
+                    'Некорректный email: name=%r addr=%r', name, addr
+                )
 
         return emails
 

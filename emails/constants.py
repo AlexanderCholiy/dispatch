@@ -1,3 +1,5 @@
+import re
+
 MAX_EMAIL_SUBJECT_LEN = 1024
 MAX_EMAIL_LEN = 64
 
@@ -102,3 +104,8 @@ ALLOWED_EXTENSIONS = {
     # Электронные письма
     '.eml', '.msg',
 }
+
+EMAIL_RE = re.compile(
+    r'^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$',
+    re.IGNORECASE,
+)
