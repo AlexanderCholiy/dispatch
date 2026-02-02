@@ -18,9 +18,9 @@ from core.loggers import email_parser_logger
 from .constants import (
     ALLOWED_EXTENSIONS,
     ALLOWED_MIME_PREFIXES,
+    EMAIL_RE,
     MAX_ATTACHMENT_SIZE,
     MAX_EMAIL_LEN,
-    EMAIL_RE,
 )
 
 

@@ -6,10 +6,10 @@ from typing import Any, Callable, Optional
 from django.utils import timezone
 
 from .constants import (
+    CONTROL_CHARS_RE,
     SUBFOLDER_DATE_FORMAT,
     SUBFOLDER_EMAIL_NAME,
-    SUBFOLDER_MIME_EMAIL_NAME,
-    CONTROL_CHARS_RE
+    SUBFOLDER_MIME_EMAIL_NAME
 )
 from .exceptions import ConfigEnvError
 from .loggers import default_logger
