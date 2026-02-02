@@ -1,5 +1,3 @@
-# core/services/email.py
-
 import os
 import warnings
 from email.mime.image import MIMEImage

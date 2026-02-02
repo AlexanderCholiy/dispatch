@@ -14,6 +14,7 @@ from users.views import role_required
 
 from .constants import INLINE_EXTS
 from .loggers import django_logger
+from .utils import sanitize_http_filename
 
 
 def bad_request(
@@ -88,7 +89,9 @@ def send_x_accel_file(file_path: Path | str) -> HttpResponse:
         django_logger.warning(f'Файл не найден: {file_path}')
         raise Http404('Файл не найден')
 
-    filename = full_path.name
+    raw_filename = full_path.name
+    safe_filename = sanitize_http_filename(raw_filename)
+
     is_inline = full_path.suffix.lower() in INLINE_EXTS
 
     if settings.DEBUG:
@@ -100,8 +103,8 @@ def send_x_accel_file(file_path: Path | str) -> HttpResponse:
     response = HttpResponse()
     response['X-Accel-Redirect'] = redirect_url
 
-    filename_ascii = filename.encode('ascii', 'ignore').decode() or 'file'
-    filename_rfc5987 = quote(filename)
+    filename_ascii = safe_filename.encode('ascii', 'ignore').decode() or 'file'
+    filename_rfc5987 = quote(safe_filename)
 
     disposition = (
         f'{"inline" if is_inline else "attachment"}; '

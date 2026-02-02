@@ -9,6 +9,7 @@ from .constants import (
     SUBFOLDER_DATE_FORMAT,
     SUBFOLDER_EMAIL_NAME,
     SUBFOLDER_MIME_EMAIL_NAME,
+    CONTROL_CHARS_RE
 )
 from .exceptions import ConfigEnvError
 from .loggers import default_logger
@@ -208,3 +209,11 @@ def run_with_timeout_process(
             raise return_dict['exception']
 
         return return_dict.get('result')
+
+
+def sanitize_http_filename(filename: str) -> str:
+    """
+    Убираем CR/LF и управляющие символы из имени файла
+    ТОЛЬКО для использования в HTTP-заголовках
+    """
+    return CONTROL_CHARS_RE.sub(' ', filename).strip()

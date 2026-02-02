@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import timedelta
 from http import HTTPStatus
 from logging import DEBUG, INFO
@@ -121,3 +122,5 @@ INLINE_EXTS = {
 EMAIL_LOGO_PATH = os.path.join(
     settings.BASE_DIR, 'static', 'img', 'services', 'logo.png'
 )
+
+CONTROL_CHARS_RE = re.compile(r'[\r\n\t]+')
