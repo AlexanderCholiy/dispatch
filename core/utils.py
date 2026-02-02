@@ -95,14 +95,14 @@ def timedelta_to_human_time(time_delta: timedelta) -> str:
 
     parts = []
     if days:
-        parts.append(f'{days} {ngettext("день", "дней", days)}')
+        parts.append(f'{days} {ngettext("дн", "дн", days)}')
     if hours:
-        parts.append(f'{hours} {ngettext("час", "часов", hours)}')
+        parts.append(f'{hours} {ngettext("ч", "ч", hours)}')
     if minutes:
-        parts.append(f'{minutes} {ngettext("минута", "минут", minutes)}')
+        parts.append(f'{minutes} {ngettext("мин", "мин", minutes)}')
 
     if not parts and secs:
-        parts.append(f'{secs} {ngettext("секунда", "секунд", secs)}')
+        parts.append(f'{secs} {ngettext("сек", "сек", secs)}')
 
     return ' '.join(parts)
 
@@ -183,7 +183,11 @@ def get_param(
     request: HttpRequest,
     get_name: Optional[str] = None,
     coockie_name: Optional[str] = None,
+    same_names: bool = True,
 ) -> Optional[str]:
+    if same_names and (get_name is None or coockie_name is None):
+        get_name = coockie_name
+
     if get_name is not None and request.GET.get(get_name, '').strip():
         return request.GET.get(get_name, '').strip()
 
