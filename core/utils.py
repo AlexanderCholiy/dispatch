@@ -179,25 +179,10 @@ def sanitize_http_filename(filename: str) -> str:
     return CONTROL_CHARS_RE.sub(' ', filename).strip()
 
 
-def get_param(
-    request: HttpRequest,
-    get_name: Optional[str] = None,
-    coockie_name: Optional[str] = None,
-    same_names: bool = True,
-) -> Optional[str]:
-    if same_names and (get_name is None or coockie_name is None):
-        get_name = coockie_name
-
-    if get_name is not None and request.GET.get(get_name, '').strip():
-        return request.GET.get(get_name, '').strip()
-
-    if coockie_name is None:
-        return
-
-    # Возвращаем если поиск был только с тукущей ссылки:
+def check_same_page(request: HttpRequest) -> bool:
+    """Возвращаем True если поиск был только с тукущей ссылки"""
     referer: str = request.META.get('HTTP_REFERER', '')
     current_url = request.build_absolute_uri(request.path)
     is_same_page = referer.split('?')[0] == current_url
 
-    if is_same_page:
-        return request.COOKIES.get(coockie_name, '').strip()
+    return is_same_page

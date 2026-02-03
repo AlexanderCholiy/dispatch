@@ -27,6 +27,7 @@ from core.exceptions import (
 )
 from core.loggers import yt_logger
 from core.threads import tasks_in_threads
+from core.utils import check_same_page
 from emails.models import EmailMessage, EmailReference
 from users.models import Roles, User
 from users.utils import role_required
@@ -55,6 +56,9 @@ from .utils import IncidentManager
 @role_required()
 @ratelimit(key='user_or_ip', rate='20/m', block=True)
 def index(request: HttpRequest) -> HttpResponse:
+    is_same_page = check_same_page(request)
+    print(is_same_page)
+
     query = request.GET.get('q', '').strip()
 
     pole = (
