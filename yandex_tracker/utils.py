@@ -66,6 +66,8 @@ yt_manager_config = {
     'YT_AVR_END_DATE_FIELD_ID': os.getenv('YT_AVR_END_DATE_FIELD_ID'),  # noqa: E501
     'YT_RVR_START_DATE_FIELD_ID': os.getenv('YT_RVR_START_DATE_FIELD_ID'),  # noqa: E501
     'YT_RVR_END_DATE_FIELD_ID': os.getenv('YT_RVR_END_DATE_FIELD_ID'),  # noqa: E501
+    'YT_DGU_START_DATE_FIELD_ID': os.getenv('YT_DGU_START_DATE_FIELD_ID'),  # noqa: E501
+    'YT_DGU_END_DATE_FIELD_ID': os.getenv('YT_DGU_END_DATE_FIELD_ID'),  # noqa: E501
 }
 Config.validate_env_variables(yt_manager_config)
 
@@ -121,6 +123,8 @@ class YandexTrackerManager:
         avr_end_date_global_field_id: str,
         rvr_start_date_global_field_id: str,
         rvr_end_date_global_field_id: str,
+        dgu_start_date_global_field_id: str,
+        dgu_end_date_global_field_id: str,
         operator_name_global_field_name: str,
         avr_name_global_field_id: str,
         monitoring_global_field_id: str,
@@ -168,6 +172,8 @@ class YandexTrackerManager:
         self.avr_end_date_global_field_id = avr_end_date_global_field_id
         self.rvr_start_date_global_field_id = rvr_start_date_global_field_id
         self.rvr_end_date_global_field_id = rvr_end_date_global_field_id
+        self.dgu_start_date_global_field_id = dgu_start_date_global_field_id
+        self.dgu_end_date_global_field_id = dgu_end_date_global_field_id
 
         self.type_of_incident_local_field_id = type_of_incident_local_field_id
         self.subtype_of_incident_local_field_id = (
@@ -1245,6 +1251,8 @@ class YandexTrackerManager:
         avr_end_date: Optional[datetime],
         rvr_start_date: Optional[datetime],
         rvr_end_date: Optional[datetime],
+        dgu_start_date: Optional[datetime],
+        dgu_end_date: Optional[datetime],
         pole_number: Optional[str],
         base_station_number: Optional[str],
         avr_name: Optional[str],
@@ -1272,6 +1280,10 @@ class YandexTrackerManager:
             rvr_start_date, datetime) else None
         rvr_end_date = rvr_end_date.isoformat() if isinstance(
             rvr_end_date, datetime) else None
+        dgu_start_date = dgu_start_date.isoformat() if isinstance(
+            dgu_start_date, datetime) else None
+        dgu_end_date = dgu_end_date.isoformat() if isinstance(
+            dgu_end_date, datetime) else None
 
         payload = {
             type_of_incident_field_key: type_of_incident,
@@ -1285,6 +1297,8 @@ class YandexTrackerManager:
             self.avr_end_date_global_field_id: avr_end_date,
             self.rvr_start_date_global_field_id: rvr_start_date,
             self.rvr_end_date_global_field_id: rvr_end_date,
+            self.dgu_start_date_global_field_id: dgu_start_date,
+            self.dgu_end_date_global_field_id: dgu_end_date,
             self.email_datetime_global_field_id: email_datetime,
             self.pole_number_global_field_id: pole_number,
             self.base_station_global_field_id: base_station_number,
@@ -1530,6 +1544,8 @@ yt_manager = YandexTrackerManager(
     avr_end_date_global_field_id=yt_manager_config['YT_AVR_END_DATE_FIELD_ID'],  # noqa: E501
     rvr_start_date_global_field_id=yt_manager_config['YT_RVR_START_DATE_FIELD_ID'],  # noqa: E501
     rvr_end_date_global_field_id=yt_manager_config['YT_RVR_END_DATE_FIELD_ID'],  # noqa: E501
+    dgu_start_date_global_field_id=yt_manager_config['YT_DGU_START_DATE_FIELD_ID'],  # noqa: E501
+    dgu_end_date_global_field_id=yt_manager_config['YT_DGU_END_DATE_FIELD_ID'],  # noqa: E501
     operator_name_global_field_name=yt_manager_config['YT_OPERATOR_NAME_GLOBAL_FIELD_NAME'],  # noqa: E501
     avr_name_global_field_id=yt_manager_config['YT_AVR_NAME_GLOBAL_FIELD_ID'],  # noqa: E501
     monitoring_global_field_id=yt_manager_config['YT_MONITORING_GLOBAL_FIELD_ID'],  # noqa: E501

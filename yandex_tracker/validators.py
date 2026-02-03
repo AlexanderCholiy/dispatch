@@ -434,6 +434,7 @@ def _check_dates_consistency(
     tracker_end_date: Optional[str],
     db_start_date: Optional[datetime],
     db_end_date: Optional[datetime],
+    has_auto_update: bool,
 ) -> bool:
     """
     Проверка согласованности дат между трекером и БД.
@@ -443,6 +444,8 @@ def _check_dates_consistency(
         tracker_end_date: Дата окончания из трекера (строка)
         db_start_date: Дата начала из БД
         db_end_date: Дата окончания из БД
+        has_auto_update: Есть ли у этих полей автообновление после прохождения
+        валидации и обновления данных в YT.
 
     Returns:
         bool: True если даты согласованы
@@ -489,10 +492,13 @@ def _check_dates_consistency(
         return False
 
     # Защита от автоматического перезаписывания - если в БД есть дата,
-    # а в трекере нет:
+    # а в трекере нет если у эих полей есть автообновление (не выключать):
     if (
-        (not parsed_start and db_start_date)
-        or (not parsed_end and db_end_date)
+        has_auto_update
+        and (
+            (not parsed_start and db_start_date)
+            or (not parsed_end and db_end_date)
+        )
     ):
         return False
 
@@ -511,7 +517,8 @@ def check_avr_dates(
         ),
         tracker_end_date=issue.get(yt_manager.avr_end_date_global_field_id),
         db_start_date=incident.avr_start_date,
-        db_end_date=incident.avr_end_date
+        db_end_date=incident.avr_end_date,
+        has_auto_update=True,
     )
 
 
@@ -527,7 +534,25 @@ def check_rvr_dates(
         ),
         tracker_end_date=issue.get(yt_manager.rvr_end_date_global_field_id),
         db_start_date=incident.rvr_start_date,
-        db_end_date=incident.rvr_end_date
+        db_end_date=incident.rvr_end_date,
+        has_auto_update=True,
+    )
+
+
+def check_dgu_dates(
+    yt_manager: YandexTrackerManager,
+    issue: dict,
+    incident: Incident,
+) -> bool:
+    return _check_dates_consistency(
+        incident=incident,
+        tracker_start_date=issue.get(
+            yt_manager.dgu_start_date_global_field_id
+        ),
+        tracker_end_date=issue.get(yt_manager.dgu_end_date_global_field_id),
+        db_start_date=incident.dgu_start_date,
+        db_end_date=incident.dgu_end_date,
+        has_auto_update=False,
     )
 
 
@@ -991,6 +1016,8 @@ def check_yt_incident_data(
                 is_sla_rvr_expired=yt_manager.get_sla_rvr_status(incident),
                 rvr_start_date=incident.rvr_start_date,
                 rvr_end_date=incident.rvr_end_date,
+                dgu_start_date=incident.dgu_start_date,
+                dgu_end_date=incident.dgu_end_date,
                 pole_number=pole_number,
                 base_station_number=base_station_number,
                 avr_name=issue.get(yt_manager.avr_name_global_field_id),
@@ -1125,6 +1152,44 @@ def check_yt_incident_data(
             )
             incident.save()
 
+    # Синхронизируем дату и время SLA ДГУ:
+    is_valid_dgu_dates = check_dgu_dates(yt_manager, issue, incident)
+    if is_valid_dgu_dates:
+        dgu_start_date: Optional[str] = issue.get(
+            yt_manager.dgu_start_date_global_field_id
+        )
+        dgu_end_date: Optional[str] = issue.get(
+            yt_manager.dgu_end_date_global_field_id
+        )
+
+        try:
+            dgu_start_date = parser.parse(
+                dgu_start_date
+            ) if dgu_start_date else None
+        except ValueError:
+            dgu_start_date = None
+
+        try:
+            dgu_end_date = parser.parse(dgu_end_date) if dgu_end_date else None
+        except ValueError:
+            dgu_end_date = None
+
+        was_dgu_date_update = False
+
+        if incident.dgu_start_date != dgu_start_date:
+            incident.dgu_start_date = dgu_start_date
+            was_dgu_date_update = True
+
+        if incident.dgu_end_date != dgu_end_date:
+            incident.dgu_end_date = dgu_end_date
+            was_dgu_date_update = True
+
+        if was_dgu_date_update:
+            logger.debug(
+                f'Меняем SLA ДГУ инцидента {incident.id} '
+            )
+            incident.save()
+
     # Синхронизируем данные по базовой станции (ДО проверки опоры):
     is_valid_base_station, bs_comment = check_yt_base_station_incident(
         yt_manager, issue, all_base_stations
@@ -1149,6 +1214,8 @@ def check_yt_incident_data(
             is_sla_rvr_expired=yt_manager.get_sla_rvr_status(incident),
             rvr_start_date=incident.rvr_start_date,
             rvr_end_date=incident.rvr_end_date,
+            dgu_start_date=incident.dgu_start_date,
+            dgu_end_date=incident.dgu_end_date,
             pole_number=pole_number,
             base_station_number=None,
             avr_name=issue.get(yt_manager.avr_name_global_field_id),
@@ -1248,6 +1315,8 @@ def check_yt_incident_data(
             is_sla_rvr_expired=yt_manager.get_sla_rvr_status(incident),
             rvr_start_date=incident.rvr_start_date,
             rvr_end_date=incident.rvr_end_date,
+            dgu_start_date=incident.dgu_start_date,
+            dgu_end_date=incident.dgu_end_date,
             pole_number=None,
             base_station_number=None,
             avr_name=None,
@@ -1363,6 +1432,7 @@ def check_yt_incident_data(
         (is_valid_rvr_expired_incident, 'статус SLA РВР'),
         (is_valid_avr_dates, 'дата начала и конца АВР'),
         (is_valid_rvr_dates, 'дата начала и конца РВР'),
+        (is_valid_dgu_dates, 'дата начала и конца ДГУ'),
         (is_valid_pole_number, 'шифр опоры'),
         (is_valid_base_station, 'номер базовой станции'),
         (is_valid_monitoring_data, 'данные мониторинга'),
@@ -1393,6 +1463,8 @@ def check_yt_incident_data(
             is_sla_rvr_expired=yt_manager.get_sla_rvr_status(incident),
             rvr_start_date=incident.rvr_start_date,
             rvr_end_date=incident.rvr_end_date,
+            dgu_start_date=incident.dgu_start_date,
+            dgu_end_date=incident.dgu_end_date,
             pole_number=incident.pole.pole if incident.pole else None,
             base_station_number=(
                 incident.base_station.bs_name
