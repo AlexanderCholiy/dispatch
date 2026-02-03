@@ -87,6 +87,10 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
     - is_sla_rvr_expired: Превышен ли SLA по РВР.
     - rvr_deadline: Дедлайн SLA РВР.
 
+    - dgu_start_datetime: Дата и время начала ДГУ.
+    - dgu_end_datetime: Дата и время завершения ДГУ.
+    - dgu_duration: Период дизеления.
+
     - pole: Шифр опоры.
     - region_ru: Регион опоры.
     - macroregion: Макрорегион опоры.
