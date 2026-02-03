@@ -32,6 +32,7 @@ from incidents.annotations import (
     annotate_incident_types,
     annotate_is_power_issue,
     annotate_sla_avr,
+    annotate_sla_dgu,
     annotate_sla_rvr,
 )
 from incidents.constants import NOTIFIED_CONTRACTOR_STATUS_NAME
@@ -331,6 +332,15 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
     - sla_rvr_in_progress: количество инцидентов с РВР в процессе и SLA еще
     не истекла
 
+    SLA ДГУ:
+    - sla_dgu_expired: количество инцидентов, где SLA ДГУ просрочена
+    - sla_dgu_closed_on_time: количество инцидентов, где SLA ДГУ
+    выполнена вовремя
+    - sla_dgu_less_than_hour: количество инцидентов, где до SLA ДГУ осталось
+    меньше часа
+    - sla_dgu_in_progress: количество инцидентов с ДГУ в процессе и SLA еще
+    не истекла
+
     ТИПЫ ИНЦИДЕНТОВ:
     - is_power_issue_type: Инциденты по питанию.
     - is_ams_issue_type: Инциденты по конструктиву / территории АМС.
@@ -426,6 +436,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
         # -------- SLA аннотации --------
         incidents = annotate_sla_avr(incidents)
         incidents = annotate_sla_rvr(incidents)
+        incidents = annotate_sla_dgu(incidents)
         incidents = annotate_incident_types(incidents)
         incidents = annotate_incident_categories(incidents)
         subtype_qs = annotate_incident_subtypes(incidents)
@@ -491,6 +502,19 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                 ),
                 sla_rvr_in_progress_count=Count(
                     'id', distinct=True, filter=Q(sla_rvr_in_progress=True)
+                ),
+                # SLA ДГУ
+                sla_dgu_expired_count=Count(
+                    'id', distinct=True, filter=Q(sla_dgu_expired=True)
+                ),
+                sla_dgu_closed_on_time_count=Count(
+                    'id', distinct=True, filter=Q(sla_dgu_closed_on_time=True)
+                ),
+                sla_dgu_less_than_hour_count=Count(
+                    'id', distinct=True, filter=Q(sla_dgu_less_than_hour=True)
+                ),
+                sla_dgu_in_progress_count=Count(
+                    'id', distinct=True, filter=Q(sla_dgu_in_progress=True)
                 ),
                 # Типы инцидентов:
                 is_power_issue_type=Count(
@@ -594,6 +618,11 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                 'sla_rvr_closed_on_time_count',
                 'sla_rvr_less_than_hour_count',
                 'sla_rvr_in_progress_count',
+                # SLA ДГУ:
+                'sla_dgu_expired_count',
+                'sla_dgu_closed_on_time_count',
+                'sla_dgu_less_than_hour_count',
+                'sla_dgu_in_progress_count',
                 # Типы инцидентов:
                 'is_power_issue_type',
                 'is_ams_issue_type',

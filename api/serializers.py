@@ -177,15 +177,19 @@ class StatisticReportSerializer(serializers.ModelSerializer):
 
     sla_avr_expired_count = serializers.IntegerField(read_only=True)
     sla_rvr_expired_count = serializers.IntegerField(read_only=True)
+    sla_dgu_expired_count = serializers.IntegerField(read_only=True)
 
     sla_avr_closed_on_time_count = serializers.IntegerField(read_only=True)
     sla_rvr_closed_on_time_count = serializers.IntegerField(read_only=True)
+    sla_dgu_closed_on_time_count = serializers.IntegerField(read_only=True)
 
     sla_avr_less_than_hour_count = serializers.IntegerField(read_only=True)
     sla_rvr_less_than_hour_count = serializers.IntegerField(read_only=True)
+    sla_dgu_less_than_hour_count = serializers.IntegerField(read_only=True)
 
     sla_avr_in_progress_count = serializers.IntegerField(read_only=True)
     sla_rvr_in_progress_count = serializers.IntegerField(read_only=True)
+    sla_dgu_in_progress_count = serializers.IntegerField(read_only=True)
 
     open_incidents_with_power_issue = serializers.IntegerField(read_only=True)
     closed_incidents_with_power_issue = serializers.IntegerField(
@@ -229,6 +233,11 @@ class StatisticReportSerializer(serializers.ModelSerializer):
             'sla_rvr_closed_on_time_count',
             'sla_rvr_less_than_hour_count',
             'sla_rvr_in_progress_count',
+            # SLA ДГУ:
+            'sla_dgu_expired_count',
+            'sla_dgu_closed_on_time_count',
+            'sla_dgu_less_than_hour_count',
+            'sla_dgu_in_progress_count',
             # Типы инцидентов:
             'is_power_issue_type',
             'is_ams_issue_type',
