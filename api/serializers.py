@@ -2,6 +2,7 @@ from datetime import date, datetime
 
 from rest_framework import serializers
 
+from incidents.constants import POWER_ISSUE_TYPES
 from incidents.models import Incident
 from ts.models import Region
 
@@ -205,6 +206,8 @@ class StatisticReportSerializer(serializers.ModelSerializer):
     total_incidents = serializers.SerializerMethodField()
     daily_incidents = serializers.SerializerMethodField()
 
+    incident_subtype_stats = serializers.SerializerMethodField()
+
     class Meta:
         model = Region
         fields = (
@@ -237,6 +240,8 @@ class StatisticReportSerializer(serializers.ModelSerializer):
             'has_avr_category',
             'has_rvr_category',
             'has_dgu_category',
+            # Подкатегории инцидентов:
+            'incident_subtype_stats',
             # Динамика по дням:
             'daily_incidents',
         )
@@ -259,3 +264,30 @@ class StatisticReportSerializer(serializers.ModelSerializer):
         }
 
         return sorted_daily
+
+    def get_incident_subtype_stats(self, obj: Region):
+        """
+        Возвращает подкатегории инцидентов, сгруппированные по основным типам.
+        Для POWER_ISSUE_TYPES объединяет их в одну категорию
+        "Аварии по питанию".
+        """
+        raw_stats: dict[str, dict[str | None, int]] = getattr(
+            obj, 'incident_subtype_stats', {}
+        )
+        result: dict[str, dict[str | None, int]] = {}
+
+        power_bucket: dict[str | None, int] = {}
+
+        for type_name, subtypes in raw_stats.items():
+            if type_name in POWER_ISSUE_TYPES:
+                for sub_name, count in subtypes.items():
+                    power_bucket[sub_name] = (
+                        power_bucket.get(sub_name, 0) + count
+                    )
+            else:
+                result[type_name] = subtypes
+
+        if power_bucket:
+            result['Аварии по питанию'] = power_bucket
+
+        return result

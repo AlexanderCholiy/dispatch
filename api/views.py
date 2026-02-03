@@ -2,7 +2,7 @@ import json
 from datetime import date
 from http import HTTPStatus
 from pathlib import Path
-from typing import Optional
+from typing import Optional, TypedDict
 
 from django.core.cache import cache
 from django.db.models import (
@@ -28,6 +28,7 @@ from core.views import send_x_accel_file
 from core.wraps import timer
 from incidents.annotations import (
     annotate_incident_categories,
+    annotate_incident_subtypes,
     annotate_incident_types,
     annotate_is_power_issue,
     annotate_sla_avr,
@@ -59,6 +60,18 @@ from .pagination import IncidentReportPagination
 from .serializers import IncidentReportSerializer, StatisticReportSerializer
 from .utils import get_first_day_prev_month, is_file_fresh
 from .validators import validate_date_range
+
+
+class IncidentSubtypeStat(TypedDict):
+    id: int
+    name: str
+    count: int
+
+
+class IncidentTypeStat(TypedDict):
+    id: int
+    name: str
+    subtypes: list[IncidentSubtypeStat]
 
 
 class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
@@ -331,6 +344,11 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
     - has_rvr_category: Инциденты с категорией РВР.
     - has_dgu_category: Инциденты с категорией ДГУ.
 
+    ПОДКАТЕГОРИИ ИНЦИДЕНТОВ:
+    - incident_subtype_stats:
+        агрегированная статистика подкатегорий инцидентов
+        по макрорегиону, сгруппированная по типам инцидентов.
+
     Query-параметры:
 
     - start_date (YYYY-MM-DD):
@@ -410,6 +428,19 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
         incidents = annotate_sla_rvr(incidents)
         incidents = annotate_incident_types(incidents)
         incidents = annotate_incident_categories(incidents)
+        subtype_qs = annotate_incident_subtypes(incidents)
+
+        subtype_map: dict[int, dict[int, IncidentTypeStat]] = {}
+
+        for row in subtype_qs:
+            macro_id = row['pole__region__macroregion']
+            type_name = row['incident_type__name']
+            subtype_name = row['incident_subtype__name'] or 'Без подкатегории'
+            count = row['count']
+
+            macro_bucket = subtype_map.setdefault(macro_id, {})
+            type_bucket = macro_bucket.setdefault(type_name, {})
+            type_bucket[subtype_name] = count
 
         # -------- Агрегация --------
         incident_stats = (
@@ -585,6 +616,8 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
             )
 
             macro.daily_incidents = daily_map.get(macro.pk, {})
+
+            macro.incident_subtype_stats = subtype_map.get(macro.pk, {})
 
         cache.set(cache_key, macroregions, STATISTIC_CACHE_TIMEOUT)
 

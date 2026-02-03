@@ -4,6 +4,7 @@ from django.core.cache import cache
 from django.db.models import (
     BooleanField,
     Case,
+    Count,
     DateTimeField,
     DurationField,
     Exists,
@@ -392,4 +393,30 @@ def annotate_incident_categories(
         has_avr_category=Exists(avr_cat),
         has_rvr_category=Exists(rvr_cat),
         has_dgu_category=Exists(dgu_cat),
+    )
+
+
+def annotate_incident_subtypes(
+    incidents: QuerySet[Incident]
+) -> QuerySet[Incident]:
+    """
+    Возвращает статистику:
+    макрорегион → тип → подтип → количество инцидентов
+    """
+    return (
+        incidents
+        .exclude(
+            incident_type__isnull=True,
+            incident_subtype__isnull=True,
+        )
+        .values(
+            'pole__region__macroregion',
+            'incident_type__id',
+            'incident_type__name',
+            'incident_subtype__id',
+            'incident_subtype__name',
+        )
+        .annotate(
+            count=Count('id')
+        )
     )
