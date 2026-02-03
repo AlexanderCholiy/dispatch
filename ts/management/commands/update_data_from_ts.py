@@ -54,8 +54,12 @@ class Command(BaseCommand):
             os.makedirs(TS_DATA_DIR, exist_ok=True)
             ts_api = Api()
             ts_api.update_poles()
+            ts_api.update_rvr()
             ts_api.update_avr()
             ts_api.update_base_stations()
+
+        except Exception as e:
+            ts_logger.exception(e)
 
         finally:
             if lock_acquired and os.path.exists(UPDATE_DATA_FROM_TS_LOCK_FILE):

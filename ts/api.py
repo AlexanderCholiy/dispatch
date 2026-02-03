@@ -12,12 +12,18 @@ from numpy import nan
 from core.loggers import ts_logger
 from core.pretty_print import PrettyPrint
 from core.wraps import timer
+from emails.constants import EMAIL_RE, MAX_EMAIL_LEN
 
 from .constants import (
     COLUMNS_TO_KEEP_AVR_REPORT,
     COLUMNS_TO_KEEP_BS_OPERATORS_REPORT,
     COLUMNS_TO_KEEP_POLES_TL,
+    COLUMNS_TO_KEEP_RVR_REPORT,
     DB_CHUNK_UPDATE,
+    RAISE_TS_AVR_TABLE_LIMIT,
+    RAISE_TS_BASE_STATION_TABLE_LIMIT,
+    RAISE_TS_POLE_TABLE_LIMIT,
+    RVR_FILE,
     TS_AVR_TABLE,
     TS_BASE_STATION_TABLE,
     TS_POLE_TABLE,
@@ -26,6 +32,7 @@ from .constants import (
     UNDEFINED_ID,
     UNVALID_DEBUG_MSG_LIMIT,
 )
+from .exceptions import EmptyTableError
 from .models import (
     AVRContractor,
     BaseStation,
@@ -90,12 +97,15 @@ class Api(SocialValidators):
             f'"{col}"' if col != 'RegionRu' else '"Регион ru" AS "RegionRu"'
             for col in COLUMNS_TO_KEEP_POLES_TL
         )
-        query = f'SELECT {columns_quoted} FROM "{TS_POLE_TABLE}";'
+        query = f'SELECT DISTINCT {columns_quoted} FROM "{TS_POLE_TABLE}";'
 
         with connections['ts'].cursor() as cursor:
             cursor.execute(query)
             columns = [col[0] for col in cursor.description]
             data = cursor.fetchall()
+
+        if len(data) < RAISE_TS_POLE_TABLE_LIMIT:
+            raise EmptyTableError(TS_POLE_TABLE, len(data))
 
         return pd.DataFrame.from_records(data, columns=columns)
 
@@ -118,11 +128,7 @@ class Api(SocialValidators):
         )
 
     @transaction.atomic
-    def update_poles(self, update_json: bool = True):
-        # if update_json or not os.path.exists(POLES_FILE):
-        #     self.download_json(POLES_FILE, TS_POLES_TL_URL)
-
-        # poles = self.json_2_df(POLES_FILE, COLUMNS_TO_KEEP_POLES_TL)
+    def update_poles(self):
         poles = self.get_ts_poles()
 
         poles['SiteId'] = poles['SiteId'].astype(int)
@@ -191,9 +197,6 @@ class Api(SocialValidators):
             for mr in MacroRegion.objects.all()
         }
 
-        bulk_macroregions_to_create: list[MacroRegion] = []
-
-        bulk_regions_to_create: list[Region] = []
         bulk_regions_to_update: list[Region] = []
 
         bulk_poles_to_create: list[Pole] = []
@@ -246,19 +249,19 @@ class Api(SocialValidators):
             if macroregion_name:
                 macroregion_obj = macroregions_cache.get(macroregion_name)
                 if not macroregion_obj:
-                    macroregion_obj = MacroRegion(name=macroregion_name)
+                    macroregion_obj = MacroRegion.objects.create(
+                        name=macroregion_name
+                    )
                     macroregions_cache[macroregion_name] = macroregion_obj
-                    bulk_macroregions_to_create.append(macroregion_obj)
 
             region_obj = regions_cache.get(region_en)
             if not region_obj:
-                region_obj = Region(
+                region_obj = Region.objects.create(
                     region_en=region_en,
                     region_ru=region_ru,
-                    macroregion=None,
+                    macroregion=macroregion_obj,
                 )
                 regions_cache[region_en] = region_obj
-                bulk_regions_to_create.append(region_obj)
             else:
                 if region_obj.macroregion != macroregion_obj:
                     region_obj.macroregion = macroregion_obj
@@ -306,36 +309,6 @@ class Api(SocialValidators):
                 find_unvalid_values > UNVALID_DEBUG_MSG_LIMIT
             ) else ts_logger.debug(msg)
 
-        if bulk_macroregions_to_create:
-            MacroRegion.objects.bulk_create(
-                bulk_macroregions_to_create,
-                ignore_conflicts=True,
-                batch_size=DB_CHUNK_UPDATE,
-            )
-            macroregions_cache.update({
-                mr.name: mr
-                for mr in MacroRegion.objects.filter(
-                    name__in=[m.name for m in bulk_macroregions_to_create]
-                )
-            })
-
-            ts_logger.debug(
-                f'MacroRegion добавлены: {len(bulk_macroregions_to_create)}'
-            )
-
-        if bulk_regions_to_create:
-            new_created_regions = Region.objects.bulk_create(
-                bulk_regions_to_create,
-                ignore_conflicts=True,
-                batch_size=DB_CHUNK_UPDATE,
-            )
-            created_regions = {r.region_en: r for r in new_created_regions}
-            regions_cache.update(created_regions)
-            ts_logger.debug(
-                'Region добавлены: '
-                f'{len(new_created_regions)} из {len(bulk_regions_to_create)}'
-            )
-
         # Обновляем FK макрорегионов у регионов:
         region_to_macro_name = dict(
             poles[['Регион', 'Макрорегион НБ']]
@@ -362,10 +335,6 @@ class Api(SocialValidators):
                 f'Region обновлены: {len(bulk_regions_to_update)} '
                 f'из {len(bulk_regions_to_update)}'
             )
-
-        for p in bulk_poles_to_create:
-            p: Pole
-            p.region = regions_cache[p.region.region_en]
 
         if bulk_poles_to_create:
             created_poles = Pole.objects.bulk_create(
@@ -419,27 +388,27 @@ class Api(SocialValidators):
             )
             for col in COLUMNS_TO_KEEP_AVR_REPORT
         )
-        query = f'SELECT {columns_quoted} FROM "{TS_AVR_TABLE}";'
+        query = f'SELECT DISTINCT {columns_quoted} FROM "{TS_AVR_TABLE}";'
 
         with connections['ts'].cursor() as cursor:
             cursor.execute(query)
             columns = [col[0] for col in cursor.description]
             data = cursor.fetchall()
 
+        if len(data) < RAISE_TS_AVR_TABLE_LIMIT:
+            raise EmptyTableError(TS_AVR_TABLE, len(data))
+
         return pd.DataFrame.from_records(data, columns=columns)
 
-    def update_avr(self, update_json: bool = True):
+    def update_avr(self):
         """
         Обновление подрядчиков по АВР.
 
         Если для опоры отсутсвует подрядчик тогда берем по умолчанию.
         Если для подрядчика нет Email, тогда ничего не выставляем.
         """
-        # if update_json or not os.path.exists(AVR_FILE):
-        #     self.download_json(AVR_FILE, TS_AVR_REPORT_URL)
-
-        # avr = self.json_2_df(AVR_FILE, COLUMNS_TO_KEEP_AVR_REPORT)
         avr = self.get_ts_avr()
+
         total = len(avr)
 
         contractors_cache = {
@@ -738,24 +707,24 @@ class Api(SocialValidators):
         columns_quoted = ', '.join(
             f'"{col}"' for col in COLUMNS_TO_KEEP_BS_OPERATORS_REPORT
         )
-        query = f'SELECT {columns_quoted} FROM "{TS_BASE_STATION_TABLE}";'
+        query = (
+            f'SELECT DISTINCT {columns_quoted} FROM "{TS_BASE_STATION_TABLE}";'
+        )
 
         with connections['ts'].cursor() as cursor:
             cursor.execute(query)
             columns = [col[0] for col in cursor.description]
             data = cursor.fetchall()
 
+        if len(data) < RAISE_TS_BASE_STATION_TABLE_LIMIT:
+            raise EmptyTableError(TS_BASE_STATION_TABLE, len(data))
+
         return pd.DataFrame.from_records(data, columns=columns)
 
     @transaction.atomic
-    def update_base_stations(self, update_json: bool = True):
-        # if update_json or not os.path.exists(BASE_STATIONS_FILE):
-        #     self.download_json(BASE_STATIONS_FILE, TS_BS_REPORT_URL)
-
-        # base_stations = self.json_2_df(
-        #     BASE_STATIONS_FILE, COLUMNS_TO_KEEP_BS_OPERATORS_REPORT
-        # )
+    def update_base_stations(self):
         base_stations = self.get_ts_bs()
+
         total = len(base_stations)
 
         # Удаляем не актуальные записи:
@@ -946,3 +915,54 @@ class Api(SocialValidators):
             new_operator_ids = set(o.id for o in operator_objs)
             if current_operator_ids != new_operator_ids:
                 base_station.operator.set(operator_objs)
+
+    @transaction.atomic
+    def update_rvr(self):
+        regions_2_update = Region.objects.filter(rvr_email__isnull=True)
+        total = regions_2_update.count()
+
+        rvr = self.json_2_df(RVR_FILE, COLUMNS_TO_KEEP_RVR_REPORT)
+
+        rvr['rvr_email'] = rvr['rvr_email'].astype(str).str.strip()
+        rvr['region_en'] = rvr['region_en'].astype(str).str.strip()
+
+        email_map = dict(rvr[['region_en', 'rvr_email']].values)
+
+        changed_regions = []
+
+        email_cache = {}
+
+        for index, region in enumerate(regions_2_update):
+            PrettyPrint.progress_bar_success(
+                index, total, 'Обновление email подрядчиков по РВР:'
+            )
+
+            email = email_map.get(region.region_en)
+
+            if not email or email.lower() in ('nan', 'none'):
+                continue
+
+            is_valid_format = bool(EMAIL_RE.match(email))
+            is_valid_len = len(email) <= MAX_EMAIL_LEN
+
+            if is_valid_format and is_valid_len:
+                if email not in email_cache:
+                    email_obj, _ = (
+                        ContractorEmail.objects.get_or_create(email=email)
+                    )
+                    email_cache[email] = email_obj
+
+                region.rvr_email = email_cache[email]
+                changed_regions.append(region)
+
+            elif not is_valid_format:
+                ts_logger.warning(
+                    f'Некорректный формат email: "{email}" '
+                    f'для "{region.region_en}"'
+                )
+
+        if changed_regions:
+            Region.objects.bulk_update(changed_regions, ['rvr_email'])
+            ts_logger.debug(
+                f'Успешно обновлено {len(changed_regions)} РВР email'
+            )

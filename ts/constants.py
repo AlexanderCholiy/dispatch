@@ -24,6 +24,7 @@ TS_DATA_DIR = os.path.join(DATA_DIR, 'ts')
 POLES_FILE = os.path.join(TS_DATA_DIR, 'poles.json')
 BASE_STATIONS_FILE = os.path.join(TS_DATA_DIR, 'base_stations.json')
 AVR_FILE = os.path.join(TS_DATA_DIR, 'avr.json')
+RVR_FILE = os.path.join(TS_DATA_DIR, 'rvr.json')
 
 TS_POLES_TL_URL = os.getenv('TS_POLES_TL_URL')
 TS_AVR_REPORT_URL = os.getenv('TS_AVR_REPORT_URL')
@@ -58,9 +59,18 @@ COLUMNS_TO_KEEP_BS_OPERATORS_REPORT: list[str] = [
     'Группа операторов',
 ]
 
+COLUMNS_TO_KEEP_RVR_REPORT = [
+    'region_en',
+    'rvr_email',
+]
+
 DB_CHUNK_UPDATE = 500
 
 UNVALID_DEBUG_MSG_LIMIT = 10
 TS_BASE_STATION_TABLE = 'EI.Размещённые арендаторы'
 TS_AVR_TABLE = 'АВР'
 TS_POLE_TABLE = 'Таблица опор'
+
+RAISE_TS_POLE_TABLE_LIMIT = 50_000
+RAISE_TS_AVR_TABLE_LIMIT = 30_000
+RAISE_TS_BASE_STATION_TABLE_LIMIT = 80_000

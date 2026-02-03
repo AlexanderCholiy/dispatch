@@ -56,8 +56,8 @@ class Command(BaseCommand):
 
         # self.restore_database(
         #     (
-        #         '/home/a.choliy/dispatch/data/remote_backup_db/'
-        #         + 'backup_dispatch_2026-01-23_09-00.sql'
+        #         '/home/a.choliy/dispatch/data/backup_db/'
+        #         'backup_dispatch_2026-02-02_15-45.sql'
         #     ),
         #     f'dump_{self.db_name}' if (
         #         not self.db_name.startswith('dump_')
