@@ -1,13 +1,15 @@
 .chart-card > :not(.chart-utils),
 #avr-sla-grid > :not(.chart-utils),
-#rvr-sla-grid > :not(.chart-utils) {
+#rvr-sla-grid > :not(.chart-utils),
+#dgu-sla-grid > :not(.chart-utils) {
     opacity: 1;
     transition: max-height var(--transition-value), opacity var(--transition-value);
 }
 
 .chart-card.collapsed > :not(.chart-utils),
 #avr-sla-grid.collapsed > :not(.chart-utils),
-#rvr-sla-grid.collapsed > :not(.chart-utils) {
+#rvr-sla-grid.collapsed > :not(.chart-utils),
+#dgu-sla-grid.collapsed > :not(.chart-utils) {
     opacity: 0;
     overflow: hidden;
     pointer-events: none;
@@ -17,7 +19,8 @@
 
 .chart-card.collapsed,
 #avr-sla-grid.collapsed,
-#rvr-sla-grid.collapsed {
+#rvr-sla-grid.collapsed,
+#dgu-sla-grid.collapsed {
     grid-column: 1 / -1 !important;
 }
 

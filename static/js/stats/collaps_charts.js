@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.toggle-chart-btn').forEach(btn => {
         // Новый контейнер — ближайший .chart-card или #avr-sla-grid/#rvr-sla-grid
-        const container = btn.closest('.chart-card, #avr-sla-grid, #rvr-sla-grid');
+        const container = btn.closest('.chart-card, #avr-sla-grid, #rvr-sla-grid, #dgu-sla-grid');
         if (!container) return;
 
         let containerId = container.id;

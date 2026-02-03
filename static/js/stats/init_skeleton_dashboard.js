@@ -4,7 +4,7 @@ import { createSlaDonutChart, updateSlaDonutChartColors } from './charts/sla_don
 import { getDatesSincePreviousMonth } from './charts_utils.js';
 import { getChartColors, observeThemeChange } from './theme_colors.js';
 import { updateCopyButton, updateSlaCopyData } from './data/copy_chart_data.js';
-// import { startStatisticsPolling } from './dashboard_api_updater.js';
+import { startStatisticsPolling } from './dashboard_api_updater.js';
 import { startStatisticsWebSocket } from './dashboard_ws_updater.js';
 
 if (window.Chart && window.ChartZoom) {
@@ -104,7 +104,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (copyBtn) {
             copyBtn.addEventListener('click', () => {
                 if (window.dashboardCharts.lastSlaData) {
-                    updateSlaCopyData(containerId, window.dashboardCharts.lastSlaData, containerId.includes('avr') ? 'avr' : 'rvr');
+                    // Определяем тип данных на основе ID контейнера
+                    let type = 'avr'; // значение по умолчанию
+                    if (containerId.includes('rvr')) {
+                        type = 'rvr';
+                    } else if (containerId.includes('dgu')) {
+                        type = 'dgu';
+                    }
+
+                    // Обновляем данные перед копированием
+                    updateSlaCopyData(containerId, window.dashboardCharts.lastSlaData, type);
+                    
+                    // Копируем в буфер
                     navigator.clipboard.writeText(copyBtn.dataset.text || '');
                 }
             });
@@ -116,12 +127,13 @@ document.addEventListener('DOMContentLoaded', () => {
     window.dashboardCharts.sla = {
         avr: initSlaSkeleton('avr-sla-grid', 'SLA АВР'),
         rvr: initSlaSkeleton('rvr-sla-grid', 'SLA РВР'),
+        dgu: initSlaSkeleton('dgu-sla-grid', 'ВРТ РВР'),
     };
 
     // Для теста:
-    // startStatisticsPolling(window.dashboardCharts);
+    startStatisticsPolling(window.dashboardCharts);
 
-    startStatisticsWebSocket(window.dashboardCharts);
+    // startStatisticsWebSocket(window.dashboardCharts);
 
     observeThemeChange(() => {
         const colors = getChartColors();
@@ -131,5 +143,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateAllIncidentsChartColors(window.dashboardCharts.types, [colors.blue, colors.red, colors.green, colors.yellow, colors.gray, colors.cyan]);
         updateSlaDonutChartColors(window.dashboardCharts.sla.avr);
         updateSlaDonutChartColors(window.dashboardCharts.sla.rvr);
+        updateSlaDonutChartColors(window.dashboardCharts.sla.dgu);
     });
 });

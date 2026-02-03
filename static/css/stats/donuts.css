@@ -1,5 +1,6 @@
 #avr-sla-grid,
-#rvr-sla-grid {
+#rvr-sla-grid,
+#dgu-sla-grid {
     grid-column: 1 / -1;
     background-color: var(--background-color);
     border-radius: var(--radius-lg);
