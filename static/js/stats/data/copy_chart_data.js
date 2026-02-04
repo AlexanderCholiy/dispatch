@@ -67,7 +67,7 @@ export function updateSlaCopyData(containerId, apiData, type = 'avr') {
     const categoriesMap = {
         avr: ['Просрочено', 'Закрыто вовремя', 'Менее часа', 'В работе'],
         rvr: ['Просрочено', 'Закрыто вовремя', 'Менее часа', 'В работе'],
-        dgu: ['Просрочено', 'Закрыто вовремя', 'Менее 15 дней', 'В работе'],
+        dgu: ['Более 15 дней', 'Закрыт за 15 дней', 'Менее 15 дней', 'Менее 12 часов'],
     };
 
     const categories = categoriesMap[type] ?? categoriesMap.avr;
