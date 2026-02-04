@@ -19,7 +19,8 @@ from ts.models import AVRContractor, BaseStation, Pole
 
 from .constants import (
     AVR_CATEGORY,
-    DGU_SLA_DEADLINE_IN_HOURS,
+    DGU_SLA_IN_PROGRESS_DEADLINE_IN_HOURS,
+    DGU_SLA_WAITING_DEADLINE_IN_HOURS,
     MAX_CODE_LEN,
     MAX_FUTURE_END_DELTA,
     MAX_STATUS_COMMENT_LEN,
@@ -40,16 +41,18 @@ def get_default_status_type():
 class SLAStatus(models.TextChoices):
     # Используй value такой же как у классов IncidentStatus
     IN_PROGRESS = ('in-progress', 'В работе')
-    LESS_THAN_HOUR = ('waiting', 'Меньше часа')
+    WAITING = ('waiting', 'Меньше часа')
     EXPIRED = ('canceled', 'Просрочен')
     CLOSED_ON_TIME = ('closed', 'Закрыт')
 
 
 class TimeStatus(models.TextChoices):
-    IN_PROGRESS = ('in-progress', f'Менее {DGU_SLA_DEADLINE_IN_HOURS}ч')
-    LESS_THAN_HOUR = ('waiting', 'Меньше часа')
-    EXPIRED = ('canceled', f'Более {DGU_SLA_DEADLINE_IN_HOURS}ч')
-    CLOSED_ON_TIME = ('closed', f'Закрыт за {DGU_SLA_DEADLINE_IN_HOURS}ч')
+    IN_PROGRESS = (
+        'in-progress', f'Менее {DGU_SLA_IN_PROGRESS_DEADLINE_IN_HOURS} ч'
+    )
+    WAITING = ('waiting', 'Менее 15 дн')
+    EXPIRED = ('canceled', 'Более 15 дн')
+    CLOSED_ON_TIME = ('closed', 'Закрыт за 15 дн')
 
 
 class Incident(models.Model):
@@ -364,14 +367,15 @@ class Incident(models.Model):
 
     @property
     def is_sla_dgu_expired(self) -> Optional[bool]:
-        is_expired = None
-        if self.dgu_start_date:
-            check_date = self.dgu_end_date or timezone.now()
-            sla_deadline = self.dgu_start_date + timedelta(
-                hours=DGU_SLA_DEADLINE_IN_HOURS
-            )
-            is_expired = sla_deadline < check_date
-        return is_expired
+        if not self.dgu_start_date:
+            return None
+
+        end_date = self.dgu_end_date or timezone.now()
+        elapsed = end_date - self.dgu_start_date
+
+        return elapsed > timedelta(
+            hours=DGU_SLA_WAITING_DEADLINE_IN_HOURS
+        )
     is_sla_dgu_expired.fget.short_description = 'Просрочен ли SLA (ДГУ)'
 
     @property
@@ -434,76 +438,105 @@ class Incident(models.Model):
     def _get_sla_status(
         self, category: str
     ) -> Optional[SLAStatus | TimeStatus]:
-        """Определяет SLA-статус для категории 'avr' или 'rvr'."""
         now = timezone.now()
-        is_avr = None
-        is_rvr = None
+        category = category.lower()
 
-        if category.lower() == 'avr':
-            is_avr = True
-            is_rvr = False
+        # ---------- AVR ----------
+        if category == 'avr':
             start = self.avr_start_date
             end = self.avr_end_date
-            sla_minutes = (
-                self.incident_type.sla_deadline
-            ) if self.incident_type else None
-        elif category.lower() == 'rvr':
-            is_avr = False
-            is_rvr = True
+
+            if (
+                not start
+                or not self.incident_type
+                or not self.incident_type.sla_deadline
+            ):
+                return None
+
+            sla_delta = timedelta(minutes=self.incident_type.sla_deadline)
+            deadline = start + sla_delta
+            check_date = end or now
+            remaining = (deadline - check_date).total_seconds()
+
+            if end:
+                return (
+                    SLAStatus.EXPIRED
+                    if self.is_sla_avr_expired
+                    else SLAStatus.CLOSED_ON_TIME
+                )
+
+            if remaining < 0:
+                return SLAStatus.EXPIRED
+            if remaining <= 3600:
+                return SLAStatus.WAITING
+
+            return SLAStatus.IN_PROGRESS
+
+        # ---------- RVR ----------
+        if category == 'rvr':
             start = self.rvr_start_date
             end = self.rvr_end_date
-            sla_minutes = RVR_SLA_DEADLINE_IN_HOURS * 60
-        elif category.lower() == 'dgu':
-            is_avr = False
-            is_rvr = False
+
+            if not start:
+                return None
+
+            sla_delta = timedelta(hours=RVR_SLA_DEADLINE_IN_HOURS)
+            deadline = start + sla_delta
+            check_date = end or now
+            remaining = (deadline - check_date).total_seconds()
+
+            if end:
+                return (
+                    SLAStatus.EXPIRED
+                    if self.is_sla_rvr_expired
+                    else SLAStatus.CLOSED_ON_TIME
+                )
+
+            if remaining < 0:
+                return SLAStatus.EXPIRED
+            if remaining <= 3600:
+                return SLAStatus.WAITING
+
+            return SLAStatus.IN_PROGRESS
+
+        # ---------- DGU ----------
+        if category == 'dgu':
             start = self.dgu_start_date
             end = self.dgu_end_date
-            sla_minutes = DGU_SLA_DEADLINE_IN_HOURS * 60
-        else:
-            return
 
-        if not start:
-            return
+            if not start:
+                return None
 
-        if end:
-            if is_avr:
-                return SLAStatus.EXPIRED if (
-                    self.is_sla_avr_expired
-                ) else SLAStatus.CLOSED_ON_TIME
+            end_date = end or now
+            elapsed = end_date - start
 
-            if is_rvr:
-                return SLAStatus.EXPIRED if (
-                    self.is_sla_rvr_expired
-                ) else SLAStatus.CLOSED_ON_TIME
+            in_progress_limit = timedelta(
+                hours=DGU_SLA_IN_PROGRESS_DEADLINE_IN_HOURS
+            )
+            waiting_limit = timedelta(
+                hours=DGU_SLA_WAITING_DEADLINE_IN_HOURS
+            )
 
-            return TimeStatus.EXPIRED if (
-                self.is_sla_dgu_expired
-            ) else TimeStatus.CLOSED_ON_TIME
+            # Закрыт
+            if end:
+                return (
+                    TimeStatus.EXPIRED
+                    if elapsed > waiting_limit
+                    else TimeStatus.CLOSED_ON_TIME
+                )
 
-        if not sla_minutes:
-            if is_avr or is_rvr:
-                return SLAStatus.CLOSED_ON_TIME if (
-                    self.is_incident_finish
-                ) else None
-            return TimeStatus.CLOSED_ON_TIME if (
-                self.is_incident_finish
-            ) else None
+            # В работе (< 12 часов)
+            if elapsed < in_progress_limit:
+                return TimeStatus.IN_PROGRESS
 
-        deadline = start + timedelta(minutes=sla_minutes)
-        remaining = (deadline - now).total_seconds()
+            # Ожидание (< 15 суток)
+            if elapsed < waiting_limit:
+                return TimeStatus.WAITING
 
-        if remaining < 0:
-            return SLAStatus.EXPIRED if (
-                is_avr or is_rvr
-            ) else TimeStatus.EXPIRED
-        elif remaining <= 3600:
-            return SLAStatus.LESS_THAN_HOUR if (
-                is_avr or is_rvr
-            ) else TimeStatus.LESS_THAN_HOUR
-        else:
-            return SLAStatus.IN_PROGRESS if (
-                is_avr or is_rvr
-            ) else TimeStatus.IN_PROGRESS
+            # Просрочен
+            return TimeStatus.EXPIRED
+
+        return None
 
 
 class IncidentHistory(models.Model):

@@ -103,6 +103,7 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
 
     - dgu_start_datetime: Дата и время начала ДГУ.
     - dgu_end_datetime: Дата и время завершения ДГУ.
+    - is_vrt_dgu_expired: Превышает ли период дизеления 15 суток
     - dgu_duration: Период дизеления.
 
     - pole: Шифр опоры.
@@ -318,7 +319,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
     - sla_avr_expired: количество инцидентов, где SLA АВР просрочена
     - sla_avr_closed_on_time: количество инцидентов, где SLA АВР
     выполнена вовремя
-    - sla_avr_less_than_hour: количество инцидентов, где до SLA АВР осталось
+    - sla_avr_waiting: количество инцидентов, где до SLA АВР осталось
     меньше часа
     - sla_avr_in_progress: количество инцидентов с АВР в процессе и SLA еще не
     истекла
@@ -327,7 +328,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
     - sla_rvr_expired: количество инцидентов, где SLA РВР просрочена
     - sla_rvr_closed_on_time: количество инцидентов, где SLA РВР
     выполнена вовремя
-    - sla_rvr_less_than_hour: количество инцидентов, где до SLA РВР осталось
+    - sla_rvr_waiting: количество инцидентов, где до SLA РВР осталось
     меньше часа
     - sla_rvr_in_progress: количество инцидентов с РВР в процессе и SLA еще
     не истекла
@@ -336,7 +337,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
     - sla_dgu_expired: количество инцидентов, где SLA ДГУ просрочена
     - sla_dgu_closed_on_time: количество инцидентов, где SLA ДГУ
     выполнена вовремя
-    - sla_dgu_less_than_hour: количество инцидентов, где до SLA ДГУ осталось
+    - sla_dgu_waiting: количество инцидентов, где до SLA ДГУ осталось
     меньше часа
     - sla_dgu_in_progress: количество инцидентов с ДГУ в процессе и SLA еще
     не истекла
@@ -484,8 +485,8 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                 sla_avr_closed_on_time_count=Count(
                     'id', distinct=True, filter=Q(sla_avr_closed_on_time=True)
                 ),
-                sla_avr_less_than_hour_count=Count(
-                    'id', distinct=True, filter=Q(sla_avr_less_than_hour=True)
+                sla_avr_waiting_count=Count(
+                    'id', distinct=True, filter=Q(sla_avr_waiting=True)
                 ),
                 sla_avr_in_progress_count=Count(
                     'id', distinct=True, filter=Q(sla_avr_in_progress=True)
@@ -497,8 +498,8 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                 sla_rvr_closed_on_time_count=Count(
                     'id', distinct=True, filter=Q(sla_rvr_closed_on_time=True)
                 ),
-                sla_rvr_less_than_hour_count=Count(
-                    'id', distinct=True, filter=Q(sla_rvr_less_than_hour=True)
+                sla_rvr_waiting_count=Count(
+                    'id', distinct=True, filter=Q(sla_rvr_waiting=True)
                 ),
                 sla_rvr_in_progress_count=Count(
                     'id', distinct=True, filter=Q(sla_rvr_in_progress=True)
@@ -510,8 +511,8 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                 sla_dgu_closed_on_time_count=Count(
                     'id', distinct=True, filter=Q(sla_dgu_closed_on_time=True)
                 ),
-                sla_dgu_less_than_hour_count=Count(
-                    'id', distinct=True, filter=Q(sla_dgu_less_than_hour=True)
+                sla_dgu_waiting_count=Count(
+                    'id', distinct=True, filter=Q(sla_dgu_waiting=True)
                 ),
                 sla_dgu_in_progress_count=Count(
                     'id', distinct=True, filter=Q(sla_dgu_in_progress=True)
@@ -611,17 +612,17 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                 # SLA АВР:
                 'sla_avr_expired_count',
                 'sla_avr_closed_on_time_count',
-                'sla_avr_less_than_hour_count',
+                'sla_avr_waiting_count',
                 'sla_avr_in_progress_count',
                 # SLA РВР:
                 'sla_rvr_expired_count',
                 'sla_rvr_closed_on_time_count',
-                'sla_rvr_less_than_hour_count',
+                'sla_rvr_waiting_count',
                 'sla_rvr_in_progress_count',
                 # SLA ДГУ:
                 'sla_dgu_expired_count',
                 'sla_dgu_closed_on_time_count',
-                'sla_dgu_less_than_hour_count',
+                'sla_dgu_waiting_count',
                 'sla_dgu_in_progress_count',
                 # Типы инцидентов:
                 'is_power_issue_type',

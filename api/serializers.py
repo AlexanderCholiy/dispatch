@@ -27,6 +27,10 @@ class IncidentReportSerializer(serializers.ModelSerializer):
     avr_names = serializers.CharField(
         source='pole.avr_contractor.contractor_name', read_only=True
     )
+    is_vrt_dgu_expired = serializers.BooleanField(
+        source='is_sla_dgu_expired',
+        read_only=True
+    )
 
     last_status = serializers.SerializerMethodField()
     avr_start_datetime = serializers.SerializerMethodField()
@@ -67,6 +71,7 @@ class IncidentReportSerializer(serializers.ModelSerializer):
             'rvr_deadline',
             'dgu_start_datetime',
             'dgu_end_datetime',
+            'is_vrt_dgu_expired',
             'dgu_duration',
             'pole',
             'region_ru',
@@ -183,9 +188,9 @@ class StatisticReportSerializer(serializers.ModelSerializer):
     sla_rvr_closed_on_time_count = serializers.IntegerField(read_only=True)
     sla_dgu_closed_on_time_count = serializers.IntegerField(read_only=True)
 
-    sla_avr_less_than_hour_count = serializers.IntegerField(read_only=True)
-    sla_rvr_less_than_hour_count = serializers.IntegerField(read_only=True)
-    sla_dgu_less_than_hour_count = serializers.IntegerField(read_only=True)
+    sla_avr_waiting_count = serializers.IntegerField(read_only=True)
+    sla_rvr_waiting_count = serializers.IntegerField(read_only=True)
+    sla_dgu_waiting_count = serializers.IntegerField(read_only=True)
 
     sla_avr_in_progress_count = serializers.IntegerField(read_only=True)
     sla_rvr_in_progress_count = serializers.IntegerField(read_only=True)
@@ -226,17 +231,17 @@ class StatisticReportSerializer(serializers.ModelSerializer):
             # SLA АВР:
             'sla_avr_expired_count',
             'sla_avr_closed_on_time_count',
-            'sla_avr_less_than_hour_count',
+            'sla_avr_waiting_count',
             'sla_avr_in_progress_count',
             # SLA РВР:
             'sla_rvr_expired_count',
             'sla_rvr_closed_on_time_count',
-            'sla_rvr_less_than_hour_count',
+            'sla_rvr_waiting_count',
             'sla_rvr_in_progress_count',
             # SLA ДГУ:
             'sla_dgu_expired_count',
             'sla_dgu_closed_on_time_count',
-            'sla_dgu_less_than_hour_count',
+            'sla_dgu_waiting_count',
             'sla_dgu_in_progress_count',
             # Типы инцидентов:
             'is_power_issue_type',

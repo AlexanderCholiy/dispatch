@@ -25,7 +25,8 @@ from ts.constants import UNDEFINED_CASE
 from .constants import (
     AVR_CATEGORY,
     DGU_CATEGORY,
-    DGU_SLA_DEADLINE_IN_HOURS,
+    DGU_SLA_IN_PROGRESS_DEADLINE_IN_HOURS,
+    DGU_SLA_WAITING_DEADLINE_IN_HOURS,
     INCIDENT_ACCESS_TO_OBJECT_TYPE,
     INCIDENT_AMS_STRUCTURE_TYPE,
     INCIDENT_DESTRUCTION_OBJECT_TYPE,
@@ -83,7 +84,7 @@ def annotate_sla_avr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
             default=Value(False),
             output_field=BooleanField()
         ),
-        sla_avr_less_than_hour=Case(
+        sla_avr_waiting=Case(
             When(
                 incident_type__sla_deadline__isnull=False,
                 avr_start_date__isnull=False,
@@ -159,7 +160,7 @@ def annotate_sla_rvr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
             default=Value(False),
             output_field=BooleanField()
         ),
-        sla_rvr_less_than_hour=Case(
+        sla_rvr_waiting=Case(
             When(
                 rvr_start_date__isnull=False,
                 rvr_end_date__isnull=True,
@@ -194,74 +195,86 @@ def annotate_sla_rvr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
 
 
 def annotate_sla_dgu(qs: QuerySet[Incident]) -> QuerySet[Incident]:
-    """Аннотация SLA для ДГУ."""
+    """Аннотация SLA для ДГУ"""
     now = timezone.now()
+
+    in_progress_delta = timedelta(
+        hours=DGU_SLA_IN_PROGRESS_DEADLINE_IN_HOURS
+    )
+    waiting_delta = timedelta(
+        hours=DGU_SLA_WAITING_DEADLINE_IN_HOURS
+    )
+
     return qs.annotate(
         dgu_has_start=Case(
             When(dgu_start_date__isnull=False, then=Value(True)),
             default=Value(False),
             output_field=BooleanField(),
         ),
-        dgu_deadline=ExpressionWrapper(
+        dgu_elapsed=ExpressionWrapper(
             Case(
                 When(
                     dgu_start_date__isnull=False,
-                    then=(
-                        F('dgu_start_date')
-                        + timedelta(hours=DGU_SLA_DEADLINE_IN_HOURS)
-                    )
+                    dgu_end_date__isnull=False,
+                    then=F('dgu_end_date') - F('dgu_start_date'),
+                ),
+                When(
+                    dgu_start_date__isnull=False,
+                    dgu_end_date__isnull=True,
+                    then=now - F('dgu_start_date'),
                 ),
                 default=None,
-                output_field=DateTimeField()
+                output_field=DurationField(),
             ),
-            output_field=DateTimeField()
+            output_field=DurationField(),
         ),
+
+        # Просрочен (> 15 суток)
         sla_dgu_expired=Case(
             When(
                 dgu_start_date__isnull=False,
-                dgu_end_date__isnull=False,
-                dgu_end_date__gt=F('dgu_deadline'),
-                then=Value(True)
-            ),
-            When(
-                dgu_start_date__isnull=False,
-                dgu_end_date__isnull=True,
-                dgu_deadline__lt=now,
-                then=Value(True)
+                dgu_elapsed__gt=waiting_delta,
+                then=Value(True),
             ),
             default=Value(False),
-            output_field=BooleanField()
+            output_field=BooleanField(),
         ),
-        sla_dgu_less_than_hour=Case(
-            When(
-                dgu_start_date__isnull=False,
-                dgu_end_date__isnull=True,
-                dgu_deadline__gt=now,
-                dgu_deadline__lte=now + timedelta(hours=1),
-                then=Value(True)
-            ),
-            default=Value(False),
-            output_field=BooleanField()
-        ),
+
+        # In progress (< 12 часов)
         sla_dgu_in_progress=Case(
             When(
                 dgu_start_date__isnull=False,
                 dgu_end_date__isnull=True,
-                dgu_deadline__gt=now + timedelta(hours=1),
-                then=Value(True)
+                dgu_elapsed__lt=in_progress_delta,
+                then=Value(True),
             ),
             default=Value(False),
-            output_field=BooleanField()
+            output_field=BooleanField(),
         ),
+
+        # Waiting (≥ 12 часов и < 15 суток)
+        sla_dgu_waiting=Case(
+            When(
+                dgu_start_date__isnull=False,
+                dgu_end_date__isnull=True,
+                dgu_elapsed__gte=in_progress_delta,
+                dgu_elapsed__lte=waiting_delta,
+                then=Value(True),
+            ),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+
+        # Закрыт вовремя (≤ 15 суток)
         sla_dgu_closed_on_time=Case(
             When(
                 dgu_start_date__isnull=False,
                 dgu_end_date__isnull=False,
-                dgu_end_date__lte=F('dgu_deadline'),
-                then=Value(True)
+                dgu_elapsed__lte=waiting_delta,
+                then=Value(True),
             ),
             default=Value(False),
-            output_field=BooleanField()
+            output_field=BooleanField(),
         ),
     )
 

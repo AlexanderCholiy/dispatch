@@ -151,8 +151,8 @@ def index(request: HttpRequest) -> HttpResponse:
     if sla_avr_status:
         if sla_avr_status == SLAStatus.EXPIRED.value:
             base_qs = base_qs.filter(sla_avr_expired=True)
-        elif sla_avr_status == SLAStatus.LESS_THAN_HOUR.value:
-            base_qs = base_qs.filter(sla_avr_less_than_hour=True)
+        elif sla_avr_status == SLAStatus.WAITING.value:
+            base_qs = base_qs.filter(sla_avr_waiting=True)
         elif sla_avr_status == SLAStatus.IN_PROGRESS.value:
             base_qs = base_qs.filter(sla_avr_in_progress=True)
         elif sla_avr_status == SLAStatus.CLOSED_ON_TIME.value:
@@ -161,8 +161,8 @@ def index(request: HttpRequest) -> HttpResponse:
     if sla_rvr_status:
         if sla_rvr_status == SLAStatus.EXPIRED.value:
             base_qs = base_qs.filter(sla_rvr_expired=True)
-        elif sla_rvr_status == SLAStatus.LESS_THAN_HOUR.value:
-            base_qs = base_qs.filter(sla_rvr_less_than_hour=True)
+        elif sla_rvr_status == SLAStatus.WAITING.value:
+            base_qs = base_qs.filter(sla_rvr_waiting=True)
         elif sla_rvr_status == SLAStatus.IN_PROGRESS.value:
             base_qs = base_qs.filter(sla_rvr_in_progress=True)
         elif sla_rvr_status == SLAStatus.CLOSED_ON_TIME.value:
@@ -171,8 +171,8 @@ def index(request: HttpRequest) -> HttpResponse:
     if sla_dgu_status:
         if sla_dgu_status == TimeStatus.EXPIRED.value:
             base_qs = base_qs.filter(sla_dgu_expired=True)
-        elif sla_dgu_status == TimeStatus.LESS_THAN_HOUR.value:
-            base_qs = base_qs.filter(sla_dgu_less_than_hour=True)
+        elif sla_dgu_status == TimeStatus.WAITING.value:
+            base_qs = base_qs.filter(sla_dgu_waiting=True)
         elif sla_dgu_status == TimeStatus.IN_PROGRESS.value:
             base_qs = base_qs.filter(sla_dgu_in_progress=True)
         elif sla_dgu_status == TimeStatus.CLOSED_ON_TIME.value:

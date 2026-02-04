@@ -90,7 +90,8 @@ DGU_CATEGORY = 'ДГУ'
 RVR_SLA_DEADLINE_IN_HOURS = 72
 
 # Дедлайн SLA ДГУ:
-DGU_SLA_DEADLINE_IN_HOURS = 72
+DGU_SLA_IN_PROGRESS_DEADLINE_IN_HOURS = 12
+DGU_SLA_WAITING_DEADLINE_IN_HOURS = 24 * 15
 
 # Ограничение для закрытия SLA в будущем:
 MAX_FUTURE_END_DELTA = timedelta(minutes=5)
