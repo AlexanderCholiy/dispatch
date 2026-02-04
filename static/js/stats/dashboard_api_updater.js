@@ -17,10 +17,14 @@ async function fetchStatistics(startDate, endDate = null) {
 
 function updateCharts(apiData, dailyChart, closedChart, openChart, typesChart, slaCharts) {
     updateDailyChart(dailyChart, apiData);
+
     updateBarChart(closedChart, apiData, ['total_closed_incidents', 'closed_incidents_with_power_issue']);
     updateBarChart(openChart, apiData, ['total_open_incidents', 'open_incidents_with_power_issue']);
+
     updateSlaCharts(slaCharts.avr, apiData, 'avr');
     updateSlaCharts(slaCharts.rvr, apiData, 'rvr');
+    updateSlaCharts(slaCharts.dgu, apiData, 'dgu');
+
     updateBarChart(typesChart, apiData, [
         'is_power_issue_type',
         'is_ams_issue_type',
@@ -38,6 +42,7 @@ function updateCharts(apiData, dailyChart, closedChart, openChart, typesChart, s
     // SLA таблицы
     updateSlaCopyData('avr-sla-grid', apiData, 'avr');
     updateSlaCopyData('rvr-sla-grid', apiData, 'rvr');
+    updateSlaCopyData('dgu-sla-grid', apiData, 'dgu');
 }
 
 export function startStatisticsPolling(charts, interval = 10_000) {

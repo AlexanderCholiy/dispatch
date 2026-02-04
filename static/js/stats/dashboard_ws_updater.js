@@ -92,6 +92,7 @@ export function startStatisticsWebSocket(charts) {
         // SLA DONUTS
         updateSlaCharts(charts.sla.avr, apiData, 'avr');
         updateSlaCharts(charts.sla.rvr, apiData, 'rvr');
+        updateSlaCharts(charts.sla.dgu, apiData, 'dgu');
 
         // ===== COPY DATA (ВАЖНО) =====
         updateCopyButton('daily-chart-card', charts.daily, 'Дата/Регион');
@@ -102,6 +103,7 @@ export function startStatisticsWebSocket(charts) {
         // SLA — таблицы из API
         updateSlaCopyData('avr-sla-grid', apiData, 'avr');
         updateSlaCopyData('rvr-sla-grid', apiData, 'rvr');
+        updateSlaCopyData('dgu-sla-grid', apiData, 'dgu');
     }
 
     /* ---------- APPLY FILTER ---------- */

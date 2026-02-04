@@ -64,7 +64,13 @@ export function updateSlaCopyData(containerId, apiData, type = 'avr') {
     const regions = apiData.map(item => item.macroregion ?? 'Регион');
 
     // Категории SLA
-    const categories = ['Просрочено', 'Закрыто вовремя', 'Менее часа', 'В работе'];
+    const categoriesMap = {
+        avr: ['Просрочено', 'Закрыто вовремя', 'Менее часа', 'В работе'],
+        rvr: ['Просрочено', 'Закрыто вовремя', 'Менее часа', 'В работе'],
+        dgu: ['Просрочено', 'Закрыто вовремя', 'Менее 15 дней', 'В работе'],
+    };
+
+    const categories = categoriesMap[type] ?? categoriesMap.avr;
 
     // Собираем строки
     const rows = categories.map((cat, idx) => {

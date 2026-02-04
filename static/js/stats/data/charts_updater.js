@@ -50,12 +50,54 @@ export function updateSlaCharts(charts, apiData, type) {
     if (!charts?.length) return;
 
     const colors = getChartColors();
-    const slaColors = [
-        colors.red,     // Просрочено
-        colors.green,   // Закрыто вовремя
-        colors.yellow,  // Менее часа
-        colors.blue,    // В работе
-    ];
+
+    const slaConfig = {
+        avr: {
+            labels: [
+                'Просрочено',
+                'Закрыто вовремя',
+                'Менее часа',
+                'В работе',
+            ],
+            colors: [
+                colors.red,
+                colors.green,
+                colors.yellow,
+                colors.blue,
+            ],
+        },
+        rvr: {
+            labels: [
+                'Просрочено',
+                'Закрыто вовремя',
+                'Менее часа',
+                'В работе',
+            ],
+            colors: [
+                colors.red,
+                colors.green,
+                colors.yellow,
+                colors.blue,
+            ],
+        },
+        dgu: {
+            labels: [
+                'Более 15 дней',
+                'Закрыт за 15 дней',
+                'Менее 15 дней',
+                'Менее 12 часов',
+            ],
+            colors: [
+                colors.red,
+                colors.green,
+                colors.yellow,
+                colors.blue,
+            ],
+        },
+    };
+
+    const { labels, colors: slaColors } =
+        slaConfig[type] ?? slaConfig.avr;
 
     charts.forEach((chart, idx) => {
         const apiItem = apiData[idx];
@@ -66,7 +108,6 @@ export function updateSlaCharts(charts, apiData, type) {
 
         const data = adaptSla(apiItem, type);
         const total = data.reduce((a, b) => a + b, 0);
-
         const nonZeroCount = data.filter(v => v > 0).length;
 
         if (total === 0) {
@@ -77,12 +118,7 @@ export function updateSlaCharts(charts, apiData, type) {
             chart.data.datasets[0].borderWidth = 0;
             chart.$hasData = false;
         } else {
-            chart.data.labels = [
-                'Просрочено',
-                'Закрыто вовремя',
-                'Менее часа',
-                'В работе',
-            ];
+            chart.data.labels = labels;
             chart.data.datasets[0].data = data;
             chart.data.datasets[0].backgroundColor = slaColors;
 
@@ -96,7 +132,6 @@ export function updateSlaCharts(charts, apiData, type) {
 
         chart.$total = total;
 
-        // Обновляем tooltip hover цвета, чтобы сегменты не краснели
         chart.options.plugins.tooltip.callbacks = {
             label: (tooltipItem) => {
                 const value = chart.data.datasets[0].data[tooltipItem.dataIndex];
