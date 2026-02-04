@@ -89,21 +89,25 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
     - incident_datetime: Дата и время возникновения инцидента (UTC, ISO).
     - incident_finish_datetime: Дата и время завершения инцидента (UTC, ISO).
 
+    - avr_names: Название подрядчика АВР.
+    - avr_emails: Email-адреса подрядчика АВР.
+
     - avr_start_datetime: Дата и время начала АВР.
     - avr_end_datetime: Дата и время завершения АВР.
     - is_sla_avr_expired: Превышен ли SLA по АВР.
     - avr_deadline: Дедлайн SLA АВР.
-    - avr_names: Название подрядчика АВР.
-    - avr_emails: Email-адреса подрядчика АВР.
+    - avr_duration: Период АВР.
 
     - rvr_start_datetime: Дата и время начала РВР.
     - rvr_end_datetime: Дата и время завершения РВР.
     - is_sla_rvr_expired: Превышен ли SLA по РВР.
     - rvr_deadline: Дедлайн SLA РВР.
+    - rvr_duration: Период РВР.
 
     - dgu_start_datetime: Дата и время начала ДГУ.
     - dgu_end_datetime: Дата и время завершения ДГУ.
     - is_vrt_dgu_expired: Превышает ли период дизеления 15 суток
+    - dgu_deadline: Дедлайн ВРТ ДГУ.
     - dgu_duration: Период дизеления.
 
     - pole: Шифр опоры.
@@ -289,6 +293,8 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
     Возвращает статистику по макрорегионам.
     Статистика формируется на основе инцидентов и агрегируется
     по макрорегионам, связанным через регионы и опоры.
+
+    ВСУ ДАТЫ И ВРЕМЯ УКАЗАНЫ В МОСКОВСКОМ ЧАСОВОМ ПОЯСЕ (UTC+3).
 
     ПОЛЯ:
 

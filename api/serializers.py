@@ -33,16 +33,23 @@ class IncidentReportSerializer(serializers.ModelSerializer):
     )
 
     last_status = serializers.SerializerMethodField()
+    avr_emails = serializers.SerializerMethodField()
+
     avr_start_datetime = serializers.SerializerMethodField()
     avr_end_datetime = serializers.SerializerMethodField()
     avr_deadline = serializers.SerializerMethodField()
-    avr_emails = serializers.SerializerMethodField()
+    avr_duration = serializers.SerializerMethodField()
+
     rvr_start_datetime = serializers.SerializerMethodField()
     rvr_end_datetime = serializers.SerializerMethodField()
     rvr_deadline = serializers.SerializerMethodField()
+    rvr_duration = serializers.SerializerMethodField()
+
     dgu_start_datetime = serializers.SerializerMethodField()
     dgu_end_datetime = serializers.SerializerMethodField()
+    dgu_deadline = serializers.SerializerMethodField()
     dgu_duration = serializers.SerializerMethodField()
+
     incident_datetime = serializers.SerializerMethodField()
     incident_finish_datetime = serializers.SerializerMethodField()
     operator_group = serializers.SerializerMethodField()
@@ -59,20 +66,28 @@ class IncidentReportSerializer(serializers.ModelSerializer):
             'categories',
             'incident_datetime',
             'incident_finish_datetime',
+
             'avr_start_datetime',
             'avr_end_datetime',
             'is_sla_avr_expired',
             'avr_deadline',
+            'avr_duration',
+
             'avr_names',
             'avr_emails',
+
             'rvr_start_datetime',
             'rvr_end_datetime',
             'is_sla_rvr_expired',
             'rvr_deadline',
+            'rvr_duration',
+
             'dgu_start_datetime',
             'dgu_end_datetime',
             'is_vrt_dgu_expired',
+            'dgu_deadline',
             'dgu_duration',
+
             'pole',
             'region_ru',
             'macroregion',
@@ -91,27 +106,33 @@ class IncidentReportSerializer(serializers.ModelSerializer):
     def get_avr_start_datetime(self, obj: Incident):
         if not obj.avr_start_date:
             return
-        return conversion_utc_datetime(obj.avr_start_date)
+        return conversion_utc_datetime(obj.avr_start_date, False, True)
 
     def get_avr_end_datetime(self, obj: Incident):
         if not obj.avr_end_date:
             return
-        return conversion_utc_datetime(obj.avr_end_date)
+        return conversion_utc_datetime(obj.avr_end_date, False, True)
 
     def get_rvr_start_datetime(self, obj: Incident):
         if not obj.rvr_start_date:
             return
-        return conversion_utc_datetime(obj.rvr_start_date)
+        return conversion_utc_datetime(obj.rvr_start_date, False, True)
 
     def get_rvr_end_datetime(self, obj: Incident):
         if not obj.rvr_end_date:
             return
-        return conversion_utc_datetime(obj.rvr_end_date)
+        return conversion_utc_datetime(obj.rvr_end_date, False, True)
 
     def get_dgu_start_datetime(self, obj: Incident):
         if not obj.dgu_start_date:
             return
-        return conversion_utc_datetime(obj.dgu_start_date)
+        return conversion_utc_datetime(obj.dgu_start_date, False, True)
+
+    def get_avr_duration(self, obj: Incident):
+        return obj.avr_duration_val_label
+
+    def get_rvr_duration(self, obj: Incident):
+        return obj.rvr_duration_val_label
 
     def get_dgu_duration(self, obj: Incident):
         return obj.dgu_duration_val_label
@@ -119,7 +140,7 @@ class IncidentReportSerializer(serializers.ModelSerializer):
     def get_dgu_end_datetime(self, obj: Incident):
         if not obj.dgu_end_date:
             return
-        return conversion_utc_datetime(obj.dgu_end_date)
+        return conversion_utc_datetime(obj.dgu_end_date, False, True)
 
     def get_avr_emails(self, obj: Incident):
         if not obj.pole or not obj.pole.avr_contractor:
@@ -141,19 +162,29 @@ class IncidentReportSerializer(serializers.ModelSerializer):
 
     def get_avr_deadline(self, obj: Incident):
         deadline = obj.sla_avr_deadline
-        return conversion_utc_datetime(deadline) if deadline else None
+        return conversion_utc_datetime(
+            deadline, False, True
+        ) if deadline else None
 
     def get_rvr_deadline(self, obj: Incident):
         deadline = obj.sla_rvr_deadline
-        return conversion_utc_datetime(deadline) if deadline else None
+        return conversion_utc_datetime(
+            deadline, False, True
+        ) if deadline else None
+
+    def get_dgu_deadline(self, obj: Incident):
+        deadline = obj.sla_dgu_deadline
+        return conversion_utc_datetime(
+            deadline, False, True
+        ) if deadline else None
 
     def get_incident_datetime(self, obj: Incident):
-        return conversion_utc_datetime(obj.incident_date)
+        return conversion_utc_datetime(obj.incident_date, False, True)
 
     def get_incident_finish_datetime(self, obj: Incident):
         if not obj.incident_finish_date:
             return
-        return conversion_utc_datetime(obj.incident_finish_date)
+        return conversion_utc_datetime(obj.incident_finish_date, False, True)
 
     def get_categories(self, obj: Incident):
         categories = obj.categories.all()

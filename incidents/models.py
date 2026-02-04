@@ -406,6 +406,51 @@ class Incident(models.Model):
     sla_rvr_deadline.fget.short_description = 'Срок устранения РВР'
 
     @property
+    def sla_dgu_deadline(self) -> Optional[datetime]:
+        if self.dgu_start_date:
+            return self.dgu_start_date + timedelta(
+                hours=DGU_SLA_WAITING_DEADLINE_IN_HOURS
+            )
+        return None
+    sla_rvr_deadline.fget.short_description = 'Срок устранения ДГУ'
+
+    @property
+    def avr_duration(self) -> Optional[timedelta]:
+        """Длительность АВР."""
+        if not self.avr_start_date:
+            return None
+
+        end_date = self.avr_end_date or timezone.now()
+        return end_date - self.avr_start_date
+    avr_duration.fget.short_description = 'Длительность АВР'
+
+    @property
+    def avr_duration_val_label(self) -> Optional[str]:
+        """Длительность АВР в человекочитаемом виде."""
+        avr_duration = self.avr_duration
+        if avr_duration is None:
+            return None
+        return timedelta_to_human_time(avr_duration)
+
+    @property
+    def rvr_duration(self) -> Optional[timedelta]:
+        """Длительность РВР."""
+        if not self.rvr_start_date:
+            return None
+
+        end_date = self.rvr_end_date or timezone.now()
+        return end_date - self.rvr_start_date
+    rvr_duration.fget.short_description = 'Длительность РВР'
+
+    @property
+    def rvr_duration_val_label(self) -> Optional[str]:
+        """Длительность РВР в человекочитаемом виде."""
+        rvr_duration = self.rvr_duration
+        if rvr_duration is None:
+            return None
+        return timedelta_to_human_time(rvr_duration)
+
+    @property
     def dgu_duration(self) -> Optional[timedelta]:
         """Длительность дизеления (ДГУ)."""
         if not self.dgu_start_date:
