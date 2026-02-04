@@ -20,8 +20,11 @@ from .constants import (
     COLUMNS_TO_KEEP_POLES_TL,
     COLUMNS_TO_KEEP_RVR_REPORT,
     DB_CHUNK_UPDATE,
+    RAISE_TS_AVR_DEL_LIMIT,
     RAISE_TS_AVR_TABLE_LIMIT,
+    RAISE_TS_BASE_STATION_DEL_LIMIT,
     RAISE_TS_BASE_STATION_TABLE_LIMIT,
+    RAISE_TS_POLE_DEL_LIMIT,
     RAISE_TS_POLE_TABLE_LIMIT,
     RVR_FILE,
     TS_AVR_TABLE,
@@ -32,7 +35,7 @@ from .constants import (
     UNDEFINED_ID,
     UNVALID_DEBUG_MSG_LIMIT,
 )
-from .exceptions import EmptyTableError
+from .exceptions import EmptyTableError, TooManyRecordsToDeleteError
 from .models import (
     AVRContractor,
     BaseStation,
@@ -147,6 +150,12 @@ class Api(SocialValidators):
             Pole.objects.values_list('site_id', flat=True)
         )
         poles_2_delete = existing_site_ids - new_site_ids - {UNDEFINED_ID}
+
+        if len(poles_2_delete) > RAISE_TS_POLE_DEL_LIMIT:
+            raise TooManyRecordsToDeleteError(
+                Pole.__name__, len(poles_2_delete), RAISE_TS_POLE_DEL_LIMIT
+            )
+
         if poles_2_delete:
             deleted_poles = 0
             for chunk in self.chunked(poles_2_delete, DB_CHUNK_UPDATE):
@@ -423,6 +432,13 @@ class Api(SocialValidators):
         contractors_to_delete = (
             existing_contractors - new_contractors - {UNDEFINED_CASE}
         )
+
+        if len(contractors_to_delete) > RAISE_TS_AVR_DEL_LIMIT:
+            raise TooManyRecordsToDeleteError(
+                AVRContractor.__name__,
+                len(contractors_to_delete),
+                RAISE_TS_AVR_DEL_LIMIT,
+            )
 
         if contractors_to_delete:
             deleted_avr, _ = AVRContractor.objects.filter(
@@ -740,6 +756,13 @@ class Api(SocialValidators):
         combinations_bs_to_delete = (
             existing_bs_combinations - new_bs_combinations
         )
+
+        if len(combinations_bs_to_delete) > RAISE_TS_BASE_STATION_DEL_LIMIT:
+            raise TooManyRecordsToDeleteError(
+                BaseStation.__name__,
+                len(combinations_bs_to_delete),
+                RAISE_TS_BASE_STATION_DEL_LIMIT,
+            )
 
         if combinations_bs_to_delete:
             deleted_count = 0

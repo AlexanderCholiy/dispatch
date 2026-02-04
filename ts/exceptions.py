@@ -7,3 +7,19 @@ class EmptyTableError(Exception):
             f'Всего: {row_count} записей.'
         )
         super().__init__(self.message)
+
+
+class TooManyRecordsToDeleteError(Exception):
+    """Исключение попытки удаления слишком большого количество записей."""
+    def __init__(
+        self, table_name: str, attempted_count: int, max_allowed: int
+    ):
+        self.table_name = table_name
+        self.attempted_count = attempted_count
+        self.max_allowed = max_allowed
+        self.message = (
+            f'Попытка удалить {attempted_count} записей из таблицы '
+            f'"{table_name}", что превышает допустимый лимит {max_allowed}. '
+            'Операция отменена для предотвращения потери данных.'
+        )
+        super().__init__(self.message)

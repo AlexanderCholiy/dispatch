@@ -226,7 +226,12 @@ class AutoEmailsFromYT:
             success_status_key=(
                 self.yt_manager.notified_op_issue_closed_status_key
             ),
-            text_template=f'Заявка "{self.issue_key}" закрыта.',
+            text_template=(
+                f'Инцидент "{self.issue_key}" устранён. '
+                'Просим проверить и подтвердить. '
+                'Если в течение 12 часов обратная связь не поступит, '
+                'заявка будет автоматически закрыта.'
+            ),
             change_status=False,
         )
 
