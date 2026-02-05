@@ -66,6 +66,15 @@ class EmailNode(TypedDict):
     max_date: Optional[datetime]
 
 
+class IncidentSelectionStrategy:
+    by_subject_with_thread = 'by_subject_with_thread'
+    by_actual_in_thread = 'by_actual_in_thread'
+    by_similar_email = 'by_similar_email'
+    by_subject_only = 'by_subject_only'
+    tele2_exception = 'tele2_exception'
+    created_new = 'created_new'
+
+
 class IncidentManager(IncidentValidator):
 
     @staticmethod
@@ -567,6 +576,8 @@ class IncidentManager(IncidentValidator):
             инцидент создан впервые, False, если уже существовал.
             - None, если в переписке отсутствует первое сообщение.
         """
+        selection_strategy: Optional[str] = None
+
         # Все письма относящиеся к переписке:
         emails_thread = self.get_email_thread(email_msg.email_msg_id)
         email_ids = [email.pk for email in emails_thread]
@@ -591,6 +602,10 @@ class IncidentManager(IncidentValidator):
             actual_email_incident = self.get_incident_by_yandex_tracker(
                 email_msg, yt_manager
             )
+            if actual_email_incident:
+                selection_strategy = (
+                    IncidentSelectionStrategy.by_subject_with_thread
+                )
 
         # 2. Если по теме не нашли — берём самый актуальный инцидент:
         if not actual_email_incident and thread_incidents:
@@ -599,6 +614,10 @@ class IncidentManager(IncidentValidator):
                 key=lambda i: (i.incident_date, i.pk),
                 default=None
             )
+            if actual_email_incident:
+                selection_strategy = (
+                    IncidentSelectionStrategy.by_actual_in_thread
+                )
 
         # 3. Исключение для писем с одинаковой темой, телом и отправителем:
         if not actual_email_incident:
@@ -617,6 +636,7 @@ class IncidentManager(IncidentValidator):
             )
             if similar_msg:
                 actual_email_incident = similar_msg.email_incident
+                selection_strategy = IncidentSelectionStrategy.by_similar_email
                 # Пусть дубликат письма всё равно будет добавлен:
                 email_msg.was_added_2_yandex_tracker = False
                 email_msg.save()
@@ -626,6 +646,8 @@ class IncidentManager(IncidentValidator):
             actual_email_incident = self.get_incident_by_yandex_tracker(
                 email_msg, yt_manager
             )
+            if actual_email_incident:
+                selection_strategy = IncidentSelectionStrategy.by_subject_only
 
         # Поиск опоры и БС по всей переписке:
         if (
@@ -680,6 +702,11 @@ class IncidentManager(IncidentValidator):
                     new_incident = False
                     actual_email_incident = old_email_msg.email_incident
 
+                    if actual_email_incident:
+                        selection_strategy = (
+                            IncidentSelectionStrategy.tele2_exception
+                        )
+
             if not actual_email_incident:
                 new_incident = True
 
@@ -688,6 +715,7 @@ class IncidentManager(IncidentValidator):
                     pole=pole,
                     base_station=base_station,
                 )
+                selection_strategy = IncidentSelectionStrategy.created_new
 
         if not actual_email_incident:
             return None
@@ -703,12 +731,14 @@ class IncidentManager(IncidentValidator):
 
         if len(thread_incident_ids) > 1:
             incident_logger.warning(
-                f'Email с id={email_msg.pk} ({email_msg.email_msg_id})'
-                'обнаружен в цепочке, связанной с несколькими инцидентами '
-                f'ids: {thread_incident_ids}. '
-                'Выбран последний актуальный инцидент '
-                f'id={actual_email_incident.pk} '
-                f'(код={actual_email_incident.code})'
+                (
+                    f'Email id={email_msg.pk} '
+                    f'(msg_id={email_msg.email_msg_id}) связан с несколькими '
+                    f'инцидентами {thread_incident_ids}. '
+                    f'Выбран инцидент id={actual_email_incident.pk} '
+                    f'(code={actual_email_incident.code}). '
+                    f'Алгоритм выбора: {selection_strategy}.'
+                )
             )
 
             old_incidents = Incident.objects.filter(
@@ -720,12 +750,13 @@ class IncidentManager(IncidentValidator):
                 disable_thread_auto_link=False,
             )
 
-            updated = old_incidents.update(disable_thread_auto_link=True)
-            if updated:
-                incident_logger.info(
-                    'Выставлен disable_thread_auto_link=True для '
-                    f'{updated} старых инцидентов: {old_incidents}'
-                )
+            if old_incidents.exists():
+                updated = old_incidents.update(disable_thread_auto_link=True)
+                if updated > 0:
+                    incident_logger.info(
+                        f'Выставлен disable_thread_auto_link=True для '
+                        f'инцидентов: {old_incidents}'
+                    )
 
         # Обновляем только письма без инцидента:
         EmailMessage.objects.filter(
