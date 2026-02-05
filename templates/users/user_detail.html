@@ -69,43 +69,84 @@
         <div class="stats-grid">
           <div class="stat-card stat-open">
             <p class="stat-title">Открытые</p>
-            <p class="stat-value">{{ open_incidents }}</p>
+            <p class="stat-value">{{ general_incidents_state.open_incidents }}</p>
           </div>
 
           <div class="stat-card stat-closed">
             <p class="stat-title">Закрытые</p>
-            <p class="stat-value">{{ closed_incidents }}</p>
+            <p class="stat-value">{{ general_incidents_state.closed_incidents }}</p>
           </div>
 
           <div class="stat-card stat-week-open">
-            <p class="stat-title">Открытые за неделю</p>
-            <p class="stat-value">{{ open_last_week }}</p>
+            <p class="stat-title">Открытые за 7 дн</p>
+            <p class="stat-value">{{ general_incidents_state.open_last_period }}</p>
           </div>
 
           <div class="stat-card stat-week-closed">
-            <p class="stat-title">Закрытые за неделю</p>
-            <p class="stat-value">{{ closed_last_week }}</p>
+            <p class="stat-title">Закрытые за 7 дн</p>
+            <p class="stat-value">{{ general_incidents_state.closed_last_period }}</p>
           </div>
 
-          <div class="stat-card stat-sla">
-            <p class="stat-title">Вовремя закрытые (неделя)</p>
+          <div class="stat-card stat-sla tooltip" data-title="Всего {{ sla_incidents_state.avr_total }}">
+            <p class="stat-title">Вовремя закрытые АВР</p>
             <p class="stat-value" 
               style="
-                {% if sla_percentage == 0 %}
+                {% if sla_incidents_state.avr_percent_on_time == 0 %}
                   color: var(--gray-color);
-                {% elif sla_percentage >= 90 %}
+                {% elif sla_incidents_state.avr_percent_on_time >= 90 %}
                   color: var(--green-color);
-                {% elif sla_percentage >= 70 %}
+                {% elif sla_incidents_state.avr_percent_on_time >= 70 %}
                   color: var(--blue-color);
-                {% elif sla_percentage >= 50 %}
+                {% elif sla_incidents_state.avr_percent_on_time >= 50 %}
                   color: var(--yellow-color);
                 {% else %}
                   color: var(--red-color);
                 {% endif %}
               ">
-              {{ sla_percentage }}%
+              {{ sla_incidents_state.avr_percent_on_time }}%
             </p>
           </div>
+
+          <div class="stat-card stat-sla tooltip" data-title="Всего {{ sla_incidents_state.rvr_total }}">
+            <p class="stat-title">Вовремя закрытые РВР</p>
+            <p class="stat-value" 
+              style="
+                {% if sla_incidents_state.rvr_percent_on_time == 0 %}
+                  color: var(--gray-color);
+                {% elif sla_incidents_state.rvr_percent_on_time >= 90 %}
+                  color: var(--green-color);
+                {% elif sla_incidents_state.rvr_percent_on_time >= 70 %}
+                  color: var(--blue-color);
+                {% elif sla_incidents_state.rvr_percent_on_time >= 50 %}
+                  color: var(--yellow-color);
+                {% else %}
+                  color: var(--red-color);
+                {% endif %}
+              ">
+              {{ sla_incidents_state.rvr_percent_on_time }}%
+            </p>
+          </div>
+
+          <div class="stat-card stat-sla tooltip" data-title="Всего {{ sla_incidents_state.dgu_total }}">
+            <p class="stat-title">Вовремя закрытые ДГУ</p>
+            <p class="stat-value" 
+              style="
+                {% if sla_incidents_state.dgu_percent_on_time == 0 %}
+                  color: var(--gray-color);
+                {% elif sla_incidents_state.dgu_percent_on_time >= 90 %}
+                  color: var(--green-color);
+                {% elif sla_incidents_state.dgu_percent_on_time >= 70 %}
+                  color: var(--blue-color);
+                {% elif sla_incidents_state.dgu_percent_on_time >= 50 %}
+                  color: var(--yellow-color);
+                {% else %}
+                  color: var(--red-color);
+                {% endif %}
+              ">
+              {{ sla_incidents_state.dgu_percent_on_time }}%
+            </p>
+          </div>
+
         </div>
       </div>
 

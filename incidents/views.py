@@ -19,6 +19,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 
+from api.constants import TOTAL_VALID_INCIDENTS_FILTER
 from core.exceptions import (
     ApiBadRequest,
     ApiNotFound,
@@ -131,7 +132,9 @@ def index(request: HttpRequest) -> HttpResponse:
         incident=OuterRef('pk')
     ).order_by('-insert_date', '-id')
 
-    base_qs = Incident.objects.select_related(
+    base_qs = Incident.objects.filter(
+        TOTAL_VALID_INCIDENTS_FILTER
+    ).select_related(
         'incident_type',
         'incident_subtype',
         'responsible_user',

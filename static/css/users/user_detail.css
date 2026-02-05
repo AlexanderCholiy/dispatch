@@ -79,13 +79,19 @@
 }
 
 .stat-card {
-  flex: 1 1 160px;
+  flex: 1 1 140px;
   padding: var(--space-md);
   border-radius: var(--radius-sm);
   background: var(--add-background-color);
   text-align: center;
-  box-shadow: 0 0 var(--space-xs) var(--extra-color);
-  transition: transform var(--transition-value), box-shadow var(--transition-value);
+  box-shadow: 0 0 0 var(--extra-color);
+  transition: box-shadow var(--transition-value),
+              transform var(--transition-value);
+}
+
+.stat-card:hover {
+  transform: scale(1.01);
+  box-shadow: 0 0 var(--space-sm) var(--extra-color);
 }
 
 .stat-title {

@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import TypedDict
 
 from django.core.cache import cache
 from django.db.models import (
@@ -37,6 +38,22 @@ from .constants import (
     RVR_SLA_DEADLINE_IN_HOURS,
 )
 from .models import Incident, IncidentCategoryRelation
+
+
+class IncidentStateStats(TypedDict):
+    open_incidents: int
+    closed_incidents: int
+    open_last_period: int
+    closed_last_period: int
+
+
+class SlaPercentStats(TypedDict):
+    avr_total: int
+    rvr_total: int
+    dgu_total: int
+    avr_percent_on_time: int | float
+    rvr_percent_on_time: int | float
+    dgu_percent_on_time: int | float
 
 
 def annotate_sla_avr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
@@ -433,3 +450,123 @@ def annotate_incident_subtypes(
             count=Count('id')
         )
     )
+
+
+def aggregate_total_incident(
+    qs: QuerySet[Incident], days: int = 7,
+) -> IncidentStateStats:
+    """
+    Возвращает агрегированную статистику по инцидентам.
+
+    - open_incidents — открытые инциденты
+    - closed_incidents — закрытые инциденты
+    - open_last_period — открытые, созданные за период
+    - closed_last_period — закрытые за период
+    """
+    period_start = timezone.now() - timedelta(days=days)
+
+    return qs.aggregate(
+        open_incidents=Count(
+            'id',
+            filter=Q(is_incident_finish=False),
+        ),
+        closed_incidents=Count(
+            'id',
+            filter=Q(is_incident_finish=True),
+        ),
+        open_last_period=Count(
+            'id',
+            filter=Q(
+                is_incident_finish=False,
+                insert_date__gte=period_start,
+            ),
+        ),
+        closed_last_period=Count(
+            'id',
+            filter=Q(
+                is_incident_finish=True,
+                incident_finish_date__gte=period_start,
+            ),
+        ),
+    )
+
+
+def aggregate_sla_percentages(
+    qs: QuerySet[Incident],
+) -> SlaPercentStats:
+    """
+    Возвращает SLA проценты по категориям:
+    - AVR
+    - RVR
+    - DGU
+
+    Округление: 1 знак, если не целое.
+    """
+    stats = qs.aggregate(
+        # === AVR ===
+        avr_total=Count(
+            'id',
+            filter=Q(
+                has_avr_category=True,
+                avr_start_date__isnull=False,
+            ),
+        ),
+        avr_on_time=Count(
+            'id',
+            filter=Q(
+                has_avr_category=True,
+                sla_avr_closed_on_time=True,
+            ),
+        ),
+
+        # === RVR ===
+        rvr_total=Count(
+            'id',
+            filter=Q(
+                has_rvr_category=True,
+                rvr_start_date__isnull=False,
+            ),
+        ),
+        rvr_on_time=Count(
+            'id',
+            filter=Q(
+                has_rvr_category=True,
+                sla_rvr_closed_on_time=True,
+            ),
+        ),
+
+        # === DGU ===
+        dgu_total=Count(
+            'id',
+            filter=Q(
+                dgu_start_date__isnull=False,
+            ),
+        ),
+        dgu_on_time=Count(
+            'id',
+            filter=Q(
+                sla_dgu_closed_on_time=True,
+            ),
+        ),
+    )
+
+    def percent(on_time: int, total: int) -> int | float:
+        if not total:
+            return 0
+        value = round(on_time / total * 100, 1)
+        return int(value) if value.is_integer() else value
+
+    return {
+        'avr_total': stats['avr_on_time'],
+        'rvr_total': stats['rvr_on_time'],
+        'dgu_total': stats['dgu_on_time'],
+        'avr_percent_on_time': percent(
+            stats['avr_on_time'], stats['avr_total']
+        ),
+        'rvr_percent_on_time': percent(
+            stats['rvr_on_time'], stats['rvr_total']
+        ),
+        'dgu_percent_on_time': percent(
+            stats['dgu_on_time'], stats['dgu_total']
+        ),
+    }

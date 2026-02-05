@@ -99,7 +99,7 @@
 .day-label:hover {
   transform: translateY(-1px);
   box-shadow: 0 0 var(--space-xs) var(--extra-color);
-  background-color: var(--background-color);
+  background-color: var(--add-background-color);
 }
 
 .day-checkbox input[type="checkbox"]:checked + .day-label {

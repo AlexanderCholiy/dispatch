@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, TypedDict
 
 from axes.helpers import get_client_ip_address
 from axes.models import AccessAttempt
@@ -16,7 +16,7 @@ from django.contrib.auth.views import (
 )
 from django.core.cache import cache
 from django.core.paginator import Paginator
-from django.db.models import Count, Q
+from django.db.models import Q
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -26,9 +26,19 @@ from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.timezone import now
 from django_ratelimit.decorators import ratelimit
 
+from api.constants import TOTAL_VALID_INCIDENTS_FILTER
 from core.loggers import django_logger
 from core.utils import timedelta_to_human_time
+from incidents.annotations import (
+    aggregate_sla_percentages,
+    aggregate_total_incident,
+    annotate_incident_categories,
+    annotate_sla_avr,
+    annotate_sla_dgu,
+    annotate_sla_rvr,
+)
 from incidents.models import Incident
+from stats.constants import STATS_INTERVAL_SECONDS
 
 from .constants import PAGE_SIZE_USERS_CHOICES, USERS_PER_PAGE
 from .forms import (
@@ -44,6 +54,12 @@ from .utils import (
     send_activation_email,
     send_confirm_email,
 )
+
+
+class SlaPercentStats(TypedDict):
+    avr: int | float
+    rvr: int | float
+    dgu: int | float
 
 
 @method_decorator(
@@ -462,50 +478,32 @@ def user_detail(request: HttpRequest, user_id: int):
         is_active=True
     )
 
-    incidents = Incident.objects.filter(responsible_user=user)
+    cache_key = f'user:{user.pk}:incident_stats'
+    stats = cache.get(cache_key)
 
-    last_week = now() - timedelta(days=7)
-
-    stats = incidents.aggregate(
-        open_incidents=Count('id', filter=Q(is_incident_finish=False)),
-        closed_incidents=Count('id', filter=Q(is_incident_finish=True)),
-        open_last_week=Count(
-            'id',
-            filter=Q(is_incident_finish=False, insert_date__gte=last_week),
-        ),
-        closed_last_week=Count(
-            'id',
-            filter=Q(is_incident_finish=True, update_date__gte=last_week),
-        ),
-    )
-
-    sla_percentage = 0
-
-    closed_recent = (
-        incidents.filter(
-            is_incident_finish=True,
-            insert_date__gte=last_week,
-        )
-        .select_related('incident_type')
-    )
-
-    total = stats['closed_last_week']
-
-    if total:
-        sla_ok_count = sum(
-            1
-            for i in closed_recent
-            if not i.is_sla_avr_expired and not i.is_sla_rvr_expired
+    if stats is None:
+        incidents = Incident.objects.filter(
+            Q(responsible_user=user) & TOTAL_VALID_INCIDENTS_FILTER
         )
 
-        sla_percentage = round(sla_ok_count / total * 100, 1)
-        if sla_percentage.is_integer():
-            sla_percentage = int(sla_percentage)
+        incidents = annotate_incident_categories(incidents)
+        incidents = annotate_sla_avr(incidents)
+        incidents = annotate_sla_rvr(incidents)
+        incidents = annotate_sla_dgu(incidents)
+
+        general_incidents_state = aggregate_total_incident(incidents)
+        sla_incidents_state = aggregate_sla_percentages(incidents)
+
+        stats = {
+            'general_incidents_state': general_incidents_state,
+            'sla_incidents_state': sla_incidents_state,
+        }
+
+        cache.set(cache_key, stats, STATS_INTERVAL_SECONDS)
 
     context = {
         'user': user,
-        **stats,
-        'sla_percentage': sla_percentage,
+        **stats
     }
 
     return render(request, 'users/user_detail.html', context)
