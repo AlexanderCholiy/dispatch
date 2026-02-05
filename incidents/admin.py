@@ -122,7 +122,7 @@ class IncidentAdmin(admin.ModelAdmin):
     ]
 
     def get_last_status(self, obj):
-        latest = obj.status_history.order_by('-insert_date').first()
+        latest = obj.status_history.order_by('-insert_date', '-id').first()
         return latest.status.name if latest else EMPTY_VALUE
     get_last_status.short_description = 'Статус'
 

@@ -129,7 +129,7 @@ def index(request: HttpRequest) -> HttpResponse:
 
     latest_status_subquery = IncidentStatusHistory.objects.filter(
         incident=OuterRef('pk')
-    ).order_by('-insert_date')
+    ).order_by('-insert_date', '-id')
 
     base_qs = Incident.objects.select_related(
         'incident_type',

@@ -390,7 +390,7 @@ class Command(BaseCommand):
 
         latest_status_subquery = IncidentStatusHistory.objects.filter(
             incident=OuterRef('pk')
-        ).order_by('-insert_date').values('insert_date')[:1]
+        ).order_by('-insert_date', '-id').values('insert_date')[:1]
 
         incidents_prefetched = Incident.objects.filter(
             id__in=database_ids
@@ -424,7 +424,7 @@ class Command(BaseCommand):
                 'status_history',
                 queryset=(
                     IncidentStatusHistory.objects.select_related('status')
-                    .order_by('-insert_date')
+                    .order_by('-insert_date', '-id')
                 ),
                 to_attr='prefetched_statuses'
             ),

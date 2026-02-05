@@ -865,7 +865,7 @@ class IncidentManager(IncidentValidator):
                         NOTIFIED_OP_END_STATUS_NAME,
                     ],
                 )
-                .select_related('status').order_by('-insert_date')
+                .select_related('status').order_by('-insert_date', '-id')
             )
         else:
             relevant_statuses: list[IncidentStatusHistory] = [
@@ -1179,7 +1179,7 @@ class IncidentManager(IncidentValidator):
                     'status_history',
                     queryset=IncidentStatusHistory.objects.select_related(
                         'status__status_type'
-                    ).order_by('-insert_date'),
+                    ).order_by('-insert_date', '-id'),
                     to_attr='prefetched_status_history'
                 ),
                 Prefetch(
