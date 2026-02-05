@@ -1,5 +1,5 @@
 import { getFirstDayOfPreviousMonth, formatDate, showMessage, validateDateRange } from './charts_utils.js';
-import { updateDailyChart, updateBarChart, updateSlaCharts } from './data/charts_updater.js';
+import { updateDailyChart, updateBarChart, updateSlaCharts, updateSubtypesChart } from './data/charts_updater.js';
 import { updateCopyButton, updateSlaCopyData } from './data/copy_chart_data.js';
 
 let ws = null;
@@ -26,7 +26,6 @@ export function startStatisticsWebSocket(charts) {
     let confirmedEnd = null;
 
     /* ---------- CONNECT ---------- */
-
     ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
@@ -37,9 +36,8 @@ export function startStatisticsWebSocket(charts) {
     ws.onmessage = (e) => {
         try {
             const data = JSON.parse(e.data);
-            if (data.error) {
-                return showMessage(data.error, 'error', messagesContainer, lastMsgRef);
-            }
+            if (data.error) return showMessage(data.error, 'error', messagesContainer, lastMsgRef);
+
             const apiData = data.period ?? data;
             updateCharts(apiData);
         } catch (err) {
@@ -58,8 +56,9 @@ export function startStatisticsWebSocket(charts) {
     }
 
     /* ---------- UPDATE CHARTS + COPY DATA ---------- */
-
     function updateCharts(apiData) {
+        const macroregionLabels = apiData.map(r => r.macroregion);
+
         // DAILY
         updateDailyChart(charts.daily, apiData);
 
@@ -67,13 +66,13 @@ export function startStatisticsWebSocket(charts) {
         updateBarChart(charts.closed, apiData, [
             'total_closed_incidents',
             'closed_incidents_with_power_issue'
-        ]);
+        ], macroregionLabels);
 
         // OPEN
         updateBarChart(charts.open, apiData, [
             'total_open_incidents',
             'open_incidents_with_power_issue'
-        ]);
+        ], macroregionLabels);
 
         // TYPES
         updateBarChart(
@@ -86,7 +85,8 @@ export function startStatisticsWebSocket(charts) {
                 'is_vols_issue_type',
                 'is_object_destruction_issue_type',
                 'is_object_access_issue_type'
-            ]
+            ],
+            macroregionLabels
         );
 
         // SLA DONUTS
@@ -94,20 +94,35 @@ export function startStatisticsWebSocket(charts) {
         updateSlaCharts(charts.sla.rvr, apiData, 'rvr');
         updateSlaCharts(charts.sla.dgu, apiData, 'dgu');
 
-        // ===== COPY DATA (ВАЖНО) =====
+        // SUBTYPES (Power Issues)
+        if (charts.subtypes?.power) {
+            updateSubtypesChart(
+                charts.subtypes.power.chart,
+                apiData,
+                'Аварии по питанию',
+                charts.subtypes.power.labels,
+                macroregionLabels
+            );
+            updateCopyButton(
+                'energy-subtypes-chart-card',
+                charts.subtypes.power.chart,
+                'Регион/Подкатегория аварии по питанию'
+            );
+        }
+
+        // ===== COPY DATA =====
         updateCopyButton('daily-chart-card', charts.daily, 'Дата/Регион');
         updateCopyButton('closed-chart-card', charts.closed, 'Регион/Количество инцидентов');
         updateCopyButton('open-chart-card', charts.open, 'Регион/Количество инцидентов');
         updateCopyButton('types-chart-card', charts.types, 'Регион/Тип аварии');
 
-        // SLA — таблицы из API
+        // SLA таблицы
         updateSlaCopyData('avr-sla-grid', apiData, 'avr');
         updateSlaCopyData('rvr-sla-grid', apiData, 'rvr');
         updateSlaCopyData('dgu-sla-grid', apiData, 'dgu');
     }
 
     /* ---------- APPLY FILTER ---------- */
-
     applyBtn.addEventListener('click', () => {
         const start = startInput.value;
         const end = endInput.value || null;
@@ -122,7 +137,6 @@ export function startStatisticsWebSocket(charts) {
     });
 
     /* ---------- RESET ---------- */
-
     resetBtn.addEventListener('click', () => {
         startInput.value = defaultStart;
         endInput.value = defaultEnd;
