@@ -13,6 +13,12 @@ export function createAllIncidentsChart(ctx, initialData, label, horizontal = fa
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
+                datalabels: {
+                    color: colors.bg,
+                    font: { size: fonts.sm, weight: '550' },
+                    rotation: horizontal ? 0 : 270,
+                    formatter: (value) => value === 0 ? '' : value, // скрываем нули
+                },
                 title: {
                     display: false,
                     text: label,
@@ -77,7 +83,8 @@ export function createAllIncidentsChart(ctx, initialData, label, horizontal = fa
                     stacked: horizontal
                 }
             }
-        }
+        },
+        plugins: [ChartDataLabels]
     });
 }
 
@@ -91,20 +98,28 @@ export function updateAllIncidentsChartColors(chart, datasetColors) {
         ds.borderColor = datasetColors[idx];
     });
 
+    // TOOLTIP
     chart.options.plugins.tooltip.backgroundColor = colors.add_bg;
     chart.options.plugins.tooltip.titleColor = colors.color;
     chart.options.plugins.tooltip.bodyColor = colors.add_color;
     chart.options.plugins.tooltip.borderColor = colors.extra;
 
+    // TITLE & LEGEND
     chart.options.plugins.title.color = colors.color;
     chart.options.plugins.legend.labels.color = colors.add_color;
+    
+    // SCALES
     chart.options.scales.x.title.color = colors.add_color;
     chart.options.scales.y.title.color = colors.add_color;
     chart.options.scales.x.ticks.color = colors.add_color;
     chart.options.scales.y.ticks.color = colors.add_color;
-
     chart.options.scales.x.grid.color = colors.extra;
     chart.options.scales.y.grid.color = colors.extra;
+
+    // DATALABELS
+    if (chart.options.plugins.datalabels) {
+        chart.options.plugins.datalabels.color = colors.bg;
+    }
 
     chart.update();
 }

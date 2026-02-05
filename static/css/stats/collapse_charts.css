@@ -25,7 +25,9 @@
 }
 
 .stats:has(#closed-chart-card.collapsed):has(#open-chart-card:not(.collapsed)) #open-chart-card,
-.stats:has(#open-chart-card.collapsed):has(#closed-chart-card:not(.collapsed)) #closed-chart-card {
+.stats:has(#open-chart-card.collapsed):has(#closed-chart-card:not(.collapsed)) #closed-chart-card,
+.stats:has(#types-chart-card.collapsed):has(#energy-subtypes-chart-card:not(.collapsed)) #energy-subtypes-chart-card,
+.stats:has(#energy-subtypes-chart-card.collapsed):has(#types-chart-card:not(.collapsed)) #types-chart-card {
     grid-column: 1 / -1;
 }
 

@@ -45,6 +45,26 @@ export function updateBarChart(chart, apiData, fields) {
     chart.update('none');
 }
 
+export function updateSubtypesChart(chart, apiData, categoryName, subtypeLabels, macroregionLabels) {
+    const datasets = chart.data.datasets;
+
+    // Обнуляем данные
+    datasets.forEach(ds => ds.data = []);
+
+    // Формируем данные по макрорегионам из API
+    macroregionLabels.forEach(regionLabel => {
+        const regionData = apiData.find(r => r.macroregion === regionLabel);
+        const stats = regionData?.incident_subtype_stats?.[categoryName] || {};
+
+        subtypeLabels.forEach((label, idx) => {
+            datasets[idx].data.push(stats[label] ?? 0);
+        });
+    });
+
+    chart.data.labels = macroregionLabels;
+    chart.update();
+}
+
 /* ---------- SLA ---------- */
 export function updateSlaCharts(charts, apiData, type) {
     if (!charts?.length) return;

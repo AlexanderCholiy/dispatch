@@ -4,7 +4,7 @@ import { createSlaDonutChart, updateSlaDonutChartColors } from './charts/sla_don
 import { getDatesSincePreviousMonth } from './charts_utils.js';
 import { getChartColors, observeThemeChange } from './theme_colors.js';
 import { updateCopyButton, updateSlaCopyData } from './data/copy_chart_data.js';
-// import { startStatisticsPolling } from './dashboard_api_updater.js';
+import { startStatisticsPolling } from './dashboard_api_updater.js';
 import { startStatisticsWebSocket } from './dashboard_ws_updater.js';
 
 if (window.Chart && window.ChartZoom) {
@@ -72,6 +72,37 @@ document.addEventListener('DOMContentLoaded', () => {
     window.dashboardCharts.types = typesChart;
     updateCopyButton('types-chart-card', typesChart, 'Регион/Тип аварии');
 
+    const powerIssueSubtypesDatasets = [
+        { label: 'ЗО НБ. ВЛ до 1 кВ', color: colors.blue },
+        { label: 'ЗО НБ. ВЛ свыше 1 кВ', color: colors.cyan },
+        { label: 'ЗО НБ. КЛ до 1 кВ', color: colors.green },
+        { label: 'ЗО НБ. КЛ свыше 1 кВ', color: colors.yellow },
+        { label: 'ЗО НБ. КТП', color: colors.red },
+        { label: 'ЗО НБ. ПУ/АИИСКУЭ', color: colors.magenta },
+        { label: 'ЗО НБ. РЩ/РУ', color: colors.brown },
+        { label: 'ЗО Оператора. Линия', color: colors.gray },
+        { label: 'ЗО Оператора. Оборудование ЭУ', color: colors.pink },
+        { label: 'ЗО Сетевой организации. Аварийные работы', color: colors.orange },
+        { label: 'ЗО Сетевой организации. Плановые работы', color: colors.purple },
+        { label: 'Прочее (форс-мажор)', color: colors.teal },
+        { label: 'Без подкатегории', color: colors.extra },
+    ];
+
+    const powerIssueSubtypesChart = createAllIncidentsChart(
+        document
+            .getElementById('energy-subtypes-incidents-chart').getContext('2d'),
+        { labels: MACROREGION_LABELS, datasets: powerIssueSubtypesDatasets.map(d => ({ label: d.label, data: [], backgroundColor: d.color,})), },
+        'Аварии по питанию (подкатегории)',
+        true,
+    );
+    window.dashboardCharts.subtypes = {
+        power: {
+            chart: powerIssueSubtypesChart,
+            labels: powerIssueSubtypesDatasets.map(d => d.label),
+        },
+    };
+    updateCopyButton('energy-subtypes-chart-card', powerIssueSubtypesChart, 'Регион/Подкатегория аварии по питанию');
+
     const initSlaSkeleton = (containerId, bar_title) => {
         const container = document.getElementById(containerId);
         const charts = [];
@@ -131,9 +162,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Для теста:
-    // startStatisticsPolling(window.dashboardCharts);
+    startStatisticsPolling(window.dashboardCharts);
 
-    startStatisticsWebSocket(window.dashboardCharts);
+    // startStatisticsWebSocket(window.dashboardCharts);
 
     observeThemeChange(() => {
         const colors = getChartColors();
@@ -141,6 +172,14 @@ document.addEventListener('DOMContentLoaded', () => {
         updateAllIncidentsChartColors(window.dashboardCharts.closed, [colors.green, colors.gray]);
         updateAllIncidentsChartColors(window.dashboardCharts.open, [colors.blue, colors.gray]);
         updateAllIncidentsChartColors(window.dashboardCharts.types, [colors.blue, colors.red, colors.green, colors.yellow, colors.gray, colors.cyan]);
+        updateAllIncidentsChartColors(
+            window.dashboardCharts.subtypes.power.chart,
+            [
+                colors.blue, colors.cyan, colors.green, colors.yellow, colors.red,
+                colors.magenta, colors.brown, colors.gray, colors.pink, colors.orange,
+                colors.purple, colors.teal, colors.extra
+            ]
+        );
         updateSlaDonutChartColors(window.dashboardCharts.sla.avr);
         updateSlaDonutChartColors(window.dashboardCharts.sla.rvr);
         updateSlaDonutChartColors(window.dashboardCharts.sla.dgu);

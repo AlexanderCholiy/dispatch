@@ -110,6 +110,17 @@
       </div>
       <canvas id="types-incidents-chart"></canvas>
     </div>
+
+    <div class="chart-card" id="energy-subtypes-chart-card">
+      <div class="chart-utils">
+        <button class="btn toggle-chart-btn">Распределение аварий по питанию</button>
+        <button class="btn btn-secondary copy-chart-data-btn tooltip copy-text" data-title="Скопировать данные" data-text="">
+          <i class="bx bx-copy"></i>
+        </button>
+      </div>
+      <canvas id="energy-subtypes-incidents-chart"></canvas>
+    </div>
+
   </div>
 </div>
 {% endblock %}
@@ -117,6 +128,7 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script src="{% static 'js/stats/collaps_charts.js' %}"></script>
 <script type="module" src="{% static 'js/stats/init_skeleton_dashboard.js' %}"></script>
 {% endblock %}

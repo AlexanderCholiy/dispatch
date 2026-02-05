@@ -16,9 +16,9 @@ export function createSlaDonutChart(ctx, {
     const chart = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['Нет данных'],
+            labels: hasData ? data.map((_, i) => `Сегмент ${i+1}`) : ['Нет данных'],
             datasets: [{
-                data: [1],
+                data: hasData ? data : [1],
                 backgroundColor: hasData ? datasetColors : [colors.extra],
                 borderWidth: single ? 0 : 1,
             }]
@@ -26,8 +26,22 @@ export function createSlaDonutChart(ctx, {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            cutout: '80%',
+            cutout: '65%',
             plugins: {
+                datalabels: {
+                    color: colors.bg,
+                    font: { size: fonts.sm, weight: '550' },
+                    formatter: (value, context) => {
+                        const chart = context.chart;
+                        const dataset = context.dataset;
+                        const nonZeroCount = dataset.data.filter(v => v > 0).length;
+
+                        // Показываем только если есть данные, значение > 0 и сегментов больше 1
+                        return chart.$hasData && value > 0 && nonZeroCount > 1 ? value : '';
+                    },
+                    anchor: 'center',
+                    align: 'center',
+                },
                 title: {
                     display: true,
                     text: title,
@@ -55,7 +69,7 @@ export function createSlaDonutChart(ctx, {
                 }
             }
         },
-        plugins: [centerTextPlugin()]
+        plugins: [centerTextPlugin(), ChartDataLabels]
     });
 
     chart.$hasData = hasData;
@@ -97,6 +111,11 @@ export function updateSlaDonutChartColors(charts) {
 
         // Легенда
         chart.options.plugins.legend.labels.color = colors.add_color;
+
+        // Datalabels
+        if (chart.options.plugins.datalabels) {
+            chart.options.plugins.datalabels.color = colors.bg;
+        }
 
         chart.update();
     });

@@ -30,13 +30,11 @@
     border-color: transparent;
 }
 
-.chart-card:first-of-type,
-.chart-card:last-of-type {
+.chart-card:first-of-type {
     grid-column: 1 / -1;
 }
 
-.chart-card:first-of-type canvas,
-.chart-card:last-of-type canvas {
+.chart-card:first-of-type canvas {
     max-height: 580px;
 }
 
