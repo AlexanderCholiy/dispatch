@@ -1451,7 +1451,9 @@ def check_yt_incident_data(
                 incident.incident_type.name
             ) if incident.incident_type else None,
             subtype_of_incident_field=subtype_of_incident_field,
-            subtype_of_incident=None,
+            subtype_of_incident=(
+                subtype_of_incident if is_valid_subtype_of_incident else None
+            ),
             category_field=category_field,
             category=category if is_valid_category else [AVR_CATEGORY],
             email_datetime=incident.incident_date,
