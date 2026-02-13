@@ -751,11 +751,15 @@ class IncidentManager(IncidentValidator):
             )
 
             if old_incidents.exists():
+                incident_data = list(old_incidents.values_list('id', 'code'))
                 updated = old_incidents.update(disable_thread_auto_link=True)
                 if updated > 0:
+                    log_message = ', '.join(
+                        [f'[ID: {idx}, Code: {c}]' for idx, c in incident_data]
+                    )
                     incident_logger.info(
                         f'Выставлен disable_thread_auto_link=True для '
-                        f'инцидентов: {old_incidents}'
+                        f'инцидентов: {log_message}'
                     )
 
         # Обновляем только письма без инцидента:
