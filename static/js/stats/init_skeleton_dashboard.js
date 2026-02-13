@@ -85,6 +85,10 @@ document.addEventListener('DOMContentLoaded', () => {
         { label: 'ЗО Сетевой организации. Аварийные работы', color: colors.orange },
         { label: 'ЗО Сетевой организации. Плановые работы', color: colors.purple },
         { label: 'Прочее (форс-мажор)', color: colors.teal },
+        { label: 'Отключение за неоплату', color: colors.lime },
+        { label: 'Самовосстановление питания', color: colors.amber },
+        { label: 'ШЭП', color: colors.slate },
+        { label: 'Отсутствие схемы', color: colors.crimson },
         { label: 'Без подкатегории', color: colors.extra },
     ];
 
@@ -177,7 +181,8 @@ document.addEventListener('DOMContentLoaded', () => {
             [
                 colors.blue, colors.cyan, colors.green, colors.yellow, colors.red,
                 colors.magenta, colors.brown, colors.gray, colors.pink, colors.orange,
-                colors.purple, colors.teal, colors.extra
+                colors.purple, colors.teal, colors.lime, colors.amber, colors.slate, colors.crimson,
+                colors.extra
             ]
         );
         updateSlaDonutChartColors(window.dashboardCharts.sla.avr);

@@ -33,6 +33,11 @@ export function getChartColors() {
         purple: getCssVar('purple-color', '#6f5bd7'),
         teal: getCssVar('teal-color', '#2f9e9e'),
 
+        lime: getCssVar('lime-color', '#84cc16'),
+        amber: getCssVar('amber-color', '#f59e0b'),
+        slate: getCssVar('slate-color', '#64748b'),
+        crimson: getCssVar('crimson-color', '#dc143c'),
+
         color: getCssVar('color', '#1b1b1f'),
         add_color: getCssVar('add-color', '#2e2e33'),
         extra: getCssVar('extra-color', 'rgba(27, 27, 31, 0.2)'),

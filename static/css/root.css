@@ -23,6 +23,11 @@
     --indigo-color: #3f51b5;     /* фокус / выделение */
     --brown-color: #8d6e63;      /* архив / устаревшее */
 
+    --lime-color: #84cc16;        /* успех / эко / старт */
+    --amber-color: #f59e0b;       /* предупреждение / золото */
+    --slate-color: #64748b;       /* системный / второстепенный */
+    --crimson-color: #dc143c;     /* критический / акцентный */
+
     --priority-color: var(--blue-color);
 
     --background-color: rgb(244, 245, 247);        /* лёгкая нотка */
@@ -73,6 +78,11 @@ html.dark {
     --pink-color: #f178b6;
     --indigo-color: #7986cb;
     --brown-color: #a1887f;
+
+    --lime-color: #a3e635;
+    --amber-color: #fbbf24;
+    --slate-color: #94a3b8;
+    --crimson-color: #ff4d6d;
 
     --priority-color: var(--blue-color);
 
