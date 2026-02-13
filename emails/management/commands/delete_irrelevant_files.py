@@ -56,7 +56,8 @@ class Command(BaseCommand):
                     )
                     | Q(
                         email_msg__email_incident__is_incident_finish=True,
-                        email_msg__email_incident__update_date__lt=(
+                        email_msg__email_incident__incident_finish_date__isnull=False,  # noqa: E501
+                        email_msg__email_incident__incident_finish_date__lt=(
                             threshold_for_incident
                         ),
                     )
