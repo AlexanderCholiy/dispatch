@@ -1,6 +1,23 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block title %}
+  {% if obj.number %}
+    {% if is_claim %}
+      Заявка
+    {% else %}
+      Обращение
+    {% endif %}
+    {{ obj.number }}
+  {% else %}
+    {% if is_claim %}
+      Новая заявка
+    {% else %}
+      Новое обращение
+    {% endif %}
+  {% endif %}
+{% endblock %}
+
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/energy/incudes/energy_deatail.css' %}">
 <link rel="stylesheet" href="{% static 'css/energy/incudes/energy_source.css' %}">
