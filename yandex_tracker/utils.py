@@ -700,6 +700,7 @@ class YandexTrackerManager:
                 json=payload,
                 sub_func_name=inspect.currentframe().f_code.co_name,
             )
+
         return self._make_request(
             HTTPMethod.PATCH,
             url,
@@ -853,6 +854,8 @@ class YandexTrackerManager:
         updated_email_ids.sort()
         updated_email_ids_str = ', '.join(str(pk) for pk in updated_email_ids)
 
+        # Не забываем, что вместе с сообщением может прийти уточнение по
+        # шифру опоры и номеру БС:
         payload = {
             self.emails_ids_global_field_id: updated_email_ids_str,
             self.is_new_msg_global_field_id: IsNewMsg.yes,
@@ -882,7 +885,8 @@ class YandexTrackerManager:
 
         pole_number = incident.pole.pole if incident.pole else None
         base_station_number = (
-            incident.base_station.bs_name) if incident.base_station else None
+            incident.base_station.bs_name if incident.base_station else None
+        )
 
         username = (
             incident.responsible_user.username
@@ -964,6 +968,39 @@ class YandexTrackerManager:
 
             auto_email = AutoEmailsFromYT(self, email_parser, issue, incident)
             auto_email.auto_reply_incident_is_closed(email_incident)
+
+        # Если по письму пришло уточнение по шифру опоры или номеру БС,
+        # добавляем в трекер:
+        db_pole_number = incident.pole.pole if incident.pole else None
+        db_base_station_number = (
+            incident.base_station.bs_name if incident.base_station else None
+        )
+        yt_pole_number = issue.get(self.pole_number_global_field_id)
+        yt_base_station_number = issue.get(self.base_station_global_field_id)
+
+        if (
+            (not yt_pole_number and db_pole_number)
+            or (not yt_base_station_number and db_base_station_number)
+        ):
+            pole_number = yt_pole_number or db_pole_number
+            base_station_number = (
+                yt_base_station_number or db_base_station_number
+            )
+
+            issue_key = issue['key']
+
+            payload = {
+                self.pole_number_global_field_id: pole_number,
+                self.base_station_global_field_id: base_station_number,
+            }
+
+            url = f'{self.create_issue_url}{issue_key}'
+            self._make_request(
+                HTTPMethod.PATCH,
+                url,
+                json=payload,
+                sub_func_name=inspect.currentframe().f_code.co_name,
+            )
 
     def add_incident_to_yandex_tracker(
         self,
