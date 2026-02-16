@@ -85,30 +85,33 @@ class EmailValidator:
 
         return ' '.join(decoded.replace('\r', '').split('\n'))
 
-    def prepare_email_to(self, to_recipients: list[str]) -> list[str]:
+    def prepare_email_to(
+        self, to_recipients: list[str], email_id: Optional[str] = None
+    ) -> list[str]:
         """Нормализуем список e-mail адресов из заголовков письма."""
         decoded = [self._decode_mime_header(addr) for addr in to_recipients]
         parsed = getaddresses(decoded)
+
         emails: list[str] = []
+        invalid_emails: list[str] = []
 
         for name, addr in parsed:
-            addr = addr.strip()
+            addr = addr.strip().strip("'").strip('"')
 
-            if (
-                addr
-                and addr not in emails
-                and EMAIL_RE.match(addr)
-                and len(addr) <= MAX_EMAIL_LEN
-            ):
+            if not addr or addr in emails:
+                continue
+
+            if EMAIL_RE.match(addr) and len(addr) <= MAX_EMAIL_LEN:
                 emails.append(addr)
-            elif (
-                addr
-                and addr not in emails
-                and not EMAIL_RE.match(addr)
-            ):
-                email_parser_logger.warning(
-                    'Некорректный email: name=%r addr=%r', name, addr
-                )
+            else:
+                full_str = f'{name} email: {addr}' if name else addr
+                invalid_emails.append(full_str)
+
+        if invalid_emails:
+            email_parser_logger.warning(
+                'Обнаружены некорректные email адреса: msg_id=%r, items=%s',
+                email_id, ', '.join(invalid_emails)
+            )
 
         return emails
 

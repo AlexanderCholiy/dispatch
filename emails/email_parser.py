@@ -494,12 +494,18 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                     ) if msg.get('In-Reply-To') is not None else None
 
                     email_to: list[str] = (
-                        self.prepare_email_to(msg.get_all('To', []))
+                        self.prepare_email_to(
+                            msg.get_all('To', []), email_msg_id
+                        )
                     )
 
                     email_to_cc: list[str] = (
-                        self.prepare_email_to(msg.get_all('Cc', []))
-                        + self.prepare_email_to(msg.get_all('Bcc', []))
+                        self.prepare_email_to(
+                            msg.get_all('Cc', []), email_msg_id
+                        )
+                        + self.prepare_email_to(
+                            msg.get_all('Bcc', []), email_msg_id
+                        )
                     )
 
                     references: Optional[str] = msg.get('References')
