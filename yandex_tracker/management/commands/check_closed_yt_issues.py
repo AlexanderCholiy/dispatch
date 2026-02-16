@@ -232,6 +232,9 @@ class Command(BaseCommand):
                 yt_manager.create_incident_from_issue(issue, True)
                 continue
 
+            if not incident.is_yt_tracker_controlled:
+                continue
+
             # Проверка и обновление кода:
             if incident.code != issue_key:
                 incident.code = issue_key

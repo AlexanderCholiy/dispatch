@@ -184,8 +184,15 @@ class Incident(models.Model):
     disable_thread_auto_link = models.BooleanField(
         default=False,
         verbose_name='Запрет авто-привязки по email цепочке',
-        db_index=True,
         help_text='Если True, инцидент исключается из авто-матчинга по thread'
+    )
+    is_yt_tracker_controlled = models.BooleanField(
+        default=True,
+        verbose_name='Использовать web форму YandexTracker',
+        help_text=(
+            'Если True, управление этим инцидентом происходит из интерфейса '
+            'YandexTracker'
+        )
     )
 
     class Meta:

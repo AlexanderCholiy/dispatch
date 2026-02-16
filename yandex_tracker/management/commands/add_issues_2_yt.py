@@ -63,7 +63,9 @@ class Command(BaseCommand):
     def add_issues_2_yt(self, yt_manager: YandexTrackerManager):
         emails = (
             YandexTrackerManager.emails_for_yandex_tracker()
-            .select_related('email_incident')
+            .select_related('email_incident').filter(
+                email_incident__is_yt_tracker_controlled=True
+            )
         )
 
         total = len(emails)

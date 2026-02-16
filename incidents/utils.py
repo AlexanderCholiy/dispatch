@@ -222,7 +222,7 @@ class IncidentManager(IncidentValidator):
     def choice_dispatch_for_incident(
         yt_manager: Optional[YandexTrackerManager],
         max_incident_num_per_user: Optional[int] = None,
-        hour_back: int = 3,
+        hour_back: int = 6,
     ) -> Optional[User]:
         """
         Возвращает самого свободного диспетчера, который сейчас работает.

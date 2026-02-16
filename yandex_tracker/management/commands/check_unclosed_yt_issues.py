@@ -471,6 +471,9 @@ class Command(BaseCommand):
                         )
                     continue
 
+                if not incident.is_yt_tracker_controlled:
+                    continue
+
                 # Проверка, что в Трекере нет дубликатов по ID инцидента:
                 if database_id in self._processed_issues:
                     duplicate_issue_key = self._processed_issues[database_id]
