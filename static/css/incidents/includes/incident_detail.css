@@ -58,14 +58,6 @@
   font-size: var(--font-sm);
 }
 
-.incident-meta p {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: var(--space-sm);
-  margin: var(--space-xs) 0;
-  line-height: 1.4;
-}
-
 .incident-sla p {
   display: flex;
   justify-content: space-between;
@@ -75,14 +67,12 @@
   line-height: 1.4;
 }
 
-.incident-sla strong,
-.incident-meta strong {
+.incident-sla strong {
   white-space: nowrap;
   color: var(--color);
 }
 
-.incident-sla span,
-.incident-meta span {
+.incident-sla span {
   color: var(--add-color);
 }
 
@@ -119,8 +109,7 @@
   overflow-x: auto;
 }
 
-.incident-sla p,
-.incident-meta p {
+.incident-sla p {
   border-bottom: 1px dashed var(--extra-color);
 }
 

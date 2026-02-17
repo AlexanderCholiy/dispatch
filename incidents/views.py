@@ -39,7 +39,7 @@ from .constants import (
     MAX_INCIDENTS_INFO_CACHE_SEC,
     PAGE_SIZE_INCIDENTS_CHOICES,
 )
-from .forms import ConfirmMoveEmailsForm, MoveEmailsForm
+from .forms import ConfirmMoveEmailsForm, MoveEmailsForm, IncidentForm
 from .models import (
     Incident,
     IncidentCategory,
@@ -322,6 +322,8 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
     allowed_roles = [Roles.DISPATCH]
     can_manage = user.role in allowed_roles or user.is_superuser
 
+    incident_form = IncidentForm(instance=incident, can_edit=can_manage)
+
     if request.method == 'POST':
         if not can_manage:
             roles = [f'"{role.label}"' for role in allowed_roles]
@@ -330,6 +332,21 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
             )
             return redirect(
                 'incidents:incident_detail', incident_id=incident.id
+            )
+
+    if request.method == 'POST' and 'incident_submit' in request.POST:
+        incident_form = IncidentForm(
+            data=request.POST, instance=incident, can_edit=can_manage
+        )
+        if incident_form.is_valid():
+            incident_form.save()
+            messages.success(request, 'Данные обновлены')
+            return redirect(
+                'incidents:incident_detail', incident_id=incident.id
+            )
+        else:
+            messages.warning(
+                request, 'Пожалуйста, исправьте ошибки в форме'
             )
 
     sort_order = (
@@ -362,7 +379,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
 
     confirm_stage = False
 
-    if request.method == 'POST':
+    if request.method == 'POST' and 'move_emails_submit' in request.POST:
         move_email_form = MoveEmailsForm(
             data=request.POST,
             email_tree=email_three,
@@ -433,6 +450,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
                 'selected_email_ids': email_ids_groups,
                 'confirm_stage': True,
                 'can_manage': can_manage,
+                'incident_form': incident_form,
             }
             return render(request, template_name, context)
 
@@ -452,6 +470,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         'selected_email_ids': selected_email_ids,
         'confirm_stage': confirm_stage,
         'can_manage': can_manage,
+        'incident_form': incident_form,
     }
 
     return render(request, template_name, context)

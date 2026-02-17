@@ -16,10 +16,8 @@
 {% block content %}
 <div class="container-sm">
   <div class="card">
-      {% include "incidents/includes/incident_header.html" with incident=incident %}
+    {% include "incidents/includes/incident_meta.html" with incident=incident %}
     <div class="card-body">
-      {% include "incidents/includes/incident_meta.html" with incident=incident %}
-
       {% if confirm_stage and email_three and can_manage %}
         <form id="confirm-move-emails-form" method="post" action="{% url 'incidents:confirm_move_emails' %}">
           {% csrf_token %}
@@ -72,7 +70,7 @@
                       pattern="[A-Za-z0-9-]+"
                       data-title="Целевой код инцидента для переноса писем"
                       value="{{ move_email_form.target_incident_code.value|default_if_none:'' }}">
-              <button id="move-emails-btn" class="btn btn-warning" type="submit" disabled>Переместить письма</button>
+              <button id="move-emails-btn" name="move_emails_submit" class="btn btn-warning" type="submit" disabled>Переместить письма</button>
             </div>
           </div>
         </form>

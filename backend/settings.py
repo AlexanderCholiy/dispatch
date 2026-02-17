@@ -70,6 +70,8 @@ INSTALLED_APPS = [
     'django_filters',
     'djoser',
     'drf_yasg',
+    'dal',
+    'dal_select2',
     'axes',  # после всех приложений
     'django_cleanup.apps.CleanupConfig',  # после всех приложений
     'django_celery_results',

@@ -1,124 +1,92 @@
-<div class="incident-meta">
-  <p>
-    <strong>Опора:</strong>
-    {% if incident.pole %}
-      <span class="copy-text" data-text="{{ incident.pole }}">{{ incident.pole.pole }} ({{ incident.pole.region.region_ru|default:incident.pole.region.region_en }})</span>
-    {% else %}
-      —  
-    {% endif %}
-  </p>
+{% load static %}
 
-  <p>
-    <strong>Базовая станция:</strong>
-    {% if incident.base_station %}
-      <span class="copy-text" data-text="{{ incident.base_station.bs_name }}">{{ incident.base_station.bs_name }}</span>
-    {% else %}
-      —
-    {% endif %}
-  </p>
+{% load custom_filters %}
 
-  <p>
-    <strong>Ответственный:</strong>
-    {% if incident.responsible_user %}
-      <span>{{ incident.responsible_user.get_full_name|default:incident.responsible_user.email }}</span>
-    {% else %}
-      —
-    {% endif %}
-  </p>
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/incidents/includes/incident_forms.css' %}">
+{% endblock %}
 
-  <p>
-    <strong>Тип:</strong>
-    {% if incident.incident_type %}
-      <span>{{ incident.incident_type }}</span>
-    {% else %}
-      —
-    {% endif %}
-  </p>
+<!-- Подключение обязательно до инициализации формы -->
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+{% endblock %}
 
-  <p>
-    <strong>Подтип:</strong>
-    {% if incident.incident_subtype %}
-      <span>{{ incident.incident_subtype }}</span>
-    {% else %}
-      —
-    {% endif %}
-  </p>
+<form method="post">
+  {% csrf_token %}
+  {{ incident_form.media }}
 
-  <p>
-    <strong>Категории:</strong>
-    {% if incident.categories.all %}
-      <span>{{ incident.categories.all|join:', ' }}</span>
-    {% else %}
-      —
-    {% endif %}
-  </p>
-
-  <p>
-    <strong>Подрядчик по АВР:</strong>
-    {% if incident.avr_contractor %}
-      <span>{{ incident.avr_contractor }}</span>
-    {% else %}
-      —
-    {% endif %}
-  </p>
-</div>
-
-<div class="incident-sla">
-  <p class="sla-row">
-    <span class="sla-left">
-      <strong>SLA АВР: </strong>
-      {% if incident.sla_avr_deadline %}
-        {{ incident.avr_start_date|date:"d.m.Y H:i" }} —
-        {{ incident.sla_avr_deadline|date:"d.m.Y H:i" }}
-      {% else %}
-        —
-      {% endif %}
-    </span>
-
-    {% if incident.sla_avr_deadline %}
-      <span class="status-tag {{ incident.sla_avr_status_val.value|default:'unknown' }}">
-        {{ incident.sla_avr_status_val.label }}
-      </span>
-    {% endif %}
-  </p>
-
-  <p class="sla-row">
-    <span class="sla-left">
-      <strong>SLA РВР: </strong>
-      {% if incident.sla_rvr_deadline %}
-        {{ incident.rvr_start_date|date:"d.m.Y H:i" }} —
-        {{ incident.sla_rvr_deadline|date:"d.m.Y H:i" }}
-      {% else %}
-        —
-      {% endif %}
-    </span>
-
-    {% if incident.sla_rvr_deadline %}
-      <span class="status-tag {{ incident.sla_rvr_status.value|default:'unknown' }}">
-        {{ incident.sla_rvr_status_val.label }}
-      </span>
-    {% endif %}
-  </p>
-
-  <p class="sla-row">
-    <span class="sla-left">
-      <strong>ВРД ДГУ: </strong>
-      {% if incident.dgu_duration %}
-        {{ incident.dgu_start_date|date:"d.m.Y H:i" }} —
-        {% if incident.dgu_end_date %}
-          {{ incident.dgu_end_date|date:"d.m.Y H:i" }}
+  <div class="card-header">
+    <div class="card-header-top">
+      <p class="incident-title">
+        {% if incident.first_email_subject %}
+          <strong class="incident-code copy-text" data-text="{{ incident.code|default:incident.id }}">{{ incident }}:</strong> {{ incident.first_email_subject|default:"—" }}
         {% else %}
-          {% now "d.m.Y H:i" %}
+          <strong class="incident-code copy-text" data-text="{{ incident.code|default:incident.id }}">{{ incident }}</strong>
         {% endif %}
-      {% else %}
-        —
-      {% endif %}
-    </span>
+      </p>
 
-    {% if incident.dgu_duration %}
-      <span class="status-tag {{ incident.sla_dgu_status.value|default:'unknown' }}">
-        {{ incident.dgu_duration_val_label }}
-      </span>
+      <div class="status-wrapper">
+        <select name="{{ incident_form.new_status.name }}">
+          {% for value, label in incident_form.new_status.field.choices %}
+            {% if value %}
+              <option value="{{ value }}" 
+                      {% if form.new_status.value == value %}selected{% endif %}
+                      class="{{ incident_form.status_classes|dict_get:value }}">
+                {{ label }}
+              </option>
+            {% endif %}
+          {% endfor %}
+        </select>
+
+        {% for error in form.new_status.errors %}
+          <div class="form-error">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+    </div>
+  
+    <button type="submit" name="incident_submit" class="btn btn-primary submit-incident-button">Сохранить</button>
+    
+    <p class="incident-date">
+      {% if incident.incident_finish_date %}
+      зарегистрировано {{ incident.incident_date|date:"d.m.Y H:i" }},
+      закрыто {{ incident.incident_finish_date|date:"d.m.Y H:i" }},
+      обновлено {{ incident.update_date|date:"d.m.Y H:i" }}
+      {% else %}
+      зарегистрировано {{ incident.incident_date|date:"d.m.Y H:i" }},
+      обновлено {{ incident.update_date|date:"d.m.Y H:i" }}
+      {% endif %}
+    </p>
+  </div>
+
+  <div class="incident-form-section">
+    {% if incident_form.non_field_errors %}
+      <div class="form-errors">
+        {% for error in incident_form.non_field_errors %}
+          <div class="form-error">{{ error }}</div>
+        {% endfor %}
+      </div>
     {% endif %}
-  </p>
-</div>
+
+    {% for field in incident_form %}
+      {% if field.name != "new_status" %}
+        <div class="form-group {% if field.errors %}has-error{% endif %}">
+          
+          <label for="{{ field.id_for_label }}">
+            {{ field.label }}
+          </label>
+
+          <div class="tooltip" data-title="{{ field.help_text }}">
+            {{ field }}
+          </div>
+
+          {% for error in field.errors %}
+            <div class="form-error">{{ error }}</div>
+          {% endfor %}
+
+        </div>
+      {% endif %}
+    {% endfor %}
+
+  </div>
+</form>

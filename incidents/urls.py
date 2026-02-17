@@ -15,5 +15,5 @@ urlpatterns = [
         'incidents/move-emails/',
         views.confirm_move_emails,
         name='confirm_move_emails'
-    )
+    ),
 ]
