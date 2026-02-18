@@ -19,6 +19,7 @@ from core.loggers import incident_logger
 from emails.models import EmailFolder, EmailMessage, EmailReference
 from users.models import Roles, User
 from yandex_tracker.utils import YandexTrackerManager
+from ts.models import Pole, ContractorEmail
 
 from .constants import (
     AVR_CATEGORY,
@@ -1196,6 +1197,12 @@ class IncidentManager(IncidentValidator):
         """
         Запрос для подготовки информации об инциденте со всей перепиской.
         """
+        avr_emails_prefetch = Prefetch(
+            'avr_emails',
+            queryset=Pole.avr_emails.rel.model.objects.order_by('email'),
+            to_attr='prefetched_avr_emails'
+        )
+
         incident = (
             Incident.objects
             .select_related(
@@ -1236,6 +1243,11 @@ class IncidentManager(IncidentValidator):
                         'email_msg_cc',
                     ).order_by('-email_date', 'is_first_email'),
                     to_attr='all_incident_emails'
+                ),
+                Prefetch(
+                    'pole__avr_emails',
+                    queryset=ContractorEmail.objects.order_by('email'),
+                    to_attr='prefetched_avr_emails'
                 ),
             )
             .annotate(

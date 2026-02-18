@@ -2,74 +2,118 @@
 
 {% load custom_filters %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/incidents/includes/incident_forms.css' %}">
-{% endblock %}
 
-<!-- jQuery должен подключаться до media формы -->
-{% block extra_js %}
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-  {{ incident_form.media }}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/incidents/includes/incident_header.css' %}">
+<link rel="stylesheet" href="{% static 'css/incidents/includes/select_forms.css' %}">
+<link rel="stylesheet" href="{% static 'css/incidents/includes/autoselect_forms.css' %}">
+<link rel="stylesheet" href="{% static 'css/incidents/includes/incident_forms.css' %}">
 {% endblock %}
 
 <form method="post">
   {% csrf_token %}
 
   <div class="card-header">
-    <div class="card-header-top">
-      <p class="incident-title">
-        {% if incident.first_email_subject %}
-          <strong class="incident-code copy-text" data-text="{{ incident.code|default:incident.id }}">{{ incident }}:</strong> {{ incident.first_email_subject|default:"—" }}
+    <div class="card-header-top-wrapper">
+      <div class="card-header-top">
+        <p class="incident-title">
+          {% if incident.first_email_subject %}
+            <strong class="incident-code copy-text" data-text="{{ incident.code|default:incident.id }}">{{ incident }}:</strong>
+            {{ incident.first_email_subject|default:"—" }}
+          {% else %}
+            <strong class="incident-code copy-text" data-text="{{ incident.code|default:incident.id }}">{{ incident }}</strong>
+          {% endif %}
+        </p>
+        <div class="select-wrapper status-select">
+          <select name="{{ incident_form.new_status.name }}">
+            {% for value, label in incident_form.new_status.field.choices %}
+              {% if value %}
+                <option value="{{ value }}" 
+                    {% if incident_form.new_status.value == value %}selected{% endif %}
+                    class="{{ incident_form.status_classes|dict_get:value }}">
+                  {{ label }}
+                </option>
+              {% endif %}
+            {% endfor %}
+          </select>
+          {% for error in incident_form.new_status.errors %}
+            <div class="form-error">{{ error }}</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card-header-bottom">
+      <button type="submit" name="incident_submit" class="btn btn-primary submit-incident-button" {% if not can_manage %}disabled{% endif %}>
+        Сохранить
+      </button>
+      <p class="incident-date">
+        {% if incident.incident_finish_date %}
+          зарегистрировано {{ incident.incident_date|date:"d.m.Y H:i" }},
+          закрыто {{ incident.incident_finish_date|date:"d.m.Y H:i" }},
+          обновлено {{ incident.update_date|date:"d.m.Y H:i" }}
         {% else %}
-          <strong class="incident-code copy-text" data-text="{{ incident.code|default:incident.id }}">{{ incident }}</strong>
+          зарегистрировано {{ incident.incident_date|date:"d.m.Y H:i" }},
+          обновлено {{ incident.update_date|date:"d.m.Y H:i" }}
         {% endif %}
       </p>
-
-      <div class="status-wrapper">
-        <select name="{{ incident_form.new_status.name }}">
-          {% for value, label in incident_form.new_status.field.choices %}
-            {% if value %}
-              <option value="{{ value }}" 
-                  {% if incident_form.new_status.value == value %}selected{% endif %}
-                  class="{{ incident_form.status_classes|dict_get:value }}">
-                {{ label }}
-              </option>
-            {% endif %}
-          {% endfor %}
-        </select>
-
-        {% for error in incident_form.new_status.errors %}
-          <div class="form-error">{{ error }}</div>
-        {% endfor %}
-      </div>
-
     </div>
-  
-    <button type="submit" name="incident_submit" class="btn btn-primary submit-incident-button" {% if not can_manage %}disabled{% endif %}>Сохранить</button>
-    
-    <p class="incident-date">
-      {% if incident.incident_finish_date %}
-      зарегистрировано {{ incident.incident_date|date:"d.m.Y H:i" }},
-      закрыто {{ incident.incident_finish_date|date:"d.m.Y H:i" }},
-      обновлено {{ incident.update_date|date:"d.m.Y H:i" }}
-      {% else %}
-      зарегистрировано {{ incident.incident_date|date:"d.m.Y H:i" }},
-      обновлено {{ incident.update_date|date:"d.m.Y H:i" }}
-      {% endif %}
-    </p>
   </div>
 
-  <div class="incident-form-section">
-    {% if incident_form.non_field_errors %}
-      <div class="form-errors">
-        {% for error in incident_form.non_field_errors %}
+  <div class="card-body">
+
+    <div class="incident-row">
+      <div class="form-group {% if incident_form.pole.errors %}has-error{% endif %}">
+        <label for="{{ incident_form.pole.id_for_label }}" class="field-label">
+          {{ incident_form.pole.label }}
+        </label>
+
+        {{ incident_form.pole }}
+
+        {% for error in incident_form.pole.errors %}
           <div class="form-error">{{ error }}</div>
         {% endfor %}
       </div>
-    {% endif %}
+
+      <div class="incident-info">
+        <label class="field-label">Подрядчик по АВР</label>
+        <span class="field-value copy-text" data-text="{% for e in incident.pole.prefetched_avr_emails %}{{ e.email }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+          {% if incident.avr_contractor %}
+            {{ incident.avr_contractor }}
+          {% else %}
+            —
+          {% endif %}
+        </span>
+      </div>
+    </div>
+
+    <div class="incident-row">
+      <div class="form-group {% if incident_form.base_station.errors %}has-error{% endif %}">
+        <label for="{{ incident_form.base_station.id_for_label }}" class="field-label">
+          {{ incident_form.base_station.label }}
+        </label>
+
+        {{ incident_form.base_station }}
+
+        {% for error in incident_form.base_station.errors %}
+          <div class="form-error">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="incident-info">
+        <label class="field-label">Подрядчик по АВР</label>
+        <span class="field-value copy-text" data-text="{% for e in incident.pole.prefetched_avr_emails %}{{ e.email }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+          {% if incident.avr_contractor %}
+            {{ incident.avr_contractor }}
+          {% else %}
+            —
+          {% endif %}
+        </span>
+      </div>
+    </div>
 
     {% for field in incident_form %}
-      {% if field.name != "new_status" %}
+      {% if field.name != "new_status" and field.name != "pole" and field.name != "base_station" %}
         <div class="form-group {% if field.errors %}has-error{% endif %}">
           
           <label for="{{ field.id_for_label }}">
@@ -88,5 +132,12 @@
       {% endif %}
     {% endfor %}
 
-  </div>
 </form>
+
+
+<!-- jQuery должен подключаться до media формы -->
+{% block extra_js %}
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  {{ incident_form.media }}
+  <script src="{% static 'js/incidents/change_status_select.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,108 @@
+.select-wrapper.status-select {
+  position: relative;
+  min-width: 120px;
+  max-width: 220px;
+  width: auto;
+  display: inline-block;
+  font-size: var(--font-sm);
+  flex-shrink: 0;
+}
+
+.select-wrapper.status-select select {
+  width: 100%;
+  padding: var(--space-xs) var(--space-sm);
+  padding-right: calc(var(--space-sm) * 2.5);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--extra-color);
+  background-color: var(--add-background-color);
+  color: var(--gray-color);
+  font-weight: 500;
+  font-size: var(--font-sm);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  transition: all var(--transition-value);
+  box-shadow: 0 0 var(--space-xxs) var(--extra-color);
+}
+
+.select-wrapper.status-select select.default { color: var(--gray-color);}
+.select-wrapper.status-select select.new { color: var(--add-color);}
+.select-wrapper.status-select select.in-progress { color: var(--blue-color);}
+.select-wrapper.status-select select.closed { color: var(--green-color);}
+.select-wrapper.status-select select.waiting { color: var(--yellow-color);}
+.select-wrapper.status-select select.canceled { color: var(--red-color);}
+.select-wrapper.status-select select.unknown { color: var(--extra-color);}
+
+.select-wrapper.status-select select:hover,
+.select-wrapper.status-select select:focus {
+  border-color: var(--gray-color);
+  box-shadow: 0 0 var(--space-sm) var(--extra-color);
+  outline: none;
+}
+
+.select-wrapper.status-select select option {
+  color: var(--add-color);
+  background-color: var(--add-background-color);
+}
+
+.incident-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+  flex-wrap: wrap;
+  border-bottom: 1px dashed var(--extra-color);
+}
+
+.form-group,
+.incident-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 45%;
+  min-width: 220px;
+  gap: var(--space-xs);
+}
+
+.incident-info {
+  text-align: right;
+}
+
+.incident-info .field-label,
+.form-group .field-label {
+  font-size: var(--font-xs);
+  color: var(--color);
+}
+
+.incident-info .field-value {
+  font-size: var(--font-sm);
+  color: var(--add-color);
+  word-break: break-word;
+}
+
+.form-group {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+
+@media (max-width: 1024px) {
+  .incident-row {
+    gap: var(--space-sm);
+  }
+
+  .form-group,
+  .incident-info {
+    flex: 1 1 100%;
+    text-align: left;
+  }
+}
+
+@media (max-width: 768px) {
+  .incident-row {
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+}

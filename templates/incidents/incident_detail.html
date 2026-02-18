@@ -17,7 +17,6 @@
 <div class="container-sm">
   <div class="card">
     {% include "incidents/includes/incident_meta.html" with incident=incident %}
-    <div class="card-body">
       {% if confirm_stage and email_three and can_manage %}
         <form id="confirm-move-emails-form" method="post" action="{% url 'incidents:confirm_move_emails' %}">
           {% csrf_token %}

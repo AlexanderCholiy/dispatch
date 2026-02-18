@@ -1,24 +1,30 @@
 .default,
 .new {
   background-color: var(--gray-color);
+  letter-spacing: 0.05em;
 }
 
 .in-progress {
   background-color: var(--blue-color);
+  letter-spacing: 0.05em;
 }
 
 .closed {
   background-color: var(--green-color);
+  letter-spacing: 0.05em;
 }
 
 .waiting {
   background-color: var(--yellow-color);
+  letter-spacing: 0.05em;
 }
 
 .canceled {
   background-color: var(--red-color);
+  letter-spacing: 0.05em;
 }
 
 .unknown {
   background-color: var(--extra-color);
+  letter-spacing: 0.05em;
 }

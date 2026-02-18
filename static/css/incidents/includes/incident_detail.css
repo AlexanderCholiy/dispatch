@@ -9,27 +9,6 @@
   border: 1px solid var(--extra-color);
 }
 
-.card-header-top {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: start;
-  gap: var(--space-sm);
-}
-
-.incident-title {
-  margin: 0;
-  font-weight: 500;
-  font-size: var(--font-md);
-  color: var(--add-color);
-  overflow-wrap: break-word;
-  word-break: break-word;
-}
-
-.incident-code {
-  color: var(--color);
-  font-weight: 600;
-}
-
 .status-name,
 .status-tag {
   padding: var(--space-xs) var(--space-sm);
@@ -40,15 +19,6 @@
   justify-self: end;
   min-width: 90px;
   text-align: center;
-}
-
-.incident-date {
-  margin: 0;
-  font-weight: 500;
-  margin-top: var(--space-sm);
-  text-align: right;
-  font-size: var(--font-xs);
-  color: var(--gray-color);
 }
 
 .card-body {

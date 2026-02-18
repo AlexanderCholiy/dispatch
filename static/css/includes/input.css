@@ -80,6 +80,11 @@ input[type="number"]:disabled {
   color: var(--gray-color);
 }
 
+.select-wrapper.open::after {
+  top: 55%;
+  transform: translateY(-50%) rotate(180deg);
+}
+
 .select:focus {
   outline: none;
   box-shadow: 0 0 var(--space-sm) var(--extra-color);

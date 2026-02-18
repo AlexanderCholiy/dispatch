@@ -171,13 +171,13 @@ class IncidentForm(forms.ModelForm):
     class Meta:
         model = Incident
         fields = (
+            'new_status',
             'pole',
             'base_station',
             'responsible_user',
+            'categories',
             'incident_type',
             'incident_subtype',
-            'new_status',
-            'categories',
             'avr_start_date',
             'avr_end_date',
             'rvr_start_date',
