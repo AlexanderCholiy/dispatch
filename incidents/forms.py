@@ -1,7 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db.models import Prefetch
-from dal import autocomplete
+from dal import autocomplete, forward
 from typing import Optional
 from datetime import datetime
 
@@ -232,7 +232,7 @@ class IncidentForm(forms.ModelForm):
             'base_station': autocomplete.ModelSelect2(
                 url='ts:bs_autocomplete',
                 forward=['pole'],
-                attrs={'data-placeholder': 'Не выбрано'}
+                attrs={'data-placeholder': 'Не выбрано'},
             ),
             'avr_start_date': forms.DateTimeInput(
                 attrs={'type': 'datetime-local'}
@@ -258,9 +258,9 @@ class IncidentForm(forms.ModelForm):
         self.can_edit = can_edit
         super().__init__(*args, **kwargs)
 
-        # if not can_edit:
-        #     for field in self.fields.values():
-        #         field.disabled = True
+        if not can_edit:
+            for field in self.fields.values():
+                field.disabled = True
 
         now = timezone.localtime()
         weekday = now.weekday()

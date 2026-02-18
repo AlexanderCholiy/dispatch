@@ -6,14 +6,14 @@
 <link rel="stylesheet" href="{% static 'css/incidents/includes/incident_forms.css' %}">
 {% endblock %}
 
-<!-- Подключение обязательно до инициализации формы -->
+<!-- jQuery должен подключаться до media формы -->
 {% block extra_js %}
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  {{ incident_form.media }}
 {% endblock %}
 
 <form method="post">
   {% csrf_token %}
-  {{ incident_form.media }}
 
   <div class="card-header">
     <div class="card-header-top">
@@ -30,22 +30,22 @@
           {% for value, label in incident_form.new_status.field.choices %}
             {% if value %}
               <option value="{{ value }}" 
-                      {% if form.new_status.value == value %}selected{% endif %}
-                      class="{{ incident_form.status_classes|dict_get:value }}">
+                  {% if incident_form.new_status.value == value %}selected{% endif %}
+                  class="{{ incident_form.status_classes|dict_get:value }}">
                 {{ label }}
               </option>
             {% endif %}
           {% endfor %}
         </select>
 
-        {% for error in form.new_status.errors %}
+        {% for error in incident_form.new_status.errors %}
           <div class="form-error">{{ error }}</div>
         {% endfor %}
       </div>
 
     </div>
   
-    <button type="submit" name="incident_submit" class="btn btn-primary submit-incident-button">Сохранить</button>
+    <button type="submit" name="incident_submit" class="btn btn-primary submit-incident-button" {% if not can_manage %}disabled{% endif %}>Сохранить</button>
     
     <p class="incident-date">
       {% if incident.incident_finish_date %}

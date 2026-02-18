@@ -30,7 +30,9 @@ def get_cached_base_stations_all():
     if bs_list is None:
         bs_list = list(
             BaseStation.objects
-            .only('id', 'bs_name', 'pole_id')
+            .select_related('pole')
+            .exclude(bs_name__exact='')
+            .only('id', 'bs_name', 'pole_id', 'pole__pole')
             .order_by('bs_name', 'pole_id', 'id')
         )
         cache.set(
@@ -44,7 +46,10 @@ def get_cached_base_stations_by_pole():
     bs_dict = cache.get('autocomplete_all_base_stations_by_pole')
     if bs_dict is None:
         bs_list = (
-            BaseStation.objects.only('id', 'bs_name', 'pole_id')
+            BaseStation.objects
+            .select_related('pole')
+            .exclude(bs_name__exact='')
+            .only('id', 'bs_name', 'pole__id', 'pole__pole')
             .order_by('bs_name', 'id')
         )
         bs_dict = {}
@@ -99,8 +104,6 @@ class BaseStationAutocomplete(autocomplete.Select2QuerySetView):
         q = (self.q or '').lower().strip()
         pole_id = self.forwarded.get('pole')
 
-        print(pole_id or 'unknown')
-
         if pole_id:
             bs_dict = get_cached_base_stations_by_pole()
             candidates = bs_dict.get(int(pole_id), [])
@@ -123,3 +126,9 @@ class BaseStationAutocomplete(autocomplete.Select2QuerySetView):
             return results
 
         return candidates[:BASE_STATIONS_PER_PAGE]
+
+    def get_result_label(self, item):
+        """Формируем label для Select2: bs_name + шифр опоры"""
+        bs_name = item.bs_name or 'unknown'
+        pole_code = getattr(getattr(item, 'pole', None), 'pole', 'unknown')
+        return f'{bs_name} [{pole_code}]'
