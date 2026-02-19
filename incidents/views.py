@@ -333,6 +333,17 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
             return redirect(
                 'incidents:incident_detail', incident_id=incident.id
             )
+        elif incident.is_yt_tracker_controlled:
+            messages.error(
+                request,
+                (
+                    'Управление этим инцидентом происходит из интерфейса '
+                    'YandexTracker'
+                )
+            )
+            return redirect(
+                'incidents:incident_detail', incident_id=incident.id
+            )
 
     if request.method == 'POST' and 'incident_submit' in request.POST:
         incident_form = IncidentForm(

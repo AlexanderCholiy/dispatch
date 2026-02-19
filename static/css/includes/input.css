@@ -1,16 +1,31 @@
-input[type="time"]::-webkit-calendar-picker-indicator {
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
   filter: invert(0);
   opacity: 0.9;
 }
 
-html.dark input[type="time"]::-webkit-calendar-picker-indicator {
+html.dark input[type="time"]::-webkit-calendar-picker-indicator,
+html.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   filter: invert(1);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    filter: invert(1); /* светлая тема */
+    transition: filter var(--transition-value);
+}
+
+html.dark input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0); /* темная тема - белый календарь */
 }
 
 input[type="text"],
 input[type="email"],
 input[type="password"],
+input[type="datetime-local"],
+input[type="date"],
+input[type="time"],
 input[type="search"],
 input[type="number"] {
   padding: var(--space-xs) var(--space-sm);
@@ -28,7 +43,10 @@ input[type="number"] {
 input[type="text"]:focus,
 input[type="email"]:focus,
 input[type="password"]:focus,
+input[type="datetime-local"]:focus,
 input[type="search"]:focus,
+input[type="date"]:focus,
+input[type="time"]:focus,
 input[type="number"]:focus {
   /* border-color: var(--extra-color); */
   box-shadow: 0 0 var(--space-sm) var(--extra-color);
@@ -37,7 +55,10 @@ input[type="number"]:focus {
 input[type="text"]:disabled,
 input[type="email"]:disabled,
 input[type="password"]:disabled,
+input[type="datetime-local"]:disabled,
 input[type="search"]:disabled,
+input[type="date"]:disabled,
+input[type="time"]:disabled,
 input[type="number"]:disabled {
   background-color: var(--background-color);
   color: var(--gray-color);

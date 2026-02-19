@@ -28,24 +28,6 @@
   font-size: var(--font-sm);
 }
 
-.incident-sla p {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-sm);
-  margin: var(--space-sm) 0;
-  line-height: 1.4;
-}
-
-.incident-sla strong {
-  white-space: nowrap;
-  color: var(--color);
-}
-
-.incident-sla span {
-  color: var(--add-color);
-}
-
 .toggle-status-history,
 .toggle-status-history,
 .toggle-incident-history {
@@ -78,15 +60,6 @@
   margin: 0;
   display: none;
   overflow-x: auto;
-}
-
-.incident-sla p {
-  border-bottom: 1px dashed var(--extra-color);
-}
-
-.sla-row .status-tag {
-  display: inline-block;
-  transform: translateY(calc(var(--space-xs) * -1));
 }
 
 @media (max-width: 768px) {
