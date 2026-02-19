@@ -53,7 +53,8 @@
   margin-bottom: var(--space-xs);
   padding: var(--space-xs) var(--space-sm);
   font-size: var(--font-sm);
-  border: 1px solid var(--extra-color);
+  border: 1px solid var(--add-background-color);
+  border-collapse: collapse;
   border-radius: var(--radius-sm);
   background-color: var(--add-background-color);
   color: var(--color);

@@ -20,11 +20,24 @@
   gap: var(--space-sm);
 }
 
-.submit-incident-button {
-  flex: 0 0 auto;
-  padding: var(--space-xxs) var(--space-md);
+.incident-form-actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.incident-form-actions button {
+  flex: 1;
   font-size: var(--font-sm);
-  min-width: 120px;
+  padding: var(--space-xxs) var(--space-md);
+  text-align: center;
+}
+
+.refresh-button {
+  flex: 0 0 auto;
+  max-width: 40px;
+  font-size: var(--font-sm);
+  padding: var(--space-xxs) var(--space-md);
+  text-align: center;
 }
 
 .incident-date {
@@ -35,7 +48,6 @@
   flex: 1 1 auto;
   text-align: right;
 }
-
 
 @media (max-width: 768px) {
   .card-header-top, .card-header-bottom {

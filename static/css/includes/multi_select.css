@@ -1,0 +1,98 @@
+.multi-select-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  max-width: 220px;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.multi-select {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.multi-select-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-sm);
+  color: var(--add-color);
+  cursor: pointer;
+  background-color: var(--add-background-color);
+  border: 0.5px solid var(--extra-color);
+  border-radius: var(--radius-sm);
+  box-sizing: border-box;
+  align-items: center;
+  transition: box-shadow var(--transition-value), border-color var(--transition-value);
+}
+
+.multi-select-values:hover {
+  box-shadow: 0 0 var(--space-xs) var(--extra-color);
+}
+
+.multi-select-values .tag {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 2px 6px;
+  background-color: var(--priority-color);
+  color: var(--background-color);
+  border-radius: var(--radius-sm);
+  box-sizing: border-box;
+  font-weight: 450;
+}
+
+/* Кнопка удаления тега */
+.multi-select-values .tag .remove {
+  cursor: pointer;
+  transition: color var(--transition-value);
+  color: var(--background-color);
+}
+
+.multi-select-values .tag .remove:hover {
+  color: var(--color);
+}
+
+/* Дропдаун со списком опций */
+.multi-select-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: var(--add-background-color);
+  border: 1px solid var(--extra-color);
+  border-radius: var(--radius-sm);
+  z-index: 100;
+  box-sizing: border-box;
+  box-shadow: 0 0 var(--space-xs) var(--extra-color);
+}
+
+.multi-select.open .multi-select-dropdown {
+  display: block;
+}
+
+/* Отдельная опция в списке */
+.multi-select-option {
+  padding: var(--space-xs) var(--space-sm);
+  cursor: pointer;
+  transition: background-color var(--transition-value), color var(--transition-value);
+  box-sizing: border-box;
+}
+
+/* Hover и выбранное состояние */
+.multi-select-option:hover {
+  background-color: var(--extra-color);
+  color: var(--color);
+}
+
+.multi-select-option.selected {
+  background-color: var(--priority-color);
+  color: var(--background-color);
+}

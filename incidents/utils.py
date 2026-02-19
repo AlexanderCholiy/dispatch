@@ -16,10 +16,10 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from core.loggers import incident_logger
-from emails.models import EmailFolder, EmailMessage, EmailReference
+from emails.models import EmailFolder, EmailMessage, EmailReference, EmailTo, EmailToCC
 from users.models import Roles, User
 from yandex_tracker.utils import YandexTrackerManager
-from ts.models import Pole, ContractorEmail
+from ts.models import Pole, ContractorEmail, BaseStationOperator
 
 from .constants import (
     AVR_CATEGORY,
@@ -1197,12 +1197,6 @@ class IncidentManager(IncidentValidator):
         """
         Запрос для подготовки информации об инциденте со всей перепиской.
         """
-        avr_emails_prefetch = Prefetch(
-            'avr_emails',
-            queryset=Pole.avr_emails.rel.model.objects.order_by('email'),
-            to_attr='prefetched_avr_emails'
-        )
-
         incident = (
             Incident.objects
             .select_related(
@@ -1239,8 +1233,16 @@ class IncidentManager(IncidentValidator):
                         ),
                         'email_attachments',
                         'email_intext_attachments',
-                        'email_msg_to',
-                        'email_msg_cc',
+                        Prefetch(
+                            'email_msg_to',
+                            queryset=EmailTo.objects.all(),
+                            to_attr='prefetched_email_to'
+                        ),
+                        Prefetch(
+                            'email_msg_cc',
+                            queryset=EmailToCC.objects.all(),
+                            to_attr='prefetched_email_cc'
+                        ),
                     ).order_by('-email_date', 'is_first_email'),
                     to_attr='all_incident_emails'
                 ),
@@ -1248,6 +1250,13 @@ class IncidentManager(IncidentValidator):
                     'pole__avr_emails',
                     queryset=ContractorEmail.objects.order_by('email'),
                     to_attr='prefetched_avr_emails'
+                ),
+                Prefetch(
+                    'base_station__operator',
+                    queryset=BaseStationOperator.objects.order_by(
+                        'operator_group', 'operator_name'
+                    ),
+                    to_attr='prefetched_bs_operators'
                 ),
             )
             .annotate(

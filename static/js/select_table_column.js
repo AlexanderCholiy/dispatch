@@ -1,10 +1,10 @@
 document.addEventListener('DOMContentLoaded', function () {
     const trigger = document.querySelector('.column-select-trigger');
-    const dropdown = document.querySelector('.column-select-dropdown');
+    const wrapper = trigger.closest('.column-select-wrapper');
+    const dropdown = wrapper.querySelector('.column-select-dropdown');
     const checkboxes = dropdown.querySelectorAll('input[type="checkbox"]');
     const table = document.querySelector('.custom-table');
 
-    // Получение и установка cookie
     function getCookie(name) {
         const value = `; ${document.cookie}`;
         const parts = value.split(`; ${name}=`);
@@ -22,14 +22,14 @@ document.addEventListener('DOMContentLoaded', function () {
     checkboxes.forEach(cb => {
         const col = cb.dataset.col;
         let visible = getCookie(`col_${col}`);
-        if (visible === null) visible = 'true'; // по умолчанию видим
+        if (visible === null) visible = 'true';
         cb.checked = visible === 'true';
         updateColumn(col, cb.checked, cb);
     });
 
     // Переключение столбцов
     checkboxes.forEach(cb => {
-        cb.addEventListener('change', function(e) {
+        cb.addEventListener('change', e => {
             const col = e.target.dataset.col;
             updateColumn(col, e.target.checked, e.target);
             setCookie(`col_${col}`, e.target.checked);
@@ -40,30 +40,23 @@ document.addEventListener('DOMContentLoaded', function () {
         const index = Array.from(table.querySelectorAll('th')).findIndex(th => th.dataset.col === col);
         if (index === -1) return;
         table.querySelectorAll('tr').forEach(tr => {
-            if (tr.children[index]) {
-                tr.children[index].style.display = show ? '' : 'none';
-            }
+            if (tr.children[index]) tr.children[index].style.display = show ? '' : 'none';
         });
         const icon = checkboxEl.parentNode.querySelector('i');
-        if (show) {
-            icon.classList.remove('bx-x');
-            icon.classList.add('bx-check');
-        } else {
-            icon.classList.remove('bx-check');
-            icon.classList.add('bx-x');
-        }
+        icon.classList.toggle('bx-check', show);
+        icon.classList.toggle('bx-x', !show);
     }
 
-    // Показ/скрытие меню
+    // Показ/скрытие меню через класс
     trigger.addEventListener('click', e => {
         e.stopPropagation();
-        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        wrapper.classList.toggle('open');
     });
 
     // Скрытие при клике вне
     document.addEventListener('click', e => {
-        if (!dropdown.contains(e.target) && !trigger.contains(e.target)) {
-            dropdown.style.display = 'none';
+        if (!wrapper.contains(e.target)) {
+            wrapper.classList.remove('open');
         }
     });
 });

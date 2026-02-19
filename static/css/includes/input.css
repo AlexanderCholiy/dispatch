@@ -30,7 +30,7 @@ input[type="email"]:focus,
 input[type="password"]:focus,
 input[type="search"]:focus,
 input[type="number"]:focus {
-  border-color: var(--extra-color);
+  /* border-color: var(--extra-color); */
   box-shadow: 0 0 var(--space-sm) var(--extra-color);
 }
 
@@ -41,7 +41,7 @@ input[type="search"]:disabled,
 input[type="number"]:disabled {
   background-color: var(--background-color);
   color: var(--gray-color);
-  border-color: var(--gray-color);
+  /* border-color: var(--gray-color); */
   box-shadow: none;
 }
 
@@ -73,16 +73,22 @@ input[type="number"]:disabled {
   content: "▼";
   position: absolute;
   right: var(--space-sm);
-  top: 45%;
-  transform: translateY(-50%);
   pointer-events: none;
+
+  margin-top: var(--space-xs);
+
   font-size: var(--font-md);
   color: var(--gray-color);
+  transition: color var(--extra-color);
+}
+
+.select-wrapper:hover::after {
+  color: var(--add-color);
 }
 
 .select-wrapper.open::after {
-  top: 55%;
-  transform: translateY(-50%) rotate(180deg);
+  transform: rotate(180deg);
+  margin-top: var(--space-sm);
 }
 
 .select:focus {

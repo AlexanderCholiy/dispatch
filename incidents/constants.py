@@ -156,4 +156,11 @@ STATUS_TRANSITIONS = {
         END_STATUS_NAME,
         GENERATION_STATUS_NAME,
     ],
+    ERR_STATUS_NAME: [
+        IN_WORK_STATUS_NAME,
+    ],
+    # Для этих статусов значение меняется автоматически:
+    NOTIFY_OP_IN_WORK_STATUS_NAME: [],
+    NOTIFY_CONTRACTOR_STATUS_NAME: [],
+    NOTIFY_OP_END_STATUS_NAME: [],
 }

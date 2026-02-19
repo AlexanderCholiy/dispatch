@@ -1,5 +1,6 @@
 .select2-container {
   width: 100% !important;
+  font-weight: 400;
   font-size: var(--font-sm);
 }
 
@@ -14,23 +15,42 @@
 }
 
 .select2-selection__clear:hover {
-  color: var(--red-color);
+  color: var(--add-color);
 }
 
-.select2-selection__arrow {
-  color: var(--gray-color);
+/* стрелка по умолчанию (закрыта) */
+.select2-container .select2-selection__arrow b {
+    border-color: var(--gray-color) transparent transparent transparent !important;
+}
+
+/* при наведении на селект, стрелка закрыта */
+.select2-container .select2-selection[aria-expanded="false"]:hover .select2-selection__arrow b {
+    border-color: var(--add-color) transparent transparent transparent !important;
+}
+
+/* стрелка раскрыта */
+.select2-container .select2-selection[aria-expanded="true"] .select2-selection__arrow b {
+    border-color: transparent transparent var(--gray-color) transparent !important;
+}
+
+/* при наведении на селект, стрелка раскрыта */
+.select2-container .select2-selection[aria-expanded="true"]:hover .select2-selection__arrow b {
+    border-color: transparent transparent var(--add-color) transparent !important;
 }
 
 .select2-selection--single {
   background-color: var(--add-background-color) !important;
-  border: 1px solid var(--extra-color) !important;
+  border: 0.5px solid var(--extra-color) !important;
   border-radius: var(--radius-sm) !important;
-  box-shadow: 0 0 var(--space-xxs) var(--extra-color);
 
   display: flex;
   align-items: center;
   
   transition: border-color var(--transition-value), box-shadow var(--transition-value);
+}
+
+.select2-selection--single:hover {
+  box-shadow: 0 0 var(--space-xs) var(--extra-color);
 }
 
 .select2-selection__rendered {
@@ -43,7 +63,7 @@
 
 .select2-dropdown {
   border-radius: var(--radius-sm) !important;
-  border: 1px solid var(--extra-color) !important;
+  border: 0.5px solid var(--extra-color) !important;
   background-color: var(--background-color) !important;
   box-shadow: 0 0 var(--space-xs) var(--extra-color) !important;
 }
@@ -66,7 +86,7 @@
 
 .select2-container--default .select2-search--dropdown .select2-search__field {
   background-color: var(--add-background-color) !important;
-  border: 1px solid var(--extra-color) !important;
+  border: 0.5px solid var(--extra-color) !important;
   border-radius: var(--radius-sm) !important;
   color: var(--color) !important;
   padding: var(--space-xs) var(--space-sm) !important;

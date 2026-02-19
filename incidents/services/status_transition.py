@@ -21,13 +21,13 @@ def get_allowed_statuses(
         allowed_names.extend(STATUS_TRANSITIONS.get(current_status.name, []))
 
     if not allowed_names:
-        return IncidentStatus.objects.none()
+        return IncidentStatus.objects.select_related('status_type').none()
 
     # Сохраняем порядок из списка allowed_names
     whens = [
         When(name=name, then=pos) for pos, name in enumerate(allowed_names)
     ]
     return (
-        IncidentStatus.objects
+        IncidentStatus.objects.select_related('status_type')
         .filter(name__in=allowed_names).order_by(Case(*whens))
     )

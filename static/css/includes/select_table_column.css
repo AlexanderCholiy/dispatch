@@ -3,6 +3,7 @@
   max-width: 200px;
 }
 
+/* Триггер */
 .column-select-trigger {
   font-size: var(--font-sm);
   padding: var(--space-sm);
@@ -18,23 +19,38 @@
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
+  position: relative;
 }
 
+/* Стрелка */
 .column-select-wrapper::after {
   content: "▼";
   position: absolute;
   right: var(--space-sm);
-  top: 45%;
-  transform: translateY(-50%);
+  top: 50%;
+  transform: translateY(-60%);
   pointer-events: none;
   font-size: var(--font-md);
   color: var(--gray-color);
+  transition: color var(--transition-value);
 }
 
+.column-select-wrapper:hover::after {
+  color: var(--add-color);
+}
+
+
+/* Поворот стрелки при открытом списке */
+.column-select-wrapper.open::after {
+  transform: translateY(-40%) rotate(180deg);
+}
+
+/* Hover для триггера */
 .column-select-trigger:hover {
   box-shadow: 0 0 var(--space-xs) var(--extra-color);
 }
 
+/* Dropdown */
 .column-select-dropdown {
   position: absolute;
   top: 100%;
@@ -44,8 +60,16 @@
   border: 1px solid var(--extra-color);
   z-index: 10;
   display: none;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 var(--space-xs) var(--extra-color);
 }
 
+/* Показываем dropdown, когда есть класс open */
+.column-select-wrapper.open .column-select-dropdown {
+  display: block;
+}
+
+/* Опции */
 .column-option {
   display: flex;
   align-items: center;
@@ -63,6 +87,7 @@
   color: var(--color);
 }
 
+/* Иконки */
 .column-option i {
   font-size: var(--font-md);
 }

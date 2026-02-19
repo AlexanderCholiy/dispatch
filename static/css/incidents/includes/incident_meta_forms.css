@@ -1,0 +1,84 @@
+.incident-meta-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-sm);
+  padding-bottom: var(--space-xs);
+  border-bottom: 1px dashed var(--extra-color);
+}
+
+.incident-meta-row .form-group {
+  flex: 1 1 200px;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-errors-general {
+  list-style: none;
+}
+
+.form-error {
+  color: var(--red-color);
+  font-size: var(--font-xs);
+}
+
+.incident-meta-row .incident-form-select,
+.incident-meta-row .multi-select-wrapper {
+  width: 100%;
+  max-width: 100%;
+}
+
+.incident-meta-row .incident-form-select select,
+.incident-meta-row .multi-select-values {
+  min-height: var(--space-xl);
+}
+
+.incident-meta-row .incident-form-select select {
+  color: var(--add-color);
+  font-size: var(--font-sm);
+  font-weight: 400;
+  font-family: inherit;
+}
+
+.select-wrapper {
+  position: relative;
+  width: 100%; /* важно убрать max-width:200px */
+  max-width: 100%;
+}
+
+.incident-meta-row label {
+  margin-bottom: var(--space-xs);
+  font-size: var(--font-xs);
+}
+
+.incident-meta-row .select-wrapper label {
+  display: block;
+  margin-bottom: var(--space-xs);
+  font-size: var(--font-xs);
+}
+
+.incident-meta-row .select-wrapper::after {
+  margin-top: var(--space-xs);
+}
+
+.incident-meta-row .select-wrapper.open::after {
+  margin-top: var(--space-sm);
+}
+
+.incident-meta-row .select-wrapper.has-error::after {
+  margin-top: 0;
+  top: var(--space-lg);
+}
+
+@media (max-width: 768px) {
+  .incident-meta-row {
+    grid-template-columns: 1fr;
+  }
+
+  .incident-meta-row .select-wrapper::after {
+    margin-top: 0;
+  }
+
+  .incident-meta-row .select-wrapper.open::after {
+    margin-top: var(--space-xs);
+  }
+}

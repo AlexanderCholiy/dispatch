@@ -1,6 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Q, F
 from dal import autocomplete, forward
 from typing import Optional
 from datetime import datetime
@@ -14,12 +14,13 @@ from .constants import (
     RVR_CATEGORY,
     DGU_CATEGORY,
 )
-from .models import Incident, IncidentStatus, IncidentStatusHistory, TypeSubTypeRelation
+from .models import Incident, IncidentStatus, IncidentStatusHistory, IncidentCategory
 from .utils import EmailNode, IncidentManager
 from ts.models import Pole, BaseStation
 from django.utils import timezone
 from users.models import User, Roles
 from .services.status_transition import get_allowed_statuses
+from django.core.cache import cache
 
 
 class MoveEmailsForm(forms.Form):
@@ -174,8 +175,8 @@ class IncidentForm(forms.ModelForm):
             'new_status',
             'pole',
             'base_station',
-            'responsible_user',
             'categories',
+            'responsible_user',
             'incident_type',
             'incident_subtype',
             'avr_start_date',
@@ -201,8 +202,6 @@ class IncidentForm(forms.ModelForm):
             'dgu_end_date': 'Закрытие ДГУ',
         }
         help_texts = {
-            'pole': 'Шифр опоры',
-            'base_station': 'Номер базовой станции, связанной с опорой',
             'avr_start_date': (
                 'Дата и время уведомления подрядчика об '
                 'аварийно-восстановительных работах'
@@ -258,47 +257,48 @@ class IncidentForm(forms.ModelForm):
         self.can_edit = can_edit
         super().__init__(*args, **kwargs)
 
+        if (
+            self.data.get('categories')
+            and isinstance(self.data['categories'], str)
+        ):
+            self.data = self.data.copy()
+            self.data.setlist('categories', self.data['categories'].split(','))
+
         if not can_edit:
             for field in self.fields.values():
                 field.disabled = True
+
+        self.fields['pole'].widget.attrs['title'] = ''
+        self.fields['base_station'].widget.attrs['title'] = ''
 
         now = timezone.localtime()
         weekday = now.weekday()
         current_time = now.time()
 
-        qs = User.objects.filter(
-            is_active=True,
-            role=Roles.DISPATCH
-        ).select_related('work_schedule')
-
-        working_users = [
-            u.pk for u in qs
-            if u.work_schedule
-            and getattr(
-                u.work_schedule,
-                [
-                    'monday',
-                    'tuesday',
-                    'wednesday',
-                    'thursday',
-                    'friday',
-                    'saturday',
-                    'sunday'
-                ][weekday]
-            )
-            and (
-                (
-                    u.work_schedule.start_time
-                    <= current_time
-                    <= u.work_schedule.end_time
-                )
-                or u.work_schedule.start_time == u.work_schedule.end_time
-            )
+        days = [
+            'monday',
+            'tuesday',
+            'wednesday',
+            'thursday',
+            'friday',
+            'saturday',
+            'sunday',
         ]
+        current_day_field = days[weekday]
+        day_filter = {f'work_schedule__{current_day_field}': True}
 
-        self.fields['responsible_user'].queryset = qs.filter(
-            pk__in=working_users
-        )
+        self.fields['responsible_user'].queryset = User.objects.filter(
+            is_active=True,
+            role=Roles.DISPATCH,
+            work_schedule__isnull=False,
+            **day_filter
+        ).filter(
+            Q(
+                work_schedule__start_time__lte=current_time,
+                work_schedule__end_time__gte=current_time,
+            )
+            | Q(work_schedule__start_time=F('work_schedule__end_time'))
+        ).select_related('work_schedule')
 
         min_date = min(
             self.instance.insert_date or now,
@@ -351,14 +351,23 @@ class IncidentForm(forms.ModelForm):
             if pole and bs.pole and pole != bs.pole:
                 self.add_error(
                     'base_station',
-                    'Выбранная БС не соответствует выбранной опоре'
+                    'БС не соответствует выбранной опоре'
                 )
                 self.add_error(
                     'pole',
-                    'Выбранная опора не соответствует выбранной БС'
+                    'Опора не соответствует выбранной БС'
                 )
 
         return cleaned_data
+
+    def clean_categories(self):
+        cats = self.cleaned_data.get('categories')
+        if not cats:
+            raise forms.ValidationError(
+                'Выберите хотя бы одну категорию инцидента'
+            )
+
+        return cats
 
     def clean_statuses(self):
         status = self.cleaned_data.get('statuses')
@@ -414,13 +423,6 @@ class IncidentForm(forms.ModelForm):
 
         return user
 
-    def clean_categories(self):
-        """Должна быть выбрана хотя бы одна категория"""
-        categories = self.cleaned_data.get('categories')
-        if not categories.exists():
-            raise ValidationError('Выберите хотя бы одну категорию инцидента')
-        return categories
-
     def save(self, commit=True):
         instance = super().save(commit=commit)
         new_status = self.cleaned_data.get('new_status')
@@ -429,9 +431,7 @@ class IncidentForm(forms.ModelForm):
         current_status = last_status.status if last_status else None
 
         if new_status and new_status != current_status:
-            category_names = set(
-                instance.categories.all().values_list('name', flat=True)
-            )
+            category_names = {c.name for c in instance.categories.all()}
             IncidentStatusHistory.objects.create(
                 incident=instance,
                 status=new_status,
@@ -440,5 +440,11 @@ class IncidentForm(forms.ModelForm):
                 is_dgu_category=DGU_CATEGORY in category_names,
             )
             instance.statuses.add(new_status)
+
+        cat_ids = self.cleaned_data.get('categories', [])
+        if commit:
+            instance.save()
+            if cat_ids:
+                instance.categories.set(cat_ids)
 
         return instance

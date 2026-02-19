@@ -346,7 +346,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
             )
         else:
             messages.warning(
-                request, 'Пожалуйста, исправьте ошибки в форме'
+                request, 'Пожалуйста, исправьте ошибки в формах'
             )
 
     sort_order = (

@@ -671,6 +671,7 @@ class IncidentCategoryRelation(models.Model):
                 name='unique_incident_category'
             )
         ]
+        ordering = ['category']
 
     def __str__(self):
         return f'{self.incident} - {self.category}'
