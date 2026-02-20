@@ -15,7 +15,7 @@ from .constants import (
 from users.models import Roles, User
 
 
-def get_cached_poles():
+def get_cached_poles() -> list[tuple[int, str]]:
     poles = cache.get('autocomplete_all_poles')
     if poles is None:
         poles = list(Pole.objects.only('id', 'pole').order_by('pole', 'id'))

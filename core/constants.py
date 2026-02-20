@@ -32,6 +32,9 @@ EMAIL_PARSER_LOG_ROTATING_FILE = os.path.join(
     LOG_DIR, 'emails', 'email_parser.log'
 )
 TS_LOG_ROTATING_FILE = os.path.join(LOG_DIR, 'ts', 'ts.log')
+MONITORING_LOG_ROTATING_FILE = os.path.join(
+    LOG_DIR, 'monitoring', 'monitoring.log'
+)
 YANDEX_TRACKER_ROTATING_FILE = os.path.join(
     LOG_DIR, 'yandex_tracker', 'yandex_tracker.log')
 INCIDENTS_LOG_ROTATING_FILE = os.path.join(
@@ -51,6 +54,7 @@ CELLERY_LOG_ROTATING_FILE = os.path.join(
 os.makedirs(os.path.dirname(DEFAULT_ROTATING_LOG_FILE), exist_ok=True)
 os.makedirs(os.path.dirname(EMAIL_PARSER_LOG_ROTATING_FILE), exist_ok=True)
 os.makedirs(os.path.dirname(TS_LOG_ROTATING_FILE), exist_ok=True)
+os.makedirs(os.path.dirname(MONITORING_LOG_ROTATING_FILE), exist_ok=True)
 os.makedirs(os.path.dirname(YANDEX_TRACKER_ROTATING_FILE), exist_ok=True)
 os.makedirs(os.path.dirname(INCIDENTS_LOG_ROTATING_FILE), exist_ok=True)
 os.makedirs(os.path.dirname(TG_NOTIFICATIONS_ROTATING_FILE), exist_ok=True)

@@ -28,7 +28,7 @@
   font-size: var(--font-sm);
 }
 
-.toggle-status-history,
+.monitoring-toggle-btn,
 .toggle-status-history,
 .toggle-incident-history {
   margin-top: var(--space-sm);
@@ -44,7 +44,7 @@
   transition: all var(--transition-value);
 }
 
-.toggle-status-history:hover,
+.monitoring-toggle-btn:hover,
 .toggle-incident-history:hover,
 .toggle-email-three:hover {
   background-color: var(--extra-color);

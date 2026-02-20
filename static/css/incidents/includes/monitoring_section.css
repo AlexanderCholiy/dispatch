@@ -1,0 +1,91 @@
+.monitoring-toggle-btn {
+  background-color: var(--add-background-color);
+  color: var(--add-color);
+  width: 100%;
+}
+
+.monitoring-toggle-btn:hover {
+  background-color: var(--add-background-color);
+  color: var(--color);
+}
+
+.monitoring-content {
+  overflow-y: auto;
+  overflow-x: auto;
+  max-height: 250px;
+  scrollbar-width: auto;
+  transition: opacity var(--transition-value);
+}
+
+.monitoring-content.collapsed {
+  display: none;
+  opacity: 0;
+}
+
+.monitoring-content.expanded {
+  display: block;
+  opacity: 1;
+}
+
+.device-type {
+  font-weight: 450;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: var(--space-xs) var(--space-md);
+  font-size: var(--font-sm);
+  font-weight: bold;
+  border-radius: var(--radius-sm);
+  text-align: center;
+  min-width: 70px;
+  width: 100%;
+  box-shadow: 0 0 var(--space-xs) var(--extra-color);
+  cursor: default;
+  user-select: none;
+  color: var(--add-color);
+  letter-spacing: 0.05em;
+}
+
+.monitoring-status-0,
+.monitoring-status-1000 {
+  color: var(--green-color);
+  box-shadow: 0 0 var(--space-xs) var(--green-color);
+}
+
+.monitoring-status-1,
+.monitoring-status-11,
+.monitoring-status-31,
+.monitoring-status-501,
+.monitoring-status-502,
+.monitoring-status-503,
+.monitoring-status-504,
+.monitoring-status-505,
+.monitoring-status-506,
+.monitoring-status-507,
+.monitoring-status-508,
+.monitoring-status-509,
+.monitoring-status-1011,
+.monitoring-status-1001 {
+  color: var(--red-color);
+  box-shadow: 0 0 var(--space-xs) var(--red-color);
+}
+
+.monitoring-status-2,
+.monitoring-status-3,
+.monitoring-status-12,
+.monitoring-status-13,
+.monitoring-status-32,
+.monitoring-status-33,
+.monitoring-status-1002 {
+  color: var(--blue-color);
+  box-shadow: 0 0 var(--space-xs) var(--blue-color);
+}
+
+.monitoring-status-4,
+.monitoring-status-14,
+.monitoring-status-34,
+.monitoring-status-1004 {
+  color: var(--yellow-color);
+  box-shadow: 0 0 var(--space-xs) var(--yellow-color);
+}

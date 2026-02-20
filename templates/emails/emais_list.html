@@ -54,7 +54,6 @@
             {% if email.email_incident %}
               <a
                 href="{% url 'incidents:incident_detail' email.email_incident.id %}"
-                target="_blank"
                 class="email-code {% if email.email_incident.is_incident_finish %}incident-closed{% else %}incident-open{% endif %}"
               >
                 {{ email.email_incident }}

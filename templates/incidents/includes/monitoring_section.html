@@ -1,0 +1,49 @@
+<div class="monitoring-wrapper">
+  <button id="monitoringToggle" class="monitoring-toggle-btn" type="button">
+    <span class="toggle-text">Скрыть мониторинг оборудования</span>
+  </button>
+  
+  <div id="monitoringContent" class="monitoring-content">
+    <div class="monitoring-card table-wrapper">
+      <table class="monitoring-table custom-table">
+        <thead>
+          <tr>
+            <th>IP</th>
+            <th>Тип</th>
+            <th>Статус</th>
+            <th>Дата обновления</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ip, data in monitoring %}
+            <tr>
+              <td class="ip-cell">
+                {{ ip }}
+              </td>
+    
+              <td class="device-type">
+                {{ data.level_val }}
+              </td>
+    
+              <td>
+                <span class="status-badge monitoring-status-{{ data.status }}">
+                  {{ data.status_val }}
+                </span>
+              </td>
+    
+              <td class="updated-cell">
+                {{ data.updated_at|date:"d.m.Y H:i:s" }}
+              </td>
+            </tr>
+            {% empty %}
+              <tr>
+                <td colspan="4" class="empty">
+                  Нет данных мониторинга
+                </td>
+              </tr>
+            {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

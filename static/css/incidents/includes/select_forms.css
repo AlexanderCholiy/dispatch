@@ -6,6 +6,7 @@
   display: inline-block;
   font-size: var(--font-sm);
   flex-shrink: 0;
+  align-items: top;
 }
 
 .select-wrapper.status-select::after {

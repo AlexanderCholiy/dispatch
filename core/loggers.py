@@ -14,6 +14,7 @@ from .constants import (
     TS_LOG_ROTATING_FILE,
     YANDEX_TRACKER_AUTO_EMAILS_ROTATING_FILE,
     YANDEX_TRACKER_ROTATING_FILE,
+    MONITORING_LOG_ROTATING_FILE,
 )
 from .exceptions import LoggerError
 
@@ -144,4 +145,8 @@ incident_logger = LoggerFactory(
 
 default_logger = LoggerFactory(
     'default', DEFAULT_ROTATING_LOG_FILE
+).get_logger()
+
+monitoring_logger = LoggerFactory(
+    'monitoring', MONITORING_LOG_ROTATING_FILE
 ).get_logger()

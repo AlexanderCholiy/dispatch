@@ -94,6 +94,7 @@ class YandexTrackerManager:
     error_status_key = 'error'
     in_work_status_key = 'inProgress'
     need_acceptance_status_key = 'needAcceptance'
+    new_status_key = 'new'
 
     system_category_field_id = '000000000000000000000001'
     timestamp_category_field_id = '000000000000000000000002'

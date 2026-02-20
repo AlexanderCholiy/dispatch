@@ -2,12 +2,14 @@
 
 {% load custom_filters %}
 
-
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/includes/tables.css' %}">
 <link rel="stylesheet" href="{% static 'css/incidents/includes/incident_header.css' %}">
 <link rel="stylesheet" href="{% static 'css/incidents/includes/select_forms.css' %}">
 <link rel="stylesheet" href="{% static 'css/incidents/includes/autoselect_forms.css' %}">
 <link rel="stylesheet" href="{% static 'css/incidents/includes/incident_meta_forms.css' %}">
+<link rel="stylesheet" href="{% static 'css/incidents/includes/sla_forms.css' %}">
+<link rel="stylesheet" href="{% static 'css/incidents/includes/monitoring_section.css' %}">
 {% endblock %}
 
 <form method="post">
@@ -201,45 +203,13 @@
       {% endfor %}
     </div>
 
-    <div class="form-group {% if incident_form.avr_start_date.errors %}has-error{% endif %}">
-      <label for="{{ incident_form.avr_start_date.id_for_label }}" class="field-label">
-        {{ incident_form.avr_start_date.label }}
-      </label>
+    {% include "incidents/includes/incident_sla_meta.html" with label="SLA АВР" status=incident.sla_avr_status_val start=incident.avr_start_date deadline=incident.sla_avr_deadline start_field=incident_form.avr_start_date end_field=incident_form.avr_end_date %}
 
-      {{ incident_form.avr_start_date }}
+    {% include "incidents/includes/incident_sla_meta.html" with label="SLA РВР" status=incident.sla_rvr_status_val start=incident.rvr_start_date deadline=incident.sla_rvr_deadline start_field=incident_form.rvr_start_date end_field=incident_form.rvr_end_date %}
 
-      {% for error in incident_form.avr_start_date.errors %}
-        <div class="form-error">{{ error }}</div>
-      {% endfor %}
-    </div>
+    {% include "incidents/includes/incident_sla_meta.html" with label="ВРТ ДГУ" status=incident.sla_dgu_status_val start=incident.dgu_start_date deadline=incident.sla_dgu_deadline start_field=incident_form.dgu_start_date end_field=incident_form.dgu_end_date %}
 
-    <div class="form-group {% if incident_form.avr_end_date.errors %}has-error{% endif %}">
-      <label for="{{ incident_form.avr_end_date.id_for_label }}" class="field-label">
-        {{ incident_form.avr_end_date.label }}
-      </label>
-
-      {{ incident_form.avr_end_date }}
-
-      {% for error in incident_form.avr_end_date.errors %}
-        <div class="form-error">{{ error }}</div>
-      {% endfor %}
-    </div>
-
-    <p class="sla-row">
-      <span class="sla-left">
-        <strong>SLA АВР: </strong>
-        {% if incident.sla_avr_deadline %}
-          {{ incident.avr_start_date|date:"d.m.Y H:i" }} —
-          {{ incident.sla_avr_deadline|date:"d.m.Y H:i" }}
-        {% else %}
-          —
-        {% endif %}
-      </span>
-
-      <span class="status-tag {{ incident.sla_avr_status_val.value|default:'unknown' }}">
-        {{ incident.sla_avr_status_val.label|default:'—' }}
-      </span>
-    </p>
+    {% include "incidents/includes/monitoring_section.html" with monitoring=monitoring %}
 
 </form>
 
@@ -249,5 +219,6 @@
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   {{ incident_form.media }}
   <script src="{% static 'js/incidents/change_status_select.js' %}"></script>
+  <script src="{% static 'js/incidents/hide_monitoring_table.js' %}"></script>
   <script src="{% static 'js/multi_select.js' %}"></script>
 {% endblock %}

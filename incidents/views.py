@@ -32,6 +32,7 @@ from emails.models import EmailMessage, EmailReference
 from users.models import Roles, User
 from users.utils import role_required
 from yandex_tracker.utils import yt_manager
+from django.utils import timezone
 
 from .annotations import annotate_sla_avr, annotate_sla_dgu, annotate_sla_rvr
 from .constants import (
@@ -50,6 +51,10 @@ from .models import (
     TimeStatus,
 )
 from .utils import IncidentManager
+from monitoring.services.monitoring_equipment import (
+    get_monitiring_cache_equipment
+)
+from monitoring.models import DeviceStatus, DeviceType
 
 
 @login_required
@@ -318,6 +323,31 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
     if not incident:
         raise Http404(f'Инцидент с ID: {incident_id} не найден')
 
+    monitiring_equipment = (
+        get_monitiring_cache_equipment(incident.pole.pole)
+        if incident.pole else None
+    ) or []
+
+    monitoring_data = {}
+
+    for pole_eq in monitiring_equipment:
+        level = pole_eq['level']
+        status = pole_eq['status']
+        updated_at = pole_eq['updated_at']
+
+        monitoring_data[pole_eq['modem_ip']] = {
+            'level': level,
+            'status': status,
+            'level_val': DeviceType(level).label,
+            'status_val': DeviceStatus(status).label,
+            'updated_at': updated_at,
+        }
+
+    sorted_monitoring = sorted(
+        monitoring_data.items(),
+        key=lambda item: (item[1]['level_val'], item[0])
+    )
+
     user: User = request.user
     allowed_roles = [Roles.DISPATCH]
     can_manage = user.role in allowed_roles or user.is_superuser
@@ -462,6 +492,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
                 'confirm_stage': True,
                 'can_manage': can_manage,
                 'incident_form': incident_form,
+                'monitoring': sorted_monitoring,
             }
             return render(request, template_name, context)
 
@@ -482,6 +513,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         'confirm_stage': confirm_stage,
         'can_manage': can_manage,
         'incident_form': incident_form,
+        'monitoring': sorted_monitoring,
     }
 
     return render(request, template_name, context)

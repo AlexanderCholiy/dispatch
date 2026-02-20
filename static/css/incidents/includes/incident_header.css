@@ -9,13 +9,17 @@
   margin: 0;
   flex: 1 1 auto;
   min-width: 150px;
+  max-width: 70%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word; 
 }
 
 .card-header-top,
 .card-header-bottom {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: flex-start;
   flex-wrap: wrap;
   gap: var(--space-sm);
 }
@@ -47,6 +51,10 @@
   font-weight: 450;
   flex: 1 1 auto;
   text-align: right;
+  max-width: 80%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word; 
 }
 
 @media (max-width: 768px) {
@@ -56,8 +64,13 @@
     text-align: left;
   }
 
+  .incident-title {
+    max-width: 100%;
+  }
+
   .incident-date {
     text-align: left;
     margin-top: var(--space-xs);
+    max-width: 100%;
   }
 }

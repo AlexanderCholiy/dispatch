@@ -16,6 +16,7 @@ from core.wraps import min_wait_timer, timer
 from emails.email_parser import email_parser
 from emails.models import EmailMessage
 from incidents.constants import (
+    DEFAULT_STATUS_NAME,
     ERR_STATUS_NAME,
     IN_WORK_STATUS_NAME,
     NOTIFIED_CONTRACTOR_STATUS_NAME,
@@ -638,6 +639,11 @@ class Command(BaseCommand):
                     and last_status_history.status.name != ERR_STATUS_NAME
                 ):
                     IncidentManager.add_error_status(incident)
+                elif (
+                    status_key == yt_manager.new_status_key
+                    and last_status_history.status.name != DEFAULT_STATUS_NAME
+                ):
+                    IncidentManager.add_default_status(incident)
                 elif (
                     status_key == yt_manager.need_acceptance_status_key
                     and last_status_history.status.name != (

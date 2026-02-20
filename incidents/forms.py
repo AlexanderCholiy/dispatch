@@ -13,6 +13,7 @@ from .constants import (
     AVR_CATEGORY,
     RVR_CATEGORY,
     DGU_CATEGORY,
+    FINISHED_STATUS_NAMES,
 )
 from .models import Incident, IncidentStatus, IncidentStatusHistory, IncidentCategory
 from .utils import EmailNode, IncidentManager
@@ -234,28 +235,48 @@ class IncidentForm(forms.ModelForm):
                 attrs={'data-placeholder': 'Не выбрано'},
             ),
             'avr_start_date': forms.DateTimeInput(
-                attrs={'type': 'datetime-local'}
+                attrs={'type': 'datetime-local'},
+                format='%Y-%m-%dT%H:%M'
             ),
             'avr_end_date': forms.DateTimeInput(
-                attrs={'type': 'datetime-local'}
+                attrs={'type': 'datetime-local'},
+                format='%Y-%m-%dT%H:%M'
             ),
             'rvr_start_date': forms.DateTimeInput(
-                attrs={'type': 'datetime-local'}
+                attrs={'type': 'datetime-local'},
+                format='%Y-%m-%dT%H:%M'
             ),
             'rvr_end_date': forms.DateTimeInput(
-                attrs={'type': 'datetime-local'}
+                attrs={'type': 'datetime-local'},
+                format='%Y-%m-%dT%H:%M'
             ),
             'dgu_start_date': forms.DateTimeInput(
-                attrs={'type': 'datetime-local'}
+                attrs={'type': 'datetime-local'},
+                format='%Y-%m-%dT%H:%M'
             ),
             'dgu_end_date': forms.DateTimeInput(
-                attrs={'type': 'datetime-local'}
+                attrs={'type': 'datetime-local'},
+                format='%Y-%m-%dT%H:%M'
             ),
         }
 
     def __init__(self, can_edit: bool = False, *args, **kwargs):
         self.can_edit = can_edit
         super().__init__(*args, **kwargs)
+
+        for field_name in [
+            'avr_start_date', 'avr_end_date',
+            'rvr_start_date', 'rvr_end_date',
+            'dgu_start_date', 'dgu_end_date',
+        ]:
+            field = self.fields[field_name]
+            if field:
+                value: Optional[datetime] = getattr(self.instance, field_name)
+                if value:
+                    local_value = timezone.localtime(value).replace(
+                        tzinfo=None
+                    )
+                    field.initial = local_value.strftime('%Y-%m-%dT%H:%M')
 
         if (
             self.data.get('categories')
@@ -318,7 +339,10 @@ class IncidentForm(forms.ModelForm):
                 field.widget.attrs['max'] = max_date.strftime('%Y-%m-%dT%H:%M')
 
         if self.instance.pk:
-            last_status = self.instance.prefetched_status_history[0]
+            last_status = (
+                self.instance.prefetched_status_history[0]
+                if self.instance.prefetched_status_history else None
+            )
             last_status = last_status.status if last_status else None
         else:
             last_status = None
@@ -424,14 +448,28 @@ class IncidentForm(forms.ModelForm):
         return user
 
     def save(self, commit=True):
-        instance = super().save(commit=commit)
-        new_status = self.cleaned_data.get('new_status')
+        instance: Incident = super().save(commit=False)
+        new_status: Optional[IncidentStatus] = self.cleaned_data.get(
+            'new_status'
+        )
 
-        last_status = self.instance.prefetched_status_history[0]
+        # Получаем категории из формы
+        cat_objs = self.cleaned_data.get('categories', [])
+        category_names = {c.name for c in cat_objs} if cat_objs else set()
+
+        # Определяем текущий статус
+        last_status: Optional[IncidentStatusHistory] = (
+            instance.prefetched_status_history[0]
+            if getattr(instance, 'prefetched_status_history', None)
+            else None
+        )
         current_status = last_status.status if last_status else None
 
-        if new_status and new_status != current_status:
-            category_names = {c.name for c in instance.categories.all()}
+        # Если статус меняется
+        if new_status and (
+            not current_status or new_status.pk != current_status.pk
+        ):
+            # Создаём историю с актуальными категориями из формы
             IncidentStatusHistory.objects.create(
                 incident=instance,
                 status=new_status,
@@ -441,10 +479,15 @@ class IncidentForm(forms.ModelForm):
             )
             instance.statuses.add(new_status)
 
-        cat_ids = self.cleaned_data.get('categories', [])
+        # Обновляем флаг завершённости
+        instance.is_incident_finish = (
+            new_status.name in FINISHED_STATUS_NAMES if new_status else False
+        )
+
+        # Сохраняем instance и категории
         if commit:
             instance.save()
-            if cat_ids:
-                instance.categories.set(cat_ids)
+            if cat_objs:
+                instance.categories.set(cat_objs)
 
         return instance

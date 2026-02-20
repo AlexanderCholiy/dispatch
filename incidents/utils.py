@@ -1262,27 +1262,37 @@ class IncidentManager(IncidentValidator):
             .annotate(
                 sla_avr_status_val=Value('', output_field=CharField()),
                 sla_rvr_status_val=Value('', output_field=CharField()),
+                sla_dgu_status_val=Value('', output_field=CharField()),
             )
             .filter(pk=incident_id)
             .first()
         )
 
-        incident.sla_avr_status_val = incident.sla_avr_status
-        incident.sla_rvr_status_val = incident.sla_rvr_status
-
         if not incident:
             return
 
-        if getattr(incident, 'prefetched_status_history', None):
-            latest_status = incident.prefetched_status_history[0]
-            incident.latest_status_name = latest_status.status.name
-            incident.latest_status_date = latest_status.insert_date
-            incident.latest_status_class = (
-                latest_status.status.status_type.css_class
+        incident.sla_avr_status_val = incident.sla_avr_status
+        incident.sla_rvr_status_val = incident.sla_rvr_status
+        incident.sla_dgu_status_val = incident.sla_dgu_status
+
+        if not incident.prefetched_status_history:
+            default_status, _ = IncidentStatus.objects.get_or_create(
+                name=DEFAULT_STATUS_NAME
             )
-        else:
-            incident.latest_status_name = None
-            incident.latest_status_date = None
-            incident.latest_status_class = None
+            hist = IncidentStatusHistory.objects.create(
+                incident=incident,
+                status=default_status,
+                is_avr_category=False,
+                is_rvr_category=False,
+                is_dgu_category=False,
+            )
+            incident.prefetched_status_history = [hist]
+
+        latest_status = incident.prefetched_status_history[0]
+        incident.latest_status_name = latest_status.status.name
+        incident.latest_status_date = latest_status.insert_date
+        incident.latest_status_class = (
+            latest_status.status.status_type.css_class
+        )
 
         return incident

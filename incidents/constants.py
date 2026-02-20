@@ -81,6 +81,8 @@ NOTIFIED_CONTRACTOR_STATUS_DESC = (
     'Отправили письмо с инцидентом подрядчику.'
 )
 
+FINISHED_STATUS_NAMES = [END_STATUS_NAME, GENERATION_STATUS_NAME]
+
 # В Трекере должно быть также, также есть связь в истории статусов:
 AVR_CATEGORY = 'АВР'
 RVR_CATEGORY = 'РВР'
