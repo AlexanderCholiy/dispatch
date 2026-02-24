@@ -31,3 +31,5 @@ PASSWORD_HELP_TEXT = (
 )
 
 ALLOWED_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png']
+
+USERS_CACHE_TTL = 300

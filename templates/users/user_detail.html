@@ -6,8 +6,8 @@
 {% endblock %}
 
 {% block title %}
-    {% if user.first_name and user.last_name %}
-        {{ user.first_name }} {{ user.last_name }}
+    {% if user_info.first_name and user_info.last_name %}
+        {{ user_info.first_name }} {{ user_info.last_name }}
     {% else %}
         Новый пользователь
     {% endif %}
@@ -19,20 +19,20 @@
     <div class="card-body">
       <div class="user-detail-card">   
         <div class="user-info">
-          <p><strong>Email: </strong><span class="user-email copy-text" data-text={{ user.email }}>{{ user.email }}</span></p>
-          <p><strong>Дата рождения:</strong> {{ user.date_of_birth|default:"Не указана" }}</p>
+          <p><strong>Email: </strong><span class="user-email copy-text" data-text={{ user_info.email }}>{{ user_info.email }}</span></p>
+          <p><strong>Дата рождения:</strong> {{ user_info.date_of_birth|default:"Не указана" }}</p>
     
           <p><strong>График работы:</strong>
-          {% if user.work_schedule.is_working %}
-            {% if user.work_schedule.start_time == user.work_schedule.end_time %}
+          {% if user_info.work_schedule.is_working %}
+            {% if user_info.work_schedule.start_time == user_info.work_schedule.end_time %}
               Круглосуточно
             {% else %}
-              {{ user.work_schedule.start_time }} – {{ user.work_schedule.end_time }}
+              {{ user_info.work_schedule.start_time }} – {{ user_info.work_schedule.end_time }}
             {% endif %}
             <p>
             <strong>Рабочие дни:</strong>
             <small>
-              {% for day, work in user.work_schedule.get_fields.items %}
+              {% for day, work in user_info.work_schedule.get_fields.items %}
                   {% if work %}{{ day }} {% endif %}
               {% endfor %}
             </small>
@@ -42,23 +42,23 @@
           </p>
     
           {% if request.user.is_staff or request.user.is_admin or request.user == user %}
-            <a href="{% url 'users:work_schedule' user.id %}" class="btn btn-danger">Изменить расписание</a>
+            <a href="{% url 'users:work_schedule' user_info.id %}" class="btn btn-danger">Изменить расписание</a>
           {% endif %}
         </div>
 
         <div class="user-right">
           <div class="user-avatar">
-            {% if user.avatar %}
-                <img src="{{ user.avatar.url }}" alt="Аватар">
+            {% if user_info.avatar %}
+                <img src="{{ user_info.avatar.url }}" alt="Аватар">
             {% else %}
-                <div class="avatar-placeholder">{{ user.username|first|upper }}</div>
+                <div class="avatar-placeholder">{{ user_info.username|first|upper }}</div>
             {% endif %}
           </div>
           <p class="user-role">
-            {% if user.first_name and user.last_name %}
-                {{ user.get_role_display }} {{ user.first_name }} {{ user.last_name }}
+            {% if user_info.first_name and user_info.last_name %}
+                {{ user_info.get_role_display }} {{ user_info.first_name }} {{ user_info.last_name }}
             {% else %}
-                Новый {{ user.get_role_display|lower }}
+                Новый {{ user_info.get_role_display|lower }}
             {% endif %}
           </p>
         </div>

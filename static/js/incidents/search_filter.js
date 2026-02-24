@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const finishSelect = document.getElementById('finish-select');
   const statusSelect = document.getElementById('status-select');
   const categorySelect = document.getElementById('category-select');
+  const responsibleuserSelect = document.getElementById('responsible-user-select');
   const slaavrSelect = document.getElementById('sla-avr');
   const slarvrSelect = document.getElementById('sla-rvr');
   const sladguSelect = document.getElementById('sla-dgu');
@@ -23,7 +24,8 @@ document.addEventListener('DOMContentLoaded', function() {
     sla_rvr: 'sla_rvr',
     sla_dgu: 'sla_dgu',
     pole: 'pole',
-    base_station: 'base_station'
+    base_station: 'base_station',
+    responsible_user: 'responsible_user',
   };
 
   // ---- COOKIE HELPERS ----
@@ -55,6 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
   restoreValue(sladguSelect, 'sla_dgu');
   restoreValue(poleInput, 'pole');
   restoreValue(baseStationInput, 'base_station');
+  restoreValue(responsibleuserSelect, 'responsible_user');
 
   // ---- СОХРАНЕНИЕ В COOKIE ----
   function saveOnChange(input, name) {
@@ -72,6 +75,7 @@ document.addEventListener('DOMContentLoaded', function() {
   saveOnChange(sladguSelect, 'sla_dgu');
   saveOnChange(poleInput, 'pole');
   saveOnChange(baseStationInput, 'base_station');
+  saveOnChange(responsibleuserSelect, 'responsible_user');
 
   // ----- СИНХРОНИЗАЦИЯ СКРЫТЫХ ПОЛЕЙ В searchForm -----
   function syncHiddenField(input, fieldName) {
@@ -91,6 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
   syncHiddenField(finishSelect, 'finish');
   syncHiddenField(statusSelect, 'status');
   syncHiddenField(categorySelect, 'category');
+  syncHiddenField(responsibleuserSelect, 'responsible_user');
   syncHiddenField(slaavrSelect, 'sla_avr');
   syncHiddenField(slarvrSelect, 'sla_rvr');
   syncHiddenField(sladguSelect, 'sla_dgu');

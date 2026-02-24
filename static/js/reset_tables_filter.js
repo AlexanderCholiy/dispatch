@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
       deleteCookie('pole');
       deleteCookie('base_station');
       deleteCookie('category');
+      deleteCookie('responsible_user');
       deleteCookie('sla_avr');
       deleteCookie('sla_rvr');
       deleteCookie('sla_dgu');
@@ -49,6 +50,10 @@ document.addEventListener('DOMContentLoaded', () => {
       // Сбрасываем категорию
       const categorySelect = document.getElementById('category-select');
       if (categorySelect) categorySelect.selectedIndex = 0;
+
+      // Сбрасываем ответственного диспетчера
+      const responsibleuserSelect = document.getElementById('responsible-user-select');
+      if (responsibleuserSelect) responsibleuserSelect.selectedIndex = 0;
 
       // Сбрасываем статусы SLA
       const slaavrSelect = document.getElementById('sla-avr');
@@ -95,6 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'search-hidden-finish',
         'search-hidden-status',
         'search-hidden-category',
+        'search-hidden-responsible-user',
         'search-hidden-pole',
         'search-hidden-base-station',
         'search-hidden-sla-avr',

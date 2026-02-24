@@ -41,6 +41,8 @@ from .constants import (
     PAGE_SIZE_INCIDENTS_CHOICES,
 )
 from .forms import ConfirmMoveEmailsForm, MoveEmailsForm, IncidentForm
+from users.models import User, Roles
+from users.constants import USERS_CACHE_TTL
 from .models import (
     Incident,
     IncidentCategory,
@@ -85,6 +87,16 @@ def index(request: HttpRequest) -> HttpResponse:
         category_id = int(category_id)
     else:
         category_id = None
+
+    responsible_user_id = (
+        request.GET.get('responsible_user')
+        or request.COOKIES.get('responsible_user')
+    )
+
+    if responsible_user_id and responsible_user_id.isdigit():
+        responsible_user_id = int(responsible_user_id)
+    else:
+        responsible_user_id = None
 
     is_incident_finish = (
         request.GET.get('finish', '').strip()
@@ -209,6 +221,9 @@ def index(request: HttpRequest) -> HttpResponse:
     if category_id:
         base_qs = base_qs.filter(categories__id=category_id)
 
+    if responsible_user_id:
+        base_qs = base_qs.filter(responsible_user__id=responsible_user_id)
+
     if sort == 'asc':
         base_qs = base_qs.order_by('update_date', 'incident_date', 'id')
     else:
@@ -282,6 +297,20 @@ def index(request: HttpRequest) -> HttpResponse:
         MAX_INCIDENTS_INFO_CACHE_SEC,
     )
 
+    responsible_users = cache.get_or_set(
+        'incident_filter_responsible_users',
+        lambda: [
+            {
+                'id': user.id,
+                'full_name': user.get_full_name() or 'Новый пользователь'
+            }
+            for user in User.objects.filter(
+                role=Roles.DISPATCH, is_active=True
+            ).order_by('username')
+        ],
+        USERS_CACHE_TTL,
+    )
+
     query_params = request.GET.copy()
     query_params.pop('page', None)
     page_url_base = f'?{query_params.urlencode()}&' if query_params else '?'
@@ -293,12 +322,14 @@ def index(request: HttpRequest) -> HttpResponse:
         'page_url_base': page_url_base,
         'statuses': statuses,
         'categories': categories,
+        'responsible_users': responsible_users,
         'sla_statuses': SLAStatus,
         'time_statuses': TimeStatus,
         'selected': {
             'is_incident_finish': is_incident_finish,
             'status': status_name,
             'category': category_id,
+            'responsible_user': responsible_user_id,
             'pole': pole,
             'base_station': base_station,
             'per_page': per_page,

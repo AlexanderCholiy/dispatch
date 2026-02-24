@@ -502,7 +502,7 @@ def user_detail(request: HttpRequest, user_id: int):
         cache.set(cache_key, stats, STATS_INTERVAL_SECONDS)
 
     context = {
-        'user': user,
+        'user_info': user,
         **stats
     }
 
