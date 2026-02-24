@@ -1,18 +1,17 @@
 import bisect
-from sortedcontainers import SortedList
 
 from dal import autocomplete
-from .models import Pole, BaseStation
 from django.core.cache import cache
 
+from users.models import Roles, User
 
 from .constants import (
-    POLES_PER_PAGE,
+    BASE_STATION_CACHE_TTL,
     BASE_STATIONS_PER_PAGE,
     POLE_CACHE_TTL,
-    BASE_STATION_CACHE_TTL,
+    POLES_PER_PAGE,
 )
-from users.models import Roles, User
+from .models import BaseStation, Pole
 
 
 def get_cached_poles() -> list[tuple[int, str]]:

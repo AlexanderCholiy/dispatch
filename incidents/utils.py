@@ -16,10 +16,16 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from core.loggers import incident_logger
-from emails.models import EmailFolder, EmailMessage, EmailReference, EmailTo, EmailToCC
+from emails.models import (
+    EmailFolder,
+    EmailMessage,
+    EmailReference,
+    EmailTo,
+    EmailToCC,
+)
+from ts.models import BaseStationOperator, ContractorEmail
 from users.models import Roles, User
 from yandex_tracker.utils import YandexTrackerManager
-from ts.models import Pole, ContractorEmail, BaseStationOperator
 
 from .constants import (
     AVR_CATEGORY,

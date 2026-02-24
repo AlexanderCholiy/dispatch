@@ -1,21 +1,16 @@
-from django.db.models import Q
-from itertools import islice
-from django.core.cache import cache
-from typing import TypedDict, Optional
-
 from datetime import datetime, timedelta
+from typing import Optional, TypedDict
+
+from django.core.cache import cache
 from django.utils import timezone
 
+from core.loggers import monitoring_logger
 from monitoring.constants import (
-    MONITORING_EQUIPMENT_CACHE_TTL,
     CHUNKED_MONITORING_QS,
     MONITORING_EQUIPMENT_CACHE_KEY,
+    MONITORING_EQUIPMENT_CACHE_TTL,
     UNDEFINED_POLE_CASE,
 )
-
-from core.loggers import monitoring_logger
-
-
 from monitoring.models import MSysModem
 from ts.models import Pole
 

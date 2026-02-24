@@ -196,6 +196,14 @@
       </select>
     </div>
 
+    {% if can_manage %}
+      <a href="{% url 'incidents:create' %}" 
+        class="btn btn-success tooltip" 
+        data-title="Добавить инцидент">
+        <i class="bx bx-plus"></i>
+      </a>
+    {% endif %}
+
     <button type="button" id="reset-filters" class="btn btn-secondary tooltip" data-title="Сбросить фильтры">
       <i class="bx bx-x-circle"></i>
     </button>

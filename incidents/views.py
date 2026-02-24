@@ -29,10 +29,14 @@ from core.exceptions import (
 from core.loggers import yt_logger
 from core.threads import tasks_in_threads
 from emails.models import EmailMessage, EmailReference
+from monitoring.models import DeviceStatus, DeviceType
+from monitoring.services.monitoring_equipment import (
+    get_monitiring_cache_equipment,
+)
+from users.constants import USERS_CACHE_TTL
 from users.models import Roles, User
 from users.utils import role_required
 from yandex_tracker.utils import yt_manager
-from django.utils import timezone
 
 from .annotations import annotate_sla_avr, annotate_sla_dgu, annotate_sla_rvr
 from .constants import (
@@ -40,9 +44,7 @@ from .constants import (
     MAX_INCIDENTS_INFO_CACHE_SEC,
     PAGE_SIZE_INCIDENTS_CHOICES,
 )
-from .forms import ConfirmMoveEmailsForm, MoveEmailsForm, IncidentForm
-from users.models import User, Roles
-from users.constants import USERS_CACHE_TTL
+from .forms import ConfirmMoveEmailsForm, IncidentForm, MoveEmailsForm
 from .models import (
     Incident,
     IncidentCategory,
@@ -53,10 +55,6 @@ from .models import (
     TimeStatus,
 )
 from .utils import IncidentManager
-from monitoring.services.monitoring_equipment import (
-    get_monitiring_cache_equipment
-)
-from monitoring.models import DeviceStatus, DeviceType
 
 
 @login_required
@@ -315,6 +313,11 @@ def index(request: HttpRequest) -> HttpResponse:
     query_params.pop('page', None)
     page_url_base = f'?{query_params.urlencode()}&' if query_params else '?'
 
+    allowed_roles = [Roles.DISPATCH]
+    can_manage = (
+        request.user.role in allowed_roles or request.user.is_superuser
+    )
+
     context = {
         'page_obj': page_obj,
         'incidents': incidents,
@@ -339,6 +342,7 @@ def index(request: HttpRequest) -> HttpResponse:
             'sla_dgu_status': sla_dgu_status,
         },
         'page_size_choices': PAGE_SIZE_INCIDENTS_CHOICES,
+        'can_manage': can_manage,
     }
 
     return render(request, 'incidents/index.html', context)
@@ -676,3 +680,34 @@ def confirm_move_emails(request: HttpRequest) -> HttpResponse:
     return redirect(
         'incidents:incident_detail', incident_id=source_incident.id
     )
+
+
+@login_required
+@role_required(allowed_roles=[Roles.DISPATCH])
+@ratelimit(key='user_or_ip', rate='20/m', block=True)
+def create_incident(request: HttpRequest) -> HttpResponse:
+    template_name = 'incidents/create_incident.html'
+
+    if request.method == 'POST':
+        form = IncidentForm(data=request.POST, can_edit=True)
+        if form.is_valid():
+            incident = form.save(commit=False)
+            incident.is_yt_tracker_controlled = False
+            incident.save()
+            return redirect(
+                'incidents:incident_detail', incident_id=incident.id
+            )
+
+    else:
+        form = IncidentForm(
+            initial={
+                'responsible_user': request.user
+            },
+            can_edit=True
+        )
+
+    context = {
+        'form': form
+    }
+
+    return render(request, template_name, context)

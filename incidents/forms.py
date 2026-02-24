@@ -1,27 +1,32 @@
+from datetime import datetime
+from typing import Optional
+
+from dal import autocomplete
 from django import forms
 from django.core.exceptions import ValidationError
-from django.db.models import Prefetch, Q, F
-from dal import autocomplete, forward
-from typing import Optional
-from datetime import datetime
+from django.db.models import F, Prefetch, Q
+from django.utils import timezone
 
 from emails.models import EmailMessage, EmailReference
+from users.models import Roles, User
 
 from .constants import (
-    MAX_CODE_LEN,
-    MAX_FUTURE_END_DELTA,
     AVR_CATEGORY,
-    RVR_CATEGORY,
+    DEFAULT_STATUS_NAME,
     DGU_CATEGORY,
     FINISHED_STATUS_NAMES,
+    MAX_CODE_LEN,
+    MAX_FUTURE_END_DELTA,
+    RVR_CATEGORY,
 )
-from .models import Incident, IncidentStatus, IncidentStatusHistory, IncidentCategory
-from .utils import EmailNode, IncidentManager
-from ts.models import Pole, BaseStation
-from django.utils import timezone
-from users.models import User, Roles
+from .models import (
+    Incident,
+    IncidentCategory,
+    IncidentStatus,
+    IncidentStatusHistory,
+)
 from .services.status_transition import get_allowed_statuses
-from django.core.cache import cache
+from .utils import EmailNode, IncidentManager
 
 
 class MoveEmailsForm(forms.Form):
@@ -166,7 +171,7 @@ class ConfirmMoveEmailsForm(forms.Form):
 class IncidentForm(forms.ModelForm):
     new_status = forms.ModelChoiceField(
         queryset=IncidentStatus.objects.none(),
-        required=True,
+        required=False,
         label='Статус'
     )
 
@@ -264,6 +269,13 @@ class IncidentForm(forms.ModelForm):
         self.can_edit = can_edit
         super().__init__(*args, **kwargs)
 
+        # Значение по умолчанию для категории и статуса:
+        if not self.instance.pk and not self.data:
+            avr_category, _ = (
+                IncidentCategory.objects.get_or_create(name=AVR_CATEGORY)
+            )
+            self.fields['categories'].initial = [avr_category]
+
         for field_name in [
             'avr_start_date', 'avr_end_date',
             'rvr_start_date', 'rvr_end_date',
@@ -354,6 +366,16 @@ class IncidentForm(forms.ModelForm):
         self.fields['new_status'].empty_label = None
 
         self.fields['new_status'].label_from_instance = lambda obj: obj.name
+
+        # Для нового объекта ставим статус по умолчанию:
+        if not self.instance.pk:
+            default_status, _ = (
+                IncidentStatus.objects.get_or_create(name=DEFAULT_STATUS_NAME)
+            )
+            self.fields['new_status'].initial = default_status
+        else:
+            self.fields['new_status'].initial = last_status
+
         self.status_classes = {
             s.pk: s.status_type.css_class for s in allowed_statuses
         }

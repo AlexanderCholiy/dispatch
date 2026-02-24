@@ -1,10 +1,9 @@
 from typing import Optional
 
-from incidents.constants import STATUS_TRANSITIONS, DEFAULT_STATUS_NAME
-
-from incidents.models import IncidentStatus
-
 from django.db.models import Case, When
+
+from incidents.constants import DEFAULT_STATUS_NAME, STATUS_TRANSITIONS
+from incidents.models import IncidentStatus
 
 
 def get_allowed_statuses(

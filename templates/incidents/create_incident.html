@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/incidents/create_incident.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-sm">
+
+  <div class="card">
+
+    <div class="card-body">
+
+      <form method="post" novalidate>
+        {% csrf_token %}
+  
+        {% if form.non_field_errors %}
+          <div class="form-non-field-errors">
+            {% for error in form.non_field_errors %}
+              <div class="form-error">{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+        <div class="field-row">
+ 
+          {% with field=form.responsible_user %}
+            <div class="select-wrapper responsible-user-select {% if field.errors %}has-error{% endif %}">
+              <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+  
+              <select 
+                name="{{ field.name }}" 
+                id="{{ field.id_for_label }}"
+              >
+  
+                {% for value, label in field.field.choices %}
+                  {% if value %}
+                    <option value="{{ value }}"
+                      {% if field.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}
+                    >
+                      {{ label }}
+                    </option>
+                  {% endif %}
+                {% endfor %}
+  
+              </select>
+  
+              {% for error in field.errors %}
+                <div class="form-error">{{ error }}</div>
+              {% endfor %}
+            </div>
+          {% endwith %}
+
+          <div class="multi-select-wrapper" data-required="true">
+            {% with field=form.categories %}
+              <div class="form-group">
+                <label for="id_categories">{{ field.label }}</label>
+  
+                <div class="multi-select" id="categories-select">
+                  <div class="multi-select-values"></div>
+  
+                  <div class="multi-select-dropdown">
+                    {% for value, label in field.field.choices %}
+                      <div class="multi-select-option"
+                           data-value="{{ value }}">
+                        {{ label }}
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+  
+                <input type="hidden"
+                       name="categories"
+                       id="id_categories"
+                       value="{{ field.value|join:',' }}">
+  
+                {% for error in field.errors %}
+                  <div class="form-error">{{ error }}</div>
+                {% endfor %}
+              </div>
+            {% endwith %}
+          </div>
+  
+        </div>
+  
+        <div class="form-actions"> 
+          <button type="submit" class="btn btn-primary">
+            Создать инцидент
+          </button>
+        </div>
+  
+      </form>
+    </div>
+
+
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/multi_select.js' %}"></script>
+{% endblock %}

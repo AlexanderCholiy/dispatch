@@ -243,6 +243,9 @@ class Incident(models.Model):
         return self.code or f'ID-{self.pk}'
 
     def save(self, *args, **kwargs):
+        if not self.incident_date:
+            self.incident_date = timezone.now()
+
         self.full_clean()
 
         if self.is_incident_finish and not self.incident_finish_date:
