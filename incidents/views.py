@@ -691,7 +691,7 @@ def create_incident(request: HttpRequest) -> HttpResponse:
     if request.method == 'POST':
         form = IncidentForm(data=request.POST, can_edit=True)
         if form.is_valid():
-            incident = form.save(commit=False)
+            incident = form.save()
             incident.is_yt_tracker_controlled = False
             incident.save()
             return redirect(

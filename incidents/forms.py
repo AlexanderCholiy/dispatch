@@ -471,12 +471,19 @@ class IncidentForm(forms.ModelForm):
 
     def save(self, commit=True):
         instance: Incident = super().save(commit=False)
+
         new_status: Optional[IncidentStatus] = self.cleaned_data.get(
             'new_status'
         )
 
         # Получаем категории из формы
         cat_objs = self.cleaned_data.get('categories', [])
+
+        if commit:
+            instance.save()
+            if cat_objs:
+                instance.categories.set(cat_objs)
+
         category_names = {c.name for c in cat_objs} if cat_objs else set()
 
         # Определяем текущий статус
@@ -488,9 +495,18 @@ class IncidentForm(forms.ModelForm):
         current_status = last_status.status if last_status else None
 
         # Если статус меняется
-        if new_status and (
-            not current_status or new_status.pk != current_status.pk
+        if (
+            (
+                new_status
+                and (not current_status or new_status.pk != current_status.pk)
+            )
+            or not new_status and not current_status
         ):
+            if not new_status:
+                new_status, _ = (
+                    IncidentStatus.objects
+                    .get_or_create(name=DEFAULT_STATUS_NAME)
+                )
             # Создаём историю с актуальными категориями из формы
             IncidentStatusHistory.objects.create(
                 incident=instance,
