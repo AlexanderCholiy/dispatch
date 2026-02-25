@@ -1,4 +1,5 @@
 from functools import partial
+from typing import Optional
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -16,6 +17,7 @@ from django.db.models import (
 )
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 
@@ -28,7 +30,18 @@ from core.exceptions import (
 )
 from core.loggers import yt_logger
 from core.threads import tasks_in_threads
-from emails.models import EmailMessage, EmailReference
+from emails.email_parser import email_parser
+from emails.models import (
+    EmailAttachment,
+    EmailFolder,
+    EmailMessage,
+    EmailReference,
+    EmailStatus,
+    EmailTo,
+    EmailToCC
+)
+from emails.services.generate_email_msg_id import generate_message_id
+from emails.tasks import send_incident_email_task
 from monitoring.models import DeviceStatus, DeviceType
 from monitoring.services.monitoring_equipment import (
     get_monitiring_cache_equipment,
@@ -44,7 +57,12 @@ from .constants import (
     MAX_INCIDENTS_INFO_CACHE_SEC,
     PAGE_SIZE_INCIDENTS_CHOICES,
 )
-from .forms import ConfirmMoveEmailsForm, IncidentForm, MoveEmailsForm
+from .forms import (
+    ConfirmMoveEmailsForm,
+    IncidentForm,
+    MoveEmailsForm,
+    NewEmailForm,
+)
 from .models import (
     Incident,
     IncidentCategory,
@@ -54,6 +72,8 @@ from .models import (
     SLAStatus,
     TimeStatus,
 )
+from .selectors.incidents import IncidentSelector
+from .services.normalize_incident_subject import normalize_incident_subject
 from .utils import IncidentManager
 
 
@@ -385,7 +405,10 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
 
     user: User = request.user
     allowed_roles = [Roles.DISPATCH]
-    can_manage = user.role in allowed_roles or user.is_superuser
+    can_manage = (
+        (user.role in allowed_roles or user.is_superuser)
+        and not incident.is_yt_tracker_controlled
+    )
 
     incident_form = IncidentForm(instance=incident, can_edit=can_manage)
 
@@ -708,6 +731,109 @@ def create_incident(request: HttpRequest) -> HttpResponse:
 
     context = {
         'form': form
+    }
+
+    return render(request, template_name, context)
+
+
+@login_required
+@role_required(allowed_roles=[Roles.DISPATCH])
+@ratelimit(key='user_or_ip', rate='20/m', block=True)
+def new_email(request: HttpRequest, incident_id: int) -> HttpResponse:
+    template_name = 'emails/new_email.html'
+    incident = IncidentSelector.incidents_with_email_history(incident_id)
+
+    first_email: Optional[EmailMessage] = (
+        incident.all_incident_emails[0]
+        if incident.all_incident_emails else None
+    )
+
+    if request.method == 'POST':
+        form = NewEmailForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            now = timezone.now()
+            domain = request.get_host()
+            message_id = generate_message_id(domain)
+
+            raw_subject = form.cleaned_data.get('subject') or ''
+
+            subject = normalize_incident_subject(
+                raw_subject,
+                incident.code
+            )
+
+            with transaction.atomic():
+                folder = EmailFolder.objects.get(name='SENT')
+
+                email_msg = EmailMessage.objects.create(
+                    email_msg_id=message_id,
+                    email_subject=subject,
+                    email_from=email_parser.email_login,
+                    email_date=now,
+                    email_body=form.cleaned_data.get('body'),
+                    is_first_email=not first_email,
+                    is_email_from_yandex_tracker=False,
+                    was_added_2_yandex_tracker=False,
+                    need_2_add_in_yandex_tracker=True,
+                    email_incident=incident,
+                    folder=folder,
+                    status=EmailStatus.PENDING,
+                )
+
+                for email in form.cleaned_data.get('to', []):
+                    EmailTo.objects.create(
+                        email_msg=email_msg,
+                        email_to=email
+                    )
+
+                for email in form.cleaned_data.get('cc', []):
+                    EmailToCC.objects.create(
+                        email_msg=email_msg,
+                        email_to=email
+                    )
+
+                files = form.cleaned_data.get('attachments')
+
+                if files:
+                    for f in files:
+                        EmailAttachment.objects.create(
+                            email_msg=email_msg,
+                            file_url=f
+                        )
+
+                transaction.on_commit(
+                    lambda: send_incident_email_task.delay(email_msg.id)
+                )
+
+            messages.success(
+                request,
+                (
+                    f'Письмо (ID: {email_msg.id}) готовится к отправке и '
+                    'скоро будет доставлено.'
+                )
+            )
+            return redirect(
+                'incidents:incident_detail', incident_id=incident.id
+            )
+    else:
+        initial_data = {}
+
+        if first_email and first_email.email_subject:
+            clean_subj = (
+                first_email.email_subject
+                .replace(f'{incident.code}:', '')
+                .replace('Re: ', '')
+                .strip()
+            )
+            initial_data['subject'] = clean_subj
+
+        form = NewEmailForm(initial=initial_data)
+
+    context = {
+        'incident': incident,
+        'form': form,
+        'first_email': first_email,
     }
 
     return render(request, template_name, context)

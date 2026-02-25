@@ -18,3 +18,6 @@ CRON_TZ=Europe/Moscow
 # Резервное копирование:
 # Сдвигаем на 45-ю минуту, чтобы не пересекаться с началом часа, когда срабатывают многие скрипты
 45 */6 * * * nice -n 10 ionice -c 2 -n 7 /usr/local/bin/python /app/manage.py database_backup >> /app/logs/cron/cron.log 2>&1
+
+# Повторная отправка "зависших" писем (не чаще чем 2 минуты)
+*/3 * * * * nice -n 19 ionice -c 3 /usr/local/bin/python /app/manage.py resend_stuck_emails >> /app/logs/cron/cron.log 2>&1

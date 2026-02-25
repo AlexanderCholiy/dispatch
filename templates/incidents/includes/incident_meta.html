@@ -60,6 +60,13 @@
                 data-title="Перезагрузить страницу">
           <i class="bx bx-refresh"></i>
         </button>
+
+        <a href="{% url 'incidents:new_email' incident.id %}" 
+          class="btn btn-warning new-email-button tooltip" 
+          data-title="Создать новое письмо">
+          <i class="bx bx-envelope"></i>
+        </a>
+
       </div>
       <p class="incident-date">
         {% if incident.incident_finish_date %}

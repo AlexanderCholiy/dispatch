@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="card">
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="form-group">
+          <label for="{{ form.to.id_for_label }}">Кому</label>
+          {{ form.to }}
+          {% for error in form.to.errors %}
+            <div class="form-error">{{ error }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.cc.id_for_label }}">Копия (CC)</label>
+          {{ form.cc }}
+          {% for error in form.cc.errors %}
+            <div class="form-error">{{ error }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.subject.id_for_label }}">Тема письма</label>
+          {{ form.subject }}
+          {% for error in form.subject.errors %}
+              <div class="form-error">{{ error }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.body.id_for_label }}">Текст письма</label>
+          {{ form.body }}
+          {% for error in form.body.errors %}
+              <div class="form-error">{{ error }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.attachments.id_for_label }}">Вложения</label>
+          {{ form.attachments }}
+          {% for error in form.attachments.errors %}
+              <div class="form-error">{{ error }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="form-group">
+          <button type="submit">Отправить письмо</button>
+          <a href="{% url 'incidents:incident_detail' incident_id=incident.id %}">Отмена</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% endblock %}

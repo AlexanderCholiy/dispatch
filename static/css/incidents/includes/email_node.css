@@ -78,6 +78,7 @@
   margin: 0;
 }
 
+.email-meta-status,
 .email-meta-id,
 .email-meta-ref,
 .email-date,
@@ -97,6 +98,30 @@
 .email-link:hover {
   color: var(--add-color);
   text-decoration: underline;
+}
+
+.email-meta-status span {
+  letter-spacing: 0.05em;
+  border-radius: var(--space-xs);
+  border: 1px solid var(--extra-color);
+  text-align: center;
+}
+
+.email-status-pending {
+  color: var(--priority-color);
+}
+
+.email-status-retry,
+.email-status-sending {
+  color: var(--yellow-color);
+}
+
+.email-status-sent {
+  color: var(--green-color);
+}
+
+.email-status-failed {
+  color: var(--red-color);
 }
 
 

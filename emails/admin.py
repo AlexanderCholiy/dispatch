@@ -96,6 +96,7 @@ class EmailMessageAdmin(admin.ModelAdmin):
                 'was_added_2_yandex_tracker',
                 'need_2_add_in_yandex_tracker',
                 'folder',
+                'status',
             )
         }),
         (None, {

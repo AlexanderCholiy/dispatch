@@ -17,4 +17,9 @@ urlpatterns = [
         name='confirm_move_emails'
     ),
     path('incidents/create/', views.create_incident, name='create'),
+    path(
+        'incidents/<int:incident_id>/emails/new/',
+        views.new_email,
+        name='new_email'
+    ),
 ]

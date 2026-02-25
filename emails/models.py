@@ -8,10 +8,19 @@ from incidents.models import Incident
 
 from .constants import (
     MAX_EMAIL_LEN,
+    MAX_EMAIL_STATUS_LEN,
     MAX_EMAIL_SUBJECT_LEN,
 )
 
 User = get_user_model()
+
+
+class EmailStatus(models.TextChoices):
+    PENDING = 'pending', 'Ожидает отправки'
+    SENDING = 'sending', 'Отправляется'
+    SENT = 'sent', 'Отправлено'
+    FAILED = 'failed', 'Ошибка отправки'
+    RETRY = 'retry', 'Повторная попытка'
 
 
 class EmailErr(SpecialEmail):
@@ -103,6 +112,13 @@ class EmailMessage(models.Model):
         'Необходимо ли перенести письмо в YandexTracker',
         default=False,
         db_index=True
+    )
+    status = models.CharField(
+        'Статус отправки',
+        max_length=MAX_EMAIL_STATUS_LEN,
+        choices=EmailStatus.choices,
+        default=EmailStatus.SENT,
+        db_index=True,
     )
     email_incident = models.ForeignKey(
         Incident,

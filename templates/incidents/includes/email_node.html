@@ -71,6 +71,12 @@
           </div>
         </div>
       {% endif %}
+      <div class="email-meta-status">
+        <strong>Статус:</strong>
+        <span class="email-status-{{ node.email.status }}">
+            {{ node.email.get_status_display }}
+        </span>
+      </div>
     </div>  
   </div>
 

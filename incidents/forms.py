@@ -1,12 +1,22 @@
+import os
 from datetime import datetime
 from typing import Optional
 
 from dal import autocomplete
 from django import forms
 from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.db.models import F, Prefetch, Q
 from django.utils import timezone
 
+from emails.constants import (
+    ALLOWED_EXTENSIONS,
+    ALLOWED_MIME_PREFIXES,
+    MAX_ATTACHMENT_SIZE,
+    MAX_EMAIL_LEN,
+    MAX_EMAIL_SUBJECT_LEN,
+    MAX_TOTAL_ATTACHMENTS_SIZE,
+)
 from emails.models import EmailMessage, EmailReference
 from users.models import Roles, User
 
@@ -27,6 +37,76 @@ from .models import (
 )
 from .services.status_transition import get_allowed_statuses
 from .utils import EmailNode, IncidentManager
+
+
+class MultipleFileInput(forms.FileInput):
+    allow_multiple_selected = True
+
+
+class MultipleFileField(forms.FileField):
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('widget', MultipleFileInput())
+        super().__init__(*args, **kwargs)
+
+    def clean(self, data, initial=None):
+        single_file_clean = super().clean
+        if isinstance(data, (list, tuple)):
+            result = [single_file_clean(d, initial) for d in data]
+        else:
+            result = [single_file_clean(data, initial)]
+
+        total_size = 0
+
+        for f in result:
+            if not f:
+                continue
+
+            if f.size > MAX_ATTACHMENT_SIZE:
+                limit_mb = MAX_ATTACHMENT_SIZE / (1024 * 1024)
+                current_mb = round(f.size / (1024 * 1024), 2)
+                raise ValidationError(
+                    f'Файл "{f.name}" слишком большой ({current_mb} МБ). '
+                    f'Максимальный размер одного файла: {int(limit_mb)} МБ.'
+                )
+
+            total_size += f.size
+
+            ext = os.path.splitext(f.name)[1].lower()
+
+            if not ext:
+                raise ValidationError(
+                    f'Файл "{f.name}" не имеет расширения. '
+                    'Загрузка файлов без расширения запрещена.'
+                )
+
+            if ext not in ALLOWED_EXTENSIONS:
+                raise ValidationError(
+                    f'Формат {ext} для файла "{f.name}" не поддерживается.'
+                )
+
+            file_mime = f.content_type
+            is_mime_valid = any(
+                file_mime == allowed
+                or (
+                    allowed.endswith('/') and file_mime.startswith(allowed)
+                )
+                for allowed in ALLOWED_MIME_PREFIXES
+            )
+
+            if not is_mime_valid:
+                raise ValidationError(
+                    f'Тип файла "{f.name}" ({file_mime}) не разрешен.'
+                )
+
+        if total_size > MAX_TOTAL_ATTACHMENTS_SIZE:
+            total_mb = round(total_size / (1024 * 1024), 1)
+            limit_total_mb = MAX_TOTAL_ATTACHMENTS_SIZE / (1024 * 1024)
+            raise ValidationError(
+                f'Общий объем вложений ({total_mb} МБ) превышает лимит '
+                f'{int(limit_total_mb)} МБ.'
+            )
+
+        return result
 
 
 class MoveEmailsForm(forms.Form):
@@ -529,3 +609,58 @@ class IncidentForm(forms.ModelForm):
                 instance.categories.set(cat_objs)
 
         return instance
+
+
+class NewEmailForm(forms.Form):
+    to = forms.CharField(
+        label='Кому',
+        widget=forms.TextInput(attrs={'placeholder': 'example@company.com'}),
+    )
+    cc = forms.CharField(
+        label='Копия (CC)',
+        required=False,
+        widget=forms.TextInput(attrs={'placeholder': 'example@company.com'}),
+    )
+    subject = forms.CharField(
+        label='Тема письма',
+        max_length=MAX_EMAIL_SUBJECT_LEN,
+        widget=forms.TextInput(attrs={'placeholder': 'Введите тему письма'})
+    )
+    body = forms.CharField(
+        label='Текст письма',
+        required=False,
+        widget=forms.Textarea(
+            attrs={'placeholder': 'Введите текст письма'}
+        )
+    )
+    attachments = MultipleFileField(
+        label='Прикрепить файлы',
+        required=False,
+    )
+
+    def _clean_email_list(self, data):
+        if not data:
+            return []
+
+        emails = [e.strip() for e in data.split(',') if e.strip()]
+
+        for email in emails:
+            validate_email(email)
+
+            if len(email) > MAX_EMAIL_LEN:
+                raise ValidationError(
+                    f'Email "{email[:30]}..." слишком длинный. '
+                    f'Максимальная длина одного адреса — {MAX_EMAIL_LEN} '
+                    'символа.'
+                )
+
+        return emails
+
+    def clean_to(self):
+        emails = self._clean_email_list(self.cleaned_data.get('to', ''))
+        if not emails:
+            raise ValidationError('Поле "Кому" не может быть пустым.')
+        return emails
+
+    def clean_cc(self):
+        return self._clean_email_list(self.cleaned_data.get('cc', ''))

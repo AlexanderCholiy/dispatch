@@ -4,6 +4,7 @@ MAX_EMAIL_SUBJECT_LEN = 1024
 MAX_EMAIL_LEN = 64
 
 MAX_ATTACHMENT_SIZE = 48 * 1024 * 1024  # (в YandexTracker max 50 MB)
+MAX_TOTAL_ATTACHMENTS_SIZE = 5 * MAX_ATTACHMENT_SIZE
 
 # Кол-во дней через которое для не актуальных инцидентов будут удалены
 # вложения:
@@ -12,6 +13,8 @@ MAX_EMAILS_ATTACHMENT_DAYS = 180
 EMAILS_FILES_2_DEL_BATCH_SIZE = 500
 
 MAX_EMAILS_INFO_CACHE_SEC = 3600
+
+MAX_EMAIL_STATUS_LEN = 32
 
 EMAILS_PER_PAGE = 100
 PAGE_SIZE_EMAILS_CHOICES = [25, 50, EMAILS_PER_PAGE]
@@ -109,3 +112,7 @@ EMAIL_RE = re.compile(
     r'^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$',
     re.IGNORECASE,
 )
+
+MIN_STACK_EMAILS_TTL = 120  # Не менять, сначала просмотеть задачу в Cellery
+
+MAX_STACK_EMAILS_TTL = 3600
