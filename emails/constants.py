@@ -24,6 +24,9 @@ ALLOWED_MIME_PREFIXES = {
     'application/pdf',
     'application/msword',
     'application/vnd.openxmlformats-officedocument',  # docx, xlsx, pptx
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',  # noqa: E501
     'application/vnd.ms-excel',
     'application/vnd.ms-powerpoint',
     'application/vnd.visio',  # .vsdx, .vsd

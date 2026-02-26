@@ -63,7 +63,8 @@
 
         <a href="{% url 'incidents:new_email' incident.id %}" 
           class="btn btn-warning new-email-button tooltip" 
-          data-title="Создать новое письмо">
+          data-title="Создать новое письмо"
+          {% if not can_manage %}disabled{% endif %}>
           <i class="bx bx-envelope"></i>
         </a>
 

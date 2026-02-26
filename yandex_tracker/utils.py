@@ -905,10 +905,14 @@ class YandexTrackerManager:
         email_cc = [
             eml.email_to for eml in email_incident.email_msg_cc.all()
         ]
-        issues = self.select_issue(database_id)
 
-        if not issues and incident.code:
+        issues = []
+        # В YandexTracker обязательно приоритет по коду:
+        if incident.code:
             issues = self.select_issue(key=incident.code)
+
+        if not issues:
+            issues = self.select_issue(database_id)
 
         key = issues[0]['key'] if issues else None
 

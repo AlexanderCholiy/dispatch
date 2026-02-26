@@ -100,8 +100,28 @@
   text-decoration: underline;
 }
 
+.send-reply {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  /* margin-top: auto; */
+  width: 100%;
+  margin-bottom: var(--space-lg);
+  text-align: center;
+}
+
+.send-reply a.btn {
+  width: 100%;
+  text-align: center;
+  display: inline-block;
+  box-sizing: border-box;
+  padding: var(--space-xxs) var(--space-sm);
+  font-size: var(--font-sm);
+}
+
 .email-meta-status span {
   letter-spacing: 0.05em;
+  background-color: var(--add-background-color);
   border-radius: var(--space-xs);
   border: 1px solid var(--extra-color);
   text-align: center;

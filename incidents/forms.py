@@ -87,9 +87,7 @@ class MultipleFileField(forms.FileField):
             file_mime = f.content_type
             is_mime_valid = any(
                 file_mime == allowed
-                or (
-                    allowed.endswith('/') and file_mime.startswith(allowed)
-                )
+                or (allowed.endswith('/') and file_mime.startswith(allowed))
                 for allowed in ALLOWED_MIME_PREFIXES
             )
 
@@ -614,12 +612,16 @@ class IncidentForm(forms.ModelForm):
 class NewEmailForm(forms.Form):
     to = forms.CharField(
         label='Кому',
-        widget=forms.TextInput(attrs={'placeholder': 'example@company.com'}),
+        widget=forms.TextInput(
+            attrs={'placeholder': 'ivanov@mail.ru, petrov@mail.ru...'}
+        ),
     )
     cc = forms.CharField(
         label='Копия (CC)',
         required=False,
-        widget=forms.TextInput(attrs={'placeholder': 'example@company.com'}),
+        widget=forms.TextInput(
+            attrs={'placeholder': 'ivanov@mail.ru, petrov@mail.ru...'}
+        ),
     )
     subject = forms.CharField(
         label='Тема письма',

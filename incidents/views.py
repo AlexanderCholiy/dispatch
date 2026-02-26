@@ -16,7 +16,7 @@ from django.db.models import (
     Value,
 )
 from django.http import Http404, HttpRequest, HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
@@ -75,6 +75,7 @@ from .models import (
 from .selectors.incidents import IncidentSelector
 from .services.normalize_incident_subject import normalize_incident_subject
 from .utils import IncidentManager
+from emails.services.send_email_msg import send_via_django_email
 
 
 @login_required
@@ -167,19 +168,23 @@ def index(request: HttpRequest) -> HttpResponse:
         incident=OuterRef('pk')
     ).order_by('-insert_date', '-id')
 
-    base_qs = Incident.objects.filter(
-        TOTAL_VALID_INCIDENTS_FILTER
-    ).select_related(
-        'incident_type',
-        'incident_subtype',
-        'responsible_user',
-        'pole',
-        'pole__region',
-        'base_station',
-    ).prefetch_related('categories').annotate(
-        latest_status_name=Subquery(
-            latest_status_subquery.values('status__name')[:1]
-        ),
+    base_qs = (
+        Incident.objects
+        .filter(TOTAL_VALID_INCIDENTS_FILTER)
+        .select_related(
+            'incident_type',
+            'incident_subtype',
+            'responsible_user',
+            'pole',
+            'pole__region',
+            'base_station',
+        )
+        .prefetch_related('categories')
+        .annotate(
+            latest_status_name=Subquery(
+                latest_status_subquery.values('status__name')[:1]
+            ),
+        )
     )
 
     base_qs = annotate_sla_avr(base_qs)
@@ -405,10 +410,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
 
     user: User = request.user
     allowed_roles = [Roles.DISPATCH]
-    can_manage = (
-        (user.role in allowed_roles or user.is_superuser)
-        and not incident.is_yt_tracker_controlled
-    )
+    can_manage = user.role in allowed_roles or user.is_superuser
 
     incident_form = IncidentForm(instance=incident, can_edit=can_manage)
 
@@ -739,7 +741,11 @@ def create_incident(request: HttpRequest) -> HttpResponse:
 @login_required
 @role_required(allowed_roles=[Roles.DISPATCH])
 @ratelimit(key='user_or_ip', rate='20/m', block=True)
-def new_email(request: HttpRequest, incident_id: int) -> HttpResponse:
+def new_email(
+    request: HttpRequest,
+    incident_id: int,
+    reply_email_id: Optional[int] = None
+) -> HttpResponse:
     template_name = 'emails/new_email.html'
     incident = IncidentSelector.incidents_with_email_history(incident_id)
 
@@ -748,13 +754,20 @@ def new_email(request: HttpRequest, incident_id: int) -> HttpResponse:
         if incident.all_incident_emails else None
     )
 
+    reply_to_email: Optional[EmailMessage] = None
+    if reply_email_id is not None:
+        reply_to_email = get_object_or_404(
+            EmailMessage,
+            id=reply_email_id,
+            email_incident=incident
+        )
+
     if request.method == 'POST':
         form = NewEmailForm(request.POST, request.FILES)
 
         if form.is_valid():
             now = timezone.now()
-            domain = request.get_host()
-            message_id = generate_message_id(domain)
+            message_id = generate_message_id()
 
             raw_subject = form.cleaned_data.get('subject') or ''
 
@@ -762,6 +775,8 @@ def new_email(request: HttpRequest, incident_id: int) -> HttpResponse:
                 raw_subject,
                 incident.code
             )
+            if reply_to_email and not subject.lower().startswith('re:'):
+                subject = f'Re: {subject}'
 
             with transaction.atomic():
                 folder = EmailFolder.objects.get(name='SENT')
@@ -779,7 +794,28 @@ def new_email(request: HttpRequest, incident_id: int) -> HttpResponse:
                     email_incident=incident,
                     folder=folder,
                     status=EmailStatus.PENDING,
+                    email_msg_reply_id=(
+                        reply_to_email.email_msg_id
+                        if reply_to_email else None
+                    ),
                 )
+
+                if reply_to_email:
+                    # Копируем все references исходного письма:
+                    for ref in (
+                        reply_to_email.email_references.all()
+                        .order_by('email_msg__email_date', 'email_msg__id')
+                    ):
+                        EmailReference.objects.create(
+                            email_msg=email_msg,
+                            email_msg_references=ref.email_msg_references
+                        )
+
+                    # Добавляем само письмо, на которое отвечаем:
+                    EmailReference.objects.create(
+                        email_msg=email_msg,
+                        email_msg_references=reply_to_email.email_msg_id
+                    )
 
                 for email in form.cleaned_data.get('to', []):
                     EmailTo.objects.create(
@@ -802,8 +838,14 @@ def new_email(request: HttpRequest, incident_id: int) -> HttpResponse:
                             file_url=f
                         )
 
-                transaction.on_commit(
-                    lambda: send_incident_email_task.delay(email_msg.id)
+                # transaction.on_commit(
+                #     lambda: send_incident_email_task.delay(email_msg.id)
+                # )
+                send_via_django_email(
+                    email_msg,
+                    email_parser.email_login,
+                    email_parser.email_pswd,
+                    email_parser.email_server,
                 )
 
             messages.success(
@@ -819,7 +861,11 @@ def new_email(request: HttpRequest, incident_id: int) -> HttpResponse:
     else:
         initial_data = {}
 
-        if first_email and first_email.email_subject:
+        if (
+            reply_to_email is None
+            and first_email
+            and first_email.email_subject
+        ):
             clean_subj = (
                 first_email.email_subject
                 .replace(f'{incident.code}:', '')
@@ -828,12 +874,38 @@ def new_email(request: HttpRequest, incident_id: int) -> HttpResponse:
             )
             initial_data['subject'] = clean_subj
 
+        elif reply_to_email is not None:
+            clean_subj = reply_to_email.email_subject or ''
+            clean_subj = (
+                clean_subj
+                .replace(f'{incident.code}:', '')
+                .replace('Re: ', '')
+                .strip()
+            )
+            initial_data['subject'] = clean_subj
+
+            email_to = [
+                obj.email_to for obj in reply_to_email.email_msg_to.all()
+                if obj.email_to != email_parser.email_login
+            ]
+            if reply_to_email.email_from != email_parser.email_login:
+                email_to.append(reply_to_email.email_from)
+
+            initial_data['to'] = ', '.join(email_to)
+            initial_data['cc'] = ', '.join(
+                [
+                    obj.email_to for obj in reply_to_email.email_msg_cc.all()
+                    if obj.email_to != email_parser.email_login
+                ]
+            )
+
         form = NewEmailForm(initial=initial_data)
 
     context = {
         'incident': incident,
         'form': form,
         'first_email': first_email,
+        'reply_to_email': reply_to_email,
     }
 
     return render(request, template_name, context)

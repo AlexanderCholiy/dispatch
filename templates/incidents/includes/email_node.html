@@ -44,17 +44,21 @@
       
       <div class="email-to">
         <strong>Кому:</strong>
-        {% for to in node.email.prefetched_email_to %}
-        {{ to.email_to }}{% if not forloop.last %}, {% endif %}
-        {% endfor %}
+        <span class="copy-text" data-text="{% for to in node.email.prefetched_email_to %}{{ to.email_to }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+          {% for to in node.email.prefetched_email_to %}
+            {{ to.email_to }}{% if not forloop.last %}, {% endif %}
+          {% endfor %}
+        </span>
       </div>
       
       {% if node.email.email_msg_cc.all %}
         <div class="email-to-cc">
           <strong>Копия:</strong>
-          {% for cc in node.email.prefetched_email_to_cc %}
-          {{ cc.email_to }}{% if not forloop.last %}, {% endif %}
-          {% endfor %}
+          <span class="copy-text" data-text="{% for cc in node.email.prefetched_email_to_cc %}{{ cc.email_to }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+            {% for cc in node.email.prefetched_email_to_cc %}
+              {{ cc.email_to }}{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+          </span>
         </div>
       {% endif %}
       
@@ -71,11 +75,22 @@
           </div>
         </div>
       {% endif %}
-      <div class="email-meta-status">
-        <strong>Статус:</strong>
-        <span class="email-status-{{ node.email.status }}">
-            {{ node.email.get_status_display }}
-        </span>
+      {% if node.email.status != 'sent' %}
+        <div class="email-meta-status">
+          <strong>Статус:</strong>
+          <span class="email-status-{{ node.email.status }}">
+              {{ node.email.get_status_display }}
+          </span>
+        </div>
+      {% endif %}
+      <div class="send-reply">
+          <a 
+            href="{% url 'incidents:email_reply' incident_id=incident.id reply_email_id=node.email.id %}" 
+            class="btn btn-danger"
+            {% if not can_manage %}disabled{% endif %}
+          >
+              Ответить
+          </a>
       </div>
     </div>  
   </div>

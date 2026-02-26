@@ -22,4 +22,9 @@ urlpatterns = [
         views.new_email,
         name='new_email'
     ),
+    path(
+        'incidents/<int:incident_id>/emails/reply/<int:reply_email_id>/',
+        views.new_email,
+        name='email_reply'
+    ),
 ]

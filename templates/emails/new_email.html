@@ -5,8 +5,26 @@
 {% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="container-sm">
   <div class="card">
+    <div class="card-header">
+      <div class="header-text">
+        <p class="new-email-label">
+          {% if reply_to_email %}
+            Ответ на письмо
+            <span class="copy-text" data-text="{{ reply_to_email.id }}">
+              {{ reply_to_email.id }}
+            </span>
+            по инциденту
+          {% else %}
+            Создание нового письма по инциденту
+          {% endif %}
+          <span class="incident-code copy-text" data-text="{{ incident.code|default:incident.id }}">
+            {{ incident.code|default:incident.id }}
+          </span>
+        </p>
+      </div>
+    </div>
     <div class="card-body">
       <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
