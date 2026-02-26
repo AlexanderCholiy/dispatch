@@ -78,7 +78,6 @@
   margin: 0;
 }
 
-.email-meta-status,
 .email-meta-id,
 .email-meta-ref,
 .email-date,
@@ -100,6 +99,7 @@
   text-decoration: underline;
 }
 
+.email-meta-status,
 .send-reply {
   display: flex !important;
   justify-content: center !important;
@@ -110,13 +110,14 @@
   text-align: center;
 }
 
+.email-meta-status span,
 .send-reply a.btn {
   width: 100%;
   text-align: center;
   display: inline-block;
   box-sizing: border-box;
   padding: var(--space-xxs) var(--space-sm);
-  font-size: var(--font-sm);
+  font-size: var(--font-xs);
 }
 
 .email-meta-status span {

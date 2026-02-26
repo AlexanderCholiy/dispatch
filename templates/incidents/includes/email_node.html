@@ -77,9 +77,8 @@
       {% endif %}
       {% if node.email.status != 'sent' %}
         <div class="email-meta-status">
-          <strong>Статус:</strong>
           <span class="email-status-{{ node.email.status }}">
-              {{ node.email.get_status_display }}
+            {{ node.email.get_status_display }}
           </span>
         </div>
       {% endif %}
@@ -89,7 +88,7 @@
             class="btn btn-danger"
             {% if not can_manage %}disabled{% endif %}
           >
-              Ответить
+            Ответить
           </a>
       </div>
     </div>  

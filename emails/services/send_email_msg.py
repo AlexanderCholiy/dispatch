@@ -28,14 +28,8 @@ def send_via_django_email(
         fail_silently=False,
     )
 
-    # Гарантируем правильный Subject, т.к. некоторые алгоритмы его требуют при
-    # ответе:
-    subject = email_msg.email_subject or ''
-    if email_msg.email_msg_reply_id and not subject.lower().startswith('re:'):
-        subject = f'Re: {subject}'
-
     message = DjangoEmailMessage(
-        subject=subject,
+        subject=email_msg.email_subject or '',
         body=email_msg.email_body or '',
         from_email=email_msg.email_from,
         to=[obj.email_to for obj in email_msg.email_msg_to.all()],
@@ -66,6 +60,10 @@ def send_via_django_email(
         if attachment.file_url:
             message.attach_file(attachment.file_url.path)
 
+    for attachment in email_msg.email_intext_attachments.all():
+        if attachment.file_url:
+            message.attach_file(attachment.file_url.path)
+
     # Бросает исключение, если отправка не удалась:
     message.send(fail_silently=False)
     parsed_date = timezone.now()
@@ -89,15 +87,5 @@ def send_via_django_email(
         save=True,
     )
 
-    real_subject = mime_message.get('Subject')
-
-    update_fields = []
-
     email_msg.email_date = parsed_date
-    update_fields.append('email_date')
-
-    if real_subject and email_msg.email_subject != real_subject:
-        email_msg.email_subject = real_subject
-        update_fields.append('email_subject')
-
-    email_msg.save(update_fields=update_fields)
+    email_msg.save(update_fields=['email_date'])

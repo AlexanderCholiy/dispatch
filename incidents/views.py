@@ -50,6 +50,7 @@ from users.constants import USERS_CACHE_TTL
 from users.models import Roles, User
 from users.utils import role_required
 from yandex_tracker.utils import yt_manager
+from emails.services.clean_email_subject import clean_email_subject
 
 from .annotations import annotate_sla_avr, annotate_sla_dgu, annotate_sla_rvr
 from .constants import (
@@ -76,6 +77,7 @@ from .selectors.incidents import IncidentSelector
 from .services.normalize_incident_subject import normalize_incident_subject
 from .utils import IncidentManager
 from emails.services.send_email_msg import send_via_django_email
+from emails.services.get_previous_email_body import get_previous_email_body
 
 
 @login_required
@@ -412,7 +414,9 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
     allowed_roles = [Roles.DISPATCH]
     can_manage = user.role in allowed_roles or user.is_superuser
 
-    incident_form = IncidentForm(instance=incident, can_edit=can_manage)
+    incident_form = IncidentForm(
+        instance=incident, can_edit=can_manage, author=user
+    )
 
     if request.method == 'POST':
         if not can_manage:
@@ -437,7 +441,10 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
 
     if request.method == 'POST' and 'incident_submit' in request.POST:
         incident_form = IncidentForm(
-            data=request.POST, instance=incident, can_edit=can_manage
+            data=request.POST,
+            instance=incident,
+            can_edit=can_manage,
+            author=user,
         )
         if incident_form.is_valid():
             incident_form.save()
@@ -713,8 +720,10 @@ def confirm_move_emails(request: HttpRequest) -> HttpResponse:
 def create_incident(request: HttpRequest) -> HttpResponse:
     template_name = 'incidents/create_incident.html'
 
+    user: User = request.user
+
     if request.method == 'POST':
-        form = IncidentForm(data=request.POST, can_edit=True)
+        form = IncidentForm(data=request.POST, can_edit=True, author=user)
         if form.is_valid():
             incident = form.save()
             incident.is_yt_tracker_controlled = False
@@ -728,7 +737,8 @@ def create_incident(request: HttpRequest) -> HttpResponse:
             initial={
                 'responsible_user': request.user
             },
-            can_edit=True
+            can_edit=True,
+            author=user,
         )
 
     context = {
@@ -775,8 +785,6 @@ def new_email(
                 raw_subject,
                 incident.code
             )
-            if reply_to_email and not subject.lower().startswith('re:'):
-                subject = f'Re: {subject}'
 
             with transaction.atomic():
                 folder = EmailFolder.objects.get(name='SENT')
@@ -838,14 +846,8 @@ def new_email(
                             file_url=f
                         )
 
-                # transaction.on_commit(
-                #     lambda: send_incident_email_task.delay(email_msg.id)
-                # )
-                send_via_django_email(
-                    email_msg,
-                    email_parser.email_login,
-                    email_parser.email_pswd,
-                    email_parser.email_server,
+                transaction.on_commit(
+                    lambda: send_incident_email_task.delay(email_msg.id)
                 )
 
             messages.success(
@@ -866,23 +868,16 @@ def new_email(
             and first_email
             and first_email.email_subject
         ):
-            clean_subj = (
-                first_email.email_subject
-                .replace(f'{incident.code}:', '')
-                .replace('Re: ', '')
-                .strip()
+            clean_subj = clean_email_subject(
+                first_email.email_subject or '', incident.code
             )
             initial_data['subject'] = clean_subj
 
         elif reply_to_email is not None:
-            clean_subj = reply_to_email.email_subject or ''
-            clean_subj = (
-                clean_subj
-                .replace(f'{incident.code}:', '')
-                .replace('Re: ', '')
-                .strip()
+            clean_subj = clean_email_subject(
+                first_email.email_subject or '', incident.code
             )
-            initial_data['subject'] = clean_subj
+            initial_data['subject'] = f'Re: {clean_subj}'
 
             email_to = [
                 obj.email_to for obj in reply_to_email.email_msg_to.all()
@@ -899,13 +894,19 @@ def new_email(
                 ]
             )
 
+            previous_msg = (
+                get_previous_email_body(reply_to_email)
+                if reply_to_email else None
+            )
+
+            initial_data['body'] = previous_msg
+
         form = NewEmailForm(initial=initial_data)
 
     context = {
         'incident': incident,
         'form': form,
         'first_email': first_email,
-        'reply_to_email': reply_to_email,
     }
 
     return render(request, template_name, context)

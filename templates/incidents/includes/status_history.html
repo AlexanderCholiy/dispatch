@@ -3,7 +3,15 @@
 <ul class="status-history">
   {% for history in incident.prefetched_status_history %}
     <li class="status-item">
-      <span class="status-name {{ history.status.status_type.css_class }}">{{ history.status.name }}</span>
+      {% if history.comments %}
+        <span 
+          class="status-name {{ history.status.status_type.css_class }} tooltip"
+          data-title="{{ history.comments|default:'—' }}">
+          {{ history.status.name }}
+        </span>
+      {% else %}
+        <span class="status-name {{ history.status.status_type.css_class }}">{{ history.status.name }}</span>
+      {% endif %}
       <span class="status-date">{{ history.insert_date|date:"d.m.Y H:i" }}</span>
     </li>
   {% empty %}

@@ -343,8 +343,15 @@ class IncidentForm(forms.ModelForm):
             ),
         }
 
-    def __init__(self, can_edit: bool = False, *args, **kwargs):
+    def __init__(
+        self,
+        can_edit: bool = False,
+        author: Optional[User] = None,
+        *args,
+        **kwargs
+    ):
         self.can_edit = can_edit
+        self.author = author
         super().__init__(*args, **kwargs)
 
         # Значение по умолчанию для категории и статуса:
@@ -586,9 +593,16 @@ class IncidentForm(forms.ModelForm):
                     .get_or_create(name=DEFAULT_STATUS_NAME)
                 )
             # Создаём историю с актуальными категориями из формы
+
+            comments = (
+                f'Автор {self.author.get_full_name()} '
+                f'[ID: {self.author.id}]'
+            ) if self.author else None
+
             IncidentStatusHistory.objects.create(
                 incident=instance,
                 status=new_status,
+                comments=comments,
                 is_avr_category=AVR_CATEGORY in category_names,
                 is_rvr_category=RVR_CATEGORY in category_names,
                 is_dgu_category=DGU_CATEGORY in category_names,
