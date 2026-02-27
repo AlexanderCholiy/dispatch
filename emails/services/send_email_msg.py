@@ -1,12 +1,13 @@
 from django.core.files.base import ContentFile
-from django.core.mail import EmailMessage as DjangoEmailMessage, SafeMIMEText
+from django.core.mail import EmailMultiAlternatives, SafeMIMEText
 from django.core.mail.backends.smtp import EmailBackend
-from email.utils import parsedate_to_datetime
+from django.db.models import Prefetch
 from django.utils import timezone
-from django.db import transaction
-from datetime import timezone as dt_timezone
+from django.utils.html import escape
 
 from emails.models import EmailMessage, EmailMime, EmailReference
+
+from .get_previous_email_body import get_previous_email_body
 
 
 def send_via_django_email(
@@ -28,12 +29,51 @@ def send_via_django_email(
         fail_silently=False,
     )
 
-    message = DjangoEmailMessage(
+    # ---------------- Подготовка цитаты ----------------
+    plain_body = email_msg.email_body or ''
+    html_body_content = (
+        escape(email_msg.email_body or '').replace('\n', '<br>')
+    )
+
+    reply_to_email = None
+    prev_plain = prev_html = ''
+    if email_msg.email_msg_reply_id:
+        try:
+            reply_to_email = EmailMessage.objects.prefetch_related(
+                'email_msg_to', 'email_msg_cc',
+                Prefetch(
+                    'email_references',
+                    queryset=EmailReference.objects.order_by(
+                        'email_msg__email_date', 'email_msg__id'
+                    )
+                )
+            ).get(email_msg_id=email_msg.email_msg_reply_id)
+
+            prev_plain, prev_html = get_previous_email_body(reply_to_email)
+            plain_body += '\n' + prev_plain
+            html_body_content = f'{html_body_content}{prev_html}'
+        except EmailMessage.DoesNotExist:
+            pass
+
+    to_list = [
+        obj.email_to
+        for obj in getattr(
+            email_msg, '_prefetched_email_msg_to', email_msg.email_msg_to.all()
+        )
+    ]
+    cc_list = [
+        obj.email_to
+        for obj in getattr(
+            email_msg, '_prefetched_email_msg_cc', email_msg.email_msg_cc.all()
+        )
+    ]
+
+    message = EmailMultiAlternatives(
         subject=email_msg.email_subject or '',
-        body=email_msg.email_body or '',
+        body=plain_body,
         from_email=email_msg.email_from,
-        to=[obj.email_to for obj in email_msg.email_msg_to.all()],
-        cc=[obj.email_to for obj in email_msg.email_msg_cc.all()],
+        to=to_list,
+        cc=cc_list,
         connection=connection,
     )
 
@@ -42,10 +82,13 @@ def send_via_django_email(
     if email_msg.email_msg_reply_id:
         message.extra_headers['In-Reply-To'] = email_msg.email_msg_reply_id
 
-    references = list(
+    references_qs = getattr(
+        email_msg,
+        '_prefetched_email_references',
         email_msg.email_references.all()
-        .order_by('email_msg__email_date', 'email_msg__id')
-        .values_list('email_msg_references', flat=True)
+    )
+    references = list(
+        references_qs.values_list('email_msg_references', flat=True)
     )
     if email_msg.email_msg_reply_id:
         references = [
@@ -56,13 +99,26 @@ def send_via_django_email(
     if references:
         message.extra_headers['References'] = ' '.join(references)
 
-    for attachment in email_msg.email_attachments.all():
+    attachments = getattr(
+        email_msg,
+        '_prefetched_email_attachments',
+        email_msg.email_attachments.all()
+    )
+    intext_attachments = getattr(
+        email_msg,
+        '_prefetched_email_intext_attachments',
+        email_msg.email_intext_attachments.all()
+    )
+
+    for attachment in attachments:
         if attachment.file_url:
             message.attach_file(attachment.file_url.path)
 
-    for attachment in email_msg.email_intext_attachments.all():
+    for attachment in intext_attachments:
         if attachment.file_url:
             message.attach_file(attachment.file_url.path)
+
+    message.attach_alternative(html_body_content, 'text/html')
 
     # Бросает исключение, если отправка не удалась:
     message.send(fail_silently=False)

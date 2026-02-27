@@ -51,7 +51,7 @@
         </span>
       </div>
       
-      {% if node.email.email_msg_cc.all %}
+      {% if node.email.prefetched_email_to_cc %}
         <div class="email-to-cc">
           <strong>Копия:</strong>
           <span class="copy-text" data-text="{% for cc in node.email.prefetched_email_to_cc %}{{ cc.email_to }}{% if not forloop.last %}, {% endif %}{% endfor %}">

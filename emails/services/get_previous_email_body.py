@@ -1,16 +1,20 @@
 from typing import Optional
 
-from django.utils import timezone
 from babel.dates import format_datetime
+from django.utils import timezone
+from django.utils.html import escape
 
 from emails.models import EmailMessage
 
 
-def get_previous_email_body(prev_email: EmailMessage) -> Optional[str]:
+def get_previous_email_body(
+    prev_email: EmailMessage
+) -> Optional[tuple[str, str]]:
     """
-    Формирует блок предыдущего сообщения в стиле Outlook:
-    Возвращает None, если блок не нужен.
+    Формирует блок предыдущего сообщения в стиле Outlook.
+    Возвращает (plain_text, html_text)
     """
+
     if not prev_email.email_body and not prev_email.email_subject:
         return None
 
@@ -31,12 +35,15 @@ def get_previous_email_body(prev_email: EmailMessage) -> Optional[str]:
         sent_dt = timezone.localtime(sent_dt)
 
     sent_value = format_datetime(
-        sent_dt, 'EEE, d MMMM yyyy HH:mm', locale='ru_RU'
+        sent_dt,
+        'EEE, d MMMM yyyy HH:mm',
+        locale='ru_RU'
     )
 
     subject_value = prev_email.email_subject or ''
+    body_value = prev_email.email_body or ''
 
-    lines = [
+    plain_lines = [
         '',
         '',
         '-----Original Message-----',
@@ -46,12 +53,39 @@ def get_previous_email_body(prev_email: EmailMessage) -> Optional[str]:
     ]
 
     if cc_value:
-        lines.append(f'Cc: {cc_value}')
+        plain_lines.append(f'Cc: {cc_value}')
 
-    lines.append(f'Subject: {subject_value}')
-    lines.append('')
+    plain_lines.append(f'Subject: {subject_value}')
+    plain_lines.append('')
+    plain_lines.append(body_value)
 
-    if prev_email.email_body:
-        lines.append(prev_email.email_body)
+    plain_part = '\n'.join(plain_lines)
 
-    return '\n'.join(lines)
+    escaped_body = escape(body_value).replace('\n', '<br>')
+
+    html_part = f"""
+    <div style="margin-top:15px;">
+        <div style="
+            border-top:1px solid #B5C4DF;
+            padding-top:10px;
+            font-size:10pt;
+        ">
+            <b>From:</b> {escape(from_value)}<br>
+            <b>Sent:</b> {escape(sent_value)}<br>
+            <b>To:</b> {escape(to_value)}<br>
+            {"<b>Cc:</b> " + escape(cc_value) + "<br>" if cc_value else ""}
+            <b>Subject:</b> {escape(subject_value)}<br>
+        </div>
+
+        <blockquote style="
+            border-left:2px solid #B5C4DF;
+            margin-left:5px;
+            padding-left:10px;
+            color:#000000;
+        ">
+            {escaped_body}
+        </blockquote>
+    </div>
+    """
+
+    return plain_part, html_part

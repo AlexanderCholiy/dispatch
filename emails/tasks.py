@@ -19,7 +19,18 @@ from .services.send_email_msg import send_via_django_email
 )
 def send_incident_email_task(self: Task, email_id: int):
     try:
-        email_msg = EmailMessage.objects.get(pk=email_id)
+        email_msg = (
+            EmailMessage.objects
+            .select_related('folder', 'email_incident')
+            .prefetch_related(
+                'email_msg_to',
+                'email_msg_cc',
+                'email_references',
+                'email_attachments',
+                'email_intext_attachments',
+            )
+            .get(pk=email_id)
+        )
     except EmailMessage.DoesNotExist:
         celery_logger.warning(
             f'Письмо id={email_id} не найдено'

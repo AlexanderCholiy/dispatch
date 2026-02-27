@@ -119,3 +119,8 @@ EMAIL_RE = re.compile(
 MIN_STACK_EMAILS_TTL = 120  # Не менять, сначала просмотеть задачу в Cellery
 
 MAX_STACK_EMAILS_TTL = 3600
+
+DISPATCHER_SIGNATURE = (
+    'С уважением,\n'
+    'Диспетчерская служба «Новые Башни»'
+)

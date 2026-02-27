@@ -16,7 +16,7 @@ from django.db.models import (
     Value,
 )
 from django.http import Http404, HttpRequest, HttpResponse
-from django.shortcuts import redirect, render, get_object_or_404
+from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
@@ -30,6 +30,7 @@ from core.exceptions import (
 )
 from core.loggers import yt_logger
 from core.threads import tasks_in_threads
+from emails.constants import DISPATCHER_SIGNATURE
 from emails.email_parser import email_parser
 from emails.models import (
     EmailAttachment,
@@ -40,7 +41,9 @@ from emails.models import (
     EmailTo,
     EmailToCC
 )
+from emails.services.clean_email_subject import clean_email_subject
 from emails.services.generate_email_msg_id import generate_message_id
+from emails.services.get_previous_email_body import get_previous_email_body
 from emails.tasks import send_incident_email_task
 from monitoring.models import DeviceStatus, DeviceType
 from monitoring.services.monitoring_equipment import (
@@ -50,7 +53,6 @@ from users.constants import USERS_CACHE_TTL
 from users.models import Roles, User
 from users.utils import role_required
 from yandex_tracker.utils import yt_manager
-from emails.services.clean_email_subject import clean_email_subject
 
 from .annotations import annotate_sla_avr, annotate_sla_dgu, annotate_sla_rvr
 from .constants import (
@@ -76,8 +78,6 @@ from .models import (
 from .selectors.incidents import IncidentSelector
 from .services.normalize_incident_subject import normalize_incident_subject
 from .utils import IncidentManager
-from emails.services.send_email_msg import send_via_django_email
-from emails.services.get_previous_email_body import get_previous_email_body
 
 
 @login_required
@@ -766,11 +766,26 @@ def new_email(
 
     reply_to_email: Optional[EmailMessage] = None
     if reply_email_id is not None:
-        reply_to_email = get_object_or_404(
-            EmailMessage,
+        reply_to_email = EmailMessage.objects.prefetch_related(
+            Prefetch(
+                'email_msg_to', queryset=EmailTo.objects.order_by('email_to')
+            ),
+            Prefetch(
+                'email_msg_cc', queryset=EmailToCC.objects.order_by('email_to')
+            ),
+        ).filter(
             id=reply_email_id,
             email_incident=incident
-        )
+        ).first()
+
+        if not reply_to_email:
+            raise Http404
+
+    previous_plain = None
+    previous_html = None
+
+    if reply_to_email is not None:
+        previous_plain, previous_html = get_previous_email_body(reply_to_email)
 
     if request.method == 'POST':
         form = NewEmailForm(request.POST, request.FILES)
@@ -894,12 +909,7 @@ def new_email(
                 ]
             )
 
-            previous_msg = (
-                get_previous_email_body(reply_to_email)
-                if reply_to_email else None
-            )
-
-            initial_data['body'] = previous_msg
+        initial_data['body'] = f'\n\n{DISPATCHER_SIGNATURE}'
 
         form = NewEmailForm(initial=initial_data)
 
@@ -907,6 +917,7 @@ def new_email(
         'incident': incident,
         'form': form,
         'first_email': first_email,
+        'previous_plain': previous_plain,
     }
 
     return render(request, template_name, context)
