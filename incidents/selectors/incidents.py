@@ -2,7 +2,7 @@ from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 
 from emails.models import EmailMessage, EmailReference
-from incidents.models import Incident
+from incidents.models import Incident, IncidentStatusHistory
 
 
 class IncidentSelector:
@@ -30,13 +30,25 @@ class IncidentSelector:
             .order_by('email_date', 'id')
         )
 
+        status_history_qs = (
+            IncidentStatusHistory.objects
+            .select_related('status', 'status__status_type')
+            .order_by('-insert_date', '-id')
+        )
+
         return get_object_or_404(
             Incident.objects.prefetch_related(
+                'categories',
                 Prefetch(
                     'email_messages',
                     queryset=emails_qs,
                     to_attr='all_incident_emails'
-                )
+                ),
+                Prefetch(
+                    'status_history',
+                    queryset=status_history_qs,
+                    to_attr='prefetched_status_history'
+                ),
             ),
             id=incident_id
         )

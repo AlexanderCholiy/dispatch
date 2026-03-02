@@ -27,4 +27,9 @@ urlpatterns = [
         views.new_email,
         name='email_reply'
     ),
+    path(
+        'incidents/<int:incident_id>/emails/notify-operator/',
+        views.notify_operator,
+        name='notify_operator'
+    ),
 ]

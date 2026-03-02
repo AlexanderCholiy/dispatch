@@ -4,6 +4,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/includes/tables.css' %}">
+<link rel="stylesheet" href="{% static 'css/includes/dropdown.css' %}">
 <link rel="stylesheet" href="{% static 'css/incidents/includes/incident_header.css' %}">
 <link rel="stylesheet" href="{% static 'css/incidents/includes/select_forms.css' %}">
 <link rel="stylesheet" href="{% static 'css/incidents/includes/autoselect_forms.css' %}">
@@ -68,15 +69,37 @@
           <i class="bx bx-envelope"></i>
         </a>
 
+        <div class="dropdown">
+          <button type="button" class="dropdown-toggle">
+            Шаблоны
+            <span class="dropdown-arrow">▾</span>
+          </button>
+
+          <div class="dropdown-menu">
+            <a href="{% url 'incidents:notify_operator' incident.id %}"
+              class="dropdown-item">
+              Уведомить оператора
+            </a>
+
+            <a href="#"
+              class="dropdown-item">
+              Передать подрядчику
+            </a>
+
+            <a href="#"
+              class="dropdown-item">
+              Уведомить о закрытии
+            </a>
+          </div>
+        </div>
+
       </div>
       <p class="incident-date">
         {% if incident.incident_finish_date %}
           зарегистрировано {{ incident.incident_date|date:"d.m.Y H:i" }},
-          закрыто {{ incident.incident_finish_date|date:"d.m.Y H:i" }},
-          обновлено {{ incident.update_date|date:"d.m.Y H:i" }}
+          закрыто {{ incident.incident_finish_date|date:"d.m.Y H:i" }}
         {% else %}
-          зарегистрировано {{ incident.incident_date|date:"d.m.Y H:i" }},
-          обновлено {{ incident.update_date|date:"d.m.Y H:i" }}
+          зарегистрировано {{ incident.incident_date|date:"d.m.Y H:i" }}
         {% endif %}
       </p>
     </div>
@@ -229,4 +252,5 @@
   <script src="{% static 'js/incidents/change_status_select.js' %}"></script>
   <script src="{% static 'js/incidents/hide_monitoring_table.js' %}"></script>
   <script src="{% static 'js/multi_select.js' %}"></script>
+  <script src="{% static 'js/dropdown.js' %}"></script>
 {% endblock %}

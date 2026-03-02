@@ -14,7 +14,9 @@
     <div class="card-header email-header">
       <div class="header-text">
         <h2 class="email-title">
-          {% if reply_to_email %}
+          {% if email_header %}
+            {{ email_header }}
+          {% elif reply_to_email %}
             Ответ на письмо
             <span class="copy-text" data-text="{{ reply_to_email.id }}">
               {{ reply_to_email.id }}
