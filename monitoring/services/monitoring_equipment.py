@@ -17,10 +17,12 @@ from ts.models import Pole
 
 class MonitoringEquipment(TypedDict):
     modem_ip: Optional[str]
+    modem_serial: Optional[str]
     pole_1: Optional[str]
     pole_2: Optional[str]
     pole_3: Optional[str]
     level: int
+    cabinet: Optional[str]
     status: int
     updated_at: Optional[datetime]
 
@@ -44,10 +46,12 @@ def get_monitiring_cache_equipment(
             MSysModem.objects
             .values(
                 'modem_ip',
+                'modem_serial',
                 'pole_1',
                 'pole_2',
                 'pole_3',
                 'level',
+                'cabinet',
                 'status',
                 'updated_at',
             )
@@ -78,10 +82,12 @@ def get_monitiring_cache_equipment(
 
         row_result: MonitoringEquipment = {
             'modem_ip': (row['modem_ip'] or '').strip() or None,
+            'modem_serial': (row['modem_serial'] or '').strip() or None,
             'pole_1': (row['pole_1'] or '').strip() or None,
             'pole_2': (row['pole_2'] or '').strip() or None,
             'pole_3': (row['pole_3'] or '').strip() or None,
             'level': row['level'],
+            'cabinet': (row['cabinet'] or '').strip() or None,
             'status': row['status'],
             'updated_at': updated_at,
         }

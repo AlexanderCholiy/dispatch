@@ -1,0 +1,77 @@
+.email-header {
+  padding: var(--space-sm) var(--space-md);
+}
+
+.email-title {
+  font-size: var(--font-md);
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.email-body .form-group {
+  margin-bottom: var(--space-md);
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between; 
+}
+
+.email-body .form-control-wrapper {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--extra-color);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-sm);
+  background-color: var(--background-color);
+  color: var(--add-color);
+  transition: border var(--transition-value), box-shadow var(--transition-value);
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  border-color: var(--gray-color);
+  box-shadow: 0 0 var(--space-sm) var(--space-xxs) var(--extra-color);
+  outline: none;
+}
+
+.email-body .form-group label {
+  font-weight: 500;
+  min-width: 50px;
+  font-size: var(--font-sm);
+  margin-right: var(--space-md); 
+}
+
+.email-body .form-error {
+  margin-left: var(--space-sm);
+  color: var(--red-color);
+  font-size: var(--font-xs);
+}
+
+.email-body .form-actions {
+  display: flex;
+  justify-content: space-between; 
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.email-body .btn {
+  padding: var(--space-xxs) var(--space-sm);
+  font-size: var(--font-xs);
+  font-weight: 500;
+}

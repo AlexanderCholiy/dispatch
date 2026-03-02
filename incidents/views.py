@@ -390,20 +390,14 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         if incident.pole else None
     ) or []
 
-    monitoring_data = {}
-
-    for pole_eq in monitiring_equipment:
-        level = pole_eq['level']
-        status = pole_eq['status']
-        updated_at = pole_eq['updated_at']
-
-        monitoring_data[pole_eq['modem_ip']] = {
-            'level': level,
-            'status': status,
-            'level_val': DeviceType(level).label,
-            'status_val': DeviceStatus(status).label,
-            'updated_at': updated_at,
+    monitoring_data = {
+        eq['modem_ip']: {
+            **eq,
+            'level_val': DeviceType(eq['level']).label,
+            'status_val': DeviceStatus(eq['status']).label,
         }
+        for eq in monitiring_equipment
+    }
 
     sorted_monitoring = sorted(
         monitoring_data.items(),
@@ -918,6 +912,7 @@ def new_email(
         'form': form,
         'first_email': first_email,
         'previous_plain': previous_plain,
+        'previous_html': previous_html,
     }
 
     return render(request, template_name, context)

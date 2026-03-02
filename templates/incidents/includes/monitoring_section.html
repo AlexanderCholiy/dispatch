@@ -9,6 +9,7 @@
         <thead>
           <tr>
             <th>IP</th>
+            <th>S/N</th>
             <th>Тип</th>
             <th>Статус</th>
             <th>Дата обновления</th>
@@ -17,27 +18,31 @@
         <tbody>
           {% for ip, data in monitoring %}
             <tr>
-              <td class="ip-cell">
-                {{ ip }}
+              <td class="ip-cell copy-text" data-text="{{ ip|default:'' }}">
+                {{ ip|default:"—" }}
+              </td>
+
+              <td class="sn-cell">
+                {{ data.modem_serial|default:"—" }}
               </td>
     
-              <td class="device-type">
-                {{ data.level_val }}
+              <td class="device-type tooltip" data-title="{{ data.cabinet|default:'' }}">
+                {{ data.level_val|default:"—" }}
               </td>
     
               <td>
                 <span class="status-badge monitoring-status-{{ data.status }}">
-                  {{ data.status_val }}
+                  {{ data.status_val|default:"—" }}
                 </span>
               </td>
     
               <td class="updated-cell">
-                {{ data.updated_at|date:"d.m.Y H:i:s" }}
+                {{ data.updated_at|date:"d.m.Y H:i:s"|default:"—" }}
               </td>
             </tr>
             {% empty %}
               <tr>
-                <td colspan="4" class="empty">
+                <td colspan="5" class="empty">
                   Нет данных мониторинга
                 </td>
               </tr>

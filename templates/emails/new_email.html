@@ -2,14 +2,18 @@
 {% load static %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/emails/new_email/new_email.css' %}">
+<link rel="stylesheet" href="{% static 'css/emails/new_email/previous_email.css' %}">
+<link rel="stylesheet" href="{% static 'css/emails/new_email/text_area.css' %}">
+<link rel="stylesheet" href="{% static 'css/includes/files_input.css' %}">
 {% endblock %}
 
 {% block content %}
 <div class="container-sm">
   <div class="card">
-    <div class="card-header">
+    <div class="card-header email-header">
       <div class="header-text">
-        <p class="new-email-label">
+        <h2 class="email-title">
           {% if reply_to_email %}
             Ответ на письмо
             <span class="copy-text" data-text="{{ reply_to_email.id }}">
@@ -22,63 +26,79 @@
           <span class="incident-code copy-text" data-text="{{ incident.code|default:incident.id }}">
             {{ incident.code|default:incident.id }}
           </span>
-        </p>
+        </h2>
       </div>
     </div>
-    <div class="card-body">
+    <div class="card-body email-body">
       <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         
         <div class="form-group">
-          <label for="{{ form.to.id_for_label }}">Кому</label>
-          {{ form.to }}
-          {% for error in form.to.errors %}
-            <div class="form-error">{{ error }}</div>
-          {% endfor %}
-        </div>
-
-        <div class="form-group">
-          <label for="{{ form.cc.id_for_label }}">Копия (CC)</label>
-          {{ form.cc }}
-          {% for error in form.cc.errors %}
-            <div class="form-error">{{ error }}</div>
-          {% endfor %}
-        </div>
-
-        <div class="form-group">
-          <label for="{{ form.subject.id_for_label }}">Тема письма</label>
-          {{ form.subject }}
-          {% for error in form.subject.errors %}
+          <label for="{{ form.to.id_for_label }}">Кому:</label>
+          <div class="form-control-wrapper">
+            {{ form.to }}
+            {% for error in form.to.errors %}
               <div class="form-error">{{ error }}</div>
-          {% endfor %}
+            {% endfor %}
+          </div>
         </div>
 
         <div class="form-group">
-          <label for="{{ form.body.id_for_label }}">Текст письма</label>
+          <label for="{{ form.cc.id_for_label }}">Копия:</label>
+          <div class="form-control-wrapper">
+            {{ form.cc }}
+            {% for error in form.cc.errors %}
+              <div class="form-error">{{ error }}</div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.subject.id_for_label }}">Тема:</label>
+          <div class="form-control-wrapper">
+            {{ form.subject }}
+            {% for error in form.subject.errors %}
+              <div class="form-error">{{ error }}</div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="form-group">
           {{ form.body }}
           {% for error in form.body.errors %}
-              <div class="form-error">{{ error }}</div>
+            <div class="form-error">{{ error }}</div>
           {% endfor %}
         </div>
 
-        <div class="form-group">
-          <label for="{{ form.attachments.id_for_label }}">Вложения</label>
+        <div class="form-group file-uploader">
+          <label class="file-uploader-label tooltip" data-title="Выберите или перетащите файлы" for="id_attachments">
+            <span class="file-uploader-text">Выбрать файлы</span>
+            <span class="file-uploader-count">Файлы не выбраны</span>
+          </label>
           {{ form.attachments }}
-          {% for error in form.attachments.errors %}
-              <div class="form-error">{{ error }}</div>
-          {% endfor %}
+          <ul class="file-list"></ul>
         </div>
 
-        <div class="form-group">
-          <button type="submit">Отправить письмо</button>
-          <a href="{% url 'incidents:incident_detail' incident_id=incident.id %}">Отмена</a>
+        {% if previous_html %}
+        <div class="previous-email">
+            <div class="previous-email-header">Предыдущее письмо:</div>
+            <div class="previous-email-content">
+                {{ previous_html|safe }}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="form-actions">
+          <a href="{% url 'incidents:incident_detail' incident_id=incident.id %}" class="btn btn-secondary">Отмена</a>
+          <button type="submit" class="btn btn-primary">Отправить</button>
         </div>
       </form>
-      {{ previous_plain }}
+
     </div>
   </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/download_files.js' %}"></script>
 {% endblock %}

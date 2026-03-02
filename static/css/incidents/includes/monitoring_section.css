@@ -38,7 +38,6 @@
   font-weight: bold;
   border-radius: var(--radius-sm);
   text-align: center;
-  min-width: 70px;
   width: 100%;
   box-shadow: 0 0 var(--space-xs) var(--extra-color);
   cursor: default;
