@@ -9,7 +9,7 @@
   justify-content: space-between;
   gap: var(--space-md);
 
-  padding: var(--space-xs) var(--space-xs) !important;
+  padding: var(--space-xs) var(--space-sm) !important;
   height: 100%;
 
   font-size: var(--font-sm) !important;
@@ -28,9 +28,14 @@
   box-shadow: 0 0 var(--space-xs) var(--extra-color);
 }
 
+.dropdown:hover .dropdown-arrow {
+  color: var(--add-color);
+}
+
 .dropdown-arrow {
   font-size: var(--font-md);
-  color: var(--add-color);
+  color: var(--gray-color);
+  transition: color var(--color);
 }
 
 .dropdown.open .dropdown-arrow {

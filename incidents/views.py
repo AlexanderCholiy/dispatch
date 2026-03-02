@@ -1068,7 +1068,7 @@ def notify_operator(request: HttpRequest, incident_id: int) -> HttpResponse:
                 request,
                 (
                     f'Письмо (ID: {email_msg.id}) готовится к отправке и '
-                    'скоро будет доставлено.'
+                    'скоро будет доставлено заявителю.'
                 )
             )
             return redirect(
@@ -1108,7 +1108,7 @@ def notify_operator(request: HttpRequest, incident_id: int) -> HttpResponse:
                 ]
             )
 
-        incident_label = f'"{incident.code}" ' if incident.code else ''
+        incident_label = f'{incident.code} ' if incident.code else ''
 
         initial_data['body'] = (
             f'Заявка {incident_label} принята в работу.'
