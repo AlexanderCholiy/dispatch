@@ -124,3 +124,5 @@ DISPATCHER_SIGNATURE = (
     'С уважением,\n'
     'Диспетчерская служба «Новые Башни»'
 )
+
+EMAIL_SUBJECT_NOT_FOR_YT_CONTROLLED = 'V8ieFf'

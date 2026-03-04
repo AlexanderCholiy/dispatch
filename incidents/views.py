@@ -22,6 +22,7 @@ from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 
 from api.constants import TOTAL_VALID_INCIDENTS_FILTER
+from core.constants import CURRENT_TZ
 from core.exceptions import (
     ApiBadRequest,
     ApiNotFound,
@@ -60,16 +61,15 @@ from .constants import (
     DGU_CATEGORY,
     INCIDENTS_PER_PAGE,
     MAX_INCIDENTS_INFO_CACHE_SEC,
+    NOTIFIED_CONTRACTOR_STATUS_NAME,
+    NOTIFIED_OP_END_STATUS_NAME,
     NOTIFIED_OP_IN_WORK_STATUS_NAME,
+    NOTIFY_CONTRACTOR_STATUS_NAME,
+    NOTIFY_OP_END_STATUS_NAME,
     NOTIFY_OP_IN_WORK_STATUS_NAME,
     PAGE_SIZE_INCIDENTS_CHOICES,
     RVR_CATEGORY,
-    NOTIFIED_CONTRACTOR_STATUS_NAME,
-    NOTIFY_CONTRACTOR_STATUS_NAME,
-    NOTIFY_OP_END_STATUS_NAME,
-    NOTIFIED_OP_END_STATUS_NAME,
 )
-from core.constants import CURRENT_TZ
 from .forms import (
     ConfirmMoveEmailsForm,
     IncidentForm,
@@ -90,9 +90,9 @@ from .services.normalize_incident_subject import normalize_incident_subject
 from .utils import IncidentManager
 from .validators import (
     validate_notify_avr,
-    validate_notify_rvr,
-    validate_notify_operator,
     validate_notify_incident_closed,
+    validate_notify_operator,
+    validate_notify_rvr,
 )
 
 
@@ -735,7 +735,7 @@ def create_incident(request: HttpRequest) -> HttpResponse:
     if request.method == 'POST':
         form = IncidentForm(data=request.POST, can_edit=True, author=user)
         if form.is_valid():
-            incident = form.save()
+            incident: Incident = form.save()
             incident.is_yt_tracker_controlled = False
             incident.save()
             return redirect(
@@ -927,6 +927,7 @@ def new_email(
         'incident': incident,
         'form': form,
         'first_email': first_email,
+        'reply_to_email': reply_to_email,
         'previous_plain': previous_plain,
         'previous_html': previous_html,
     }

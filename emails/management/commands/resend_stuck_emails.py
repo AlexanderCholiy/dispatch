@@ -5,7 +5,7 @@ from django.utils import timezone
 
 from core.loggers import celery_logger
 from emails.constants import MAX_STACK_EMAILS_TTL, MIN_STACK_EMAILS_TTL
-from emails.models import EmailMessage, EmailStatus, EmailFolder
+from emails.models import EmailFolder, EmailMessage, EmailStatus
 from emails.tasks import send_incident_email_task
 
 

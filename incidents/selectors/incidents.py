@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404
 
 from emails.models import EmailMessage, EmailReference
 from incidents.models import Incident, IncidentStatusHistory
-from ts.models import PoleContractorEmail, BaseStationOperator
+from ts.models import BaseStationOperator, PoleContractorEmail
 
 
 class IncidentSelector:

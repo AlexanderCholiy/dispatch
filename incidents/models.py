@@ -21,6 +21,7 @@ from .constants import (
     AVR_CATEGORY,
     DGU_SLA_IN_PROGRESS_DEADLINE_IN_HOURS,
     DGU_SLA_WAITING_DEADLINE_IN_HOURS,
+    INCIDENT_CODE_PREFIX,
     MAX_CODE_LEN,
     MAX_FUTURE_END_DELTA,
     MAX_STATUS_COMMENT_LEN,
@@ -257,6 +258,12 @@ class Incident(models.Model):
         is_new = self.pk is None
         super().save(*args, **kwargs)
 
+        # Автогенерация кода:
+        if not self.is_yt_tracker_controlled and not self.code:
+            self.code = f'{INCIDENT_CODE_PREFIX}{self.pk}'
+            super().save(update_fields=['code'])
+
+        # Категория по умолчанию:
         if is_new and not self.categories.exists():
             avr_category, _ = IncidentCategory.objects.get_or_create(
                 name=AVR_CATEGORY

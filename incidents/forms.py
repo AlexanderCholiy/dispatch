@@ -27,9 +27,9 @@ from .constants import (
     FINISHED_STATUS_NAMES,
     MAX_CODE_LEN,
     MAX_FUTURE_END_DELTA,
-    RVR_CATEGORY,
-    NOTIFIED_OP_END_STATUS_NAME,
     NOTIFIED_CONTRACTOR_STATUS_NAME,
+    NOTIFIED_OP_END_STATUS_NAME,
+    RVR_CATEGORY,
 )
 from .models import (
     Incident,

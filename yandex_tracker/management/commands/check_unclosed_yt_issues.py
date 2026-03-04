@@ -96,7 +96,7 @@ class Command(BaseCommand):
                 total_operations, total_errors, total_updated = (
                     self.check_unclosed_issues())
                 if total_updated or total_errors:
-                    yt_logger.info(
+                    yt_logger.debug(
                         f'Обработано {total_operations} инцидент(ов), '
                         f'обновлено {total_updated}, ошибок {total_errors}'
                     )

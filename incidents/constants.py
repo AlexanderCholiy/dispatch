@@ -23,6 +23,7 @@ INCIDENT_CATEGORIES_FILE = os.path.join(INCIDENTS_DATA_DIR, 'categories.xlsx')
 
 # n-ое письмо после которого закрытая заявка, становится сново открытой:
 MAX_EMAILS_ON_CLOSED_INCIDENTS = 2
+INCIDENT_CODE_PREFIX = 'NT-'
 
 DEFAULT_STATUS_NAME = 'Новый'
 DEFAULT_STATUS_DESC = (

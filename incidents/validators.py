@@ -6,17 +6,17 @@ from django.db.models.functions import Length
 
 from emails.models import EmailMessage
 
-from .models import BaseStation, Pole, Incident, IncidentStatus
 from .constants import (
-    NOTIFIED_CONTRACTOR_STATUS_NAME,
-    NOTIFY_CONTRACTOR_STATUS_NAME,
     AVR_CATEGORY,
-    NOTIFY_OP_IN_WORK_STATUS_NAME,
-    NOTIFIED_OP_IN_WORK_STATUS_NAME,
-    RVR_CATEGORY,
-    NOTIFY_OP_END_STATUS_NAME,
+    NOTIFIED_CONTRACTOR_STATUS_NAME,
     NOTIFIED_OP_END_STATUS_NAME,
+    NOTIFIED_OP_IN_WORK_STATUS_NAME,
+    NOTIFY_CONTRACTOR_STATUS_NAME,
+    NOTIFY_OP_END_STATUS_NAME,
+    NOTIFY_OP_IN_WORK_STATUS_NAME,
+    RVR_CATEGORY,
 )
+from .models import BaseStation, Incident, IncidentStatus, Pole
 
 
 class IncidentValidator:

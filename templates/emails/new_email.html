@@ -23,7 +23,7 @@
             </span>
             по инциденту
           {% else %}
-            Создание нового письма по инциденту
+            Новое письмо по инциденту
           {% endif %}
           <span class="incident-code copy-text" data-text="{{ incident.code|default:incident.id }}">
             {{ incident.code|default:incident.id }}

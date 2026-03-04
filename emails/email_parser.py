@@ -779,7 +779,7 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                             f'Не валидные данные: {invalid_data}')
 
             if email_msg_counter:
-                email_parser_logger.info(
+                email_parser_logger.debug(
                     f'Было найдено {email_msg_counter} новых сообщений '
                     f'в папке {folder.name}'
                 )

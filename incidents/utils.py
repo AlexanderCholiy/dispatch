@@ -1,4 +1,5 @@
 import random
+import re
 from datetime import datetime, timedelta
 from typing import Optional, TypedDict
 
@@ -16,6 +17,7 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from core.loggers import incident_logger
+from emails.constants import EMAIL_SUBJECT_NOT_FOR_YT_CONTROLLED
 from emails.models import (
     EmailFolder,
     EmailMessage,
@@ -40,6 +42,7 @@ from .constants import (
     GENERATION_STATUS_NAME,
     IN_WORK_STATUS_DESC,
     IN_WORK_STATUS_NAME,
+    INCIDENT_CODE_PREFIX,
     NOTIFIED_CONTRACTOR_STATUS_DESC,
     NOTIFIED_CONTRACTOR_STATUS_NAME,
     NOTIFIED_OP_END_STATUS_DESC,
@@ -178,11 +181,17 @@ class IncidentManager(IncidentValidator):
         )
 
     @staticmethod
-    def get_incident_by_yandex_tracker(
+    def find_default_code_number_in_text(text: str) -> Optional[str]:
+        """Ищет первое вхождение: префикс кода, дефис и цифры"""
+        match = re.search(rf'{INCIDENT_CODE_PREFIX}\d+', text)
+        return match.group(0) if match else None
+
+    @staticmethod
+    def get_incident_by_code_in_subject(
         email_msg: EmailMessage, yt_manager: YandexTrackerManager
     ) -> Optional[Incident]:
         """
-        Получаем локальный Incident по письму из YandexTracker.
+        Получаем локальный Incident по письму.
 
         Логика:
         1. Ищем номер инцидента в теме письма.
@@ -197,14 +206,27 @@ class IncidentManager(IncidentValidator):
         yt_incident_key = yt_manager.find_yt_number_in_text(
             email_msg.email_subject
         )
-        if not yt_incident_key:
+        default_incident_key = (
+            IncidentManager.find_default_code_number_in_text(
+                email_msg.email_subject
+            )
+        )
+
+        if not yt_incident_key and not default_incident_key:
             return
 
-        try:
-            incident = Incident.objects.get(code=yt_incident_key)
-            return incident
-        except Incident.DoesNotExist:
-            pass
+        if yt_incident_key:
+            try:
+                incident = Incident.objects.get(code=yt_incident_key)
+                return incident
+            except Incident.DoesNotExist:
+                pass
+        if default_incident_key:
+            try:
+                incident = Incident.objects.get(code=default_incident_key)
+                return incident
+            except Incident.DoesNotExist:
+                pass
 
         # Ключ в YT уникален:
         issues = yt_manager.select_issue(key=yt_incident_key)
@@ -606,7 +628,7 @@ class IncidentManager(IncidentValidator):
 
         # 1. Если инцидентов несколько — приоритет по теме письма:
         if len(thread_incidents) > 1 and yt_manager:
-            actual_email_incident = self.get_incident_by_yandex_tracker(
+            actual_email_incident = self.get_incident_by_code_in_subject(
                 email_msg, yt_manager
             )
             if actual_email_incident:
@@ -650,7 +672,7 @@ class IncidentManager(IncidentValidator):
 
         # 5. Резервный поиск по коду инцидента в теме письма:
         if not actual_email_incident and yt_manager:
-            actual_email_incident = self.get_incident_by_yandex_tracker(
+            actual_email_incident = self.get_incident_by_code_in_subject(
                 email_msg, yt_manager
             )
             if actual_email_incident:
@@ -717,11 +739,25 @@ class IncidentManager(IncidentValidator):
             if not actual_email_incident:
                 new_incident = True
 
+                is_yt_tracker_controlled = True
+                if (
+                    email_msg.email_subject
+                    and EMAIL_SUBJECT_NOT_FOR_YT_CONTROLLED in (
+                        email_msg.email_subject
+                    )
+                ):
+                    is_yt_tracker_controlled = False
+
                 actual_email_incident = Incident.objects.create(
                     incident_date=emails_thread[0].email_date,
                     pole=pole,
                     base_station=base_station,
+                    responsible_user=(
+                        self.choice_dispatch_for_incident(yt_manager)
+                    ),
+                    is_yt_tracker_controlled=is_yt_tracker_controlled,
                 )
+
                 selection_strategy = IncidentSelectionStrategy.created_new
 
         if not actual_email_incident:
