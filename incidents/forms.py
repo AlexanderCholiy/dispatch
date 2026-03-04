@@ -28,6 +28,8 @@ from .constants import (
     MAX_CODE_LEN,
     MAX_FUTURE_END_DELTA,
     RVR_CATEGORY,
+    NOTIFIED_OP_END_STATUS_NAME,
+    NOTIFIED_CONTRACTOR_STATUS_NAME,
 )
 from .models import (
     Incident,
@@ -489,6 +491,25 @@ class IncidentForm(forms.ModelForm):
                     'Опора не соответствует выбранной БС'
                 )
 
+        date_pairs = [
+            ('avr_start_date', 'avr_end_date'),
+            ('rvr_start_date', 'rvr_end_date'),
+            ('dgu_start_date', 'dgu_end_date'),
+        ]
+
+        for start_field, end_field in date_pairs:
+            start = cleaned_data.get(start_field)
+            end = cleaned_data.get(end_field)
+
+            if end and not start:
+                self.add_error(
+                    start_field,
+                    (
+                        'Дата передачи в работу обязательна при заполненной '
+                        'дате завершения'
+                    )
+                )
+
         return cleaned_data
 
     def clean_categories(self):
@@ -608,6 +629,48 @@ class IncidentForm(forms.ModelForm):
                 is_dgu_category=DGU_CATEGORY in category_names,
             )
             instance.statuses.add(new_status)
+
+            now = timezone.now()
+            if (
+                AVR_CATEGORY in category_names
+                and (
+                    new_status.name in FINISHED_STATUS_NAMES
+                    or new_status.name == NOTIFIED_OP_END_STATUS_NAME
+                )
+            ):
+                instance.avr_end_date = (
+                    now
+                    if (
+                        instance.avr_start_date
+                        and not instance.avr_end_date
+                    )
+                    else instance.avr_end_date
+                )
+            if (
+                RVR_CATEGORY in category_names
+                and (
+                    new_status.name in FINISHED_STATUS_NAMES
+                    or new_status.name == NOTIFIED_OP_END_STATUS_NAME
+                )
+            ):
+                instance.rvr_end_date = (
+                    now
+                    if (
+                        instance.rvr_start_date
+                        and not instance.rvr_end_date
+                    )
+                    else instance.rvr_end_date
+                )
+            if (
+                AVR_CATEGORY in category_names
+                and new_status.name == NOTIFIED_CONTRACTOR_STATUS_NAME
+            ):
+                instance.avr_start_date = instance.avr_start_date or now
+            if (
+                RVR_CATEGORY in category_names
+                and new_status.name == NOTIFIED_CONTRACTOR_STATUS_NAME
+            ):
+                instance.rvr_start_date = instance.rvr_start_date or now
 
         # Обновляем флаг завершённости
         instance.is_incident_finish = (

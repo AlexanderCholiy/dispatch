@@ -81,17 +81,17 @@
               Уведомить оператора
             </a>
 
-            <a href="#"
+            <a href="{% url 'incidents:notify_avr_contractor' incident.id %}"
               class="dropdown-item">
               Передать подрядчику АВР
             </a>
 
-            <a href="#"
+            <a href="{% url 'incidents:notify_rvr_contractor' incident.id %}"
               class="dropdown-item">
               Передать подрядчику РВР
             </a>
 
-            <a href="#"
+            <a href="{% url 'incidents:notify_incident_closed' incident.id %}"
               class="dropdown-item">
               Уведомить о закрытии
             </a>

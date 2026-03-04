@@ -5,7 +5,7 @@ from django.utils import timezone
 
 from core.loggers import celery_logger
 from emails.constants import MAX_STACK_EMAILS_TTL, MIN_STACK_EMAILS_TTL
-from emails.models import EmailMessage, EmailStatus
+from emails.models import EmailMessage, EmailStatus, EmailFolder
 from emails.tasks import send_incident_email_task
 
 
@@ -30,6 +30,8 @@ class Command(BaseCommand):
         min_seconds = options['min_seconds']
         max_seconds = options['max_seconds']
 
+        folder = EmailFolder.objects.get(name='SENT')
+
         now = timezone.now()
 
         min_time = now - timedelta(seconds=min_seconds)
@@ -40,6 +42,8 @@ class Command(BaseCommand):
             .filter(
                 email_date__lte=min_time,
                 email_date__gte=max_time,
+                folder=folder,
+                is_email_from_yandex_tracker=False,
             )
             .exclude(
                 status__in=[

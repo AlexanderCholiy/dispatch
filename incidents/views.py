@@ -64,7 +64,12 @@ from .constants import (
     NOTIFY_OP_IN_WORK_STATUS_NAME,
     PAGE_SIZE_INCIDENTS_CHOICES,
     RVR_CATEGORY,
+    NOTIFIED_CONTRACTOR_STATUS_NAME,
+    NOTIFY_CONTRACTOR_STATUS_NAME,
+    NOTIFY_OP_END_STATUS_NAME,
+    NOTIFIED_OP_END_STATUS_NAME,
 )
+from core.constants import CURRENT_TZ
 from .forms import (
     ConfirmMoveEmailsForm,
     IncidentForm,
@@ -83,6 +88,12 @@ from .models import (
 from .selectors.incidents import IncidentSelector
 from .services.normalize_incident_subject import normalize_incident_subject
 from .utils import IncidentManager
+from .validators import (
+    validate_notify_avr,
+    validate_notify_rvr,
+    validate_notify_operator,
+    validate_notify_incident_closed,
+)
 
 
 @login_required
@@ -936,22 +947,14 @@ def notify_operator(request: HttpRequest, incident_id: int) -> HttpResponse:
         else None
     )
 
-    if (
-        last_status
-        and last_status.name in (
-            NOTIFY_OP_IN_WORK_STATUS_NAME, NOTIFIED_OP_IN_WORK_STATUS_NAME
-        )
-    ):
-        messages.error(
-            request,
-            (
-                f'Инцидент {incident} уже находится в статусе '
-                f'«{last_status.name}».'
-            )
-        )
-        return redirect(
-            'incidents:incident_detail', incident_id=incident.id
-        )
+    error_message = validate_notify_operator(
+        incident,
+        last_status,
+    )
+
+    if error_message:
+        messages.error(request, error_message)
+        return redirect('incidents:incident_detail', incident_id=incident.id)
 
     first_email: Optional[EmailMessage] = (
         incident.all_incident_emails[0]
@@ -1124,6 +1127,743 @@ def notify_operator(request: HttpRequest, incident_id: int) -> HttpResponse:
         'previous_plain': previous_plain,
         'previous_html': previous_html,
         'email_header': 'Уведомление оператору о принятии в работу инцидента',
+    }
+
+    return render(request, template_name, context)
+
+
+@login_required
+@role_required(allowed_roles=[Roles.DISPATCH])
+@ratelimit(key='user_or_ip', rate='20/m', block=True)
+def notify_avr_contractor(
+    request: HttpRequest, incident_id: int
+) -> HttpResponse:
+    template_name = 'emails/new_email.html'
+    incident = IncidentSelector.incidents_with_email_history(incident_id)
+
+    last_status: Optional[IncidentStatus] = (
+        incident.prefetched_status_history[0].status
+        if incident.prefetched_status_history
+        else None
+    )
+
+    cat_objs = incident.categories.all()
+    category_names = {c.name for c in cat_objs}
+
+    error_message = validate_notify_avr(
+        incident,
+        last_status,
+        category_names,
+    )
+
+    if error_message:
+        messages.error(request, error_message)
+        return redirect('incidents:incident_detail', incident_id=incident.id)
+
+    first_email: Optional[EmailMessage] = (
+        incident.all_incident_emails[0]
+        if incident.all_incident_emails else None
+    )
+
+    previous_plain = None
+    previous_html = None
+
+    if request.method == 'POST':
+        form = NewEmailForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            now = timezone.now()
+            message_id = generate_message_id()
+
+            raw_subject = form.cleaned_data.get('subject') or ''
+
+            subject = normalize_incident_subject(
+                raw_subject,
+                incident.code
+            )
+
+            with transaction.atomic():
+                folder = EmailFolder.objects.get(name='SENT')
+
+                email_msg = EmailMessage.objects.create(
+                    email_msg_id=message_id,
+                    email_subject=subject,
+                    email_from=email_parser.email_login,
+                    email_date=now,
+                    email_body=form.cleaned_data.get('body'),
+                    is_first_email=not first_email,
+                    is_email_from_yandex_tracker=False,
+                    was_added_2_yandex_tracker=False,
+                    need_2_add_in_yandex_tracker=True,
+                    email_incident=incident,
+                    folder=folder,
+                    status=EmailStatus.PENDING,
+                    email_msg_reply_id=None,
+                )
+
+                for email in form.cleaned_data.get('to', []):
+                    EmailTo.objects.create(
+                        email_msg=email_msg,
+                        email_to=email
+                    )
+
+                for email in form.cleaned_data.get('cc', []):
+                    EmailToCC.objects.create(
+                        email_msg=email_msg,
+                        email_to=email
+                    )
+
+                files = form.cleaned_data.get('attachments')
+
+                if files:
+                    for f in files:
+                        EmailAttachment.objects.create(
+                            email_msg=email_msg,
+                            file_url=f
+                        )
+
+                new_status, _ = (
+                    IncidentStatus.objects
+                    .get_or_create(name=NOTIFY_CONTRACTOR_STATUS_NAME)
+                )
+
+                comments = (
+                    'Статус добавлен автоматически после '
+                    'начала отправки автоответа.'
+                )
+
+                IncidentStatusHistory.objects.create(
+                    incident=incident,
+                    status=new_status,
+                    comments=comments,
+                    is_avr_category=AVR_CATEGORY in category_names,
+                    is_rvr_category=RVR_CATEGORY in category_names,
+                    is_dgu_category=DGU_CATEGORY in category_names,
+                )
+                incident.statuses.add(new_status)
+
+                transaction.on_commit(
+                    lambda: send_incident_email_task.delay(
+                        email_msg.id,
+                        new_status_name=NOTIFIED_CONTRACTOR_STATUS_NAME,
+                    )
+                )
+
+                now = timezone.now()
+                incident.avr_start_date = incident.avr_start_date or now
+                incident.save()
+
+            messages.success(
+                request,
+                (
+                    f'Письмо (ID: {email_msg.id}) готовится к отправке и '
+                    'скоро будет доставлено подрядчику по АВР.'
+                )
+            )
+            return redirect(
+                'incidents:incident_detail', incident_id=incident.id
+            )
+    else:
+        initial_data = {}
+
+        if (
+            first_email
+            and first_email.email_subject
+        ):
+            clean_subj = clean_email_subject(
+                first_email.email_subject or '', incident.code
+            )
+            initial_data['subject'] = clean_subj
+
+        avr_emails = [
+            obj.email.email
+            for obj in incident.pole.prefetched_pole_avr_emails
+        ]
+
+        initial_data['to'] = ', '.join(avr_emails)
+
+        text_parts = []
+
+        incident_label = f'{incident.code} ' if incident.code else ''
+
+        text_parts.append(
+            f'На вас назначен инцидент {incident_label} (АВР).'
+        )
+
+        pole = incident.pole
+
+        pole_region = (
+            pole.region.region_ru or pole.region.region_en
+        ) if pole.region else None
+
+        text_parts.append('\nИНФОРМАЦИЯ ОБ ОПОРЕ:')
+        text_parts.append(f'  • Шифр опоры: {pole.pole}')
+
+        if pole_region:
+            text_parts.append(f'  • Регион: {pole_region}')
+
+        if pole.address:
+            text_parts.append(f'  • Адрес: {pole.address}')
+
+        if pole.pole_latitude and pole.pole_longtitude:
+            text_parts.append(
+                f'  • Координаты: {pole.pole_latitude}, {pole.pole_longtitude}'
+            )
+
+        if incident.base_station:
+            bs = incident.base_station
+
+            text_parts.append('\nИНФОРМАЦИЯ О БАЗОВОЙ СТАНЦИИ:')
+            text_parts.append(f'  • Номер БС: {bs.bs_name}')
+
+            if hasattr(bs, 'prefetched_operators'):
+                operators = [
+                    op.operator_name
+                    for op in bs.prefetched_operators
+                ]
+            else:
+                operators = list(
+                    bs.operator.values_list('operator_name', flat=True)
+                )
+
+            if operators:
+                text_parts.append(f'  • Операторы: {", ".join(operators)}')
+
+        text_parts.append('\nДЕТАЛИ ИНЦИДЕНТА:')
+
+        incident_date = (
+            incident.incident_date
+            .astimezone(CURRENT_TZ)
+            .strftime('%d.%m.%Y %H:%M')
+        )
+
+        text_parts.append(f'  • Дата регистрации: {incident_date}')
+
+        if incident.incident_type:
+            text_parts.append(
+                f'  • Тип инцидента: {incident.incident_type.name}'
+            )
+            if incident.incident_type.description:
+                text_parts.append(
+                    f'  • Описание: {incident.incident_type.description}'
+                )
+
+        now = timezone.now()
+        incident.avr_start_date = incident.avr_start_date or now
+
+        if incident.sla_avr_deadline:
+            sla_deadline = (
+                incident.sla_avr_deadline
+                .astimezone(CURRENT_TZ)
+                .strftime('%d.%m.%Y %H:%M')
+            )
+            text_parts.append(f'  • SLA дедлайн: {sla_deadline}')
+
+        text_parts.append(
+            '\nПожалуйста не меняйте тему письма.'
+        )
+
+        text_parts.append(f'\n\n\n{DISPATCHER_SIGNATURE}')
+
+        if first_email:
+            first_email_plain, _ = get_previous_email_body(first_email)
+            if first_email_plain:
+                text_parts.append(first_email_plain)
+
+        initial_data['body'] = '\n'.join(text_parts)
+
+        form = NewEmailForm(initial=initial_data)
+
+    context = {
+        'incident': incident,
+        'form': form,
+        'first_email': first_email,
+        'previous_plain': previous_plain,
+        'previous_html': previous_html,
+        'email_header': (
+            'Уведомление подрядчику по АВР о передаче инцидента'
+        ),
+    }
+
+    return render(request, template_name, context)
+
+
+@login_required
+@role_required(allowed_roles=[Roles.DISPATCH])
+@ratelimit(key='user_or_ip', rate='20/m', block=True)
+def notify_rvr_contractor(
+    request: HttpRequest, incident_id: int
+) -> HttpResponse:
+    template_name = 'emails/new_email.html'
+    incident = IncidentSelector.incidents_with_email_history(incident_id)
+
+    last_status: Optional[IncidentStatus] = (
+        incident.prefetched_status_history[0].status
+        if incident.prefetched_status_history
+        else None
+    )
+
+    cat_objs = incident.categories.all()
+    category_names = {c.name for c in cat_objs}
+
+    error_message = validate_notify_rvr(
+        incident,
+        last_status,
+        category_names,
+    )
+
+    if error_message:
+        messages.error(request, error_message)
+        return redirect('incidents:incident_detail', incident_id=incident.id)
+
+    first_email: Optional[EmailMessage] = (
+        incident.all_incident_emails[0]
+        if incident.all_incident_emails else None
+    )
+
+    previous_plain = None
+    previous_html = None
+
+    if request.method == 'POST':
+        form = NewEmailForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            now = timezone.now()
+            message_id = generate_message_id()
+
+            raw_subject = form.cleaned_data.get('subject') or ''
+
+            subject = normalize_incident_subject(
+                raw_subject,
+                incident.code
+            )
+
+            with transaction.atomic():
+                folder = EmailFolder.objects.get(name='SENT')
+
+                email_msg = EmailMessage.objects.create(
+                    email_msg_id=message_id,
+                    email_subject=subject,
+                    email_from=email_parser.email_login,
+                    email_date=now,
+                    email_body=form.cleaned_data.get('body'),
+                    is_first_email=not first_email,
+                    is_email_from_yandex_tracker=False,
+                    was_added_2_yandex_tracker=False,
+                    need_2_add_in_yandex_tracker=True,
+                    email_incident=incident,
+                    folder=folder,
+                    status=EmailStatus.PENDING,
+                    email_msg_reply_id=None,
+                )
+
+                for email in form.cleaned_data.get('to', []):
+                    EmailTo.objects.create(
+                        email_msg=email_msg,
+                        email_to=email
+                    )
+
+                for email in form.cleaned_data.get('cc', []):
+                    EmailToCC.objects.create(
+                        email_msg=email_msg,
+                        email_to=email
+                    )
+
+                files = form.cleaned_data.get('attachments')
+
+                if files:
+                    for f in files:
+                        EmailAttachment.objects.create(
+                            email_msg=email_msg,
+                            file_url=f
+                        )
+
+                new_status, _ = (
+                    IncidentStatus.objects
+                    .get_or_create(name=NOTIFY_CONTRACTOR_STATUS_NAME)
+                )
+
+                comments = (
+                    'Статус добавлен автоматически после '
+                    'начала отправки автоответа.'
+                )
+
+                IncidentStatusHistory.objects.create(
+                    incident=incident,
+                    status=new_status,
+                    comments=comments,
+                    is_avr_category=AVR_CATEGORY in category_names,
+                    is_rvr_category=RVR_CATEGORY in category_names,
+                    is_dgu_category=DGU_CATEGORY in category_names,
+                )
+                incident.statuses.add(new_status)
+
+                transaction.on_commit(
+                    lambda: send_incident_email_task.delay(
+                        email_msg.id,
+                        new_status_name=NOTIFIED_CONTRACTOR_STATUS_NAME,
+                    )
+                )
+
+                now = timezone.now()
+                incident.rvr_start_date = incident.rvr_start_date or now
+                incident.save()
+
+            messages.success(
+                request,
+                (
+                    f'Письмо (ID: {email_msg.id}) готовится к отправке и '
+                    'скоро будет доставлено подрядчику по РВР.'
+                )
+            )
+            return redirect(
+                'incidents:incident_detail', incident_id=incident.id
+            )
+    else:
+        initial_data = {}
+
+        if (
+            first_email
+            and first_email.email_subject
+        ):
+            clean_subj = clean_email_subject(
+                first_email.email_subject or '', incident.code
+            )
+            initial_data['subject'] = clean_subj
+
+        if (
+            incident.pole
+            and incident.pole.region
+            and incident.pole.region.rvr_email
+        ):
+            initial_data['to'] = incident.pole.region.rvr_email
+
+        text_parts = []
+
+        incident_label = f'{incident.code} ' if incident.code else ''
+
+        text_parts.append(
+            f'На вас назначен инцидент {incident_label} (РВР).'
+        )
+
+        pole = incident.pole
+
+        pole_region = (
+            pole.region.region_ru or pole.region.region_en
+        ) if pole.region else None
+
+        text_parts.append('\nИНФОРМАЦИЯ ОБ ОПОРЕ:')
+        text_parts.append(f'  • Шифр опоры: {pole.pole}')
+
+        if pole_region:
+            text_parts.append(f'  • Регион: {pole_region}')
+
+        if pole.address:
+            text_parts.append(f'  • Адрес: {pole.address}')
+
+        if pole.pole_latitude and pole.pole_longtitude:
+            text_parts.append(
+                f'  • Координаты: {pole.pole_latitude}, {pole.pole_longtitude}'
+            )
+
+        if incident.base_station:
+            bs = incident.base_station
+
+            text_parts.append('\nИНФОРМАЦИЯ О БАЗОВОЙ СТАНЦИИ:')
+            text_parts.append(f'  • Номер БС: {bs.bs_name}')
+
+            if hasattr(bs, 'prefetched_operators'):
+                operators = [
+                    op.operator_name
+                    for op in bs.prefetched_operators
+                ]
+            else:
+                operators = list(
+                    bs.operator.values_list('operator_name', flat=True)
+                )
+
+            if operators:
+                text_parts.append(f'  • Операторы: {", ".join(operators)}')
+
+        text_parts.append('\nДЕТАЛИ ИНЦИДЕНТА:')
+
+        incident_date = (
+            incident.incident_date
+            .astimezone(CURRENT_TZ)
+            .strftime('%d.%m.%Y %H:%M')
+        )
+
+        text_parts.append(f'  • Дата регистрации: {incident_date}')
+
+        if incident.incident_type:
+            text_parts.append(
+                f'  • Тип инцидента: {incident.incident_type.name}'
+            )
+            if incident.incident_type.description:
+                text_parts.append(
+                    f'  • Описание: {incident.incident_type.description}'
+                )
+
+        now = timezone.now()
+        incident.rvr_start_date = incident.rvr_start_date or now
+
+        if incident.sla_rvr_deadline:
+            sla_deadline = (
+                incident.sla_avr_deadline
+                .astimezone(CURRENT_TZ)
+                .strftime('%d.%m.%Y %H:%M')
+            )
+            text_parts.append(f'  • SLA дедлайн: {sla_deadline}')
+
+        text_parts.append(
+            '\nПожалуйста не меняйте тему письма.'
+        )
+
+        text_parts.append(f'\n\n\n{DISPATCHER_SIGNATURE}')
+
+        if first_email:
+            first_email_plain, _ = get_previous_email_body(first_email)
+            if first_email_plain:
+                text_parts.append(first_email_plain)
+
+        initial_data['body'] = '\n'.join(text_parts)
+
+        form = NewEmailForm(initial=initial_data)
+
+    context = {
+        'incident': incident,
+        'form': form,
+        'first_email': first_email,
+        'previous_plain': previous_plain,
+        'previous_html': previous_html,
+        'email_header': (
+            'Уведомление подрядчику по РВР о передаче инцидента'
+        ),
+    }
+
+    return render(request, template_name, context)
+
+
+@login_required
+@role_required(allowed_roles=[Roles.DISPATCH])
+@ratelimit(key='user_or_ip', rate='20/m', block=True)
+def notify_incident_closed(
+    request: HttpRequest, incident_id: int
+) -> HttpResponse:
+    template_name = 'emails/new_email.html'
+    incident = IncidentSelector.incidents_with_email_history(incident_id)
+
+    last_status: Optional[IncidentStatus] = (
+        incident.prefetched_status_history[0].status
+        if incident.prefetched_status_history
+        else None
+    )
+
+    error_message = validate_notify_incident_closed(
+        incident,
+        last_status,
+    )
+
+    if error_message:
+        messages.error(request, error_message)
+        return redirect('incidents:incident_detail', incident_id=incident.id)
+
+    first_email: Optional[EmailMessage] = (
+        incident.all_incident_emails[0]
+        if incident.all_incident_emails else None
+    )
+    reply_to_email = first_email
+
+    previous_plain, previous_html = get_previous_email_body(reply_to_email)
+
+    if request.method == 'POST':
+        form = NewEmailForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            now = timezone.now()
+            message_id = generate_message_id()
+
+            raw_subject = form.cleaned_data.get('subject') or ''
+
+            subject = normalize_incident_subject(
+                raw_subject,
+                incident.code
+            )
+
+            with transaction.atomic():
+                folder = EmailFolder.objects.get(name='SENT')
+
+                email_msg = EmailMessage.objects.create(
+                    email_msg_id=message_id,
+                    email_subject=subject,
+                    email_from=email_parser.email_login,
+                    email_date=now,
+                    email_body=form.cleaned_data.get('body'),
+                    is_first_email=not first_email,
+                    is_email_from_yandex_tracker=False,
+                    was_added_2_yandex_tracker=False,
+                    need_2_add_in_yandex_tracker=True,
+                    email_incident=incident,
+                    folder=folder,
+                    status=EmailStatus.PENDING,
+                    email_msg_reply_id=(
+                        reply_to_email.email_msg_id
+                        if reply_to_email else None
+                    ),
+                )
+
+                if reply_to_email:
+                    # Копируем все references исходного письма:
+                    for ref in (
+                        reply_to_email.email_references.all()
+                        .order_by('email_msg__email_date', 'email_msg__id')
+                    ):
+                        EmailReference.objects.create(
+                            email_msg=email_msg,
+                            email_msg_references=ref.email_msg_references
+                        )
+
+                    # Добавляем само письмо, на которое отвечаем:
+                    EmailReference.objects.create(
+                        email_msg=email_msg,
+                        email_msg_references=reply_to_email.email_msg_id
+                    )
+
+                for email in form.cleaned_data.get('to', []):
+                    EmailTo.objects.create(
+                        email_msg=email_msg,
+                        email_to=email
+                    )
+
+                for email in form.cleaned_data.get('cc', []):
+                    EmailToCC.objects.create(
+                        email_msg=email_msg,
+                        email_to=email
+                    )
+
+                files = form.cleaned_data.get('attachments')
+
+                if files:
+                    for f in files:
+                        EmailAttachment.objects.create(
+                            email_msg=email_msg,
+                            file_url=f
+                        )
+
+                new_status, _ = (
+                    IncidentStatus.objects
+                    .get_or_create(name=NOTIFY_OP_END_STATUS_NAME)
+                )
+
+                cat_objs = incident.categories.all()
+                category_names = {c.name for c in cat_objs}
+                comments = (
+                    'Статус добавлен автоматически после '
+                    'начала отправки автоответа.'
+                )
+
+                IncidentStatusHistory.objects.create(
+                    incident=incident,
+                    status=new_status,
+                    comments=comments,
+                    is_avr_category=AVR_CATEGORY in category_names,
+                    is_rvr_category=RVR_CATEGORY in category_names,
+                    is_dgu_category=DGU_CATEGORY in category_names,
+                )
+                incident.statuses.add(new_status)
+
+                transaction.on_commit(
+                    lambda: send_incident_email_task.delay(
+                        email_msg.id,
+                        new_status_name=NOTIFIED_OP_END_STATUS_NAME,
+                    )
+                )
+
+                now = timezone.now()
+                if AVR_CATEGORY in category_names:
+                    incident.avr_end_date = (
+                        now
+                        if (
+                            incident.avr_start_date
+                            and not incident.avr_end_date
+                        )
+                        else incident.avr_end_date
+                    )
+                if RVR_CATEGORY in category_names:
+                    incident.rvr_end_date = (
+                        now
+                        if (
+                            incident.rvr_start_date
+                            and not incident.rvr_end_date
+                        )
+                        else incident.rvr_end_date
+                    )
+
+                incident.save()
+
+            messages.success(
+                request,
+                (
+                    f'Письмо (ID: {email_msg.id}) готовится к отправке и '
+                    'скоро будет доставлено заявителю.'
+                )
+            )
+            return redirect(
+                'incidents:incident_detail', incident_id=incident.id
+            )
+    else:
+        initial_data = {}
+
+        if (
+            reply_to_email is None
+            and first_email
+            and first_email.email_subject
+        ):
+            clean_subj = clean_email_subject(
+                first_email.email_subject or '', incident.code
+            )
+            initial_data['subject'] = clean_subj
+
+        elif reply_to_email is not None:
+            clean_subj = clean_email_subject(
+                first_email.email_subject or '', incident.code
+            )
+            initial_data['subject'] = f'Re: {clean_subj}'
+
+            email_to = [
+                obj.email_to for obj in reply_to_email.email_msg_to.all()
+                if obj.email_to != email_parser.email_login
+            ]
+            if reply_to_email.email_from != email_parser.email_login:
+                email_to.append(reply_to_email.email_from)
+
+            initial_data['to'] = ', '.join(email_to)
+            initial_data['cc'] = ', '.join(
+                [
+                    obj.email_to for obj in reply_to_email.email_msg_cc.all()
+                    if obj.email_to != email_parser.email_login
+                ]
+            )
+
+        incident_label = f'{incident.code} ' if incident.code else ''
+
+        initial_data['body'] = (
+            f'Инцидент {incident_label}устранён.'
+            '\n\nПросим проверить и подтвердить. '
+            'Если в течение 12 часов обратная связь не поступит, '
+            'заявка будет автоматически закрыта.'
+            f'\n\n\n{DISPATCHER_SIGNATURE}'
+        )
+
+        form = NewEmailForm(initial=initial_data)
+
+    context = {
+        'incident': incident,
+        'form': form,
+        'first_email': first_email,
+        'previous_plain': previous_plain,
+        'previous_html': previous_html,
+        'email_header': 'Уведомление заявителю о закрытии инцидента',
     }
 
     return render(request, template_name, context)

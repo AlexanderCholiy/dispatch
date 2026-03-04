@@ -6,7 +6,17 @@ from django.db.models.functions import Length
 
 from emails.models import EmailMessage
 
-from .models import BaseStation, Pole
+from .models import BaseStation, Pole, Incident, IncidentStatus
+from .constants import (
+    NOTIFIED_CONTRACTOR_STATUS_NAME,
+    NOTIFY_CONTRACTOR_STATUS_NAME,
+    AVR_CATEGORY,
+    NOTIFY_OP_IN_WORK_STATUS_NAME,
+    NOTIFIED_OP_IN_WORK_STATUS_NAME,
+    RVR_CATEGORY,
+    NOTIFY_OP_END_STATUS_NAME,
+    NOTIFIED_OP_END_STATUS_NAME,
+)
 
 
 class IncidentValidator:
@@ -140,3 +150,103 @@ class IncidentValidator:
                 return pole, base_station
 
         return None, None
+
+
+def validate_notify_operator(
+    incident: Incident, last_status: Optional[IncidentStatus]
+) -> Optional[str]:
+    if (
+        last_status
+        and last_status.name in (
+            NOTIFY_OP_IN_WORK_STATUS_NAME, NOTIFIED_OP_IN_WORK_STATUS_NAME
+        )
+    ):
+        return (
+            f'Инцидент {incident} уже находится в статусе '
+            f'«{last_status.name}».'
+        )
+
+
+def validate_notify_incident_closed(
+    incident: Incident, last_status: Optional[IncidentStatus]
+) -> Optional[str]:
+    if (
+        last_status
+        and last_status.name in (
+            NOTIFY_OP_END_STATUS_NAME, NOTIFIED_OP_END_STATUS_NAME
+        )
+    ):
+        return (
+            f'Инцидент {incident} уже находится в статусе '
+            f'«{last_status.name}».'
+        )
+
+
+def validate_notify_avr(
+    incident: Incident,
+    last_status: Optional[IncidentStatus],
+    category_names: set[str],
+) -> Optional[str]:
+    if (
+        last_status
+        and last_status.name in (
+            NOTIFY_CONTRACTOR_STATUS_NAME,
+            NOTIFIED_CONTRACTOR_STATUS_NAME,
+        )
+    ):
+        return (
+            f'Инцидент {incident} уже находится в статусе '
+            f'«{last_status.name}».'
+        )
+
+    if not incident.pole:
+        return (
+            f'Перед передачей инцидента {incident} '
+            f'на РВР необходимо указать шифр опоры.'
+        )
+
+    if AVR_CATEGORY not in category_names:
+        return (
+            f'Перед передачей инцидента {incident} '
+            f'на РВР необходимо добавить категорию «{AVR_CATEGORY}».'
+        )
+
+    if not incident.incident_type:
+        return (
+            'Необходимо выбрать тип проблемы перед передачей '
+            'подрядчику по АВР.'
+        )
+
+    return None
+
+
+def validate_notify_rvr(
+    incident: Incident,
+    last_status: Optional[IncidentStatus],
+    category_names: set[str],
+) -> Optional[str]:
+    if (
+        last_status
+        and last_status.name in (
+            NOTIFY_CONTRACTOR_STATUS_NAME,
+            NOTIFIED_CONTRACTOR_STATUS_NAME,
+        )
+    ):
+        return (
+            f'Инцидент {incident} уже находится в статусе '
+            f'«{last_status.name}».'
+        )
+
+    if not incident.pole:
+        return (
+            f'Перед передачей инцидента {incident} '
+            'на РВР необходимо указать шифр опоры.'
+        )
+
+    if RVR_CATEGORY not in category_names:
+        return (
+            f'Перед передачей инцидента {incident} '
+            f'на РВР необходимо добавить категорию «{RVR_CATEGORY}».'
+        )
+
+    return None

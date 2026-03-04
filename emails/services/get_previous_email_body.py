@@ -9,14 +9,14 @@ from emails.models import EmailMessage
 
 def get_previous_email_body(
     prev_email: EmailMessage
-) -> Optional[tuple[str, str]]:
+) -> tuple[Optional[str], Optional[str]]:
     """
     Формирует блок предыдущего сообщения в стиле Outlook.
     Возвращает (plain_text, html_text)
     """
 
     if not prev_email.email_body and not prev_email.email_subject:
-        return None
+        return None, None
 
     from_value = prev_email.email_from or ''
 

@@ -32,4 +32,19 @@ urlpatterns = [
         views.notify_operator,
         name='notify_operator'
     ),
+    path(
+        'incidents/<int:incident_id>/emails/notify-avr-contractor/',
+        views.notify_avr_contractor,
+        name='notify_avr_contractor'
+    ),
+    path(
+        'incidents/<int:incident_id>/emails/notify-rvr-contractor/',
+        views.notify_rvr_contractor,
+        name='notify_rvr_contractor'
+    ),
+    path(
+        'incidents/<int:incident_id>/emails/notify-incident-closed/',
+        views.notify_incident_closed,
+        name='notify_incident_closed'
+    ),
 ]
