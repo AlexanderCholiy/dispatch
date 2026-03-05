@@ -19,19 +19,20 @@ export function remToPx(rem) {
 
 export function getChartColors() {
     return {
-        blue: getCssVar('blue-color', '#5a7fff'),
-        magenta: getCssVar('magenta-color', '#b23ae8'),
-        green: getCssVar('green-color', '#36b37e'),
-        yellow: getCssVar('yellow-color', '#bb9f4e'),
-        red: getCssVar('red-color', '#d93f3f'),
-        cyan: getCssVar('cyan-color', '#17a2b8'),
         gray: getCssVar('gray-color', '#949497'),
+        red: getCssVar('red-color', '#d93f3f'),
+        green: getCssVar('green-color', '#36b37e'),
+        blue: getCssVar('blue-color', '#5a7fff'),
+        yellow: getCssVar('yellow-color', '#bb9f4e'),
+        magenta: getCssVar('magenta-color', '#b23ae8'),
+        cyan: getCssVar('cyan-color', '#17a2b8'),
 
-        pink: getCssVar('pink-color', '#e255a1;'),
-        brown: getCssVar('brown-color', '#8d6e63'),
         orange: getCssVar('orange-color', '#f2994a'),
         purple: getCssVar('purple-color', '#6f5bd7'),
         teal: getCssVar('teal-color', '#2f9e9e'),
+        pink: getCssVar('pink-color', '#e255a1;'),
+        indigo: getCssVar('indigo-color', '#7986cb'),
+        brown: getCssVar('brown-color', '#8d6e63'),
 
         lime: getCssVar('lime-color', '#84cc16'),
         amber: getCssVar('amber-color', '#f59e0b'),

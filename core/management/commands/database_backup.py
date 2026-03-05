@@ -55,7 +55,7 @@ class Command(BaseCommand):
         self.compress_old_remote_backups()
 
         # self.restore_database(
-        #     '/home/a.choliy/dispatch/data/remote_backup_db/backup_dispatch_2026-02-05_12-45.sql',  # noqa: E501
+        #     '/home/a.choliy/dispatch/data/remote_backup_db/backup_dispatch_2026-03-05_15-45.sql',
         #     f'dump_{self.db_name}' if (
         #         not self.db_name.startswith('dump_')
         #     ) else self.db_name

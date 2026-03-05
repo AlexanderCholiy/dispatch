@@ -5,7 +5,7 @@ import { getDatesSincePreviousMonth } from './charts_utils.js';
 import { getChartColors, observeThemeChange } from './theme_colors.js';
 import { updateCopyButton, updateSlaCopyData } from './data/copy_chart_data.js';
 import { startStatisticsWebSocket } from './dashboard_ws_updater.js';
-import { startStatisticsPolling } from './dashboard_api_updater.js';
+// import { startStatisticsPolling } from './dashboard_api_updater.js';
 
 if (window.Chart && window.ChartZoom) {
     Chart.register(window.ChartZoom);
@@ -73,22 +73,22 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCopyButton('types-chart-card', typesChart, 'Регион/Тип аварии');
 
     const powerIssueSubtypesDatasets = [
-        { label: 'ЗО НБ. ВЛ до 1 кВ', color: colors.blue },
-        { label: 'ЗО НБ. ВЛ свыше 1 кВ', color: colors.cyan },
-        { label: 'ЗО НБ. КЛ до 1 кВ', color: colors.green },
-        { label: 'ЗО НБ. КЛ свыше 1 кВ', color: colors.yellow },
-        { label: 'ЗО НБ. КТП', color: colors.red },
-        { label: 'ЗО НБ. ПУ/АИИСКУЭ', color: colors.magenta },
-        { label: 'ЗО НБ. РЩ/РУ', color: colors.brown },
-        { label: 'ЗО Оператора. Линия', color: colors.gray },
-        { label: 'ЗО Оператора. Оборудование ЭУ', color: colors.pink },
-        { label: 'ЗО Сетевой организации. Аварийные работы', color: colors.orange },
-        { label: 'ЗО Сетевой организации. Плановые работы', color: colors.purple },
-        { label: 'Прочее (форс-мажор)', color: colors.teal },
-        { label: 'Отключение за неоплату', color: colors.lime },
-        { label: 'Самовосстановление питания', color: colors.amber },
-        { label: 'ШЭП', color: colors.slate },
-        { label: 'Отсутствие схемы', color: colors.crimson },
+        { label: 'ЗО НБ. ВЛ до 1 кВ', color: colors.magenta },
+        { label: 'ЗО НБ. ВЛ свыше 1 кВ', color: colors.pink },
+        { label: 'ЗО НБ. КЛ до 1 кВ', color: colors.purple },
+        { label: 'ЗО НБ. КЛ свыше 1 кВ', color: colors.lime },
+        { label: 'ЗО НБ. КТП', color: colors.orange },
+        { label: 'ЗО НБ. ПУ/АИИСКУЭ', color: colors.teal },
+        { label: 'ЗО НБ. РЩ/РУ', color: colors.green },
+        { label: 'ЗО Оператора. Линия', color: colors.indigo },
+        { label: 'ЗО Оператора. Оборудование ЭУ', color: colors.cyan },
+        { label: 'ЗО Сетевой организации. Аварийные работы', color: colors.yellow },
+        { label: 'ЗО Сетевой организации. Плановые работы', color: colors.blue },
+        { label: 'Прочее (форс-мажор)', color: colors.brown },
+        { label: 'Отключение за неоплату', color: colors.amber },
+        { label: 'Самовосстановление питания', color: colors.red },
+        { label: 'ШЭП', color: colors.gray },
+        { label: 'Отсутствие схемы', color: colors.slate },
         { label: 'Без подкатегории', color: colors.extra },
     ];
 
@@ -166,9 +166,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Для теста:
-    startStatisticsPolling(window.dashboardCharts);
+    // startStatisticsPolling(window.dashboardCharts);
 
-    // startStatisticsWebSocket(window.dashboardCharts);
+    startStatisticsWebSocket(window.dashboardCharts);
 
     observeThemeChange(() => {
         const colors = getChartColors();
@@ -179,10 +179,23 @@ document.addEventListener('DOMContentLoaded', () => {
         updateAllIncidentsChartColors(
             window.dashboardCharts.subtypes.power.chart,
             [
-                colors.blue, colors.cyan, colors.green, colors.yellow, colors.red,
-                colors.magenta, colors.brown, colors.gray, colors.pink, colors.orange,
-                colors.purple, colors.teal, colors.lime, colors.amber, colors.slate, colors.crimson,
-                colors.extra
+                colors.magenta,   // 0  ЗО НБ. ВЛ до 1 кВ
+                colors.pink,   // 1  ЗО НБ. ВЛ свыше 1 кВ
+                colors.purple,   // 2  ЗО НБ. КЛ до 1 кВ
+                colors.lime,   // 3  ЗО НБ. КЛ свыше 1 кВ
+                colors.orange,   // 4  ЗО НБ. КТП
+                colors.teal,   // 5  ЗО НБ. ПУ/АИИСКУЭ
+                colors.green,   // 6  ЗО НБ. РЩ/РУ
+                colors.indigo,   // 7  ЗО Оператора. Линия
+                colors.cyan,   // 8  ЗО Оператора. Оборудование ЭУ
+                colors.yellow,   // 9  ЗО Сетевой организации. Аварийные работы
+                colors.blue,   // 10 ЗО Сетевой организации. Плановые работы
+                colors.brown,   // 11 Прочее (форс-мажор)
+                colors.amber,   // 12 Отключение за неоплату
+                colors.red,   // 13 Самовосстановление питания
+                colors.gray,   // 14 ШЭП
+                colors.slate,   // 15 Отсутствие схемы
+                colors.extra  // 16 Без подкатегории
             ]
         );
         updateSlaDonutChartColors(window.dashboardCharts.sla.avr);

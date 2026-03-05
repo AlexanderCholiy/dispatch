@@ -18,7 +18,7 @@
   padding: var(--space-xs);
   border-radius: var(--radius-sm);
   box-shadow: 0 0 var(--space-xxs) var(--extra-color);
-  color: var(--add-color);
+  color: var(--gray-color);
 }
 
 #open-total-count {
@@ -32,4 +32,45 @@
 #closed-energy-total-count,
 #open-energy-total-count {
   color: var(--gray-color);
+}
+
+#avr-expired-total,
+#rvr-expired-total,
+#dgu-expired-total {
+  color: var(--red-color);
+}
+
+#avr-on-time-total,
+#rvr-on-time-total,
+#dgu-on-time-total {
+  color: var(--green-color);
+}
+
+#avr-less-hour-total,
+#rvr-less-hour-total,
+#dgu-less-hour-total {
+  color: var(--yellow-color);
+}
+
+#avr-in-work-total,
+#rvr-in-work-total,
+#dgu-in-work-total {
+  color: var(--blue-color);
+}
+
+#types-power-total {
+  color: var(--blue-color);
+}
+
+#power-no-subtype-total {
+  color: var(--red-color);
+}
+
+#power-other-total,
+#types-other-total {
+  color: var(--gray-color);
+}
+
+.total-count span.empty {
+  color: var(--extra-color) !important;
 }
