@@ -5,7 +5,7 @@ import { getDatesSincePreviousMonth } from './charts_utils.js';
 import { getChartColors, observeThemeChange } from './theme_colors.js';
 import { updateCopyButton, updateSlaCopyData } from './data/copy_chart_data.js';
 import { startStatisticsWebSocket } from './dashboard_ws_updater.js';
-// import { startStatisticsPolling } from './dashboard_api_updater.js';
+import { startStatisticsPolling } from './dashboard_api_updater.js';
 
 if (window.Chart && window.ChartZoom) {
     Chart.register(window.ChartZoom);
@@ -166,9 +166,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Для теста:
-    // startStatisticsPolling(window.dashboardCharts);
+    startStatisticsPolling(window.dashboardCharts);
 
-    startStatisticsWebSocket(window.dashboardCharts);
+    // startStatisticsWebSocket(window.dashboardCharts);
 
     observeThemeChange(() => {
         const colors = getChartColors();

@@ -1,6 +1,7 @@
 import { getFirstDayOfPreviousMonth, formatDate, showMessage, validateDateRange } from './charts_utils.js';
 import { updateDailyChart, updateBarChart, updateSlaCharts, updateSubtypesChart } from './data/charts_updater.js';
 import { updateCopyButton, updateSlaCopyData } from './data/copy_chart_data.js'
+import { updateTotalCount } from './data/update_total_counter.js'
 
 let isFetching = false;
 let pollingInterval = null;
@@ -20,9 +21,21 @@ function updateCharts(apiData, dailyChart, closedChart, openChart, typesChart, s
     const macroregionLabels = apiData.map(r => r.macroregion);
 
     updateDailyChart(dailyChart, apiData);
+    updateTotalCount(dailyChart, [
+        { id: 'daily-total-count' }
+    ]);
 
     updateBarChart(closedChart, apiData, ['total_closed_incidents', 'closed_incidents_with_power_issue'], macroregionLabels);
+    updateTotalCount(closedChart, [
+        { id: 'closed-total-count', field: 'Всего' },
+        { id: 'closed-energy-total-count', field: 'Без питания' }
+    ]);
+
     updateBarChart(openChart, apiData, ['total_open_incidents', 'open_incidents_with_power_issue'], macroregionLabels);
+    updateTotalCount(openChart, [
+        { id: 'open-total-count', field: 'Всего' },
+        { id: 'open-energy-total-count', field: 'Без питания' }
+    ]);
 
     updateSlaCharts(slaCharts.avr, apiData, 'avr');
     updateSlaCharts(slaCharts.rvr, apiData, 'rvr');

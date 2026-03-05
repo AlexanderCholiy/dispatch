@@ -1,0 +1,35 @@
+.chart-data {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: nowrap;
+}
+
+.total-count {
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: nowrap;
+  font-size: var(--font-md);
+}
+
+.total-count span {
+  padding: var(--space-xs);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 var(--space-xxs) var(--extra-color);
+  color: var(--add-color);
+}
+
+#open-total-count {
+  color: var(--blue-color);
+}
+
+#closed-total-count {
+  color: var(--green-color);
+}
+
+#closed-energy-total-count,
+#open-energy-total-count {
+  color: var(--gray-color);
+}

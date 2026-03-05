@@ -42,7 +42,8 @@
 
 .toggle-chart-btn {
     flex-shrink: 0;
-    min-width: 240px;
+    min-width: 260px;
+    max-width: 280px;
     padding: var(--space-xs) var(--space-sm);
     background-color: var(--background-color);
     border: none;
