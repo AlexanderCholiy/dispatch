@@ -260,7 +260,7 @@ class Incident(models.Model):
 
         # Автогенерация кода:
         if not self.is_yt_tracker_controlled and not self.code:
-            self.code = f'{INCIDENT_CODE_PREFIX}{self.pk}'
+            self.code = f'{INCIDENT_CODE_PREFIX}-{self.pk}'
             super().save(update_fields=['code'])
 
         # Категория по умолчанию:

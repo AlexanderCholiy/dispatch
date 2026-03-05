@@ -11,12 +11,20 @@
   display: grid;
   grid-template-columns: 4fr 1fr;
   grid-template-areas: "left right";
-  gap: var(--space-lg);
+  gap: var(--space-md);
   align-items: start;
 }
 
+.email-content.sent-email {
+  border-left: var(--space-xs) solid var(--rgba-blue-color);
+}
+
+.email-content.inbox-email {
+  border-left: var(--space-xs) solid var(--rgba-red-color);
+}
+
 .email-tree.chosen .email-content {
-  border-color: var(--gray-color);
+  border-color: var(--green-color);
 }
 
 .email-content.email-highlight {
@@ -27,14 +35,14 @@
   grid-area: left;
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: var(--space-sm);
 }
 
 .email-right {
   grid-area: right;
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
+  gap: var(--space-sm);
   font-size: var(--font-xs);
   color: var(--add-color);
   align-items: flex-end;
@@ -67,15 +75,18 @@
 
 .email-body {
   font-size: var(--font-xs);
-  white-space: pre-wrap;
+  line-height: 1.4;
+  /* white-space: pre-wrap; */
   word-break: break-word;
   max-height: 250px;
   max-width: 100%;
   overflow: auto;
+  margin: 0;
+  padding: 0;
 }
 
 .email-body p {
-  margin: 0;
+  margin: 0 0 var(--font-xl) 0;
 }
 
 .email-meta-id,

@@ -1,6 +1,8 @@
 <div class="email-wrapper">
 
-  <div id="email-{{ node.email.id }}" class="email-content">
+  <div 
+    id="email-{{ node.email.id }}" 
+    class="email-content {% if node.email.folder.name == 'INBOX' %}inbox-email{% else %}sent-email{% endif %}">
     <div class="email-left">
       <div class="email-subject">
         {% if node.email.email_subject %}

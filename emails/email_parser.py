@@ -354,6 +354,8 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                 Папка для проверки новых писем.
                 По умолчанию стандартная папка входящих писем INBOX.
         """
+        from incidents.services.send_auto_reply import AutoReply
+
         if (
             check_days == 0
             and self.is_time_in_range(
@@ -730,6 +732,14 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                             self.add_incident_from_email(
                                 email_msg, self.yt_manager
                             )
+
+                            # Обновляем объект в памяти
+                            email_msg.refresh_from_db()
+
+                            AutoReply().open_incident_or_reply(
+                                email_msg, self.email_login
+                            )
+
                         email_err_msg_ids_to_del.append(email_msg_id)
                     except KeyboardInterrupt:
                         raise

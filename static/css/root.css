@@ -9,7 +9,7 @@
     --extra-color: rgba(27, 27, 31, 0.2); /* тени, границы */
 
     --gray-color: #949497;           /* нейтральные элементы */
-    --red-color: #d93f3f;            /* ошибки / отменено */
+    --red-color: #d94040;            /* ошибки / отменено */
     --green-color: #36b37e;          /* закрыто / успешно */
     --blue-color: #5a7fff;           /* в работе / активный */
     --yellow-color: #bb9f4e;        /* ожидание / на паузе */
@@ -32,6 +32,9 @@
 
     --background-color: rgb(244, 245, 247);        /* лёгкая нотка */
     --add-background-color: rgb(225, 228, 235);    /* чуть темнее, мягкая градация */
+
+    --rgba-blue-color: rgba(90, 127, 255, 0.7);
+    --rgba-red-color: rgba(217, 64, 64, 0.7);
 
     --space-xxs: 0.125rem;
     --space-xs: 0.25rem;
@@ -88,6 +91,9 @@ html.dark {
 
     --background-color: rgb(31, 32, 39);     /* тёмный фон с синеватой ноткой */
     --add-background-color: rgb(44, 46, 54); /* чуть светлее для карточек */
+
+    --rgba-blue-color: rgba(90, 127, 255, 0.7);
+    --rgba-red-color: rgba(220, 87, 87, 0.7);
 
 }
 

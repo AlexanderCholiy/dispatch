@@ -183,7 +183,7 @@ class IncidentManager(IncidentValidator):
     @staticmethod
     def find_default_code_number_in_text(text: str) -> Optional[str]:
         """Ищет первое вхождение: префикс кода, дефис и цифры"""
-        match = re.search(rf'{INCIDENT_CODE_PREFIX}\d+', text)
+        match = re.search(rf'{INCIDENT_CODE_PREFIX}-\d+', text)
         return match.group(0) if match else None
 
     @staticmethod
@@ -569,7 +569,7 @@ class IncidentManager(IncidentValidator):
         self,
         email_msg: EmailMessage,
         yt_manager: Optional[YandexTrackerManager],
-    ) -> Optional[tuple[Incident, bool]]:
+    ) -> tuple[Optional[Incident], Optional[bool]]:
         """
         Регистрирует инцидент по переписке, связанной с указанным
         сообщением.
@@ -600,10 +600,10 @@ class IncidentManager(IncidentValidator):
             YandexTracker к которым надо восстановить цепочку переписки.
 
         Returns:
-            tuple[Incident, bool] | None
+            tuple[Incident, bool]
             - Кортеж из Incident, связанного с перепиской и True, если
             инцидент создан впервые, False, если уже существовал.
-            - None, если в переписке отсутствует первое сообщение.
+            - tuple[None, None], если инцидент не зарегестрирован.
         """
         selection_strategy: Optional[str] = None
 
@@ -761,7 +761,7 @@ class IncidentManager(IncidentValidator):
                 selection_strategy = IncidentSelectionStrategy.created_new
 
         if not actual_email_incident:
-            return None
+            return None, None
 
         # Финальная привязка и обработка конфликтов:
         thread_incident_ids: list[int] = list(
