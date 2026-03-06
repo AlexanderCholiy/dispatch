@@ -15,6 +15,7 @@ from .constants import (
     NOTIFY_OP_END_STATUS_NAME,
     NOTIFY_OP_IN_WORK_STATUS_NAME,
     RVR_CATEGORY,
+    STATUS_TRANSITIONS,
 )
 from .models import BaseStation, Incident, IncidentStatus, Pole
 
@@ -152,6 +153,26 @@ class IncidentValidator:
         return None, None
 
 
+def validate_status_transition(
+    last_status: Optional[IncidentStatus],
+    next_status_name: str,
+) -> Optional[str]:
+    """Проверяет допустимость перехода между статусами."""
+
+    if not last_status:
+        return None
+
+    allowed_transitions = STATUS_TRANSITIONS.get(last_status.name, [])
+
+    if next_status_name not in allowed_transitions:
+        return (
+            'Недопустимый переход из статуса '
+            f'«{last_status.name}» в «{next_status_name}».'
+        )
+
+    return None
+
+
 def validate_notify_operator(
     incident: Incident, last_status: Optional[IncidentStatus]
 ) -> Optional[str]:
@@ -165,6 +186,13 @@ def validate_notify_operator(
             f'Инцидент {incident} уже находится в статусе '
             f'«{last_status.name}».'
         )
+
+    transition_error = validate_status_transition(
+        last_status,
+        NOTIFIED_OP_IN_WORK_STATUS_NAME,
+    )
+    if transition_error:
+        return transition_error
 
 
 def validate_notify_incident_closed(
@@ -180,6 +208,13 @@ def validate_notify_incident_closed(
             f'Инцидент {incident} уже находится в статусе '
             f'«{last_status.name}».'
         )
+
+    transition_error = validate_status_transition(
+        last_status,
+        NOTIFIED_OP_END_STATUS_NAME,
+    )
+    if transition_error:
+        return transition_error
 
 
 def validate_notify_avr(
@@ -217,6 +252,13 @@ def validate_notify_avr(
             'отправить заявку на АВР.'
         )
 
+    transition_error = validate_status_transition(
+        last_status,
+        NOTIFIED_CONTRACTOR_STATUS_NAME,
+    )
+    if transition_error:
+        return transition_error
+
     return None
 
 
@@ -248,5 +290,12 @@ def validate_notify_rvr(
             f'Перед передачей инцидента {incident} '
             f'на РВР необходимо добавить категорию «{RVR_CATEGORY}».'
         )
+
+    transition_error = validate_status_transition(
+        last_status,
+        NOTIFIED_CONTRACTOR_STATUS_NAME,
+    )
+    if transition_error:
+        return transition_error
 
     return None

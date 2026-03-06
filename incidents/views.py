@@ -974,7 +974,10 @@ def notify_operator(request: HttpRequest, incident_id: int) -> HttpResponse:
     )
     reply_to_email = first_email
 
-    previous_plain, previous_html = get_previous_email_body(reply_to_email)
+    previous_plain, previous_html = None, None
+
+    if reply_to_email:
+        previous_plain, previous_html = get_previous_email_body(reply_to_email)
 
     if request.method == 'POST':
         form = NewEmailForm(request.POST, request.FILES)
@@ -1686,7 +1689,9 @@ def notify_incident_closed(
     )
     reply_to_email = first_email
 
-    previous_plain, previous_html = get_previous_email_body(reply_to_email)
+    previous_plain, previous_html = None, None
+    if reply_to_email:
+        previous_plain, previous_html = get_previous_email_body(reply_to_email)
 
     if request.method == 'POST':
         form = NewEmailForm(request.POST, request.FILES)
