@@ -132,6 +132,8 @@ def index(request: HttpRequest) -> HttpResponse:
 
     if responsible_user_id and responsible_user_id.isdigit():
         responsible_user_id = int(responsible_user_id)
+    elif responsible_user_id == 'none':
+        responsible_user_id = responsible_user_id
     else:
         responsible_user_id = None
 
@@ -262,7 +264,9 @@ def index(request: HttpRequest) -> HttpResponse:
     if category_id:
         base_qs = base_qs.filter(categories__id=category_id)
 
-    if responsible_user_id:
+    if responsible_user_id == 'none':
+        base_qs = base_qs.filter(responsible_user__isnull=True)
+    elif responsible_user_id:
         base_qs = base_qs.filter(responsible_user__id=responsible_user_id)
 
     if sort == 'asc':
@@ -345,9 +349,16 @@ def index(request: HttpRequest) -> HttpResponse:
                 'id': user.id,
                 'full_name': user.get_full_name() or 'Новый пользователь'
             }
-            for user in User.objects.filter(
-                role=Roles.DISPATCH, is_active=True
-            ).order_by('username')
+            for user in (
+                User.objects.filter(
+                    Q(role=Roles.DISPATCH, is_active=True)
+                    | Q(id__in=Incident.objects.values_list(
+                        'responsible_user_id', flat=True
+                    ))
+                )
+                .distinct()
+                .order_by('username')
+            )
         ],
         USERS_CACHE_TTL,
     )

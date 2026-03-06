@@ -1,7 +1,7 @@
 .types-total-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(85px, max-content));
-  justify-content: center;
+  justify-content: space-evenly;
   gap: var(--space-sm);
   margin: 0 var(--space-sm);
 }

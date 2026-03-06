@@ -254,6 +254,12 @@ class IncidentForm(forms.ModelForm):
         required=False,
         label='Статус'
     )
+    responsible_user = forms.ModelChoiceField(
+        queryset=User.objects.none(),
+        required=False,
+        label='Диспетчер',
+        empty_label='Не назначен'
+    )
 
     class Meta:
         model = Incident
@@ -407,7 +413,7 @@ class IncidentForm(forms.ModelForm):
         current_day_field = days[weekday]
         day_filter = {f'work_schedule__{current_day_field}': True}
 
-        self.fields['responsible_user'].queryset = User.objects.filter(
+        users_qs = User.objects.filter(
             is_active=True,
             role=Roles.DISPATCH,
             work_schedule__isnull=False,
@@ -419,6 +425,15 @@ class IncidentForm(forms.ModelForm):
             )
             | Q(work_schedule__start_time=F('work_schedule__end_time'))
         ).select_related('work_schedule')
+
+        if self.instance.responsible_user:
+            users_qs = users_qs | User.objects.filter(
+                pk=self.instance.responsible_user.pk
+            )
+
+        self.fields['responsible_user'].queryset = (
+            users_qs.distinct().order_by('first_name', 'last_name', 'id')
+        )
 
         min_date = min(
             self.instance.insert_date or now,
@@ -521,12 +536,12 @@ class IncidentForm(forms.ModelForm):
 
         return cats
 
-    def clean_statuses(self):
-        status = self.cleaned_data.get('statuses')
+    def clean_new_status(self):
+        status: Optional[IncidentStatus] = self.cleaned_data.get('new_status')
         if not status:
             raise forms.ValidationError('Выберите статус')
 
-        allowed_qs = self.fields['statuses'].queryset
+        allowed_qs = self.fields['new_status'].queryset
         if status not in allowed_qs:
             raise forms.ValidationError(
                 'Переход в выбранный статус недоступен'

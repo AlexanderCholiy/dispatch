@@ -213,6 +213,8 @@
 
               {% if field.name == "incident_type" or field.name == "incident_subtype" %}
                 <option value="" {% if not field.value %}selected{% endif %}>Не выбрано</option>
+              {% elif field.name == "responsible_user" %}
+                <option value="" {% if not field.value %}selected{% endif %}>Не назначен</option>
               {% endif %}
 
               {% for value, label in field.field.choices %}
