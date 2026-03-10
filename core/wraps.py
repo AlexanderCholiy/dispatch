@@ -205,21 +205,18 @@ def min_wait_timer(logger: Logger, min_seconds: int = 10):
 
 
 def db_timeout(seconds: Optional[int] = None):
-    """
-    Декоратор для жесткого таймаута работы view с внешней базой.
-    Если view не успевает выполнить работу, возвращается 503.
-    """
+    """Декоратор для жесткого таймаута работы с базой."""
     seconds = seconds or DB_TIMEOUT
 
-    def decorator(view_func):
-        @functools.wraps(view_func)
-        def _wrapped_view(request, *args, **kwargs):
+    def decorator(func: Callable):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
             result = {}
             exception = {}
 
             def target():
                 try:
-                    result['response'] = view_func(request, *args, **kwargs)
+                    result['value'] = func(*args, **kwargs)
                 except Exception as e:
                     exception['error'] = e
 
@@ -236,8 +233,8 @@ def db_timeout(seconds: Optional[int] = None):
             if 'error' in exception:
                 raise exception['error']
 
-            return result['response']
+            return result.get('value')
 
-        return _wrapped_view
+        return wrapper
 
     return decorator

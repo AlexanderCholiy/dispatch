@@ -27,8 +27,4 @@ def validate_date_range(
     if start and end and start > end:
         raise ValidationError('start_date не может быть больше end_date')
 
-    today = timezone.now().date()
-    if end and end > today:
-        raise ValidationError('end_date не может быть в будущем')
-
     return start, end

@@ -150,7 +150,7 @@ DATABASES = {
         'CONN_MAX_AGE': 60,
         'OPTIONS': {
             'connect_timeout': 3,
-            'options': '-c statement_timeout=5000'
+            'options': '-c statement_timeout=10000'
         },
     },
     'monitoring': {
@@ -165,8 +165,8 @@ DATABASES = {
             'driver': 'ODBC Driver 17 for SQL Server',
             'Encrypt': 'no',
             'TrustServerCertificate': 'yes',
-            'Connection Timeout': 3,
-            'Query Timeout': 5,
+            'Connection Timeout': 5,
+            'Query Timeout': 15,
         },
     },
     'ts': {
@@ -176,11 +176,6 @@ DATABASES = {
         'PASSWORD': os.environ.get('TS_DB_PASSWORD'),
         'HOST': os.environ.get('TS_DB_HOST'),
         'PORT': int(os.environ.get('TS_DB_PORT', 5432)),
-        'CONN_MAX_AGE': 60,
-        'OPTIONS': {
-            'connect_timeout': 3,
-            'options': '-c statement_timeout=5000'
-        },
     },
     'energy': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -191,8 +186,8 @@ DATABASES = {
         'PORT': int(os.environ.get('ENERGY_DB_PORT', 5432)),
         'CONN_MAX_AGE': 60,
         'OPTIONS': {
-            'connect_timeout': 3,
-            'options': '-c statement_timeout=5000'
+            'connect_timeout': 5,
+            'options': '-c statement_timeout=15000'
         },
     }
 }

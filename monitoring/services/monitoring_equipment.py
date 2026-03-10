@@ -3,6 +3,7 @@ from typing import Optional, TypedDict
 
 from django.core.cache import cache
 from django.utils import timezone
+from django.db.models import QuerySet
 
 from core.loggers import monitoring_logger
 from core.wraps import db_timeout
@@ -29,6 +30,25 @@ class MonitoringEquipment(TypedDict):
 
 
 @db_timeout()
+def monitoring_qs() -> QuerySet[MSysModem]:
+    qs = (
+        MSysModem.objects
+        .values(
+            'modem_ip',
+            'modem_serial',
+            'pole_1',
+            'pole_2',
+            'pole_3',
+            'level',
+            'cabinet',
+            'status',
+            'updated_at',
+        )
+        .exclude(pole_1=UNDEFINED_POLE_CASE)
+    )
+    return qs
+
+
 def get_monitiring_cache_equipment(
     pole: str
 ) -> Optional[list[MonitoringEquipment]]:
@@ -45,23 +65,15 @@ def get_monitiring_cache_equipment(
     equipment: dict[str, MonitoringEquipment] = {}
 
     try:
-        qs = (
-            MSysModem.objects
-            .values(
-                'modem_ip',
-                'modem_serial',
-                'pole_1',
-                'pole_2',
-                'pole_3',
-                'level',
-                'cabinet',
-                'status',
-                'updated_at',
-            )
-            .exclude(pole_1=UNDEFINED_POLE_CASE)
-        )
+        qs = monitoring_qs()
     except Exception as e:
+        cache.set(
+            MONITORING_EQUIPMENT_CACHE_KEY,
+            {},
+            timeout=MONITORING_EQUIPMENT_CACHE_TTL
+        )
         monitoring_logger.exception(e)
+        return None
 
     now = timezone.now()
 
