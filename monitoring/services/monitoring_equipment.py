@@ -5,6 +5,7 @@ from django.core.cache import cache
 from django.utils import timezone
 
 from core.loggers import monitoring_logger
+from core.wraps import db_timeout
 from monitoring.constants import (
     CHUNKED_MONITORING_QS,
     MONITORING_EQUIPMENT_CACHE_KEY,
@@ -27,12 +28,14 @@ class MonitoringEquipment(TypedDict):
     updated_at: Optional[datetime]
 
 
+@db_timeout()
 def get_monitiring_cache_equipment(
     pole: str
 ) -> Optional[list[MonitoringEquipment]]:
-    cached_data: dict[str, list[MonitoringEquipment]] = cache.get(
+    cached_data: Optional[dict[str, list[MonitoringEquipment]]] = cache.get(
         MONITORING_EQUIPMENT_CACHE_KEY
     )
+    cached_data = None
 
     if cached_data is not None:
         return cached_data.get(pole)

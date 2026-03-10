@@ -147,6 +147,11 @@ DATABASES = {
         'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': int(os.getenv('DB_PORT', 5432)),
+        'CONN_MAX_AGE': 60,
+        'OPTIONS': {
+            'connect_timeout': 3,
+            'options': '-c statement_timeout=5000'
+        },
     },
     'monitoring': {
         'ENGINE': 'mssql',
@@ -155,11 +160,13 @@ DATABASES = {
         'PASSWORD': os.getenv('MONITORING_DB_PASSWORD', ''),
         'HOST': os.getenv('MONITORING_DB_HOST', 'localhost'),
         'PORT': int(os.getenv('MONITORING_DB_PORT', 1433)),
+        'CONN_MAX_AGE': 60,
         'OPTIONS': {
             'driver': 'ODBC Driver 17 for SQL Server',
             'Encrypt': 'no',
             'TrustServerCertificate': 'yes',
-            'Connection Timeout': 10,
+            'Connection Timeout': 3,
+            'Query Timeout': 5,
         },
     },
     'ts': {
@@ -169,6 +176,11 @@ DATABASES = {
         'PASSWORD': os.environ.get('TS_DB_PASSWORD'),
         'HOST': os.environ.get('TS_DB_HOST'),
         'PORT': int(os.environ.get('TS_DB_PORT', 5432)),
+        'CONN_MAX_AGE': 60,
+        'OPTIONS': {
+            'connect_timeout': 3,
+            'options': '-c statement_timeout=5000'
+        },
     },
     'energy': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -177,8 +189,15 @@ DATABASES = {
         'PASSWORD': os.environ.get('ENERGY_DB_PASSWORD'),
         'HOST': os.environ.get('ENERGY_DB_HOST'),
         'PORT': int(os.environ.get('ENERGY_DB_PORT', 5432)),
+        'CONN_MAX_AGE': 60,
+        'OPTIONS': {
+            'connect_timeout': 3,
+            'options': '-c statement_timeout=5000'
+        },
     }
 }
+
+CONN_HEALTH_CHECKS = False
 
 DATABASE_ROUTERS = [
     'monitoring.routers.ReadOnlyRouter',

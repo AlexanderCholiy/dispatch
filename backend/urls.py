@@ -110,6 +110,7 @@ app_urls = [
     path('pages/', include('pages.urls')),
     path('stats/', include('stats.urls')),
     path('ts/', include('ts.urls')),
+    path('notifications/', include('notifications.urls')),
 ]
 
 urlpatterns = swagger_urls + auth_urlpatterns + app_urls

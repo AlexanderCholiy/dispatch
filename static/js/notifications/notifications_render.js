@@ -20,10 +20,21 @@ export function addNotification(listEl, n, markReadFn, panel, showPanel = true) 
     const sent_at = n.send_at ? new Date(n.send_at) : new Date();
     const dateStr = isNaN(sent_at.getTime()) ? "" : sent_at.toLocaleString();
 
+    const notificationUrl = n.notification_url || null;
+    const incidentUrl = n.incident_url || null;
+
+    const titleHtml = notificationUrl
+        ? `<a href="${notificationUrl}" class="notification-title">${title}</a>`
+        : `<div class="notification-title">${title}</div>`;
+
+    const messageHtml = incidentUrl
+        ? `<a href="${incidentUrl}" class="notification-message">${message}</a>`
+        : `<div class="notification-message">${message}</div>`;
+
     el.dataset.id = n.id;
     el.innerHTML = `
-        <div class="notification-title copy-text" data-text="${title}">${title}</div>
-        <div class="notification-message">${message}</div>
+        ${titleHtml}
+        ${messageHtml}
         <div class="notification-footer">
             <span class="notification-date">${dateStr}</span>
             <button class="btn btn-secondary notification-mark-read">Прочитано</button>
@@ -56,29 +67,4 @@ export function updateCount(countEl, count) {
     } else {
         countEl.style.display = "none";
     }
-}
-
-// Делегированное копирование текста
-export function initCopy(listEl, messagesContainer) {
-    if (!listEl || !messagesContainer) return;
-    listEl.addEventListener("click", (e) => {
-        const target = e.target.closest(".copy-text");
-        if (!target) return;
-        const text = target.dataset.text || target.innerText || "";
-        if (!text) return;
-
-        navigator.clipboard.writeText(text).then(() => {
-            const msg = document.createElement("div");
-            msg.className = "message alert-info";
-            msg.innerText = text.length > 100 ? "Данные скопированы в буфер обмена" : `${text} скопирован в буфер`;
-            messagesContainer.appendChild(msg);
-            setTimeout(() => msg.remove(), 5000);
-        }).catch(() => {
-            const msg = document.createElement("div");
-            msg.className = "message alert-error";
-            msg.innerText = "Не удалось скопировать данные";
-            messagesContainer.appendChild(msg);
-            setTimeout(() => msg.remove(), 5000);
-        });
-    });
 }

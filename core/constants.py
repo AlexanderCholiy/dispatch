@@ -131,3 +131,5 @@ EMAIL_LOGO_PATH = os.path.join(
 CONTROL_CHARS_RE = re.compile(r'[\r\n\t]+')
 
 CURRENT_TZ = timezone.get_current_timezone()
+
+DB_TIMEOUT = 3

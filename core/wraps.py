@@ -1,14 +1,19 @@
 import functools
+import threading
 import time
 from datetime import datetime
 from http import HTTPStatus
 from logging import Logger
-from typing import Callable
+from typing import Callable, Optional
 
 import requests
 
-from .constants import API_STATUS_EXCEPTIONS
-from .exceptions import ApiServerError, ApiTooManyRequests
+from .constants import API_STATUS_EXCEPTIONS, DB_TIMEOUT
+from .exceptions import (
+    ApiServerError,
+    ApiTooManyRequests,
+    DatabaseTimeoutError,
+)
 from .utils import format_seconds
 
 
@@ -196,4 +201,43 @@ def min_wait_timer(logger: Logger, min_seconds: int = 10):
 
             return result
         return wrapper
+    return decorator
+
+
+def db_timeout(seconds: Optional[int] = None):
+    """
+    Декоратор для жесткого таймаута работы view с внешней базой.
+    Если view не успевает выполнить работу, возвращается 503.
+    """
+    seconds = seconds or DB_TIMEOUT
+
+    def decorator(view_func):
+        @functools.wraps(view_func)
+        def _wrapped_view(request, *args, **kwargs):
+            result = {}
+            exception = {}
+
+            def target():
+                try:
+                    result['response'] = view_func(request, *args, **kwargs)
+                except Exception as e:
+                    exception['error'] = e
+
+            thread = threading.Thread(target=target)
+            thread.daemon = True
+            thread.start()
+            thread.join(seconds)
+
+            if thread.is_alive():
+                raise DatabaseTimeoutError(
+                    f'Таймаут {seconds}s при работе с базой данных'
+                )
+
+            if 'error' in exception:
+                raise exception['error']
+
+            return result['response']
+
+        return _wrapped_view
+
     return decorator

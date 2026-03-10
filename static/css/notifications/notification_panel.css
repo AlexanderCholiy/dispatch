@@ -95,6 +95,29 @@
   white-space: pre-wrap;
 }
 
+a.notification-title,
+a.notification-message {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+a.notification-title {
+  color: var(--color);
+}
+
+a.notification-message {
+  color: var(--add-color)
+}
+
+a.notification-title:hover {
+  text-decoration: underline;
+  color: var(--priority-color);
+}
+
+a.notification-message:hover {
+  background: var(--extra-color);
+}
+
 .notification-footer {
     display: flex;
     justify-content: space-between;

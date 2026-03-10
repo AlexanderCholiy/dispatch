@@ -3,9 +3,14 @@ from typing import Optional
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
+from django.urls import reverse
 from django.utils import timezone
 
-from .constants import NOTIFICATIONS_PER_PAGE, OLD_NOTIFICATIONS_TTL
+from .constants import (
+    MAX_NOTIFICATION_PREWIE_LEN,
+    NOTIFICATIONS_PER_PAGE,
+    OLD_NOTIFICATIONS_TTL,
+)
 from .models import Notification, NotificationLevel
 from .signals import NotificationData
 
@@ -53,18 +58,37 @@ class NotificationsConsumer(AsyncJsonWebsocketConsumer):
             [:NOTIFICATIONS_PER_PAGE]
         )
 
-        return [
-            {
+        notifications = []
+
+        for n in qs:
+            notification_url = reverse(
+                'notifications:notification_detail', args=[n.id]
+            )
+            incident_url = None
+
+            if isinstance(n.data, dict):
+                incident_id = n.data.get('incident_id')
+                if isinstance(incident_id, int) and incident_id > 0:
+                    incident_url = reverse(
+                        'incidents:incident_detail', args=[incident_id]
+                    )
+
+            message = n.message or ''
+
+            if len(message) > MAX_NOTIFICATION_PREWIE_LEN:
+                message = message[:MAX_NOTIFICATION_PREWIE_LEN] + '…'
+
+            notifications.append({
                 'id': n.id,
                 'title': n.title,
-                'message': n.message,
+                'message': message,
                 'level': n.level,
-                'data': n.data,
+                'notification_url': notification_url,
+                'incident_url': incident_url,
                 'send_at': n.send_at.isoformat(),
-                'created_at': n.created_at.isoformat()
-            }
-            for n in qs
-        ]
+            })
+
+        return notifications
 
     @database_sync_to_async
     def get_unread_count(self) -> int:
@@ -118,6 +142,42 @@ class NotificationsConsumer(AsyncJsonWebsocketConsumer):
                 return
 
         count = await self.get_unread_count()
+
+        notif_id = notif['id']
+
+        notification_url = reverse(
+            'notifications:notification_detail', args=[notif.get('id')]
+        ) if notif_id else None
+
+        incident_url = None
+        notif_data = notif['data']
+
+        if isinstance(notif_data, dict):
+            incident_id = notif_data.get('incident_id')
+            if isinstance(incident_id, int) and incident_id > 0:
+                incident_url = reverse(
+                    'incidents:incident_detail', args=[incident_id]
+                )
+
+        message = notif.get('message') or ''
+
+        if len(message) > MAX_NOTIFICATION_PREWIE_LEN:
+            message = message[:MAX_NOTIFICATION_PREWIE_LEN] + '…'
+
+        notification = {
+            'id': notif['id'],
+            'title': notif['title'],
+            'message': message,
+            'level': notif['level'],
+            'notification_url': notification_url,
+            'incident_url': incident_url,
+            'send_at': notif['send_at'],
+        }
+
         await self.send_json(
-            {'type': 'notification', 'notification': notif, 'count': count}
+            {
+                'type': 'notification',
+                'notification': notification,
+                'count': count
+            }
         )
