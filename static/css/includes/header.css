@@ -39,6 +39,7 @@
 }
 
 .btn-toggle,
+#notifications-toggle,
 #theme-toggle,
 #user-toggle {
   background: none;
@@ -56,11 +57,13 @@
 }
 
 .btn-toggle:hover,
+#notifications-toggle:hover,
 #theme-toggle:hover {
   color: var(--priority-color);
 }
 
 .btn-toggle:active,
+#notifications-toggle:active,
 #theme-toggle:active,
 #user-toggle:active {
   transform: scale(0.95);

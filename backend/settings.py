@@ -47,13 +47,14 @@ SESSION_COOKIE_AGE = 7 * 24 * 3600  # Неделя
 SESSION_SAVE_EVERY_REQUEST = True
 
 INSTALLED_APPS = [
+    'daphne',
+    'channels',  # до всех приложений
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'channels',  # до всех приложений
     'debug_toolbar',
     'core.apps.CoreConfig',
     'users.apps.UsersConfig',
@@ -66,6 +67,7 @@ INSTALLED_APPS = [
     'monitoring.apps.MonitoringConfig',
     'energy.apps.EnergyConfig',
     'stats.apps.StatsConfig',
+    'notifications.apps.NotificationsConfig',
     'rest_framework',
     'django_filters',
     'djoser',

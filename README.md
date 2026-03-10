@@ -510,6 +510,12 @@ sudo ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc unixodbc-dev
 > 
 > В Linux 24.04 ODBC Driver 18 иногда вызывает проблемы с SSL-соединением, особенно при работе с серверами MSSQL, использующими самоподписанные сертификаты.
 
+5. Проверка работы WebSocke:
+```bash
+uvicorn backend.asgi:application --reload
+```
+> Запуск приложения с автоматической перезагрузкой, но без раздачи статики.
+
 ---
 
 ## 🛠️ Полезные команды

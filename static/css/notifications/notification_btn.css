@@ -1,0 +1,40 @@
+.notification-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notifications-count {
+  position: absolute;
+
+  top: -12px;
+  right: -12px;
+
+  min-width: 16px;
+  height: 16px;
+  padding: 0 var(--space-xxs);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: var(--font-sm);
+  font-weight: 600;
+
+  color: var(--add-background-color);
+  background: var(--red-color);
+
+  border-radius: var(--radius-xl);
+
+  pointer-events: none;
+  line-height: 1.1;
+
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  box-shadow: 0 0 var(--space-xxs) var(--extra-color);
+}
+
+.notifications-count:empty {
+  display: none;
+}

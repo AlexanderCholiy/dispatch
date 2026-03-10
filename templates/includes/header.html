@@ -29,8 +29,15 @@
     </div>
   {% endif %}
 
-  <!-- Правый блок: тема + пользователь -->
+  <!-- Правый блок: тема + пользователь + уведомления -->
   <div class="header-right">
+    <button id="notifications-toggle" class="tooltip" data-title="Показать уведомления">
+      <span class="notification-wrapper">
+        <i id="notification-icon" class="bx bx-bell"></i>
+        <span id="notifications-count" class="notifications-count"></span>
+      </span>
+    </button>
+
     <button id="theme-toggle" class="tooltip" data-title="Переключить тему">
       <i id="theme-icon" class="bx bx-sun"></i>
     </button>
@@ -49,7 +56,9 @@
         {% else %}
           <div class="user-icon tooltip" data-title="Профиль">E</div>
         {% endif %}
+        
       </button>
+
       <div id="user-menu" class="user-menu">
         {% include "includes/user_menu.html" %}
       </div>

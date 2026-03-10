@@ -60,6 +60,8 @@
     <link rel="stylesheet" href="{% static 'css/includes/statuses.css' %}">
     <link rel="stylesheet" href="{% static 'css/includes/copy_text.css' %}">
     <link rel="stylesheet" href="{% static 'css/includes/multi_select.css' %}">
+    <link rel="stylesheet" href="{% static 'css/notifications/notification_btn.css' %}">
+    <link rel="stylesheet" href="{% static 'css/notifications/notification_panel.css' %}">
     {% block extra_css %}{% endblock %}
   </head>
   <body>
@@ -78,6 +80,7 @@
           </main>
         </div>
       </div>
+      {% include "includes/notifications_panel.html" %}
       {% include "includes/footer.html" %}
     </div>
 
@@ -90,6 +93,7 @@
     <script src="{% static 'js/copy_text.js' %}"></script>
     <script src="{% static 'js/focus_on_search_filter.js' %}"></script>
     <script src="{% static 'js/change_select_arrow.js' %}"></script>
+    <script type="module" src="{% static 'js/notifications/init_skeleton_notifications.js' %}"></script>
     {% block extra_js %}{% endblock %}
   </body>
 </html>

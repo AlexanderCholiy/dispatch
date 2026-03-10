@@ -1,0 +1,123 @@
+.notifications-panel {
+  position: fixed;
+  bottom: var(--space-md);
+  right: var(--space-md);
+  width: 320px;
+  max-height: 480px;
+  background-color: transparent;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 var(--space-xxs) var(--extra-color);
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 1000;
+  transition: all var(--transition-value);
+}
+
+.notifications-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-sm) var(--space-sm);
+  background-color: transparent;
+  border-bottom: 1px solid var(--extra-color);
+  font-weight: 600;
+  font-size: var(--font-sm);
+  color: var(--add-color);
+}
+
+.notifications-header-actions {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.notifications-btn {
+  border-radius: var(--radius-sm);
+  padding: var(--space-xxs) var(--space-xs);
+  font-size: var(--font-xs);
+  font-weight: 600;
+}
+
+.notifications-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  max-height: 380px;
+}
+
+.notification-item {
+  border-radius: var(--radius-sm);
+  padding: var(--space-xs);
+  position: relative;
+  cursor: default;
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: opacity var(--transition-value), transform var(--transition-value);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 var(--space-xxs) var(--extra-color);
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  background-color: var(--add-background-color);
+  gap: var(--space-xs);
+}
+
+.notification-item.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.notification-high {
+  border-left: 4px solid var(--red-color);
+}
+
+.notification-medium {
+  border-left: 4px solid var(--priority-color);
+}
+
+.notification-low {
+  background-color: var(--extra-color);
+  border-left: 4px solid var(--gray-color);
+}
+
+.notification-title {
+  font-weight: 600;
+  font-size: var(--font-sm);
+}
+
+.notification-message {
+  font-size: var(--font-xs);
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.notification-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--space-xxs);
+}
+
+.notification-date {
+  font-size: var(--font-xxs);
+  opacity: 0.6;
+}
+
+.notification-mark-read {
+  padding: var(--space-xxs) var(--space-xs);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-xs);
+  font-weight: 600;
+}
+
+
+@media (max-width: 768px) {
+  .notifications-panel {
+    width: 90%;
+    right: 5%;
+    max-height: 60vh;
+  }
+}
