@@ -24,6 +24,7 @@
   font-weight: 600;
   font-size: var(--font-sm);
   color: var(--add-color);
+  background-color: var(--background-color);
 }
 
 .notifications-header-actions {
