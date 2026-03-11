@@ -11,6 +11,9 @@ CRON_TZ=Europe/Moscow
 30 2 * * * nice -n 19 ionice -c 3 /usr/local/bin/python /app/manage.py delete_irrelevant_files >> /app/logs/cron/cron.log 2>&1
 0 4 * * * nice -n 19 ionice -c 3 /usr/local/bin/python /app/manage.py cleanup_users_avatars >> /app/logs/cron/cron.log 2>&1
 
+# Удаление не актуальных данных:
+15 3 * * * nice -n 19 ionice -c 3 /usr/local/bin/python /app/manage.py cleanup_notifications >> /app/logs/cron/cron.log 2>&1
+
 # Обновление данных:
 # Добавляем небольшую задержку (sleep), чтобы не стартовать ровно в 00 секунд вместе с другими системными задачами
 */20 * * * * sleep 15 && nice -n 15 /usr/local/bin/python /app/manage.py update_data_from_ts >> /app/logs/cron/cron.log 2>&1

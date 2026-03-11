@@ -10,4 +10,12 @@ NOTIFICATIONS_PER_PAGE = 50
 
 OLD_NOTIFICATIONS_TTL = timedelta(days=7)
 
+UNREAD_NOTIFICATION_TTL = {
+    'low': OLD_NOTIFICATIONS_TTL,
+    'medium': timedelta(days=30),
+    'high': timedelta(days=90),
+}
+
 MAX_NOTIFICATION_PREWIE_LEN = 128
+
+NOTIFICATION_BATCH = 1000
