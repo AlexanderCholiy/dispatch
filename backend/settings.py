@@ -199,6 +199,11 @@ DATABASE_ROUTERS = [
     'energy.routers.WithoutMigrationsRouter',
 ]
 
+MIGRATION_MODULES = {
+    'monitoring': None,
+    'energy': None,
+}
+
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL')
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_CACHE_BACKEND = 'django-cache'
@@ -257,10 +262,6 @@ CACHES = {
 }
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
-
-MIGRATION_MODULES = {
-    'monitoring': None,
-}
 
 AUTH_PASSWORD_VALIDATORS = [
     {

@@ -5,6 +5,7 @@ from channels.layers import get_channel_layer
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
+from datetime import timedelta
 
 from .constants import OLD_NOTIFICATIONS_TTL
 from .models import Notification, NotificationLevel
@@ -23,7 +24,7 @@ class NotificationData(TypedDict):
 
 @receiver(post_save, sender=Notification)
 def notify_notification_change(sender, instance: Notification, **kwargs):
-    now = timezone.now()
+    now = timezone.now() + timedelta(milliseconds=1)
     week_ago = now - OLD_NOTIFICATIONS_TTL
 
     if (

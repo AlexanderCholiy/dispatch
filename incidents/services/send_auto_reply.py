@@ -22,11 +22,22 @@ from incidents.constants import (
 )
 from incidents.models import IncidentStatus, IncidentStatusHistory
 from yandex_tracker.constants import SEND_AUTO_EMAIL_ON_CLOSED_INCIDENT
+from users.models import User, Roles
 
 from .normalize_incident_subject import normalize_incident_subject
+from notifications.models import Notification, NotificationLevel
+from notifications.constants import (
+    MAX_NOTIFICATION_TITLE_LEN, MAX_NOTIFICATION_TEXT_LEN
+)
 
 
 class AutoReply:
+
+    @staticmethod
+    def truncate_text(text: str, max_len: int) -> str:
+        if len(text) > max_len - 3:
+            return text[:max_len - 3] + '...'
+        return text
 
     def auto_reply_incident_is_closed(
         self, email: EmailMessage, email_login: str
@@ -124,6 +135,32 @@ class AutoReply:
                         email_to=cc_email
                     )
 
+                notif_title = self.truncate_text(
+                    f'Автоответ по инциденту {incident}',
+                    MAX_NOTIFICATION_TITLE_LEN,
+                )
+                notif_msg = self.truncate_text(
+                    (
+                        'Система автоматически ответила на письмо от '
+                        f'{email.email_from}.\n'
+                        f'Тема: "{email.email_subject or "Без темы"}".'
+                    ),
+                    MAX_NOTIFICATION_TEXT_LEN,
+                )
+                notif_data = {
+                    'incident_id': incident.id,
+                    'email_id': email.id,
+                }
+
+                if incident.responsible_user:
+                    Notification.objects.create(
+                        user=incident.responsible_user,
+                        title=notif_title,
+                        message=notif_msg,
+                        level=NotificationLevel.LOW,
+                        data=notif_data,
+                    )
+
                 transaction.on_commit(
                     lambda: send_incident_email_task.delay(email_msg.id)
                 )
@@ -136,6 +173,51 @@ class AutoReply:
             or not incident.is_incident_finish
             or incident.is_yt_tracker_controlled
         ):
+            if (
+                incident
+                and not incident.is_yt_tracker_controlled
+                and not incident.is_incident_finish
+                and email.folder == EmailFolder.get_inbox()
+            ):
+                notif_title = self.truncate_text(
+                    f'Новое письмо по инциденту {incident}',
+                    MAX_NOTIFICATION_TITLE_LEN,
+                )
+                notif_msg = self.truncate_text(
+                    (
+                        f'Входящее письмо от {email.email_from}.\n'
+                        f'Тема: "{email.email_subject or "Без темы"}".'
+                    ),
+                    MAX_NOTIFICATION_TEXT_LEN,
+                )
+                notif_data = {
+                    'incident_id': incident.id,
+                    'email_id': email.id,
+                }
+
+                if incident.responsible_user:
+                    Notification.objects.create(
+                        user=incident.responsible_user,
+                        title=notif_title,
+                        message=notif_msg,
+                        level=NotificationLevel.MEDIUM,
+                        data=notif_data,
+                    )
+                else:
+                    staff_dispatchers = User.objects.filter(
+                        is_staff=True,
+                        is_active=True,
+                        role=Roles.DISPATCH,
+                    )
+                    for u in staff_dispatchers:
+                        Notification.objects.create(
+                            user=u,
+                            title=notif_title,
+                            message=notif_msg,
+                            level=NotificationLevel.LOW,
+                            data=notif_data,
+                        )
+
             return
 
         if EmailManager.is_nth_email_after_incident_close(
@@ -169,6 +251,46 @@ class AutoReply:
                 incident.statuses.add(new_status)
 
                 incident.save()
+
+                notif_title = self.truncate_text(
+                    f'Эскалация по инциденту {incident}',
+                    MAX_NOTIFICATION_TITLE_LEN,
+                )
+                notif_msg = self.truncate_text(
+                    (
+                        f'Получено новое письмо от {email.email_from}.\n'
+                        f'Тема: "{email.email_subject or "Без темы"}".\n'
+                        'Инцидент возвращён в работу.'
+                    ),
+                    MAX_NOTIFICATION_TEXT_LEN,
+                )
+                notif_data = {
+                    'incident_id': incident.id,
+                    'email_id': email.id,
+                }
+
+                if incident.responsible_user:
+                    Notification.objects.create(
+                        user=incident.responsible_user,
+                        title=notif_title,
+                        message=notif_msg,
+                        level=NotificationLevel.HIGH,
+                        data=notif_data,
+                    )
+                else:
+                    staff_dispatchers = User.objects.filter(
+                        is_staff=True,
+                        is_active=True,
+                        role=Roles.DISPATCH,
+                    )
+                    for u in staff_dispatchers:
+                        Notification.objects.create(
+                            user=u,
+                            title=notif_title,
+                            message=notif_msg,
+                            level=NotificationLevel.MEDIUM,
+                            data=notif_data,
+                        )
 
             return
 

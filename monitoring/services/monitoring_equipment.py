@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.db.models import QuerySet
 
 from core.loggers import monitoring_logger
-from core.wraps import db_timeout
+from core.wraps import func_timeout
 from monitoring.constants import (
     CHUNKED_MONITORING_QS,
     MONITORING_EQUIPMENT_CACHE_KEY,
@@ -29,7 +29,7 @@ class MonitoringEquipment(TypedDict):
     updated_at: Optional[datetime]
 
 
-@db_timeout()
+@func_timeout()
 def monitoring_qs() -> QuerySet[MSysModem]:
     qs = (
         MSysModem.objects

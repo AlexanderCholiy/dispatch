@@ -5,6 +5,7 @@ from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from django.urls import reverse
 from django.utils import timezone
+from datetime import timedelta
 
 from .constants import (
     MAX_NOTIFICATION_PREWIE_LEN,
@@ -42,7 +43,7 @@ class NotificationsConsumer(AsyncJsonWebsocketConsumer):
 
     @database_sync_to_async
     def get_unread_notifications(self) -> list[NotificationData]:
-        now = timezone.now()
+        now = timezone.now() + timedelta(milliseconds=1)
         ago = now - OLD_NOTIFICATIONS_TTL
 
         qs = (
@@ -54,7 +55,7 @@ class NotificationsConsumer(AsyncJsonWebsocketConsumer):
                 send_at__lte=now,
                 send_at__gte=ago,
             )
-            .order_by('-send_at', '-created_at', '-id')
+            .order_by('send_at', 'created_at', 'id')
             [:NOTIFICATIONS_PER_PAGE]
         )
 
@@ -92,7 +93,7 @@ class NotificationsConsumer(AsyncJsonWebsocketConsumer):
 
     @database_sync_to_async
     def get_unread_count(self) -> int:
-        now = timezone.now()
+        now = timezone.now() + timedelta(milliseconds=1)
         ago = now - OLD_NOTIFICATIONS_TTL
 
         return Notification.objects.filter(
@@ -137,7 +138,7 @@ class NotificationsConsumer(AsyncJsonWebsocketConsumer):
         send_at = notif.get('send_at')
         if send_at:
             send_time = timezone.datetime.fromisoformat(send_at)
-            now = timezone.now()
+            now = timezone.now() + timedelta(milliseconds=1)
             if send_time > now or send_time < now - OLD_NOTIFICATIONS_TTL:
                 return
 

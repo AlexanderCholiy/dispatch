@@ -6,7 +6,7 @@ from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django_ratelimit.decorators import ratelimit
 
-from core.wraps import db_timeout
+from core.wraps import func_timeout
 from users.models import Roles
 from users.utils import role_required
 
@@ -31,7 +31,7 @@ from .models import (
 @login_required
 @role_required([Roles.ENERGY])
 @ratelimit(key='user_or_ip', rate='20/m', block=True)
-@db_timeout()
+@func_timeout()
 def energy_companies(request: HttpRequest) -> HttpResponse:
     query = request.GET.get('q', '').strip()
 
@@ -236,7 +236,7 @@ def energy_companies(request: HttpRequest) -> HttpResponse:
 @login_required
 @role_required([Roles.ENERGY])
 @ratelimit(key='user_or_ip', rate='20/m', block=True)
-@db_timeout()
+@func_timeout()
 def claim_detail(request: HttpRequest, claim_id: int) -> HttpResponse:
     statuses_prefetch = Prefetch(
         'claim_statuses',
@@ -307,7 +307,7 @@ def claim_detail(request: HttpRequest, claim_id: int) -> HttpResponse:
 @login_required
 @role_required([Roles.ENERGY])
 @ratelimit(key='user_or_ip', rate='20/m', block=True)
-@db_timeout()
+@func_timeout()
 def appeal_detail(request: HttpRequest, appeal_id: int) -> HttpResponse:
     statuses_prefetch = Prefetch(
         'appeal_statuses',

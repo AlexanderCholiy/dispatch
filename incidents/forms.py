@@ -39,6 +39,9 @@ from .models import (
 )
 from .services.status_transition import get_allowed_statuses
 from .utils import EmailNode, IncidentManager
+from .services.notify_responsible_user_on_reassign import (
+    notify_responsible_user_on_reassign
+)
 
 
 class MultipleFileInput(forms.FileInput):
@@ -593,9 +596,14 @@ class IncidentForm(forms.ModelForm):
     def save(self, commit=True):
         instance: Incident = super().save(commit=False)
 
+        old_user = None
+        if instance.pk:
+            old_user = Incident.objects.get(pk=instance.pk).responsible_user
+
         new_status: Optional[IncidentStatus] = self.cleaned_data.get(
             'new_status'
         )
+        new_user: Optional[User] = self.cleaned_data.get('responsible_user')
 
         # Получаем категории из формы
         cat_objs = self.cleaned_data.get('categories', [])
@@ -697,6 +705,13 @@ class IncidentForm(forms.ModelForm):
             instance.save()
             if cat_objs:
                 instance.categories.set(cat_objs)
+
+        notify_responsible_user_on_reassign(
+            incident=instance,
+            old_user=old_user,
+            new_user=self.cleaned_data.get('responsible_user'),
+            author=self.author,
+        )
 
         return instance
 

@@ -2,10 +2,6 @@ class LoggerError(Exception):
     """Ошибка выбора режима работы логгера."""
 
 
-class DatabaseTimeoutError(Exception):
-    """Исключение для таймаута работы с внешней базой данных."""
-
-
 class ApiUnauthorizedErr(Exception):
     """401 — Ошибка авторизации."""
 

@@ -8,11 +8,10 @@ from typing import Callable, Optional
 
 import requests
 
-from .constants import API_STATUS_EXCEPTIONS, DB_TIMEOUT
+from .constants import API_STATUS_EXCEPTIONS, FUNC_TIMEOUT
 from .exceptions import (
     ApiServerError,
     ApiTooManyRequests,
-    DatabaseTimeoutError,
 )
 from .utils import format_seconds
 
@@ -204,9 +203,9 @@ def min_wait_timer(logger: Logger, min_seconds: int = 10):
     return decorator
 
 
-def db_timeout(seconds: Optional[int] = None):
-    """Декоратор для жесткого таймаута работы с базой."""
-    seconds = seconds or DB_TIMEOUT
+def func_timeout(seconds: Optional[int] = None):
+    """Декоратор для жесткого таймаута работы функции."""
+    seconds = seconds or FUNC_TIMEOUT
 
     def decorator(func: Callable):
         @functools.wraps(func)
@@ -226,8 +225,8 @@ def db_timeout(seconds: Optional[int] = None):
             thread.join(seconds)
 
             if thread.is_alive():
-                raise DatabaseTimeoutError(
-                    f'Таймаут {seconds}s при работе с базой данных'
+                raise TimeoutError(
+                    f'Функция {func.__name__} превысила таймаут {seconds} сек'
                 )
 
             if 'error' in exception:
