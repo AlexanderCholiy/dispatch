@@ -745,6 +745,7 @@ def create_incident(request: HttpRequest) -> HttpResponse:
 
     if request.method == 'POST':
         form = IncidentForm(data=request.POST, can_edit=True, author=user)
+
         if form.is_valid():
             incident: Incident = form.save()
             incident.is_yt_tracker_controlled = False

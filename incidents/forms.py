@@ -541,6 +541,12 @@ class IncidentForm(forms.ModelForm):
 
     def clean_new_status(self):
         status: Optional[IncidentStatus] = self.cleaned_data.get('new_status')
+        if not status and not self.instance.pk:
+            status, _ = IncidentStatus.objects.get_or_create(
+                name=DEFAULT_STATUS_NAME
+            )
+            return status
+
         if not status:
             raise forms.ValidationError('Выберите статус')
 
@@ -603,6 +609,7 @@ class IncidentForm(forms.ModelForm):
         new_status: Optional[IncidentStatus] = self.cleaned_data.get(
             'new_status'
         )
+
         new_user: Optional[User] = self.cleaned_data.get('responsible_user')
 
         # Получаем категории из формы
@@ -709,7 +716,7 @@ class IncidentForm(forms.ModelForm):
         notify_responsible_user_on_reassign(
             incident=instance,
             old_user=old_user,
-            new_user=self.cleaned_data.get('responsible_user'),
+            new_user=new_user,
             author=self.author,
         )
 
