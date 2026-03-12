@@ -37,11 +37,11 @@ from .models import (
     IncidentStatus,
     IncidentStatusHistory,
 )
-from .services.status_transition import get_allowed_statuses
-from .utils import EmailNode, IncidentManager
 from .services.notify_responsible_user_on_reassign import (
     notify_responsible_user_on_reassign
 )
+from .services.status_transition import get_allowed_statuses
+from .utils import EmailNode, IncidentManager
 
 
 class MultipleFileInput(forms.FileInput):

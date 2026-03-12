@@ -2,8 +2,8 @@ from datetime import datetime, timedelta
 from typing import Optional, TypedDict
 
 from django.core.cache import cache
-from django.utils import timezone
 from django.db.models import QuerySet
+from django.utils import timezone
 
 from core.loggers import monitoring_logger
 from core.wraps import func_timeout

@@ -1,9 +1,10 @@
-from django import forms
-from typing import Optional
 from datetime import timedelta
+from typing import Optional
+
+from django import forms
+from django.utils import timezone
 
 from .models import Notification
-from django.utils import timezone
 
 
 class NotificationForm(forms.ModelForm):

@@ -2,7 +2,6 @@ from datetime import date
 from typing import Optional
 
 from django.core.exceptions import ValidationError
-from django.utils import timezone
 from django.utils.dateparse import parse_date
 
 

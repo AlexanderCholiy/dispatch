@@ -1,18 +1,15 @@
-from datetime import timedelta
-
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
-from django.db.models import Q, F
-from django.db.models.functions import Coalesce
 
-from notifications.models import Notification
+from core.loggers import default_logger
 from notifications.constants import (
-    OLD_NOTIFICATIONS_TTL,
     NOTIFICATION_BATCH,
+    OLD_NOTIFICATIONS_TTL,
     UNREAD_NOTIFICATION_TTL,
 )
-from core.loggers import default_logger
+from notifications.models import Notification
 
 
 class Command(BaseCommand):

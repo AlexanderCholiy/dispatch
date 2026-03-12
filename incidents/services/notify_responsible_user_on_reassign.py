@@ -1,13 +1,13 @@
 from typing import Optional
 
-from notifications.models import Notification, NotificationLevel
-from notifications.constants import (
-    MAX_NOTIFICATION_TITLE_LEN,
-    MAX_NOTIFICATION_TEXT_LEN,
-)
 from incidents.models import Incident
-from users.models import User, Roles
 from incidents.services.send_auto_reply import AutoReply
+from notifications.constants import (
+    MAX_NOTIFICATION_TEXT_LEN,
+    MAX_NOTIFICATION_TITLE_LEN,
+)
+from notifications.models import Notification, NotificationLevel
+from users.models import Roles, User
 
 
 def notify_responsible_user_on_reassign(

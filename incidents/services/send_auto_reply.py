@@ -21,14 +21,15 @@ from incidents.constants import (
     RVR_CATEGORY,
 )
 from incidents.models import IncidentStatus, IncidentStatusHistory
+from notifications.constants import (
+    MAX_NOTIFICATION_TEXT_LEN,
+    MAX_NOTIFICATION_TITLE_LEN
+)
+from notifications.models import Notification, NotificationLevel
+from users.models import Roles, User
 from yandex_tracker.constants import SEND_AUTO_EMAIL_ON_CLOSED_INCIDENT
-from users.models import User, Roles
 
 from .normalize_incident_subject import normalize_incident_subject
-from notifications.models import Notification, NotificationLevel
-from notifications.constants import (
-    MAX_NOTIFICATION_TITLE_LEN, MAX_NOTIFICATION_TEXT_LEN
-)
 
 
 class AutoReply:

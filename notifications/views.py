@@ -1,20 +1,20 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.http import HttpRequest, HttpResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse, reverse_lazy
+from django.views.generic import CreateView
 from django_ratelimit.decorators import ratelimit
-from django.shortcuts import render, redirect, get_object_or_404
-from django.urls import reverse
 
-from .models import Notification, NotificationLevel
+from incidents.models import Incident
+
 from .constants import (
     NOTIFICATIONS_PER_PAGE,
     PAGE_SIZE_NOTIFICATIONS_CHOICES,
 )
-from django.core.paginator import Paginator
 from .forms import NotificationForm
-from django.urls import reverse_lazy
-from django.views.generic import CreateView
-from incidents.models import Incident
+from .models import Notification, NotificationLevel
 
 
 @login_required

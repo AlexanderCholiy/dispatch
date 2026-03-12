@@ -1,17 +1,11 @@
-from typing import TypedDict
-
-from asgiref.sync import async_to_sync
-from channels.layers import get_channel_layer
+from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
-from datetime import timedelta
-from django.db import transaction
 
 from .constants import OLD_NOTIFICATIONS_TTL
 from .models import Notification, NotificationLevel
 from .tasks import send_notification_task
-from core.loggers import celery_logger
 
 
 @receiver(post_save, sender=Notification)

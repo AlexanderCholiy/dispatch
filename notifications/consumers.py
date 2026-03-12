@@ -1,11 +1,11 @@
 import json
+from datetime import timedelta
 from typing import Optional, TypedDict
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from django.urls import reverse
 from django.utils import timezone
-from datetime import timedelta
 
 from .constants import (
     MAX_NOTIFICATION_PREWIE_LEN,

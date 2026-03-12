@@ -5,9 +5,10 @@ from celery import shared_task
 from channels.layers import get_channel_layer
 from django.utils import timezone
 
+from core.loggers import celery_logger
+
 from .constants import OLD_NOTIFICATIONS_TTL
 from .models import Notification, NotificationLevel
-from core.loggers import celery_logger
 
 
 @shared_task(
