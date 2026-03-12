@@ -36,6 +36,11 @@
   text-align: center;
 }
 
+.submit-incident-button {
+  padding: var(--space-xxs) var(--space-sm) !important;
+}
+
+.new-notification-button,
 .new-email-button,
 .refresh-button {
   flex: 0 0 auto;

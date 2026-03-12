@@ -47,6 +47,12 @@
         {% endfor %}
       </select>
     </div>
+    <a href="{% url 'notifications:notification_create' %}" 
+      class="btn btn-success tooltip" 
+      data-title="Добавить уведомление">
+      <i class="bx bx-plus"></i>
+    </a>
+
     <button type="button" id="reset-filters" class="btn btn-secondary tooltip" data-title="Сбросить фильтры">
       <i class="bx bx-x-circle"></i>
     </button>

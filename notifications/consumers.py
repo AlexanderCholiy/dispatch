@@ -1,5 +1,5 @@
 import json
-from typing import Optional
+from typing import Optional, TypedDict
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
@@ -13,7 +13,17 @@ from .constants import (
     OLD_NOTIFICATIONS_TTL,
 )
 from .models import Notification, NotificationLevel
-from .signals import NotificationData
+
+
+class NotificationData(TypedDict):
+    id = int
+    title = str
+    message = str
+    level = str
+    read = bool
+    data = dict
+    created_at = str
+    send_at = str
 
 
 class NotificationsConsumer(AsyncJsonWebsocketConsumer):
@@ -130,6 +140,7 @@ class NotificationsConsumer(AsyncJsonWebsocketConsumer):
 
     async def send_notification(self, event):
         notif: Optional[NotificationData] = event.get('data')
+
         if (
             not notif or notif.get('level', 'low') == NotificationLevel.LOW
         ):
@@ -138,8 +149,8 @@ class NotificationsConsumer(AsyncJsonWebsocketConsumer):
         send_at = notif.get('send_at')
         if send_at:
             send_time = timezone.datetime.fromisoformat(send_at)
-            now = timezone.now() + timedelta(milliseconds=1)
-            if send_time > now or send_time < now - OLD_NOTIFICATIONS_TTL:
+            now = timezone.now()
+            if send_time < now - OLD_NOTIFICATIONS_TTL:
                 return
 
         count = await self.get_unread_count()

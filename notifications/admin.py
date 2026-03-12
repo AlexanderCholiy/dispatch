@@ -25,7 +25,7 @@ class NotificationAdmin(admin.ModelAdmin):
 
     search_fields = ('title', 'message', 'user__username', 'user__email')
 
-    readonly_fields = ('created_at', 'is_overdue')
+    readonly_fields = ('created_at', 'is_overdue', 'scheduled')
 
     autocomplete_fields = ['user']
 
@@ -42,7 +42,7 @@ class NotificationAdmin(admin.ModelAdmin):
             )
         }),
         ('Дополнительно', {
-            'fields': ('created_at',),
+            'fields': ('created_at', 'scheduled'),
             'classes': ('collapse',),
         }),
     )

@@ -62,8 +62,14 @@
           <i class="bx bx-refresh"></i>
         </button>
 
+        <a href="{% url 'notifications:notification_create_from_incident' incident.id %}" 
+          class="btn btn-warning new-notification-button tooltip" 
+          data-title="Создать уведомление по инциденту">
+          <i class="bx bx-bell"></i>
+        </a>
+
         <a href="{% url 'incidents:new_email' incident.id %}" 
-          class="btn btn-warning new-email-button tooltip" 
+          class="btn btn-success new-email-button tooltip" 
           data-title="Создать новое письмо"
           {% if not can_manage %}disabled{% endif %}>
           <i class="bx bx-envelope"></i>

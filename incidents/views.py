@@ -686,9 +686,12 @@ def confirm_move_emails(request: HttpRequest) -> HttpResponse:
         )
 
         try:
-            yt_comments = yt_manager.select_issue_comments(
-                source_incident.code
-            )
+            if source_incident.is_yt_tracker_controlled:
+                yt_comments = yt_manager.select_issue_comments(
+                    source_incident.code
+                )
+            else:
+                yt_comments = []
 
             tasks = []
 
@@ -724,12 +727,15 @@ def confirm_move_emails(request: HttpRequest) -> HttpResponse:
                 'YandexTracker временно не доступен. Попробуйте позже.'
             )
         else:
-            messages.success(
-                request,
-                'Письма успешно перенесены. '
-                'В ближайшее время они появятся в YandexTracker как '
-                f'комментарии к задаче {target_incident.code}.'
-            )
+            if target_incident.is_yt_tracker_controlled:
+                messages.success(
+                    request,
+                    'Письма успешно перенесены. '
+                    'В ближайшее время они появятся в YandexTracker как '
+                    f'комментарии к задаче {target_incident.code}.'
+                )
+            else:
+                messages.success(request, 'Письма успешно перенесены.')
 
     return redirect(
         'incidents:incident_detail', incident_id=source_incident.id

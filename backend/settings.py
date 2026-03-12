@@ -240,8 +240,12 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(hour=0, minute=0),
     },
     'rebuild_incidents_json': {
-        "task": "api.tasks.rebuild_incidents_json",
-        "schedule": 180,  # каждые 3 мин (cache 5 мин)
+        'task': 'api.tasks.rebuild_incidents_json',
+        'schedule': 180,  # каждые 3 мин (cache 5 мин)
+    },
+    'check-overdue-notifications': {
+        'task': 'notifications.tasks.check_overdue_notifications',
+        'schedule': 300,  # каждые 5 минут
     },
 }
 

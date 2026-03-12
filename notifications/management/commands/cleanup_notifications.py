@@ -3,6 +3,8 @@ from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
+from django.db.models import Q, F
+from django.db.models.functions import Coalesce
 
 from notifications.models import Notification
 from notifications.constants import (
@@ -25,8 +27,10 @@ class Command(BaseCommand):
         read_cutoff = now - OLD_NOTIFICATIONS_TTL
 
         read_qs = Notification.objects.filter(
-            read=True,
-            created_at__lt=read_cutoff,
+            read=True
+        ).filter(
+            Q(send_at__lt=read_cutoff)
+            | Q(send_at__isnull=True, created_at__lt=read_cutoff)
         )
 
         total_candidates += read_qs.count()
@@ -37,8 +41,10 @@ class Command(BaseCommand):
 
             qs = Notification.objects.filter(
                 read=False,
-                level=level,
-                created_at__lt=cutoff,
+                level=level
+            ).filter(
+                Q(send_at__lt=cutoff)
+                | Q(send_at__isnull=True, created_at__lt=cutoff)
             )
 
             total_candidates += qs.count()

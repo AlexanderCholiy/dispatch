@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
 from django_ratelimit.decorators import ratelimit
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 
 from .models import Notification, NotificationLevel
 from .constants import (
@@ -11,6 +12,9 @@ from .constants import (
 )
 from django.core.paginator import Paginator
 from .forms import NotificationForm
+from django.urls import reverse_lazy
+from django.views.generic import CreateView
+from incidents.models import Incident
 
 
 @login_required
@@ -135,3 +139,63 @@ def notification_detail(
         'notification': notification
     }
     return render(request, 'notifications/notification_form.html', context)
+
+
+class NotificationCreateView(CreateView):
+    model = Notification
+    form_class = NotificationForm
+    template_name = 'notifications/notification_form.html'
+    success_url = reverse_lazy('notifications:notification_list')
+
+    def form_valid(self, form):
+        form.instance.user = self.request.user
+
+        notification: Notification = form.instance
+        title = notification.title
+
+        messages.success(
+            self.request, f'Уведомление "{title}" успешно добавлено'
+        )
+
+        return super().form_valid(form)
+
+
+class NotificationCreateFromIncidentView(CreateView):
+    model = Notification
+    form_class = NotificationForm
+    template_name = 'notifications/notification_form.html'
+
+    def get_initial(self):
+        initial = super().get_initial()
+
+        incident_id = self.kwargs.get('incident_id')
+        incident = get_object_or_404(Incident, pk=incident_id)
+
+        initial['title'] = str(incident)
+
+        return initial
+
+    def form_valid(self, form):
+        form.instance.user = self.request.user
+        incident_id = self.kwargs.get('incident_id')
+
+        data = form.instance.data or {}
+        data['incident_id'] = incident_id
+        form.instance.data = data
+
+        notification: Notification = form.instance
+        title = notification.title
+
+        messages.success(
+            self.request,
+            f'Уведомление "{title}" успешно добавлено.'
+        )
+
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        incident_id = self.kwargs.get('incident_id')
+        return reverse(
+            'incidents:incident_detail',
+            kwargs={'incident_id': incident_id},
+        )

@@ -55,25 +55,40 @@ class NotificationForm(forms.ModelForm):
         send_at = self.cleaned_data.get('send_at')
         instance: Optional[Notification] = getattr(self, 'instance', None)
 
-        if send_at:
-            now = timezone.now()
+        if not send_at:
+            return send_at
 
-            if instance is None or instance.pk is None:
-                if send_at < now:
-                    raise forms.ValidationError(
-                        'Дата отправки не может быть в прошлом.'
-                    )
-            else:
-                created_at = instance.created_at
-                created_at = created_at.replace(second=0, microsecond=0)
-                if created_at and send_at < created_at:
-                    raise forms.ValidationError(
-                        'Дата отправки не может быть раньше даты создания '
-                        'уведомления.'
-                    )
-                if send_at < now:
-                    if created_at and send_at != created_at:
-                        raise forms.ValidationError(
-                            'Дата отправки не может быть в прошлом.'
-                        )
+        now = timezone.now()
+
+        if instance is None or instance.pk is None:
+            if send_at < now:
+                raise forms.ValidationError(
+                    'Дата отправки не может быть в прошлом.'
+                )
+            return send_at
+
+        created_at = instance.created_at
+        created_at = timezone.localtime(created_at).replace(
+            second=0, microsecond=0
+        )
+        if created_at and send_at < created_at:
+            raise forms.ValidationError(
+                'Дата отправки не может быть раньше даты создания '
+                'уведомления.'
+            )
+
+        original_send_at = instance.send_at
+
+        if original_send_at:
+            original_cmp = original_send_at.replace(second=0, microsecond=0)
+            new_cmp = send_at.replace(second=0, microsecond=0)
+
+            if new_cmp == original_cmp:
+                return original_send_at
+
+        if send_at < now:
+            raise forms.ValidationError(
+                'Дата отправки не может быть в прошлом.'
+            )
+
         return send_at
