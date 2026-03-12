@@ -1,0 +1,76 @@
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/includes/table_filter.css' %}">
+{% endblock %}
+
+<form method="get" class="table-filter-form" id="filter-form">
+  <div class="left-part">
+    <div class="select-wrapper">
+      <select name="read"
+              id="read-select"
+              class="select tooltip"
+              data-title="Было ли прочитоно уведомление">
+
+        <option value="" {% if selected.read is None %}selected{% endif %}>
+          Все доступные
+        </option>
+
+        <option value="true" {% if selected.read is True %}selected{% endif %}>
+          Прочитанные
+        </option>
+
+        <option value="false" {% if selected.read is False %}selected{% endif %}>
+          Не прочитанные
+        </option>
+
+      </select>
+    </div>
+
+    <div class="select-wrapper">
+      <select name="level" id="level-select" class="select tooltip" data-title="Уровень важности">
+        <option value="" {% if not selected.level %}selected{% endif %}>Приоритет: Все</option>
+        {% for l in levels %}
+          <option value="{{ l.value }}" {% if selected.level == l.value %}selected{% endif %}>
+            {{ l.label }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+    
+  <div class="right-parts">
+    <div class="select-wrapper">
+      <select name="per_page" id="per-page" class="select tooltip" data-title="Кол-во уведомлений на странице">
+        {% for size in page_size_choices %}
+        <option value="{{ size }}" {% if selected.per_page == size %}selected{% endif %}>Показать: {{ size }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="button" id="reset-filters" class="btn btn-secondary tooltip" data-title="Сбросить фильтры">
+      <i class="bx bx-x-circle"></i>
+    </button>
+    {% if selected.sort == "asc" %}
+    <button type="button" class="btn btn-secondary sort-notification-btn tooltip" data-sort="desc" data-param="sort_notifications" data-cookie="sort_notifications" data-title="Сначала старые">
+      <i class='bx bx-chevrons-down'></i>
+    </button>
+    {% else %}
+    <button type="button" class="btn btn-secondary sort-notification-btn tooltip" data-sort="asc" data-param="sort_notifications" data-cookie="sort_notifications" data-title="Сначала новые">
+      <i class='bx bx-chevrons-up'></i>
+    </button>
+    {% endif %}
+    <button type="submit" class="btn btn-primary tooltip" data-title="Применить фильтр">
+      <i class="bx bx-filter"></i>
+    </button>
+  </div>
+
+  <input type="hidden" name="q" value="{{ search_query }}" id="filter-hidden-q">
+
+</form>
+
+{% block extra_js %}
+<script src="{% static 'js/notifications/search_filter.js' %}"></script>
+<script src="{% static 'js/save_elements_per_page.js' %}"></script>
+<script src="{% static 'js/reset_tables_filter.js' %}"></script>
+<script src="{% static 'js/sort_table.js' %}"></script>
+{% endblock %}

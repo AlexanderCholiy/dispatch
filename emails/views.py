@@ -98,7 +98,8 @@ def emails_list(request: HttpRequest) -> HttpResponse:
             'email_msg_cc', to_attr='prefetched_cc'
         ),
     )
-    emails = sorted(emails_qs, key=lambda e: page_ids.index(e.id))
+    id_index = {id_: i for i, id_ in enumerate(page_ids)}
+    emails = sorted(emails_qs, key=lambda n: id_index[n.id])
 
     folders = cache.get_or_set(
         'email_filter_folders',

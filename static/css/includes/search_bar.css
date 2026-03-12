@@ -1,10 +1,10 @@
 #search-bar {
-  margin-left: calc(var(--sidebar-width) - 36px);
+  margin-left: calc(var(--sidebar-width) + 5px);
   transition: all var(--transition-value);
 }
 
 #search-bar.collapsed {
-  margin-left: calc(var(--sidebar-collapsed-width) - 36px);
+  margin-left: calc(var(--sidebar-collapsed-width) + 5px);
 }
 
 .header-search {

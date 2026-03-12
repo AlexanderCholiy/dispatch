@@ -6,14 +6,16 @@ MAX_NOTIFICATION_TEXT_LEN = 1024
 
 MAX_NOTIFICATION_LEVEL_LEN = 16
 
-NOTIFICATIONS_PER_PAGE = 50
+NOTIFICATIONS_PER_PAGE = 30
+
+PAGE_SIZE_NOTIFICATIONS_CHOICES = [9, 15, NOTIFICATIONS_PER_PAGE]
 
 OLD_NOTIFICATIONS_TTL = timedelta(days=7)
 
 UNREAD_NOTIFICATION_TTL = {
     'low': OLD_NOTIFICATIONS_TTL,
-    'medium': timedelta(days=30),
-    'high': timedelta(days=90),
+    'medium': timedelta(days=14),
+    'high': timedelta(days=30),
 }
 
 MAX_NOTIFICATION_PREWIE_LEN = 128

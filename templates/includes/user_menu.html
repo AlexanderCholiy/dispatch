@@ -19,7 +19,13 @@
             href="{% url 'users:change_email' %}">
             Изменить email
         </a>
-        </li>          
+        </li>    
+        <li class="nav-item">
+        <a class="nav-link{% if view_name == 'notifications:notification_list' %} active{% endif %}"
+            href="{% url 'notifications:notification_list' %}">
+            Уведомления
+        </a>
+        </li>       
         <li class="nav-item">
         <form method="post" action="{% url 'logout' %}">
             {% csrf_token %}

@@ -316,7 +316,8 @@ def index(request: HttpRequest) -> HttpResponse:
         sla_dgu_status_val=Value('', output_field=CharField()),
     )
 
-    incidents = sorted(incidents_qs, key=lambda i: page_ids.index(i.id))
+    id_index = {id_: i for i, id_ in enumerate(page_ids)}
+    incidents = sorted(incidents_qs, key=lambda n: id_index[n.id])
 
     for incident in incidents:
         incident.sla_avr_status_val = incident.sla_avr_status

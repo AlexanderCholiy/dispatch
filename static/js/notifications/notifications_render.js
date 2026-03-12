@@ -16,19 +16,19 @@ export function addNotification(listEl, n, markReadFn, panel, showPanel = true) 
     el.classList.add("notification-item", `notification-${(n.level || 'low').toLowerCase()}`);
 
     const title = n.title || "Без темы";
-    const message = n.message || "";
+    const message = n.message || "—";
     const sent_at = n.send_at ? new Date(n.send_at) : new Date();
     const dateStr = isNaN(sent_at.getTime()) ? "" : sent_at.toLocaleString();
 
     const notificationUrl = n.notification_url || null;
     const incidentUrl = n.incident_url || null;
 
-    const titleHtml = notificationUrl
-        ? `<a href="${notificationUrl}" class="notification-title">${title}</a>`
+    const titleHtml = incidentUrl
+        ? `<a href="${incidentUrl}" class="notification-title">${title}</a>`
         : `<div class="notification-title">${title}</div>`;
 
-    const messageHtml = incidentUrl
-        ? `<a href="${incidentUrl}" class="notification-message">${message}</a>`
+    const messageHtml = notificationUrl
+        ? `<a href="${notificationUrl}" class="notification-message">${message}</a>`
         : `<div class="notification-message">${message}</div>`;
 
     el.dataset.id = n.id;

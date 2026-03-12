@@ -13,9 +13,9 @@ from .constants import (
 
 
 class NotificationLevel(models.TextChoices):
-    LOW = ('low', 'Низкий')
-    MEDIUM = ('medium', 'Средний')
-    HIGH = ('high', 'Высокий')
+    LOW = ('low', 'Приоритет: Низкий')
+    MEDIUM = ('medium', 'Приоритет: Средний')
+    HIGH = ('high', 'Приоритет: Высокий')
 
 
 class Notification(models.Model):
@@ -29,6 +29,7 @@ class Notification(models.Model):
     title = models.CharField(
         max_length=MAX_NOTIFICATION_TITLE_LEN,
         verbose_name='Тема',
+        db_index=True,
     )
     message = models.CharField(
         null=True,
@@ -40,7 +41,7 @@ class Notification(models.Model):
         max_length=MAX_NOTIFICATION_LEVEL_LEN,
         choices=NotificationLevel.choices,
         default=NotificationLevel.MEDIUM,
-        verbose_name='Уровень важности',
+        verbose_name='Приоритет',
     )
     data = models.JSONField(
         default=dict,

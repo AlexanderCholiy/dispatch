@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Уведомления{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/notifications/notifications_list.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  {% include "notifications/includes/notification_filter.html" %}
+
+  <div class="card-grid">
+    {% for notif in notifications %}
+      <div class="notification-card 
+          level-{{ notif.level }}
+          {% if notif.read %}is-read{% else %}is-unread{% endif %}
+          {% if not notif.is_overdue %}is-overdue{% endif %}">
+          
+          <div class="notification-header">
+            <h3 class="notification-title">
+              {% if notif.data.incident_id|default:0 > 0 %}
+                <a href="{% url 'incidents:incident_detail' notif.data.incident_id %}" class="incident-link">
+                  {{ notif.title }}
+                </a>
+              {% else %}
+                <span class="copy-text" data-text="{{ notif.title }}">{{ notif.title }}</span>
+              {% endif %}
+            </h3>
+
+            <div class="notification-badges">
+              {% if not notif.read and notif.is_overdue %}
+                <span class="badge unread">новое</span>
+              {% elif not notif.read and not notif.is_overdue %}
+                <span class="badge for-future">не отправлено</span>
+              {% endif %}
+            </div>
+          </div>
+
+          {% if notif.message %}
+          <div class="notification-message">
+            {{ notif.message|linebreaks }}
+          </div>
+          {% endif %}
+
+          <div class="notification-footer">
+            <span class="notification-date">{{ notif.send_at|date:"d.m.Y H:i" }}</span>
+            <a href="{% url 'notifications:notification_detail' notif.id %}" class="btn btn-secondary btn-edit">Редактировать</a>
+          </div>
+
+      </div>
+    {% endfor %}
+  </div>
+
+  {% if not page_obj %}
+    <div class="card">
+      <div class="card-body">
+        <p class="card-text empty">Уведомлений нет...</p>
+      </div>
+    </div>
+  {% endif %}
+  
+  {% if page_obj.has_other_pages %}
+    {% include "includes/paginator.html" %}
+  {% endif %}
+</div>
+{% endblock %}

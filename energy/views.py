@@ -191,8 +191,9 @@ def energy_companies(request: HttpRequest) -> HttpResponse:
         ),
     )
 
+    id_index = {id_: i for i, id_ in enumerate(page_ids)}
     company_requests = sorted(
-        company_requests_qs, key=lambda i: page_ids.index(i.id)
+        company_requests_qs, key=lambda n: id_index[n.id]
     )
 
     companies = cache.get_or_set(

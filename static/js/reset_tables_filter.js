@@ -39,6 +39,9 @@ document.addEventListener('DOMContentLoaded', () => {
       deleteCookie('company');
       deleteCookie('declarant');
 
+      deleteCookie('read');
+      deleteCookie('level');
+
       // Сбрасываем фильтр завершен ли инцидент
       const finishSelect = document.getElementById('finish-select');
       if (finishSelect) finishSelect.selectedIndex = 0;
@@ -85,6 +88,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const declarantSelect = document.getElementById('declarant-select');
       if (declarantSelect) declarantSelect.selectedIndex = 0;
 
+      // Сбрасываем флаг прочитоно ли уведомление
+      const readSelect = document.getElementById('read-select');
+      if (readSelect) readSelect.selectedIndex = 0;
+
+      // Сбрасываем уровень приоритета уведомления
+      const levelSelect = document.getElementById('level-select');
+      if (levelSelect) levelSelect.selectedIndex = 0;
+
       // Восстанавливаем per_page
       if (perPageSelect && perPageValue) {
         perPageSelect.value = perPageValue;
@@ -111,7 +122,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // 'search-hidden-type',
         'search-hidden-company',
         'search-hidden-declarant',
-        'search-hidden-role'
+        'search-hidden-role',
+        'search-hidden-read',
+        'search-hidden-level',
       ];
 
       const hiddenInputs = document.querySelectorAll(

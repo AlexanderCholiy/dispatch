@@ -446,7 +446,8 @@ def users_list(request: HttpRequest) -> HttpResponse:
         User.objects.filter(id__in=page_ids)
         .select_related('work_schedule')
     )
-    users = sorted(users_qs, key=lambda u: page_ids.index(u.id))
+    id_index = {id_: i for i, id_ in enumerate(page_ids)}
+    users = sorted(users_qs, key=lambda n: id_index[n.id])
 
     query_params = request.GET.copy()
     query_params.pop('page', None)

@@ -1,0 +1,128 @@
+.notification-form {
+  padding: var(--space-sm);
+}
+
+.notification-form form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.notification-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  max-width: 100%;
+  padding: var(--space-sm);
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--add-background-color);
+  color: var(--color);
+  font-size: var(--font-md);
+  box-shadow: 0 0 var(--space-xs) var(--extra-color);
+  transition: box-shadow var(--transition-value), border-color var(--transition-value);
+}
+
+.form-group label {
+  color: var(--add-color);
+  font-size: var(--font-sm);
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: 1px solid var(--extra-color);
+  box-shadow: 0 0 var(--space-sm) var(--extra-color);
+}
+
+.form-group textarea {
+  max-width: 100%;
+  min-height: 180px;
+  max-height: 220px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  resize: none;
+  
+  padding: var(--space-md);
+  font-family: inherit;
+  line-height: 1.5;
+  
+  outline: none;
+}
+
+.form-group textarea::placeholder {
+  color: var(--gray-color);
+  opacity: 0.7;
+}
+
+.notification-form .form-row {
+  display: flex;
+  gap: var(--space-md);
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.notification-form .form-inline {
+  flex: 1;
+  width: 100%;
+}
+
+.notification-form .select-wrapper {
+  max-width: 100%;
+}
+
+.errorlist {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-sm);
+  color: var(--red-color);
+}
+
+.buttons-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-md);
+}
+
+.buttons-row .btn {
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-md);
+  font-size: var(--font-sm);
+}
+
+.incident-link {
+  margin-top: var(--space-lg);
+  padding-block: var(--space-sm);
+  border-top: 1px solid var(--extra-color);
+  text-align: right;
+}
+
+.incident-link a {
+  text-decoration: none;
+  color: var(--blue-color);
+  font-size: var(--font-sm);
+}
+
+.incident-link a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .notification-form .form-row:not(.buttons-row) {
+    flex-direction: column;
+  }
+
+  .notification-form .select-wrapper {
+    max-width: 100%;
+  }
+
+  .incident-link {
+    text-align: center;
+  }
+
+}

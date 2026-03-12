@@ -69,6 +69,31 @@
             tabindex="-1">
       <i class="bx bx-search"></i>
     </button>
+  {% elif view_name in 'notifications:notification_list notifications:notification_detail' %}
+    <form method="get" action="{% url 'notifications:notification_list' %}" class="header-search" id="search-form" autocomplete="off">
+      <input
+        type="text"
+        name="q"
+        value="{{ search_query|default:'' }}"
+        placeholder="Поиск уведомлений"
+        aria-label="Поиск"
+        id="search-input"
+        maxlength="256"
+        autocomplete="off"
+      >
+
+    <input type="hidden"
+          name="read"
+          id="search-hidden-read"
+          value="{% if selected.read is True %}true{% elif selected.read is False %}false{% else %}{% endif %}">
+    <input type="hidden" name="level" value="{{ selected.level }}" id="search-hidden-level">
+    <input type="hidden" name="per_page" value="{{ selected.per_page }}" id="search-hidden-per-page">
+
+    <button type="submit" class="tooltip" 
+            data-title="Поиск по теме уведомления" 
+            tabindex="-1">
+      <i class="bx bx-search"></i>
+    </button>
   {% else %}
     <form method="get" action="{% url 'incidents:index' %}" class="header-search" id="search-form" autocomplete="off">
       <input
