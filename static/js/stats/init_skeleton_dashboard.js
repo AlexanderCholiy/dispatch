@@ -5,7 +5,6 @@ import { getDatesSincePreviousMonth } from './charts_utils.js';
 import { getChartColors, observeThemeChange } from './theme_colors.js';
 import { updateCopyButton, updateSlaCopyData } from './data/copy_chart_data.js';
 import { startStatisticsWebSocket } from './dashboard_ws_updater.js';
-// import { startStatisticsPolling } from './dashboard_api_updater.js';
 
 if (window.Chart && window.ChartZoom) {
     Chart.register(window.ChartZoom);
@@ -13,153 +12,276 @@ if (window.Chart && window.ChartZoom) {
 
 window.dashboardCharts = {};
 
+
+/* =====================================================
+   COLOR KEYS CONFIG (единый источник истины)
+===================================================== */
+
+const DAILY_COLOR_KEYS = [
+    'gray','pink','cyan','blue','red',
+    'yellow','brown','slate','magenta','green'
+];
+
+const TYPES_COLOR_KEYS = [
+    'blue','red','green','yellow','gray','cyan'
+];
+
+const CLOSED_COLOR_KEYS = ['green','gray'];
+const OPEN_COLOR_KEYS = ['blue','gray'];
+
+const POWER_SUBTYPE_COLOR_KEYS = [
+    'magenta','pink','purple','lime','orange',
+    'teal','green','indigo','cyan','yellow',
+    'blue','brown','amber','red','gray',
+    'slate','extra'
+];
+
+function resolveColors(keys) {
+    const colors = getChartColors();
+    return keys.map(k => colors[k]);
+}
+
+
+/* =====================================================
+   INIT
+===================================================== */
+
 document.addEventListener('DOMContentLoaded', () => {
+
     const colors = getChartColors();
 
-    const dailyColors = [
-        colors.gray,
-        colors.pink,
-        colors.cyan,
-        colors.blue,
-        colors.red,
-        colors.yellow,
-        colors.brown,
-        colors.slate,
-        colors.magenta,
-        colors.green,
-    ];
+    /* ---------- DAILY ---------- */
 
-    const dailyDatasets = dailyColors.map((color, idx) => ({
+    const dailyDatasets = DAILY_COLOR_KEYS.map((key, idx) => ({
         label: `МР-${idx + 1}`,
         data: [],
-        borderColor: color,
-        backgroundColor: color,
-        fill: false,
+        borderColor: colors[key],
+        backgroundColor: colors[key],
+        fill: false
     }));
 
     const dailyChart = createDailyIncidentsChart(
         document.getElementById('daily-incidents-chart').getContext('2d'),
         { labels: getDatesSincePreviousMonth(), datasets: dailyDatasets }
     );
+
     window.dashboardCharts.daily = dailyChart;
+
     updateCopyButton('daily-chart-card', dailyChart, 'Дата/Регион');
 
-    const MACROREGION_LABELS = ['ALL','МР-1','МР-2','МР-3','МР-4','МР-5','МР-6','МР-7','МР-8','МР-9'];
+
+    /* ---------- MACROREGIONS ---------- */
+
+    const MACROREGION_LABELS = [
+        'ALL','МР-1','МР-2','МР-3','МР-4',
+        'МР-5','МР-6','МР-7','МР-8','МР-9'
+    ];
+
+
+    /* ---------- CLOSED ---------- */
 
     const closedChart = createAllIncidentsChart(
         document.getElementById('all-closed-incidents-chart').getContext('2d'),
-        { labels: MACROREGION_LABELS, datasets: [{ label: 'Всего', data: [], backgroundColor: colors.green }, { label: 'Без питания', data: [], backgroundColor: colors.gray }] },
+        {
+            labels: MACROREGION_LABELS,
+            datasets: [
+                { label:'Всего', data:[], backgroundColor: colors.green },
+                { label:'Без питания', data:[], backgroundColor: colors.gray }
+            ]
+        },
         'Закрытые'
     );
+
     window.dashboardCharts.closed = closedChart;
-    updateCopyButton('closed-chart-card', closedChart, 'Регион/Количество инцидентов');
+
+    updateCopyButton(
+        'closed-chart-card',
+        closedChart,
+        'Регион/Количество инцидентов'
+    );
+
+
+    /* ---------- OPEN ---------- */
 
     const openChart = createAllIncidentsChart(
         document.getElementById('all-open-incidents-chart').getContext('2d'),
-        { labels: MACROREGION_LABELS, datasets: [{ label: 'Всего', data: [], backgroundColor: colors.blue }, { label: 'Без питания', data: [], backgroundColor: colors.gray }] },
+        {
+            labels: MACROREGION_LABELS,
+            datasets: [
+                { label:'Всего', data:[], backgroundColor: colors.blue },
+                { label:'Без питания', data:[], backgroundColor: colors.gray }
+            ]
+        },
         'Открытые'
     );
+
     window.dashboardCharts.open = openChart;
-    updateCopyButton('open-chart-card', openChart, 'Регион/Количество инцидентов');
+
+    updateCopyButton(
+        'open-chart-card',
+        openChart,
+        'Регион/Количество инцидентов'
+    );
+
+
+    /* ---------- TYPES ---------- */
 
     const typesDatasets = [
-        { label: 'Авария по питанию', color: colors.blue },
-        { label: 'Инцидент по конструктиву / территорией АМС', color: colors.red },
-        { label: 'Инцидент / запрос гос. органов', color: colors.green },
-        { label: 'Авария ВОЛС', color: colors.yellow },
-        { label: 'Угроза гибели / гибель объекта', color: colors.gray },
-        { label: 'Запрос на организацию доступа к объекту', color: colors.cyan },
+        'Авария по питанию',
+        'Инцидент по конструктиву / территорией АМС',
+        'Инцидент / запрос гос. органов',
+        'Авария ВОЛС',
+        'Угроза гибели / гибель объекта',
+        'Запрос на организацию доступа к объекту'
     ];
 
     const typesChart = createAllIncidentsChart(
         document.getElementById('types-incidents-chart').getContext('2d'),
-        { labels: MACROREGION_LABELS, datasets: typesDatasets.map(d => ({ label: d.label, data: [], backgroundColor: d.color })) },
+        {
+            labels: MACROREGION_LABELS,
+            datasets: typesDatasets.map((label,i)=>({
+                label,
+                data:[],
+                backgroundColor: resolveColors(TYPES_COLOR_KEYS)[i]
+            }))
+        },
         'Классификация аварий',
-        true,
+        true
     );
-    window.dashboardCharts.types = typesChart;
-    updateCopyButton('types-chart-card', typesChart, 'Регион/Тип аварии');
 
-    const powerIssueSubtypesDatasets = [
-        { label: 'ЗО НБ. ВЛ до 1 кВ', color: colors.magenta },
-        { label: 'ЗО НБ. ВЛ свыше 1 кВ', color: colors.pink },
-        { label: 'ЗО НБ. КЛ до 1 кВ', color: colors.purple },
-        { label: 'ЗО НБ. КЛ свыше 1 кВ', color: colors.lime },
-        { label: 'ЗО НБ. КТП', color: colors.orange },
-        { label: 'ЗО НБ. ПУ/АИИСКУЭ', color: colors.teal },
-        { label: 'ЗО НБ. РЩ/РУ', color: colors.green },
-        { label: 'ЗО Оператора. Линия', color: colors.indigo },
-        { label: 'ЗО Оператора. Оборудование ЭУ', color: colors.cyan },
-        { label: 'ЗО Сетевой организации. Аварийные работы', color: colors.yellow },
-        { label: 'ЗО Сетевой организации. Плановые работы', color: colors.blue },
-        { label: 'Прочее (форс-мажор)', color: colors.brown },
-        { label: 'Отключение за неоплату', color: colors.amber },
-        { label: 'Самовосстановление питания', color: colors.red },
-        { label: 'ШЭП', color: colors.gray },
-        { label: 'Отсутствие схемы', color: colors.slate },
-        { label: 'Без подкатегории', color: colors.extra },
+    window.dashboardCharts.types = typesChart;
+
+    updateCopyButton(
+        'types-chart-card',
+        typesChart,
+        'Регион/Тип аварии'
+    );
+
+
+    /* ---------- POWER SUBTYPES ---------- */
+
+    const powerSubtypeLabels = [
+        'ЗО НБ. ВЛ до 1 кВ',
+        'ЗО НБ. ВЛ свыше 1 кВ',
+        'ЗО НБ. КЛ до 1 кВ',
+        'ЗО НБ. КЛ свыше 1 кВ',
+        'ЗО НБ. КТП',
+        'ЗО НБ. ПУ/АИИСКУЭ',
+        'ЗО НБ. РЩ/РУ',
+        'ЗО Оператора. Линия',
+        'ЗО Оператора. Оборудование ЭУ',
+        'ЗО Сетевой организации. Аварийные работы',
+        'ЗО Сетевой организации. Плановые работы',
+        'Прочее (форс-мажор)',
+        'Отключение за неоплату',
+        'Самовосстановление питания',
+        'ШЭП',
+        'Отсутствие схемы',
+        'Без подкатегории'
     ];
 
     const powerIssueSubtypesChart = createAllIncidentsChart(
-        document
-            .getElementById('energy-subtypes-incidents-chart').getContext('2d'),
-        { labels: MACROREGION_LABELS, datasets: powerIssueSubtypesDatasets.map(d => ({ label: d.label, data: [], backgroundColor: d.color,})), },
-        'Аварии по питанию (подкатегории)',
-        true,
-    );
-    window.dashboardCharts.subtypes = {
-        power: {
-            chart: powerIssueSubtypesChart,
-            labels: powerIssueSubtypesDatasets.map(d => d.label),
+        document.getElementById(
+            'energy-subtypes-incidents-chart'
+        ).getContext('2d'),
+        {
+            labels: MACROREGION_LABELS,
+            datasets: powerSubtypeLabels.map((label,i)=>({
+                label,
+                data:[],
+                backgroundColor: resolveColors(
+                    POWER_SUBTYPE_COLOR_KEYS
+                )[i]
+            }))
         },
+        'Аварии по питанию (подкатегории)',
+        true
+    );
+
+    window.dashboardCharts.subtypes = {
+        power:{
+            chart:powerIssueSubtypesChart,
+            labels:powerSubtypeLabels
+        }
     };
-    updateCopyButton('energy-subtypes-chart-card', powerIssueSubtypesChart, 'Регион/Подкатегория аварии по питанию');
 
-    const initSlaSkeleton = (containerId, bar_title) => {
-        const container = document.getElementById(containerId);
-        const charts = [];
+    updateCopyButton(
+        'energy-subtypes-chart-card',
+        powerIssueSubtypesChart,
+        'Регион/Подкатегория аварии по питанию'
+    );
 
-        // Очищаем всё кроме блока с кнопками
-        container.querySelectorAll(':scope > *:not(.chart-utils)').forEach(el => el.remove());
 
-        const titleEl = document.createElement('p');
-        titleEl.className = 'sla-title';
-        titleEl.textContent = bar_title;
+    /* ---------- SLA ---------- */
+
+    const initSlaSkeleton = (containerId,title)=>{
+
+        const container=document.getElementById(containerId);
+        const charts=[];
+
+        container
+        .querySelectorAll(':scope > *:not(.chart-utils)')
+        .forEach(el=>el.remove());
+
+        const titleEl=document.createElement('p');
+        titleEl.className='sla-title';
+        titleEl.textContent=title;
         container.appendChild(titleEl);
 
-        const grid = document.createElement('div');
-        grid.className = 'sla-grid';
+        const grid=document.createElement('div');
+        grid.className='sla-grid';
         container.appendChild(grid);
 
-        for (let i = 1; i <= 10; i++) {
-            const item = document.createElement('div');
-            item.className = 'sla-item';
+        for(let i=1;i<=10;i++){
 
-            const canvas = document.createElement('canvas');
+            const item=document.createElement('div');
+            item.className='sla-item';
+
+            const canvas=document.createElement('canvas');
+
             item.appendChild(canvas);
             grid.appendChild(item);
 
-            const chart = createSlaDonutChart(canvas.getContext('2d'), { title: `МР-${i}`, single: true, data: [], datasetColors: [], total: 0 });
+            const chart=createSlaDonutChart(
+                canvas.getContext('2d'),
+                {
+                    title:`МР-${i}`,
+                    single:true,
+                    data:[],
+                    datasetColors:[],
+                    total:0
+                }
+            );
+
             charts.push(chart);
         }
 
-        const copyBtn = container.querySelector('.copy-chart-data-btn');
-        if (copyBtn) {
-            copyBtn.addEventListener('click', () => {
-                if (window.dashboardCharts.lastSlaData) {
-                    // Определяем тип данных на основе ID контейнера
-                    let type = 'avr'; // значение по умолчанию
-                    if (containerId.includes('rvr')) {
-                        type = 'rvr';
-                    } else if (containerId.includes('dgu')) {
-                        type = 'dgu';
-                    }
+        const copyBtn=container
+            .querySelector('.copy-chart-data-btn');
 
-                    // Обновляем данные перед копированием
-                    updateSlaCopyData(containerId, window.dashboardCharts.lastSlaData, type);
-                    
-                    // Копируем в буфер
-                    navigator.clipboard.writeText(copyBtn.dataset.text || '');
+        if(copyBtn){
+
+            copyBtn.addEventListener('click',()=>{
+
+                if(window.dashboardCharts.lastSlaData){
+
+                    let type='avr';
+
+                    if(containerId.includes('rvr'))
+                        type='rvr';
+
+                    else if(containerId.includes('dgu'))
+                        type='dgu';
+
+                    updateSlaCopyData(
+                        containerId,
+                        window.dashboardCharts.lastSlaData,
+                        type
+                    );
+
+                    navigator.clipboard.writeText(
+                        copyBtn.dataset.text||''
+                    );
                 }
             });
         }
@@ -167,61 +289,62 @@ document.addEventListener('DOMContentLoaded', () => {
         return charts;
     };
 
-    window.dashboardCharts.sla = {
-        avr: initSlaSkeleton('avr-sla-grid', 'SLA АВР'),
-        rvr: initSlaSkeleton('rvr-sla-grid', 'SLA РВР'),
-        dgu: initSlaSkeleton('dgu-sla-grid', 'ВРТ РВР'),
+
+    window.dashboardCharts.sla={
+        avr:initSlaSkeleton('avr-sla-grid','SLA АВР'),
+        rvr:initSlaSkeleton('rvr-sla-grid','SLA РВР'),
+        dgu:initSlaSkeleton('dgu-sla-grid','ВРТ РВР')
     };
 
-    // Для теста:
-    // startStatisticsPolling(window.dashboardCharts);
+
+    /* ---------- DATA ---------- */
 
     startStatisticsWebSocket(window.dashboardCharts);
 
-    observeThemeChange(() => {
-        const colors = getChartColors();
-        updateDailyIncidentsChartColors(window.dashboardCharts.daily, dailyColors);
-        updateAllIncidentsChartColors(window.dashboardCharts.closed, [colors.green, colors.gray]);
-        updateAllIncidentsChartColors(window.dashboardCharts.open, [colors.blue, colors.gray]);
+
+    /* =====================================================
+       THEME CHANGE
+    ===================================================== */
+
+    observeThemeChange(()=>{
+
+        updateDailyIncidentsChartColors(
+            window.dashboardCharts.daily,
+            resolveColors(DAILY_COLOR_KEYS)
+        );
+
+        updateAllIncidentsChartColors(
+            window.dashboardCharts.closed,
+            resolveColors(CLOSED_COLOR_KEYS)
+        );
+
+        updateAllIncidentsChartColors(
+            window.dashboardCharts.open,
+            resolveColors(OPEN_COLOR_KEYS)
+        );
+
         updateAllIncidentsChartColors(
             window.dashboardCharts.types,
-            [
-                colors.extra,
-                colors.pink,
-                colors.cyan,
-                colors.blue,
-                colors.red,
-                colors.yellow,
-                colors.brown,
-                colors.gray,
-                colors.magenta,
-                colors.green,
-            ]
+            resolveColors(TYPES_COLOR_KEYS)
         );
+
         updateAllIncidentsChartColors(
             window.dashboardCharts.subtypes.power.chart,
-            [
-                colors.magenta,   // 0  ЗО НБ. ВЛ до 1 кВ
-                colors.pink,   // 1  ЗО НБ. ВЛ свыше 1 кВ
-                colors.purple,   // 2  ЗО НБ. КЛ до 1 кВ
-                colors.lime,   // 3  ЗО НБ. КЛ свыше 1 кВ
-                colors.orange,   // 4  ЗО НБ. КТП
-                colors.teal,   // 5  ЗО НБ. ПУ/АИИСКУЭ
-                colors.green,   // 6  ЗО НБ. РЩ/РУ
-                colors.indigo,   // 7  ЗО Оператора. Линия
-                colors.cyan,   // 8  ЗО Оператора. Оборудование ЭУ
-                colors.yellow,   // 9  ЗО Сетевой организации. Аварийные работы
-                colors.blue,   // 10 ЗО Сетевой организации. Плановые работы
-                colors.brown,   // 11 Прочее (форс-мажор)
-                colors.amber,   // 12 Отключение за неоплату
-                colors.red,   // 13 Самовосстановление питания
-                colors.gray,   // 14 ШЭП
-                colors.slate,   // 15 Отсутствие схемы
-                colors.extra  // 16 Без подкатегории
-            ]
+            resolveColors(POWER_SUBTYPE_COLOR_KEYS)
         );
-        updateSlaDonutChartColors(window.dashboardCharts.sla.avr);
-        updateSlaDonutChartColors(window.dashboardCharts.sla.rvr);
-        updateSlaDonutChartColors(window.dashboardCharts.sla.dgu);
+
+        updateSlaDonutChartColors(
+            window.dashboardCharts.sla.avr
+        );
+
+        updateSlaDonutChartColors(
+            window.dashboardCharts.sla.rvr
+        );
+
+        updateSlaDonutChartColors(
+            window.dashboardCharts.sla.dgu
+        );
+
     });
+
 });

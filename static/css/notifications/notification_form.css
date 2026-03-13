@@ -1,5 +1,5 @@
 .notification-form {
-  padding: var(--space-sm);
+  padding: var(--space-md);
 }
 
 .notification-form form {
@@ -46,8 +46,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   resize: none;
-  
-  padding: var(--space-md);
+
   font-family: inherit;
   line-height: 1.5;
   
