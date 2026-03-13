@@ -37,6 +37,28 @@ export function createAllIncidentsChart(ctx, initialData, label, horizontal = fa
                     borderWidth: 1,
                     cornerRadius: radius.xl,
                     padding: 8,
+                    callbacks: {
+                        label: function(context) {
+                            const dataset = context.dataset;
+                            const value = Number(dataset.data[context.dataIndex]) || 0;
+                            const label = dataset.label || '';
+
+                            let percent = 0;
+                            if (horizontal) {
+                                // считаем процент от суммы значений на этом индексе
+                                const total = context.chart.data.datasets.reduce((sum, ds) => {
+                                    return sum + (Number(ds.data[context.dataIndex]) || 0);
+                                }, 0);
+                                percent = total ? +(value / total * 100).toFixed(1) : 0;
+                            } else {
+                                // считаем процент от всех значений на графике по каждому типу
+                                const total = context.dataset.data.reduce((s, v) => s + (Number(v) || 0), 0) / 2;
+                                percent = total ? +(value / total * 100).toFixed(1) : 0;
+                            }
+
+                            return `${label}: ${value} (${percent}%)`;
+                        }
+                    }
                 },
                 zoom: {
                     zoom: {

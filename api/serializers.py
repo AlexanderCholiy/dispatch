@@ -245,6 +245,7 @@ class StatisticReportSerializer(serializers.ModelSerializer):
 
     total_incidents = serializers.SerializerMethodField()
     daily_incidents = serializers.SerializerMethodField()
+    hourly_incidents = serializers.SerializerMethodField()
 
     incident_subtype_stats = serializers.SerializerMethodField()
 
@@ -287,8 +288,9 @@ class StatisticReportSerializer(serializers.ModelSerializer):
             'has_dgu_category',
             # Подкатегории инцидентов:
             'incident_subtype_stats',
-            # Динамика по дням:
+            # Динамика по дням и часам:
             'daily_incidents',
+            'hourly_incidents',
         )
 
     def get_total_incidents(self, obj: Region):
@@ -309,6 +311,20 @@ class StatisticReportSerializer(serializers.ModelSerializer):
         }
 
         return sorted_daily
+
+    def get_hourly_incidents(self, obj: Region):
+        """
+        Возвращает hourly_incidents в виде отсортированного словаря с часами.
+        """
+        hours = getattr(obj, 'hourly_incidents', {})
+
+        # сортируем по ключу (часу)
+        sorted_hours = {
+            str(hour): count
+            for hour, count in sorted(hours.items())
+        }
+
+        return sorted_hours
 
     def get_incident_subtype_stats(self, obj: Region):
         """

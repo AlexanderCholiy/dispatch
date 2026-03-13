@@ -26,7 +26,7 @@ export function createSlaDonutChart(ctx, {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            cutout: '65%',
+            cutout: '45%',
             plugins: {
                 datalabels: {
                     color: colors.bg,
@@ -36,7 +36,6 @@ export function createSlaDonutChart(ctx, {
                         const dataset = context.dataset;
                         const nonZeroCount = dataset.data.filter(v => v > 0).length;
 
-                        // Показываем только если есть данные, значение > 0 и сегментов больше 1
                         return chart.$hasData && value > 0 && nonZeroCount > 1 ? value : '';
                     },
                     anchor: 'center',
@@ -66,6 +65,24 @@ export function createSlaDonutChart(ctx, {
                     bodyColor: colors.add_color,
                     borderColor: colors.extra,
                     borderWidth: 1,
+
+                    callbacks: {
+                        label: function(context) {
+                            const dataset = context.dataset;
+                            const value = Number(dataset.data[context.dataIndex]) || 0;
+
+                            const total = dataset.data.reduce(
+                                (sum, v) => sum + (Number(v) || 0),
+                                0
+                            );
+
+                            const percent = total ? +(value / total * 100).toFixed(1) : 0;
+
+                            const label = context.label || '';
+
+                            return `${label}: ${value} (${percent}%)`;
+                        }
+                    }
                 }
             }
         },
@@ -87,13 +104,11 @@ export function updateSlaDonutChartColors(charts) {
 
         const dataset = chart.data.datasets[0];
 
-        // Если данных нет — принудительно серый
         if (!chart.$hasData) {
             dataset.backgroundColor = [colors.gray];
             dataset.borderColor = ['transparent'];
             dataset.borderWidth = 0;
         } else {
-            // Границы всегда серые для нескольких сегментов
             const nonZeroCount = dataset.data.filter(v => v > 0).length;
             dataset.borderWidth = nonZeroCount > 1 ? 1 : 0;
             dataset.borderColor = dataset.data.map(v =>
@@ -101,18 +116,14 @@ export function updateSlaDonutChartColors(charts) {
             );
         }
 
-        // TITLE
         chart.options.plugins.title.color = colors.color;
 
-        // TOOLTIP
         chart.options.plugins.tooltip.backgroundColor = colors.bg;
         chart.options.plugins.tooltip.titleColor = colors.color;
         chart.options.plugins.tooltip.bodyColor = colors.add_color;
 
-        // Легенда
         chart.options.plugins.legend.labels.color = colors.add_color;
 
-        // Datalabels
         if (chart.options.plugins.datalabels) {
             chart.options.plugins.datalabels.color = colors.bg;
         }

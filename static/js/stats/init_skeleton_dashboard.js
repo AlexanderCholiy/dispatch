@@ -16,12 +16,20 @@ window.dashboardCharts = {};
 document.addEventListener('DOMContentLoaded', () => {
     const colors = getChartColors();
 
-    const regionColors = [
-        colors.pink, colors.cyan, colors.blue, colors.red,
-        colors.yellow, colors.brown, colors.gray, colors.magenta, colors.green,
+    const dailyColors = [
+        colors.gray,
+        colors.pink,
+        colors.cyan,
+        colors.blue,
+        colors.red,
+        colors.yellow,
+        colors.brown,
+        colors.slate,
+        colors.magenta,
+        colors.green,
     ];
 
-    const dailyDatasets = regionColors.map((color, idx) => ({
+    const dailyDatasets = dailyColors.map((color, idx) => ({
         label: `МР-${idx + 1}`,
         data: [],
         borderColor: color,
@@ -36,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.dashboardCharts.daily = dailyChart;
     updateCopyButton('daily-chart-card', dailyChart, 'Дата/Регион');
 
-    const MACROREGION_LABELS = ['МР-1','МР-2','МР-3','МР-4','МР-5','МР-6','МР-7','МР-8','МР-9'];
+    const MACROREGION_LABELS = ['ALL','МР-1','МР-2','МР-3','МР-4','МР-5','МР-6','МР-7','МР-8','МР-9'];
 
     const closedChart = createAllIncidentsChart(
         document.getElementById('all-closed-incidents-chart').getContext('2d'),
@@ -123,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
         grid.className = 'sla-grid';
         container.appendChild(grid);
 
-        for (let i = 1; i <= 9; i++) {
+        for (let i = 1; i <= 10; i++) {
             const item = document.createElement('div');
             item.className = 'sla-item';
 
@@ -172,10 +180,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     observeThemeChange(() => {
         const colors = getChartColors();
-        updateDailyIncidentsChartColors(window.dashboardCharts.daily);
+        updateDailyIncidentsChartColors(window.dashboardCharts.daily, dailyColors);
         updateAllIncidentsChartColors(window.dashboardCharts.closed, [colors.green, colors.gray]);
         updateAllIncidentsChartColors(window.dashboardCharts.open, [colors.blue, colors.gray]);
-        updateAllIncidentsChartColors(window.dashboardCharts.types, [colors.blue, colors.red, colors.green, colors.yellow, colors.gray, colors.cyan]);
+        updateAllIncidentsChartColors(
+            window.dashboardCharts.types,
+            [
+                colors.extra,
+                colors.pink,
+                colors.cyan,
+                colors.blue,
+                colors.red,
+                colors.yellow,
+                colors.brown,
+                colors.gray,
+                colors.magenta,
+                colors.green,
+            ]
+        );
         updateAllIncidentsChartColors(
             window.dashboardCharts.subtypes.power.chart,
             [

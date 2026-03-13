@@ -2,7 +2,7 @@
  * Обновляет текст элемента и класс empty
  */
 function updateElementValue(el, value) {
-    const val = value ?? 0;
+    const val = Number(value) || 0;
 
     el.textContent = val;
 
@@ -15,9 +15,22 @@ function updateElementValue(el, value) {
 
 
 /**
- * Обновляет счетчики "Всего" для графиков.
- * @param {Chart} chart
- * @param {Array<{id: string, field?: string}>} targets
+ * Берёт сумму из первого dataset (Россия)
+ */
+function getRussiaDatasetTotal(chart, index = null) {
+    const ds = chart?.data?.datasets?.[0];
+    if (!ds?.data?.length) return 0;
+
+    if (index !== null) {
+        return Number(ds.data[index]) || 0;
+    }
+
+    return ds.data.reduce((sum, v) => sum + (Number(v) || 0), 0);
+}
+
+
+/**
+ * Обновляет счетчики "Всего"
  */
 export function updateTotalCount(chart, targets = [{ id: 'daily-total-count' }]) {
     if (!chart?.data?.datasets?.length) return;
@@ -33,14 +46,17 @@ export function updateTotalCount(chart, targets = [{ id: 'daily-total-count' }])
                 chart.data.datasets.find(d => d.label === field) ||
                 chart.data.datasets[0];
 
-            total = ds.data.reduce((sum, v) => sum + (v || 0), 0);
+            total = (ds?.data || []).reduce((sum, v) => sum + (Number(v) || 0), 0);
 
         } else {
             total = chart.data.datasets.reduce(
-                (sum, ds) => sum + ds.data.reduce((a, b) => a + (b || 0), 0),
+                (sum, ds) =>
+                    sum + (ds.data || []).reduce((a, b) => a + (Number(b) || 0), 0),
                 0
             );
         }
+
+        total = Math.round(total / 2);
 
         updateElementValue(el, total);
     });
@@ -48,30 +64,24 @@ export function updateTotalCount(chart, targets = [{ id: 'daily-total-count' }])
 
 
 /**
- * Обновляет SLA счетчики из нескольких графиков
+ * SLA счетчики (берём из России)
  */
 export function updateSlaTotalCounts(charts, targets) {
     if (!charts?.length) return;
 
-    const totals = [0, 0, 0, 0];
-
-    charts.forEach(chart => {
-        if (!chart?.$hasData) return;
-
-        const data = chart.data.datasets?.[0]?.data || [];
-
-        data.forEach((value, idx) => {
-            totals[idx] += value || 0;
-        });
-    });
+    const firstChart = charts.find(c => c?.data?.datasets?.length);
+    if (!firstChart) return;
 
     targets.forEach((id, idx) => {
         const el = document.getElementById(id);
         if (!el) return;
 
-        updateElementValue(el, totals[idx]);
+        const total = getRussiaDatasetTotal(firstChart, idx);
+
+        updateElementValue(el, total);
     });
 }
+
 
 /**
  * Обновляет суммы категорий/подкатегорий графика
@@ -88,7 +98,9 @@ export function updateCategoryTotals(chart, targets) {
         const dataset = chart.data.datasets[index];
         if (!dataset) return;
 
-        const total = dataset.data.reduce((sum, v) => sum + (v || 0), 0);
+        const total = Math.round(
+            (dataset.data || []).reduce((sum, v) => sum + (Number(v) || 0), 0) / 2
+        );
 
         updateElementValue(el, total);
     });
@@ -112,8 +124,10 @@ export function updateChartTotals(chart, targets = []) {
             const dataset = chart.data.datasets[i];
             if (!dataset?.data?.length) return;
 
-            total += dataset.data.reduce((sum, v) => sum + (v || 0), 0);
+            total += dataset.data.reduce((sum, v) => sum + (Number(v) || 0), 0);
         });
+
+        total = Math.round(total / 2);
 
         updateElementValue(el, total);
     });

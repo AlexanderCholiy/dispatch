@@ -30,7 +30,7 @@ export function getChartColors() {
         orange: getCssVar('orange-color', '#f2994a'),
         purple: getCssVar('purple-color', '#6f5bd7'),
         teal: getCssVar('teal-color', '#2f9e9e'),
-        pink: getCssVar('pink-color', '#e255a1;'),
+        pink: getCssVar('pink-color', '#e255a1'),
         indigo: getCssVar('indigo-color', '#7986cb'),
         brown: getCssVar('brown-color', '#8d6e63'),
 

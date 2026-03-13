@@ -2,6 +2,7 @@ import { getFirstDayOfPreviousMonth, formatDate, showMessage, validateDateRange 
 import { updateDailyChart, updateBarChart, updateSlaCharts, updateSubtypesChart } from './data/charts_updater.js';
 import { updateCopyButton, updateSlaCopyData } from './data/copy_chart_data.js';
 import { updateTotalCount, updateSlaTotalCounts, updateCategoryTotals, updateChartTotals } from './data/update_total_counter.js'
+import { updateHourlyGrid } from './data/hourly_grid_updater.js';
 
 let ws = null;
 const lastMsgRef = { current: null };
@@ -65,6 +66,9 @@ export function startStatisticsWebSocket(charts) {
         updateTotalCount(charts.daily, [
             { id: 'daily-total-count' }
         ]);
+        if (apiData.length > 0) {
+            updateHourlyGrid(apiData[0], 'hours-total-grid');
+        }
 
         // CLOSED
         updateBarChart(charts.closed, apiData, [

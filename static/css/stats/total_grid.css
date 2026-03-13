@@ -1,3 +1,4 @@
+.hours-total-grid,
 .types-total-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(85px, max-content));
@@ -6,6 +7,7 @@
   margin: 0 var(--space-sm);
 }
 
+.hours-total-item,
 .types-total-item {
   display: flex;
   flex-direction: column;
@@ -21,16 +23,34 @@
   font-size: var(--font-xs);
 }
 
+.hours-total-label,
 .types-total-label {
   font-size: var(--font-xs);
   color: var(--add-color);
   text-align: center;
 }
 
+.hours-total-label span.empty,
 .types-total-label span.empty {
   color: var(--extra-color) !important;
 }
 
-.types-total-item span:last-child {
-  font-weight: 500;
+.hours-total-item span:nth-of-type(2) {
+  font-weight: 600;
+}
+
+.hours-total-item span.low {
+  color: var(--green-color);
+}
+
+.hours-total-item span.medium {
+  color: var(--blue-color);
+}
+
+.hours-total-item span.high {
+  color: var(--yellow-color);
+}
+
+.hours-total-item span.critical {
+  color: var(--red-color);
 }

@@ -152,14 +152,6 @@ export function updateSlaCharts(charts, apiData, type) {
 
         chart.$total = total;
 
-        chart.options.plugins.tooltip.callbacks = {
-            label: (tooltipItem) => {
-                const value = chart.data.datasets[0].data[tooltipItem.dataIndex];
-                const label = chart.data.labels[tooltipItem.dataIndex];
-                return `${label}: ${value}`;
-            }
-        };
-
         chart.update();
     });
 }

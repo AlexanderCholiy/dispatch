@@ -10,4 +10,8 @@ from users.utils import role_required
 @role_required()
 def incidents_stats(request: HttpRequest) -> HttpResponse:
     today = timezone.localdate()
-    return render(request, 'stats/incidents_stats.html', {'today': today})
+    context = {
+        'today': today,
+        'hours': range(24),
+    }
+    return render(request, 'stats/incidents_stats.html', context)

@@ -59,6 +59,14 @@
         </div>
       </div>
       <canvas id="daily-incidents-chart"></canvas>
+      <div class="hours-total-grid" id="hours-total-grid">
+          {% for i in hours %}
+            <div class="hours-total-item tooltip" data-title="Количество инцидентов за {{ i }}-й час">
+              <span class="hours-total-label">{{ i|stringformat:"02d" }} ч</span>
+              <span class="empty" id="hours-{{ i }}">0</span>
+            </div>
+          {% endfor %}
+      </div>
     </div>
 
     <div class="chart-card" id="closed-chart-card">

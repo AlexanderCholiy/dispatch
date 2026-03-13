@@ -36,7 +36,17 @@ export function createDailyIncidentsChart(ctx, initialData) {
                     displayColors: true,
                     callbacks: {
                         label: function(context) {
-                            return `${context.dataset.label}: ${context.formattedValue}`;
+                            const datasetLabel = context.dataset.label;
+                            const value = context.parsed.y; // значение на этом X
+
+                            // считаем сумму всех datasets на этом индексе X
+                            const dataIndex = context.dataIndex;
+                            const total = context.chart.data.datasets
+                                .reduce((sum, ds) => sum + (ds.data[dataIndex] || 0), 0) / 2;
+
+                            const percent = total ? +(value / total * 100).toFixed(1) : 0;
+
+                            return `${datasetLabel}: ${value} (${percent}%)`;
                         }
                     }
                 },
@@ -75,12 +85,14 @@ export function createDailyIncidentsChart(ctx, initialData) {
     return chart;
 }
 
-export function updateDailyIncidentsChartColors(chart) {
+export function updateDailyIncidentsChartColors(chart, regionColors) {
     if (!chart || !chart.data || !chart.options) return;
 
     const colors = getChartColors();
 
-    const regionColors = [
+    // если regionColors не передали, используем дефолтный набор
+    const defaultColors = [
+        colors.extra,
         colors.pink,
         colors.cyan,
         colors.blue,
@@ -89,19 +101,19 @@ export function updateDailyIncidentsChartColors(chart) {
         colors.brown,
         colors.gray,
         colors.magenta,
-        colors.orange,
         colors.green,
     ];
 
-    chart.data.datasets.forEach((ds, idx) => {
-        const color = regionColors[idx % regionColors.length];
+    const colorsToUse = regionColors && regionColors.length ? regionColors : defaultColors;
 
+    chart.data.datasets.forEach((ds, idx) => {
+        const color = colorsToUse[idx % colorsToUse.length];
         ds.borderColor = color;
         ds.backgroundColor = color;
         ds.fill = false;
     });
 
-    // обновляем tooltip
+    // обновляем tooltip и остальные элементы графика
     chart.options.plugins.tooltip.backgroundColor = colors.add_bg;
     chart.options.plugins.tooltip.titleColor = colors.color;
     chart.options.plugins.tooltip.bodyColor = colors.add_color;
@@ -109,6 +121,7 @@ export function updateDailyIncidentsChartColors(chart) {
 
     chart.options.plugins.title.color = colors.color;
     chart.options.plugins.legend.labels.color = colors.add_color;
+
     chart.options.scales.x.title.color = colors.add_color;
     chart.options.scales.y.title.color = colors.add_color;
     chart.options.scales.x.ticks.color = colors.add_color;

@@ -13,7 +13,7 @@ from django.db.models import (
     Q,
     QuerySet,
 )
-from django.db.models.functions import TruncDate
+from django.db.models.functions import TruncDate, ExtractHour
 from django.http import HttpResponse
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
@@ -306,6 +306,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
     уведомлены подрядчики или начат АВР/РВР
     - daily_incidents: разбивка количества инцидентов по дням
     в формате {"YYYY-MM-DD": количество}, включает все инциденты за период
+    - hourly_incidents: разбивка почасовой статистики за период
 
     ПРОБЛЕМЫ С ПИТАНИЕМ:
     - open_incidents_with_power_issue:
@@ -599,13 +600,27 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
             .annotate(count=Count('id'))
             .order_by('pole__region__macroregion', 'day')
         )
-
         daily_map = {}
         for row in daily_qs:
             macro_id = row['pole__region__macroregion']
             day = row['day']
             count = row['count']
             daily_map.setdefault(macro_id, {})[day] = count
+
+        # -------- Считаем инциденты по часам --------
+        hourly_qs = (
+            incidents
+            .annotate(hour=ExtractHour('incident_date'))
+            .values('pole__region__macroregion', 'hour')
+            .annotate(count=Count('id'))
+            .order_by('pole__region__macroregion', 'hour')
+        )
+        hourly_map = {}
+        for row in hourly_qs:
+            macro_id = row['pole__region__macroregion']
+            hour = row['hour']  # 0-23
+            count = row['count']
+            hourly_map.setdefault(macro_id, {})[hour] = count
 
         # -------- Заполняем макрорегионы данными --------
         for macro in macroregions:
@@ -653,7 +668,13 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
 
             macro.daily_incidents = daily_map.get(macro.pk, {})
 
+            macro.hourly_incidents = hourly_map.get(macro.pk, {})
+
             macro.incident_subtype_stats = subtype_map.get(macro.pk, {})
+
+        if macroregions:
+            summary = self._build_summary(macroregions)
+            macroregions.insert(0, summary)
 
         cache.set(cache_key, macroregions, STATISTIC_CACHE_TIMEOUT)
 
@@ -681,3 +702,68 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
         end_key = end.isoformat() if end else 'none'
         monitoring_key = 'mon1' if monitoring_check else 'mon0'
         return f'statistic_report:{start_key}:{end_key}:{monitoring_key}'
+
+    def _build_summary(self, macroregions: list[MacroRegion]) -> MacroRegion:
+        """Создает итоговую строку по всем макрорегионам."""
+        summary = MacroRegion(name='Россия')
+
+        fields_to_sum = [
+            'total_closed_incidents',
+            'total_open_incidents',
+            'active_contractor_incidents',
+            'sla_avr_expired_count',
+            'sla_avr_closed_on_time_count',
+            'sla_avr_waiting_count',
+            'sla_avr_in_progress_count',
+            'sla_rvr_expired_count',
+            'sla_rvr_closed_on_time_count',
+            'sla_rvr_waiting_count',
+            'sla_rvr_in_progress_count',
+            'sla_dgu_expired_count',
+            'sla_dgu_closed_on_time_count',
+            'sla_dgu_waiting_count',
+            'sla_dgu_in_progress_count',
+            'is_power_issue_type',
+            'is_ams_issue_type',
+            'is_goverment_request_issue_type',
+            'is_vols_issue_type',
+            'is_object_destruction_issue_type',
+            'is_object_access_issue_type',
+            'has_avr_category',
+            'has_rvr_category',
+            'has_dgu_category',
+            'open_incidents_with_power_issue',
+            'closed_incidents_with_power_issue',
+        ]
+
+        for field in fields_to_sum:
+            setattr(
+                summary, field, sum(getattr(m, field, 0) for m in macroregions)
+            )
+
+        summary.daily_incidents = {}
+        for m in macroregions:
+            for day, count in m.daily_incidents.items():
+                summary.daily_incidents[day] = (
+                    summary.daily_incidents.get(day, 0) + count
+                )
+
+        summary.hourly_incidents = {}
+        for m in macroregions:
+            for hour, count in m.hourly_incidents.items():
+                summary.hourly_incidents[hour] = (
+                    summary.hourly_incidents.get(hour, 0) + count
+                )
+
+        summary.incident_subtype_stats = {}
+        for m in macroregions:
+            for type_name, subtypes in m.incident_subtype_stats.items():
+                type_bucket = summary.incident_subtype_stats.setdefault(
+                    type_name, {}
+                )
+                for sub_name, count in subtypes.items():
+                    type_bucket[sub_name] = (
+                        type_bucket.get(sub_name, 0) + count
+                    )
+
+        return summary

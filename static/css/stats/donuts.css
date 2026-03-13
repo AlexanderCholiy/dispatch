@@ -20,8 +20,8 @@
 
 .sla-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-    gap: var(--space-lg);
+    grid-template-columns: repeat(auto-fit, minmax(192px, 1fr));
+    gap: var(--space-xs);
     margin: var(--space-md) var(--space-sm);
 }
 

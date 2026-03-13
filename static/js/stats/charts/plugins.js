@@ -17,7 +17,7 @@ export function centerTextPlugin() {
             const total = chart.$total ?? 0;
 
             ctx.save();
-            ctx.font = '600 20px sans-serif';
+            ctx.font = '600 16px sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
