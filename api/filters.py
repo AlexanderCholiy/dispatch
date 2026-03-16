@@ -6,6 +6,9 @@ from django_filters import (
 )
 
 from incidents.models import Incident
+from django.db.models import Q
+from datetime import date
+from typing import Optional
 
 from .utils import get_first_day_prev_month
 
@@ -33,3 +36,14 @@ class IncidentReportFilter(FilterSet):
             first_day_prev_month = get_first_day_prev_month()
             return queryset.filter(incident_date__gte=first_day_prev_month)
         return queryset
+
+
+def get_incident_date_filter(start: Optional[date], end: Optional[date]) -> Q:
+    q = Q()
+
+    if start:
+        q &= Q(incident_date__date__gte=start)
+    if end:
+        q &= Q(incident_date__date__lte=end)
+
+    return q

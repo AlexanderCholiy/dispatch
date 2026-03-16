@@ -55,12 +55,18 @@ from .constants import (
     OPEN_INCIDENTS_VALID_FILTER,
     STATISTIC_CACHE_TIMEOUT,
     TOTAL_VALID_INCIDENTS_FILTER,
+    PERCENT_ACCURACY,
 )
-from .filters import IncidentReportFilter
+from .filters import IncidentReportFilter, get_incident_date_filter
 from .pagination import IncidentReportPagination
-from .serializers import IncidentReportSerializer, StatisticReportSerializer
+from .serializers import (
+    IncidentReportSerializer,
+    StatisticReportSerializer,
+    ContractorStatSerializer,
+)
 from .utils import get_first_day_prev_month, is_file_fresh
 from .validators import validate_date_range
+from ts.constants import UNDEFINED_CASE
 
 
 class IncidentSubtypeStat(TypedDict):
@@ -423,12 +429,15 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
         if cached:
             return cached
 
-        incident_date_filter = self._get_incident_date_filter(start, end)
+        incident_date_filter = get_incident_date_filter(start, end)
 
         incidents = (
             Incident.objects
             .filter(TOTAL_VALID_INCIDENTS_FILTER)
             .filter(incident_date_filter)
+            .exclude(
+                pole__pole=UNDEFINED_CASE
+            )
             .select_related('pole', 'incident_type')
         )
 
@@ -680,18 +689,6 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
 
         return macroregions
 
-    def _get_incident_date_filter(
-        self, start: Optional[date], end: Optional[date]
-    ) -> Q:
-        q = Q()
-
-        if start:
-            q &= Q(incident_date__date__gte=start)
-        if end:
-            q &= Q(incident_date__date__lte=end)
-
-        return q
-
     def _build_statistic_cache_key(
         self,
         start: Optional[date],
@@ -767,3 +764,162 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                     )
 
         return summary
+
+
+class AVRContractorViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Статистика по подрядчикам АВР с разбивкой по макрорегионам.
+
+    Query-параметры:
+
+    - start_date (YYYY-MM-DD):
+        Начальная дата инцидента (включительно).
+        Если не указана — фильтрация снизу не применяется.
+
+    - end_date (YYYY-MM-DD):
+        Конечная дата инцидента (включительно).
+        Если не указана — фильтрация сверху не применяется.
+
+    ПРИМЕРЫ ЗАПРОСОВ:
+
+    Получить статистику за период:
+        GET /api/v1/report/statistics/avr-contractor/?start_date=2025-01-01&
+        end_date=2025-01-31
+
+    """
+    serializer_class = ContractorStatSerializer
+    permission_classes = (permissions.AllowAny,)
+    pagination_class = None
+
+    def get_queryset(self):
+        params = self.request.query_params
+
+        start, end = validate_date_range(
+            params.get('start_date'),
+            params.get('end_date'),
+        )
+
+        cache_key = self._build_cache_key(start, end)
+        cached = cache.get(cache_key)
+        if cached:
+            return cached
+
+        incident_date_filter = get_incident_date_filter(start, end)
+
+        incidents = (
+            Incident.objects
+            .filter(TOTAL_VALID_INCIDENTS_FILTER)
+            .filter(incident_date_filter)
+            .filter(
+                pole__isnull=False,
+                pole__avr_contractor__isnull=False,
+                pole__region__macroregion__isnull=False,
+            )
+            .exclude(
+                pole__avr_contractor__contractor_name=UNDEFINED_CASE
+            )
+            .select_related(
+                'pole',
+                'pole__avr_contractor',
+                'pole__region',
+                'pole__region__macroregion',
+                'incident_type',
+            )
+        )
+
+        incidents = annotate_sla_avr(incidents)
+
+        contractor_map = {}
+
+        for inc in incidents:
+
+            contractor = inc.pole.avr_contractor
+            macro = inc.pole.region.macroregion
+
+            if not contractor or not macro:
+                continue
+
+            macro_id = macro.id
+            macro_name = macro.name
+
+            c_bucket = contractor_map.setdefault(
+                contractor.id,
+                {
+                    'contractor_name': contractor.contractor_name,
+                    'total_closed_incidents': 0,
+                    'on_time_count': 0,
+                    'macroregions': {},
+                }
+            )
+
+            m_bucket = c_bucket['macroregions'].setdefault(
+                macro_id,
+                {
+                    'macroregion_id': macro_id,
+                    'macroregion': macro_name,
+                    'total_incidents': 0,
+                    'sla_avr_expired_count': 0,
+                    'sla_avr_closed_on_time_count': 0,
+                    'sla_avr_waiting_count': 0,
+                    'sla_avr_in_progress_count': 0,
+                }
+            )
+
+            m_bucket['total_incidents'] += 1
+
+            if inc.sla_avr_expired:
+                m_bucket['sla_avr_expired_count'] += 1
+
+            if inc.sla_avr_closed_on_time:
+                m_bucket['sla_avr_closed_on_time_count'] += 1
+
+            if inc.sla_avr_waiting:
+                m_bucket['sla_avr_waiting_count'] += 1
+
+            if inc.sla_avr_in_progress:
+                m_bucket['sla_avr_in_progress_count'] += 1
+
+            if inc.avr_end_date:
+                c_bucket['total_closed_incidents'] += 1
+
+                if inc.sla_avr_closed_on_time:
+                    c_bucket['on_time_count'] += 1
+
+        contractors = []
+
+        for c_data in contractor_map.values():
+
+            closed = c_data['total_closed_incidents']
+            on_time = c_data['on_time_count']
+
+            percentage = (on_time / closed * 100) if closed else 0
+            c_data['on_time_percentage'] = percentage
+
+            # сортировка макрорегионов
+            c_data['macroregions'] = sorted(
+                c_data['macroregions'].values(),
+                key=lambda m: (
+                    -m['total_incidents'],
+                    m['macroregion_id'],
+                )
+            )
+
+            contractors.append(c_data)
+
+        # сортировка подрядчиков
+        contractors.sort(
+            key=lambda c: (
+                c['on_time_percentage'],        # худший процент первым
+                -c['total_closed_incidents'],   # больше закрытых выше
+                c['contractor_name'],             # стабильная сортировка
+            )
+        )
+
+        cache.set(cache_key, contractors, STATISTIC_CACHE_TIMEOUT)
+
+        return contractors
+
+    def _build_cache_key(self, start: date | None, end: date | None) -> str:
+        start_key = start.isoformat() if start else 'none'
+        end_key = end.isoformat() if end else 'none'
+        return f'avr_contractor_stat:{start_key}:{end_key}'

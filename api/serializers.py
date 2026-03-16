@@ -6,7 +6,7 @@ from incidents.constants import POWER_ISSUE_TYPES
 from incidents.models import Incident
 from ts.models import Region
 
-from .constants import API_DATE_FORMAT
+from .constants import API_DATE_FORMAT, PERCENT_ACCURACY
 from .utils import conversion_utc_datetime
 
 
@@ -352,3 +352,27 @@ class StatisticReportSerializer(serializers.ModelSerializer):
             result['Аварии по питанию'] = power_bucket
 
         return result
+
+
+class ContractorMacroregionStatSerializer(serializers.Serializer):
+    macroregion = serializers.CharField()
+    total_incidents = serializers.IntegerField()
+    sla_avr_expired_count = serializers.IntegerField()
+    sla_avr_closed_on_time_count = serializers.IntegerField()
+    sla_avr_waiting_count = serializers.IntegerField()
+    sla_avr_in_progress_count = serializers.IntegerField()
+
+
+class ContractorStatSerializer(serializers.Serializer):
+    contractor_name = serializers.CharField()
+    total_closed_incidents = serializers.IntegerField()
+    macroregions = ContractorMacroregionStatSerializer(many=True)
+
+    on_time_percentage = serializers.SerializerMethodField()
+
+    def get_on_time_percentage(self, obj):
+        value = obj.get('on_time_percentage', 0)
+        value = round(value, PERCENT_ACCURACY)
+        if isinstance(value, float) and value.is_integer():
+            return int(value)
+        return value

@@ -4,11 +4,14 @@ import { updateCopyButton, updateSlaCopyData } from './data/copy_chart_data.js';
 import { updateTotalCount, updateSlaTotalCounts, updateCategoryTotals, updateChartTotals } from './data/update_total_counter.js'
 import { updateHourlyGrid } from './data/hourly_grid_updater.js';
 import { initWeeklyMacroregionsTable, updateWeeklyMacroregionsTable } from './data/weekly_macroregions_table.js';
+import { initAvrContractorsTable, updateAvrContractorsTable } from './data/avr_contractors_table.js';
 
 let ws = null;
 const lastMsgRef = { current: null };
 let lastWeeklyStart = null;
 let lastWeeklyEnd = null;
+let lastAvrStart = null;
+let lastAvrEnd = null;
 
 export function startStatisticsWebSocket(charts) {
     const startInput = document.getElementById('start-date');
@@ -43,8 +46,11 @@ export function startStatisticsWebSocket(charts) {
             const data = JSON.parse(e.data);
             if (data.error) return showMessage(data.error, 'error', messagesContainer, lastMsgRef);
 
+            // Данные могут быть в разных форматах
             const apiData = data.period ?? data;
-            updateCharts(apiData);
+            const avrData = data.avr_period ?? null;
+            
+            updateCharts(apiData, avrData);
         } catch (err) {
             console.error("WS parse error", err);
         }
@@ -61,7 +67,7 @@ export function startStatisticsWebSocket(charts) {
     }
 
     /* ---------- UPDATE CHARTS + COPY DATA ---------- */
-    function updateCharts(apiData) {
+    function updateCharts(apiData, avrData = null) {
         const macroregionLabels = apiData.map(r => r.macroregion);
 
         // DAILY
@@ -73,16 +79,15 @@ export function startStatisticsWebSocket(charts) {
             updateHourlyGrid(apiData[0], 'hours-total-grid');
         }
 
-        // WEEKLY
+        // WEEKLY TABLE
         const startDate = confirmedStart;
         const endDate = confirmedEnd || new Date().toISOString().split('T')[0];
 
-        const needRebuild =
+        const needRebuildWeekly =
             startDate !== lastWeeklyStart ||
             endDate !== lastWeeklyEnd;
 
-        if (needRebuild) {
-
+        if (needRebuildWeekly) {
             initWeeklyMacroregionsTable(
                 'weekly-incidents-table',
                 apiData,
@@ -92,9 +97,39 @@ export function startStatisticsWebSocket(charts) {
 
             lastWeeklyStart = startDate;
             lastWeeklyEnd = endDate;
+        } else {
+            updateWeeklyMacroregionsTable(apiData);
         }
 
-        updateWeeklyMacroregionsTable(apiData);
+        // AVR CONTRACTORS TABLE
+        const avrTableContainer = document.getElementById('avr-contractors-table');
+        if (avrTableContainer && avrData) {
+            const needRebuildAvr =
+                startDate !== lastAvrStart ||
+                endDate !== lastAvrEnd;
+
+            // Проверяем, нет ли ошибки в данных
+            if (avrData.error) {
+                console.warn('AVR data error:', avrData.error);
+                showMessage('Ошибка загрузки данных по подрядчикам', 'warning', messagesContainer, lastMsgRef);
+                return;
+            }
+
+            if (needRebuildAvr) {
+                initAvrContractorsTable(
+                    avrTableContainer,
+                    avrData,
+                    startDate,
+                    endDate
+                );
+                lastAvrStart = startDate;
+                lastAvrEnd = endDate;
+            } else {
+                updateAvrContractorsTable(avrData);
+            }
+        } else if (avrTableContainer && !avrData) {
+            console.warn('AVR data not available');
+        }
 
         // CLOSED
         updateBarChart(charts.closed, apiData, [

@@ -7,6 +7,8 @@ import { updateCopyButton, updateSlaCopyData } from './data/copy_chart_data.js';
 import { startStatisticsWebSocket } from './dashboard_ws_updater.js';
 import { initWeeklyMacroregionsTable } from './data/weekly_macroregions_table.js';
 import { getFirstDayOfPreviousMonth } from './charts_utils.js';
+import { initAvrContractorsTable, maybeUpdateAvrContractorsTable } from './data/avr_contractors_table.js';
+
 
 if (window.Chart && window.ChartZoom) {
     Chart.register(window.ChartZoom);
@@ -224,77 +226,113 @@ document.addEventListener('DOMContentLoaded', () => {
         'Регион/Подкатегория аварии по питанию'
     );
 
-
     /* ---------- SLA ---------- */
+    const initSlaSkeleton = (containerId, title) => {
+        const container = document.getElementById(containerId);
+        const charts = [];
 
-    const initSlaSkeleton = (containerId,title)=>{
+        if (!container) {
+            console.error(`Container ${containerId} not found`);
+            return charts;
+        }
 
-        const container=document.getElementById(containerId);
-        const charts=[];
-
+        // Удаляем все дочерние элементы кроме .chart-utils и таблицы AVR
         container
-        .querySelectorAll(':scope > *:not(.chart-utils)')
-        .forEach(el=>el.remove());
+            .querySelectorAll(':scope > *:not(.chart-utils):not(#avr-contractors-table)')
+            .forEach(el => el.remove());
 
-        const titleEl=document.createElement('p');
-        titleEl.className='sla-title';
-        titleEl.textContent=title;
+        // Заголовок SLA
+        const titleEl = document.createElement('p');
+        titleEl.className = 'sla-title';
+        titleEl.textContent = title;
         container.appendChild(titleEl);
 
-        const grid=document.createElement('div');
-        grid.className='sla-grid';
+        // Создаём сетку графиков
+        const grid = document.createElement('div');
+        grid.className = 'sla-grid';
         container.appendChild(grid);
 
-        for(let i=1;i<=10;i++){
+        // Создаём 10 графиков
+        for (let i = 1; i <= 10; i++) {
+            const item = document.createElement('div');
+            item.className = 'sla-item';
 
-            const item=document.createElement('div');
-            item.className='sla-item';
-
-            const canvas=document.createElement('canvas');
-
+            const canvas = document.createElement('canvas');
             item.appendChild(canvas);
             grid.appendChild(item);
 
-            const chart=createSlaDonutChart(
+            const chart = createSlaDonutChart(
                 canvas.getContext('2d'),
                 {
-                    title:`МР-${i}`,
-                    single:true,
-                    data:[],
-                    datasetColors:[],
-                    total:0
+                    title: `МР-${i}`,
+                    single: true,
+                    data: [],
+                    datasetColors: [],
+                    total: 0
                 }
             );
-
             charts.push(chart);
         }
 
-        const copyBtn=container
-            .querySelector('.copy-chart-data-btn');
+        // Добавляем таблицу только для AVR
+        if (containerId === 'avr-sla-grid') {
+            // Создаем структуру таблицы
+            const tableContainer = document.createElement('div');
+            tableContainer.className = 'avr-contractors-table table-wrapper';
+            tableContainer.id = 'avr-contractors-table';
 
-        if(copyBtn){
+            const tableTitle = document.createElement('p');
+            tableTitle.className = 'table-title';
+            tableTitle.textContent = 'SLA АВР Contractors';
+            tableContainer.appendChild(tableTitle);
 
-            copyBtn.addEventListener('click',()=>{
+            const tableEl = document.createElement('table');
+            tableEl.className = 'table';
+            tableEl.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>Подрядчик</th>
+                        <th>Всего инцидентов</th>
+                        <th>Просроченные</th>
+                        <th>Закрыто вовремя</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="4">Данные загружаются...</td></tr>
+                </tbody>
+            `;
+            tableContainer.appendChild(tableEl);
+            
+            // Сначала добавляем таблицу в DOM
+            container.appendChild(tableContainer);
+            
+            // Используем setTimeout с нулевой задержкой для гарантии, 
+            // что DOM полностью обновлен перед инициализацией таблицы
+            setTimeout(() => {
+                const tableElement = document.getElementById('avr-contractors-table');
+                if (tableElement) {
+                    try {
+                        initAvrContractorsTable(tableElement);
+                    } catch (error) {
+                        console.error('Ошибка инициализации таблицы AVR:', error);
+                    }
+                } else {
+                    console.error('avr-contractors-table не найден в DOM после добавления!');
+                }
+            }, 0);
+        }
 
-                if(window.dashboardCharts.lastSlaData){
+        // Копирование данных
+        const copyBtn = container.querySelector('.copy-chart-data-btn');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', () => {
+                if (window.dashboardCharts.lastSlaData) {
+                    let type = 'avr';
+                    if (containerId.includes('rvr')) type = 'rvr';
+                    else if (containerId.includes('dgu')) type = 'dgu';
 
-                    let type='avr';
-
-                    if(containerId.includes('rvr'))
-                        type='rvr';
-
-                    else if(containerId.includes('dgu'))
-                        type='dgu';
-
-                    updateSlaCopyData(
-                        containerId,
-                        window.dashboardCharts.lastSlaData,
-                        type
-                    );
-
-                    navigator.clipboard.writeText(
-                        copyBtn.dataset.text||''
-                    );
+                    updateSlaCopyData(containerId, window.dashboardCharts.lastSlaData, type);
+                    navigator.clipboard.writeText(copyBtn.dataset.text || '');
                 }
             });
         }
@@ -302,13 +340,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return charts;
     };
 
-
-    window.dashboardCharts.sla={
-        avr:initSlaSkeleton('avr-sla-grid','SLA АВР'),
-        rvr:initSlaSkeleton('rvr-sla-grid','SLA РВР'),
-        dgu:initSlaSkeleton('dgu-sla-grid','ВРТ РВР')
+    window.dashboardCharts.sla = {
+        avr: initSlaSkeleton('avr-sla-grid', 'SLA АВР'),
+        rvr: initSlaSkeleton('rvr-sla-grid', 'SLA РВР'),
+        dgu: initSlaSkeleton('dgu-sla-grid', 'ВРТ РВР')
     };
-
 
     /* ---------- DATA ---------- */
 

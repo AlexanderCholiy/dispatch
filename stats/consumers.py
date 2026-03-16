@@ -85,11 +85,7 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
         Любые ошибки валидации (например, неверный формат дат) ловятся и
         возвращаются клиенту в JSON.
         """
-        from api.views import StatisticReportViewSet
-
-        factory = APIRequestFactory()
-        view = StatisticReportViewSet.as_view({'get': 'list'})
-        url = reverse('statistics_report-list')
+        from api.views import StatisticReportViewSet, AVRContractorViewSet
 
         now = timezone.localtime()
         first_day_prev_month = (
@@ -114,11 +110,13 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
                     in ('1', 'true', 'yes')
                 )
 
-        request = factory.get(url, query)
+        request = APIRequestFactory().get(
+            reverse('statistics_report-list'), query
+        )
         force_authenticate(request, user=None)
 
         try:
-            response = view(request)
+            response = StatisticReportViewSet.as_view({'get': 'list'})(request)
             data = response.data
         except Exception as e:
             django_logger.debug(e, exc_info=True)
@@ -137,8 +135,27 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
                 'query': query
             }
 
+        avr_request = APIRequestFactory().get(
+            reverse('avr_contractor_statistics_report-list'), query
+        )
+        force_authenticate(avr_request, user=None)
+
+        try:
+            avr_response = (
+                AVRContractorViewSet.as_view({'get': 'list'})(avr_request)
+            )
+            avr_data = avr_response.data
+            if getattr(
+                avr_response, 'status_code', HTTPStatus.OK
+            ) >= HTTPStatus.BAD_REQUEST:
+                avr_data = {'error': avr_data}
+        except Exception as e:
+            django_logger.debug("AVR error", exc_info=True)
+            avr_data = {'error': str(e)}
+
         return {
             'period': data,
+            'avr_period': avr_data,
             'meta': {
                 'generated_at': now.isoformat(),
                 'period': {
