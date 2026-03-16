@@ -3,9 +3,12 @@ import { updateDailyChart, updateBarChart, updateSlaCharts, updateSubtypesChart 
 import { updateCopyButton, updateSlaCopyData } from './data/copy_chart_data.js';
 import { updateTotalCount, updateSlaTotalCounts, updateCategoryTotals, updateChartTotals } from './data/update_total_counter.js'
 import { updateHourlyGrid } from './data/hourly_grid_updater.js';
+import { initWeeklyMacroregionsTable, updateWeeklyMacroregionsTable } from './data/weekly_macroregions_table.js';
 
 let ws = null;
 const lastMsgRef = { current: null };
+let lastWeeklyStart = null;
+let lastWeeklyEnd = null;
 
 export function startStatisticsWebSocket(charts) {
     const startInput = document.getElementById('start-date');
@@ -69,6 +72,29 @@ export function startStatisticsWebSocket(charts) {
         if (apiData.length > 0) {
             updateHourlyGrid(apiData[0], 'hours-total-grid');
         }
+
+        // WEEKLY
+        const startDate = confirmedStart;
+        const endDate = confirmedEnd || new Date().toISOString().split('T')[0];
+
+        const needRebuild =
+            startDate !== lastWeeklyStart ||
+            endDate !== lastWeeklyEnd;
+
+        if (needRebuild) {
+
+            initWeeklyMacroregionsTable(
+                'weekly-incidents-table',
+                apiData,
+                startDate,
+                endDate
+            );
+
+            lastWeeklyStart = startDate;
+            lastWeeklyEnd = endDate;
+        }
+
+        updateWeeklyMacroregionsTable(apiData);
 
         // CLOSED
         updateBarChart(charts.closed, apiData, [

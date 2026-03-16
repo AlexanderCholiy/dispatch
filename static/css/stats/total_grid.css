@@ -20,7 +20,7 @@
   box-shadow: 0 0 var(--space-xxs) var(--extra-color);
 
   color: var(--color);
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
 }
 
 .hours-total-label,

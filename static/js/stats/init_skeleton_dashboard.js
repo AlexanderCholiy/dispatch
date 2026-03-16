@@ -5,6 +5,8 @@ import { getDatesSincePreviousMonth } from './charts_utils.js';
 import { getChartColors, observeThemeChange } from './theme_colors.js';
 import { updateCopyButton, updateSlaCopyData } from './data/copy_chart_data.js';
 import { startStatisticsWebSocket } from './dashboard_ws_updater.js';
+import { initWeeklyMacroregionsTable } from './data/weekly_macroregions_table.js';
+import { getFirstDayOfPreviousMonth } from './charts_utils.js';
 
 if (window.Chart && window.ChartZoom) {
     Chart.register(window.ChartZoom);
@@ -69,13 +71,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateCopyButton('daily-chart-card', dailyChart, 'Дата/Регион');
 
-
     /* ---------- MACROREGIONS ---------- */
 
     const MACROREGION_LABELS = [
         'ALL','МР-1','МР-2','МР-3','МР-4',
         'МР-5','МР-6','МР-7','МР-8','МР-9'
     ];
+
+    //* ---------- WEEKLY TABLE ---------- */
+
+    const start = getFirstDayOfPreviousMonth();
+    const end = new Date();
+
+    initWeeklyMacroregionsTable(
+        'weekly-incidents-table',
+        null,
+        start,
+        end
+    );
 
 
     /* ---------- CLOSED ---------- */
