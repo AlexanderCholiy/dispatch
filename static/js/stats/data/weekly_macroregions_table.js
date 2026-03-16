@@ -1,5 +1,5 @@
 /* =====================================================
-   WEEKLY MACROREGIONS TABLE
+   WEEKLY MACROREGIONS TABLE (UTC FIX)
 ===================================================== */
 
 let tableState = {
@@ -8,33 +8,31 @@ let tableState = {
     initialized: false
 };
 
-
 /* =====================================================
    HELPERS
 ===================================================== */
 
-function getMonday(date) {
+function toDate(d) {
+    if (d instanceof Date) return d;
+    return new Date(d); // если строка — преобразуем
+}
 
-    const d = new Date(date);
-
-    // ISO день недели (0 = Monday)
-    const day = (d.getDay() + 6) % 7;
-
-    d.setDate(d.getDate() - day);
-    d.setHours(0, 0, 0, 0);
-
+function getUTCMonday(inputDate) {
+    const date = toDate(inputDate);
+    // создаём UTC дату
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const day = (d.getUTCDay() + 6) % 7; // ISO: 0 = Monday
+    d.setUTCDate(d.getUTCDate() - day);
+    d.setUTCHours(0, 0, 0, 0);
     return d;
 }
 
 function formatDate(date) {
-
-    // const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-
-    return `${m}-${d}`;
+    const y = date.getUTCFullYear();
+    const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(date.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }
-
 
 /* =====================================================
    BUILD WEEKS
@@ -42,27 +40,24 @@ function formatDate(date) {
 
 function buildWeeks(startDate, endDate) {
     const weeks = [];
-    let current = getMonday(startDate);
-    const end = new Date(endDate);
+    let current = getUTCMonday(startDate);
+    const end = toDate(endDate);
+    const endUTC = new Date(Date.UTC(end.getFullYear(), end.getMonth(), end.getDate()));
 
-    while (current <= end) {
+    while (current <= endUTC) {
         const weekStart = new Date(current);
         const weekEnd = new Date(current);
-        weekEnd.setDate(current.getDate() + 6);
-
-        if (weekEnd > end) {
-            weekEnd.setTime(end.getTime());
-        }
+        weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
+        if (weekEnd > endUTC) weekEnd.setTime(endUTC.getTime());
 
         weeks.push({
             key: `${formatDate(weekStart)}_${formatDate(weekEnd)}`,
-            label: `${formatDate(weekStart)}<br>${formatDate(weekEnd)}`, // перенос через <br>
+            label: `${formatDate(weekStart)}<br>${formatDate(weekEnd)}`,
             start: weekStart,
             end: weekEnd
         });
 
-        current = new Date(current);
-        current.setDate(current.getDate() + 7);
+        current.setUTCDate(current.getUTCDate() + 7);
     }
 
     return weeks;
@@ -99,12 +94,12 @@ export function initWeeklyMacroregionsTable(containerId, apiData = null, startDa
     const trHead = document.createElement('tr');
 
     const thFirst = document.createElement('th');
-    thFirst.textContent = 'Макрорегион';
+    thFirst.textContent = 'Макрорегион / Неделя';
     trHead.appendChild(thFirst);
 
     weeks.forEach(w => {
         const th = document.createElement('th');
-        th.innerHTML = w.label; // важно — innerHTML чтобы <br> работал
+        th.innerHTML = w.label;
         trHead.appendChild(th);
     });
 
@@ -165,28 +160,21 @@ export function initWeeklyMacroregionsTable(containerId, apiData = null, startDa
     tbody.appendChild(trTotal);
 
     table.appendChild(tbody);
-
     container.innerHTML = '';
     container.appendChild(table);
 }
-
 
 /* =====================================================
    DELTA HELPERS
 ===================================================== */
 
 function calcDelta(prev, curr) {
-    if (prev === 0) {
-        if (curr === 0) return 0;
-        return 100;
-    }
+    if (prev === 0) return curr === 0 ? 0 : 100;
     return ((curr - prev) / prev) * 100;
 }
 
 function getDeltaClass(delta) {
-    // если дельта отрицательная — всегда хорошо
     if (delta < 0) return 'delta-low';
-
     const abs = Math.abs(delta);
     if (abs < 10) return 'delta-low';
     if (abs < 30) return 'delta-medium';
@@ -195,11 +183,10 @@ function getDeltaClass(delta) {
 }
 
 function getArrow(delta) {
-    if (delta > 0) return '▲';    // рост
-    if (delta < 0) return '▼';    // падение
-    return '●';                    // стабильно
+    if (delta > 0) return '▲';
+    if (delta < 0) return '▼';
+    return '●';
 }
-
 
 /* =====================================================
    UPDATE TABLE
@@ -210,6 +197,12 @@ export function updateWeeklyMacroregionsTable(apiData) {
 
     const weekKeys = tableState.weeks.map(w => w.key);
 
+    function getDateUTC(dateStr) {
+        const d = new Date(dateStr);
+        return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+    }
+
+    // обновляем регионы
     apiData.slice(1).forEach(region => {
         const row = document.querySelector(`tr[data-region="${region.macroregion}"]`);
         if (!row) return;
@@ -217,27 +210,25 @@ export function updateWeeklyMacroregionsTable(apiData) {
         const weekTotals = [];
 
         tableState.weeks.forEach(week => {
+            const weekStartUTC = Date.UTC(week.start.getUTCFullYear(), week.start.getUTCMonth(), week.start.getUTCDate());
+            const weekEndUTC = Date.UTC(week.end.getUTCFullYear(), week.end.getUTCMonth(), week.end.getUTCDate());
+
             let count = 0;
-            Object.entries(region.daily_incidents || {}).forEach(([date, val]) => {
-                const d = new Date(date);
-                if (d >= week.start && d <= week.end) {
-                    count += val;
-                }
+            Object.entries(region.daily_incidents || {}).forEach(([dateStr, val]) => {
+                const dUTC = getDateUTC(dateStr);
+                if (dUTC >= weekStartUTC && dUTC <= weekEndUTC) count += val;
             });
+
             weekTotals.push(count);
 
             const cell = row.querySelector(`[data-week="${week.key}"]`);
             if (cell) {
                 cell.textContent = count;
-                if (count === 0) {
-                    cell.classList.add('empty');
-                } else {
-                    cell.classList.remove('empty');
-                }
+                cell.classList.toggle('empty', count === 0);
             }
         });
 
-        /* DELTA */
+        // DELTA
         const prev = weekTotals[weekTotals.length - 2] || 0;
         const curr = weekTotals[weekTotals.length - 1] || 0;
         const delta = calcDelta(prev, curr);
@@ -246,12 +237,46 @@ export function updateWeeklyMacroregionsTable(apiData) {
         if (deltaCell) {
             const arrow = getArrow(delta);
             const arrowClass = getDeltaClass(delta);
-
-            // стрелка в отдельном span
             deltaCell.innerHTML = `<span class="delta-arrow ${arrowClass}">${arrow}</span> ${Math.abs(delta).toFixed(0)}%`;
-
-            // общий класс для ячейки оставляем только если нужен (можно очистить)
             deltaCell.className = '';
         }
     });
+
+    // обновляем TOTAL row
+    const totalData = apiData[0];
+    const totalRow = document.querySelector('tr.total-row');
+    if (!totalRow || !totalData) return;
+
+    const weekTotals = [];
+
+    tableState.weeks.forEach(week => {
+        const weekStartUTC = Date.UTC(week.start.getUTCFullYear(), week.start.getUTCMonth(), week.start.getUTCDate());
+        const weekEndUTC = Date.UTC(week.end.getUTCFullYear(), week.end.getUTCMonth(), week.end.getUTCDate());
+
+        let count = 0;
+        Object.entries(totalData.daily_incidents || {}).forEach(([dateStr, val]) => {
+            const dUTC = getDateUTC(dateStr);
+            if (dUTC >= weekStartUTC && dUTC <= weekEndUTC) count += val;
+        });
+
+        weekTotals.push(count);
+
+        const cell = totalRow.querySelector(`[data-total-week="${week.key}"]`);
+        if (cell) {
+            cell.textContent = count;
+            cell.classList.toggle('empty', count === 0);
+        }
+    });
+
+    const prev = weekTotals[weekTotals.length - 2] || 0;
+    const curr = weekTotals[weekTotals.length - 1] || 0;
+    const delta = calcDelta(prev, curr);
+
+    const deltaCell = totalRow.querySelector('[data-delta="total"]');
+    if (deltaCell) {
+        const arrow = getArrow(delta);
+        const arrowClass = getDeltaClass(delta);
+        deltaCell.innerHTML = `<span class="delta-arrow ${arrowClass}">${arrow}</span> ${Math.abs(delta).toFixed(0)}%`;
+        deltaCell.className = '';
+    }
 }
