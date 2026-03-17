@@ -1,0 +1,50 @@
+.avr-contractors-table th:nth-child(n+1) {
+  text-align: center;
+}
+
+.avr-contractors-table th:nth-child(1) {
+  text-align: left;
+}
+
+.avr-contractors-table td[rowspan]:first-child {
+  text-align: left !important;
+  font-weight: 500;
+}
+
+.avr-contractors-table td {
+  text-align: center;
+}
+
+.avr-contractors-container {
+  max-height: 550px;
+  overflow-y: auto;
+  padding-right: var(--space-sm);
+  margin-top: var(--space-lg);
+}
+
+.avr-contractors-table thead th {
+  position: sticky;
+  top: 0;
+  background-color: var(--background-color);
+  z-index: 1;
+}
+
+.avr-contractors-table .low {
+  color: var(--red-color);
+  font-weight: 500;
+}
+
+.avr-contractors-table .medium {
+  color: var(--yellow-color);
+  font-weight: 500;
+}
+
+.avr-contractors-table .high {
+  color: var(--blue-color);
+  font-weight: 500;
+}
+
+.avr-contractors-table .excellent {
+  color: var(--green-color);
+  font-weight: 500;
+}

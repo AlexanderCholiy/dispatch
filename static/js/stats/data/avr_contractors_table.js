@@ -18,21 +18,24 @@ export function initAvrContractorsTable(container, data = null, startDate = null
     // Удаляем старое содержимое
     containerEl.querySelectorAll(':scope > *').forEach(el => el.remove());
 
-    // Заголовок таблицы
-    const title = document.createElement('p');
-    title.className = 'table-title';
-    title.textContent = 'SLA АВР по подрядчикам';
-    containerEl.appendChild(title);
-
     // Таблица
     const table = document.createElement('table');
-    table.className = 'avr-contractors-table';
+    table.className = 'avr-contractors-table custom-table';
     containerEl.appendChild(table);
 
     // Заголовки
     const thead = document.createElement('thead');
     const headerRow = document.createElement('tr');
-    ['Подрядчик','Всего','В срок','Просрочено','<1ч','В работе'].forEach(text => {
+    [
+        'Подрядчик',
+        'Макрорегион',
+        'Просрочено',
+        'Закрыто вовремя',
+        'Менее часа',
+        'В работе',
+        'Всего (SLA)',
+        'SLA, %'
+    ].forEach(text => {
         const th = document.createElement('th');
         th.textContent = text;
         headerRow.appendChild(th);
@@ -53,6 +56,7 @@ export function initAvrContractorsTable(container, data = null, startDate = null
     lastEnd = endDate;
 }
 
+
 export function updateAvrContractorsTable(data, tbody = null) {
     if (!data || !Array.isArray(data)) {
         console.warn('updateAvrContractorsTable: invalid data', data);
@@ -67,35 +71,70 @@ export function updateAvrContractorsTable(data, tbody = null) {
 
     if (!tbody) return;
 
+    let groupCounter = 0;
+
     tbody.querySelectorAll('tr').forEach(r => r.remove());
 
-    data.forEach(row => {
-        if (!row.contractor_name) return;
+    data.forEach(contractor => {
+        const rowsCount = contractor.macroregions.length;
+        const groupId = `group-${groupCounter++}`;
 
-        const tr = document.createElement('tr');
+        contractor.macroregions.forEach((region, index) => {
+            const tr = document.createElement('tr');
+            tr.dataset.groupId = groupId; // Уникальный id для группы
 
-        const cells = [
-            row.contractor_name,
-            row.total_closed_incidents ?? 0,
-            row.on_time_count ?? 0,
-            row.expired_count ?? 0,
-            row.less_hour_count ?? 0,
-            row.in_work_count ?? 0
-        ];
-
-        cells.forEach(val => {
-            const td = document.createElement('td');
-            if (typeof val === 'number') {
-                td.textContent = Number.isInteger(val) ? val : val.toFixed(1);
-            } else {
-                td.textContent = val;
+            // Подрядчик (только первая строка для rowspan)
+            if (index === 0) {
+                const tdName = document.createElement('td');
+                tdName.textContent = contractor.contractor_name;
+                tdName.rowSpan = rowsCount;
+                tr.appendChild(tdName);
             }
-            tr.appendChild(td);
-        });
 
-        tbody.appendChild(tr);
+            // Макрорегион
+            const tdRegion = document.createElement('td');
+            tdRegion.textContent = region.macroregion;
+            tr.appendChild(tdRegion);
+
+            // Функция для числовых ячеек с классом empty при 0
+            const createNumericCell = (value) => {
+                const td = document.createElement('td');
+                td.textContent = value ?? 0;
+                if (!value || value === 0) td.classList.add('empty');
+                return td;
+            };
+
+            tr.appendChild(createNumericCell(region.sla_expired_count));
+            tr.appendChild(createNumericCell(region.sla_closed_on_time_count));
+            tr.appendChild(createNumericCell(region.sla_waiting_count));
+            tr.appendChild(createNumericCell(region.sla_in_progress_count));
+
+            // Всего (SLA) и SLA % — только для первой строки
+            if (index === 0) {
+                const tdTotal = createNumericCell(contractor.total_incidents_for_sla);
+                tdTotal.rowSpan = rowsCount;
+                tr.appendChild(tdTotal);
+
+                const tdPercent = document.createElement('td');
+                tdPercent.textContent = contractor.on_time_percentage != null
+                    ? parseFloat(contractor.on_time_percentage.toFixed(1)) + '%'
+                    : '0%';
+                tdPercent.rowSpan = rowsCount;
+
+                const percent = contractor.on_time_percentage ?? 0;
+                if (percent < 50) tdPercent.classList.add('low');
+                else if (percent < 75) tdPercent.classList.add('medium');
+                else if (percent < 90) tdPercent.classList.add('high');
+                else tdPercent.classList.add('excellent');
+
+                tr.appendChild(tdPercent);
+            }
+
+            tbody.appendChild(tr);
+        });
     });
 }
+
 
 export function maybeUpdateAvrContractorsTable(data, startDate, endDate) {
     if (startDate !== lastStart || endDate !== lastEnd) {

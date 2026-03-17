@@ -11,7 +11,9 @@
 <link rel="stylesheet" href="{% static 'css/stats/collapse_charts.css' %}">
 <link rel="stylesheet" href="{% static 'css/stats/total_count.css' %}">
 <link rel="stylesheet" href="{% static 'css/stats/total_grid.css' %}">
+<link rel="stylesheet" href="{% static 'css/stats/tables.css' %}">
 <link rel="stylesheet" href="{% static 'css/stats/weekly_table.css' %}">
+<link rel="stylesheet" href="{% static 'css/stats/avr_contractor_table.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -317,4 +319,5 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script src="{% static 'js/stats/collaps_charts.js' %}"></script>
 <script type="module" src="{% static 'js/stats/init_skeleton_dashboard.js' %}"></script>
+<script src="{% static 'js/group_table_hover.js' %}"></script>
 {% endblock %}

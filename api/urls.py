@@ -2,9 +2,9 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
+    AVRContractorViewSet,
     IncidentReportViewSet,
     StatisticReportViewSet,
-    AVRContractorViewSet,
 )
 
 router = DefaultRouter()

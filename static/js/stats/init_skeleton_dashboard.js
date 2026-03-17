@@ -276,43 +276,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Добавляем таблицу только для AVR
         if (containerId === 'avr-sla-grid') {
-            // Создаем структуру таблицы
             const tableContainer = document.createElement('div');
-            tableContainer.className = 'avr-contractors-table table-wrapper';
+            tableContainer.className = 'avr-contractors-container table-wrapper';
             tableContainer.id = 'avr-contractors-table';
 
-            const tableTitle = document.createElement('p');
-            tableTitle.className = 'table-title';
-            tableTitle.textContent = 'SLA АВР Contractors';
-            tableContainer.appendChild(tableTitle);
-
-            const tableEl = document.createElement('table');
-            tableEl.className = 'table';
-            tableEl.innerHTML = `
-                <thead>
-                    <tr>
-                        <th>Подрядчик</th>
-                        <th>Всего инцидентов</th>
-                        <th>Просроченные</th>
-                        <th>Закрыто вовремя</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr><td colspan="4">Данные загружаются...</td></tr>
-                </tbody>
-            `;
-            tableContainer.appendChild(tableEl);
-            
-            // Сначала добавляем таблицу в DOM
+            // Добавляем контейнер в DOM
             container.appendChild(tableContainer);
-            
-            // Используем setTimeout с нулевой задержкой для гарантии, 
-            // что DOM полностью обновлен перед инициализацией таблицы
+
+            // Инициализация таблицы с пустыми данными
             setTimeout(() => {
                 const tableElement = document.getElementById('avr-contractors-table');
                 if (tableElement) {
                     try {
-                        initAvrContractorsTable(tableElement);
+                        // Создаём строку с пустыми значениями для placeholders
+                        const emptyData = [{
+                            contractor_name: '—',
+                            total_incidents_for_sla: 0,
+                            on_time_percentage: 0,
+                            macroregions: [{
+                                macroregion: '—',
+                                sla_expired_count: 0,
+                                sla_closed_on_time_count: 0,
+                                sla_waiting_count: 0,
+                                sla_in_progress_count: 0
+                            }]
+                        }];
+
+                        // Инициализируем таблицу
+                        initAvrContractorsTable(tableElement, emptyData);
                     } catch (error) {
                         console.error('Ошибка инициализации таблицы AVR:', error);
                     }

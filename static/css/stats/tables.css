@@ -1,0 +1,29 @@
+.avr-contractors-container,
+.weekly-table-container {
+  width: calc(100% - 2 * var(--space-md) + 8px);
+  margin-left: calc(var(--space-sm) + 4px);
+  box-sizing: border-box;
+  margin-block: var(--space-sm);
+  box-shadow: 0 0 var(--space-xxs) var(--extra-color);
+}
+
+.avr-contractors-table,
+.stats-table {
+  border-collapse: collapse;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  font-size: var(--font-sm);
+}
+
+.avr-contractors-table th,
+.avr-contractors-table td,
+.stats-table th,
+.stats-table td {
+  padding: var(--space-sm) var(--space-xs) !important;
+}
+
+.avr-contractors-table .empty,
+.stats-table .empty{
+  color: var(--gray-color);
+}

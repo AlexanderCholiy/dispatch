@@ -1,4 +1,7 @@
-from django.db.models import QuerySet
+from datetime import date
+from typing import Optional
+
+from django.db.models import Q, QuerySet
 from django_filters import (
     BooleanFilter,
     DateFromToRangeFilter,
@@ -6,9 +9,6 @@ from django_filters import (
 )
 
 from incidents.models import Incident
-from django.db.models import Q
-from datetime import date
-from typing import Optional
 
 from .utils import get_first_day_prev_month
 

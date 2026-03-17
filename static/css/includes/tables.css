@@ -87,3 +87,19 @@
     max-width: 100px;
   }
 }
+
+/* Подсветка всех сгруппированных строк при наведении (через JS) */
+tr.highlight {
+  background-color: var(--add-background-color);
+  transition: background-color var(--transition-value);
+}
+
+/* Убираем стандартное подчеркивание */
+.custom-table tbody tr[data-group-id]:not(:last-child) td {
+  border-color: var(--add-background-color);
+}
+
+/* Для последней строки, чтобы при hover появилась граница */
+tr.highlight.group-last:not(:last-child) {
+  box-shadow: inset 0 -1px 0 var(--color);
+}

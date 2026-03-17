@@ -357,18 +357,20 @@ class StatisticReportSerializer(serializers.ModelSerializer):
 class ContractorMacroregionStatSerializer(serializers.Serializer):
     macroregion = serializers.CharField()
     total_incidents = serializers.IntegerField()
-    sla_avr_expired_count = serializers.IntegerField()
-    sla_avr_closed_on_time_count = serializers.IntegerField()
-    sla_avr_waiting_count = serializers.IntegerField()
-    sla_avr_in_progress_count = serializers.IntegerField()
+    sla_expired_count = serializers.IntegerField()
+    sla_closed_on_time_count = serializers.IntegerField()
+    sla_waiting_count = serializers.IntegerField()
+    sla_in_progress_count = serializers.IntegerField()
 
 
 class ContractorStatSerializer(serializers.Serializer):
     contractor_name = serializers.CharField()
-    total_closed_incidents = serializers.IntegerField()
-    macroregions = ContractorMacroregionStatSerializer(many=True)
-
+    total_open_avr_incidents = serializers.IntegerField()
+    total_closed_avr_incidents = serializers.IntegerField()
+    total_incidents_for_sla = serializers.IntegerField()
+    sla_on_time_count = serializers.IntegerField()
     on_time_percentage = serializers.SerializerMethodField()
+    macroregions = ContractorMacroregionStatSerializer(many=True)
 
     def get_on_time_percentage(self, obj):
         value = obj.get('on_time_percentage', 0)

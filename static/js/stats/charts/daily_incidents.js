@@ -64,7 +64,10 @@ export function createDailyIncidentsChart(ctx, initialData) {
                         color: colors.add_color,
                         font: { size: fonts.sm, weight: '500' }
                     },
-                    ticks: { color: colors.add_color, font: { size: fonts.xs, weight: '500' } },
+                    ticks: { 
+                        color: colors.add_color,
+                        font: { size: fonts.xs, weight: '500' },
+                    },
                     grid: { color: colors.extra }
                 },
                 y: {
@@ -74,7 +77,11 @@ export function createDailyIncidentsChart(ctx, initialData) {
                         color: colors.add_color,
                         font: { size: fonts.sm, weight: '500' }
                     },
-                    ticks: { color: colors.add_color, font: { size: fonts.xs, weight: '500' }, precision: 0 },
+                    ticks: { 
+                        color: colors.add_color,
+                        font: { size: fonts.xs, weight: '500' },
+                        precision: 0
+                    },
                     beginAtZero: true,
                     grid: { color: colors.extra }
                 }

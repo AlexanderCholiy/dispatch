@@ -13,7 +13,7 @@ from django.db.models import (
     Q,
     QuerySet,
 )
-from django.db.models.functions import TruncDate, ExtractHour
+from django.db.models.functions import ExtractHour, TruncDate
 from django.http import HttpResponse
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
@@ -37,6 +37,7 @@ from incidents.annotations import (
 )
 from incidents.constants import NOTIFIED_CONTRACTOR_STATUS_NAME
 from incidents.models import Incident, IncidentStatusHistory
+from ts.constants import UNDEFINED_CASE
 from ts.models import MacroRegion, PoleContractorEmail
 
 from .constants import (
@@ -55,18 +56,16 @@ from .constants import (
     OPEN_INCIDENTS_VALID_FILTER,
     STATISTIC_CACHE_TIMEOUT,
     TOTAL_VALID_INCIDENTS_FILTER,
-    PERCENT_ACCURACY,
 )
 from .filters import IncidentReportFilter, get_incident_date_filter
 from .pagination import IncidentReportPagination
 from .serializers import (
+    ContractorStatSerializer,
     IncidentReportSerializer,
     StatisticReportSerializer,
-    ContractorStatSerializer,
 )
 from .utils import get_first_day_prev_month, is_file_fresh
 from .validators import validate_date_range
-from ts.constants import UNDEFINED_CASE
 
 
 class IncidentSubtypeStat(TypedDict):
@@ -791,6 +790,9 @@ class AVRContractorViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (permissions.AllowAny,)
     pagination_class = None
 
+    throttle_classes = (ScopedRateThrottle,)
+    throttle_scope = 'stats_request'
+
     def get_queryset(self):
         params = self.request.query_params
 
@@ -814,10 +816,10 @@ class AVRContractorViewSet(viewsets.ReadOnlyModelViewSet):
                 pole__isnull=False,
                 pole__avr_contractor__isnull=False,
                 pole__region__macroregion__isnull=False,
+                avr_start_date__isnull=False,
+                incident_type__sla_deadline__isnull=False,
             )
-            .exclude(
-                pole__avr_contractor__contractor_name=UNDEFINED_CASE
-            )
+            .exclude(pole__avr_contractor__contractor_name=UNDEFINED_CASE)
             .select_related(
                 'pole',
                 'pole__avr_contractor',
@@ -832,10 +834,8 @@ class AVRContractorViewSet(viewsets.ReadOnlyModelViewSet):
         contractor_map = {}
 
         for inc in incidents:
-
             contractor = inc.pole.avr_contractor
             macro = inc.pole.region.macroregion
-
             if not contractor or not macro:
                 continue
 
@@ -846,8 +846,10 @@ class AVRContractorViewSet(viewsets.ReadOnlyModelViewSet):
                 contractor.id,
                 {
                     'contractor_name': contractor.contractor_name,
-                    'total_closed_incidents': 0,
-                    'on_time_count': 0,
+                    'total_open_avr_incidents': 0,
+                    'total_closed_avr_incidents': 0,
+                    'total_incidents_for_sla': 0,
+                    'sla_on_time_count': 0,
                     'macroregions': {},
                 }
             )
@@ -858,50 +860,54 @@ class AVRContractorViewSet(viewsets.ReadOnlyModelViewSet):
                     'macroregion_id': macro_id,
                     'macroregion': macro_name,
                     'total_incidents': 0,
-                    'sla_avr_expired_count': 0,
-                    'sla_avr_closed_on_time_count': 0,
-                    'sla_avr_waiting_count': 0,
-                    'sla_avr_in_progress_count': 0,
+                    'sla_expired_count': 0,
+                    'sla_closed_on_time_count': 0,
+                    'sla_waiting_count': 0,
+                    'sla_in_progress_count': 0,
                 }
             )
 
+            # --- TOTALS ---
             m_bucket['total_incidents'] += 1
 
-            if inc.sla_avr_expired:
-                m_bucket['sla_avr_expired_count'] += 1
-
-            if inc.sla_avr_closed_on_time:
-                m_bucket['sla_avr_closed_on_time_count'] += 1
-
-            if inc.sla_avr_waiting:
-                m_bucket['sla_avr_waiting_count'] += 1
-
-            if inc.sla_avr_in_progress:
-                m_bucket['sla_avr_in_progress_count'] += 1
-
             if inc.avr_end_date:
-                c_bucket['total_closed_incidents'] += 1
+                c_bucket['total_closed_avr_incidents'] += 1
+            else:
+                c_bucket['total_open_avr_incidents'] += 1
 
+            # --- SLA COUNTERS НА УРОВНЕ МАКРОРЕГИОНА ---
+            if inc.sla_avr_expired:
+                m_bucket['sla_expired_count'] += 1
+            if inc.sla_avr_closed_on_time:
+                m_bucket['sla_closed_on_time_count'] += 1
+            if inc.sla_avr_waiting:
+                m_bucket['sla_waiting_count'] += 1
+            if inc.sla_avr_in_progress:
+                m_bucket['sla_in_progress_count'] += 1
+
+            # --- SLA AGGREGATION НА УРОВНЕ ПОДРЯДЧИКА ---
+            # считаем только те, которые логически влияют на SLA
+            consider_for_sla = (
+                inc.sla_avr_expired or inc.sla_avr_closed_on_time
+            )
+            if consider_for_sla:
+                c_bucket['total_incidents_for_sla'] += 1
                 if inc.sla_avr_closed_on_time:
-                    c_bucket['on_time_count'] += 1
+                    c_bucket['sla_on_time_count'] += 1
 
         contractors = []
 
         for c_data in contractor_map.values():
-
-            closed = c_data['total_closed_incidents']
-            on_time = c_data['on_time_count']
-
-            percentage = (on_time / closed * 100) if closed else 0
-            c_data['on_time_percentage'] = percentage
+            total_for_sla = c_data['total_incidents_for_sla']
+            on_time = c_data['sla_on_time_count']
+            c_data['on_time_percentage'] = (
+                (on_time / total_for_sla * 100) if total_for_sla else 0
+            )
 
             # сортировка макрорегионов
             c_data['macroregions'] = sorted(
                 c_data['macroregions'].values(),
-                key=lambda m: (
-                    -m['total_incidents'],
-                    m['macroregion_id'],
-                )
+                key=lambda m: (-m['total_incidents'], m['macroregion_id'])
             )
 
             contractors.append(c_data)
@@ -909,9 +915,9 @@ class AVRContractorViewSet(viewsets.ReadOnlyModelViewSet):
         # сортировка подрядчиков
         contractors.sort(
             key=lambda c: (
-                c['on_time_percentage'],        # худший процент первым
-                -c['total_closed_incidents'],   # больше закрытых выше
-                c['contractor_name'],             # стабильная сортировка
+                c['on_time_percentage'],
+                -c['total_closed_avr_incidents'],
+                c['contractor_name'],
             )
         )
 

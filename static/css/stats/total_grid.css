@@ -4,7 +4,7 @@
   grid-template-columns: repeat(auto-fit, minmax(85px, max-content));
   justify-content: space-evenly;
   gap: var(--space-sm);
-  margin: 0 var(--space-sm);
+  margin: var(--space-lg) var(--space-sm);
 }
 
 .hours-total-item,
