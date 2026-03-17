@@ -103,15 +103,15 @@ class NotificationsConsumer(AsyncJsonWebsocketConsumer):
 
     @database_sync_to_async
     def get_unread_count(self) -> int:
-        now = timezone.now() + timedelta(milliseconds=1)
-        ago = now - OLD_NOTIFICATIONS_TTL
+        now = timezone.now() + timedelta(seconds=10)
+        # ago = now - OLD_NOTIFICATIONS_TTL
 
         return Notification.objects.filter(
             user=self.user,
             read=False,
             level__in=[NotificationLevel.MEDIUM, NotificationLevel.HIGH],
             send_at__lte=now,
-            send_at__gte=ago,
+            # send_at__gte=ago,
         ).count()
 
     @database_sync_to_async
@@ -150,6 +150,7 @@ class NotificationsConsumer(AsyncJsonWebsocketConsumer):
         if send_at:
             send_time = timezone.datetime.fromisoformat(send_at)
             now = timezone.now()
+
             if send_time < now - OLD_NOTIFICATIONS_TTL:
                 return
 
