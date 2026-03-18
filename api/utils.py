@@ -59,3 +59,12 @@ def is_file_fresh(
     )
     is_fresh = timezone.now() - modified_time < ttl
     return is_fresh, modified_time
+
+
+def get_attr_mapping(attr_class):
+    """Автоматически собирает числовые константы из класса."""
+    return {
+        value: key.lower()
+        for key, value in attr_class.__dict__.items()
+        if not key.startswith('__') and isinstance(value, int)
+    }

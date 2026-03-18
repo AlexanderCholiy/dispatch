@@ -85,7 +85,9 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
         Любые ошибки валидации (например, неверный формат дат) ловятся и
         возвращаются клиенту в JSON.
         """
-        from api.views import AVRContractorViewSet, StatisticReportViewSet
+        from api.views.reports import (
+            AVRContractorViewSet, StatisticReportViewSet
+        )
 
         now = timezone.localtime()
         first_day_prev_month = (
