@@ -144,7 +144,7 @@ class Command(BaseCommand):
             if index < len(fields) - 1:
                 time.sleep(self.min_seconds)
 
-        yt_logger.info(
+        yt_logger.debug(
             'Добавление инцидентов в YandexTracker завершено. '
             f'Успешно: {total - error_count} из {total}.'
         )
