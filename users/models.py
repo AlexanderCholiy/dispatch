@@ -23,7 +23,7 @@ from .validators import (
     validate_pending_password,
     validate_pending_username,
     validate_user_email,
-    validate_user_username
+    validate_user_username,
 )
 
 

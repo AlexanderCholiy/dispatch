@@ -31,12 +31,14 @@
 
   <!-- Правый блок: тема + пользователь + уведомления -->
   <div class="header-right">
-    <button id="notifications-toggle" class="tooltip" data-title="Показать уведомления">
-      <span class="notification-wrapper">
-        <i id="notification-icon" class="bx bx-bell"></i>
-        <span id="notifications-count" class="notifications-count"></span>
-      </span>
-    </button>
+    {% if user.is_authenticated %}
+      <button id="notifications-toggle" class="tooltip" data-title="Показать уведомления">
+        <span class="notification-wrapper">
+          <i id="notification-icon" class="bx bx-bell"></i>
+          <span id="notifications-count" class="notifications-count"></span>
+        </span>
+      </button>
+    {% endif %}
 
     <button id="theme-toggle" class="tooltip" data-title="Переключить тему">
       <i id="theme-icon" class="bx bx-sun"></i>

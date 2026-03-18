@@ -287,7 +287,6 @@ def activate(
 
 
 @login_required
-@role_required()
 @ratelimit(key='user_or_ip', rate='10/m', block=True, method='POST')
 def change_email(request: HttpRequest) -> HttpResponse:
     if request.method == 'POST':
@@ -366,7 +365,6 @@ def confirm_email_change(
 
 
 @login_required
-@role_required()
 @ratelimit(key='user_or_ip', rate='20/m', block=True, method='POST')
 def profile(request: HttpRequest) -> HttpResponse:
     if request.method == 'POST':
