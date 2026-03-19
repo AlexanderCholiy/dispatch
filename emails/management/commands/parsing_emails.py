@@ -9,7 +9,6 @@ from django.core.management.base import (
 
 from core.constants import MIN_WAIT_SEC_WITH_CRITICAL_EXC
 from core.loggers import email_parser_logger
-from core.tg_bot import tg_manager
 from core.utils import run_with_timeout_process
 from emails.email_parser import email_parser
 
@@ -45,10 +44,6 @@ class Command(BaseCommand):
 
         mailbox_name = self.mailbox_map[mailbox]
 
-        tg_manager.send_startup_notification(__name__)
-
-        first_success_sent = False
-        had_errors_last_time = False
         last_error_type = None
 
         min_timeout = 600  # 10 минут
@@ -59,8 +54,6 @@ class Command(BaseCommand):
 
         while True:
             err = None
-            error_count = 0
-            total_operations = 0
 
             start_time = time.time()
 
@@ -104,18 +97,6 @@ class Command(BaseCommand):
 
                 current_timeout = calculated_timeout
 
-                if not first_success_sent and not error_count:
-                    tg_manager.send_first_success_notification(__name__)
-                    first_success_sent = True
-
-                if error_count and not had_errors_last_time:
-                    tg_manager.send_warning_counter_notification(
-                        __name__, error_count, total_operations
-                    )
-
-                had_errors_last_time = error_count > 0
-
             finally:
                 if err is not None and last_error_type != type(err).__name__:
-                    tg_manager.send_error_notification(__name__, err)
                     last_error_type = type(err).__name__

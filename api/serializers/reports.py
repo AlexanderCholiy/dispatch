@@ -2,12 +2,11 @@ from datetime import date, datetime
 
 from rest_framework import serializers
 
+from api.constants import API_DATE_FORMAT, PERCENT_ACCURACY
+from api.utils import conversion_utc_datetime
 from incidents.constants import POWER_ISSUE_TYPES
 from incidents.models import Incident
 from ts.models import Region
-
-from api.constants import API_DATE_FORMAT, PERCENT_ACCURACY
-from api.utils import conversion_utc_datetime
 
 
 class IncidentReportSerializer(serializers.ModelSerializer):

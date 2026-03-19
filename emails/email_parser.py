@@ -491,17 +491,25 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                         email_date, email_msg_id
                     )
 
-                    email_msg_reply_id: Optional[str] = self.prepare_msg_id(
-                        msg.get('In-Reply-To')
-                    ) if msg.get('In-Reply-To') is not None else None
-
-                    email_to: list[str] = (
-                        self.prepare_email_to(
-                            msg.get_all('To', []), email_msg_id
-                        )
+                    in_reply_to = msg.get('In-Reply-To')
+                    prepared_id: Optional[str] = (
+                        self.prepare_msg_id(in_reply_to)
+                        if in_reply_to and in_reply_to.strip() else None
+                    )
+                    email_msg_reply_id: Optional[str] = (
+                        prepared_id
+                        if prepared_id and prepared_id.strip() else None
                     )
 
-                    email_to_cc: list[str] = (
+                    raw_to = self.prepare_email_to(
+                        msg.get_all('To', []), email_msg_id
+                    )
+                    email_to: list[str] = [
+                        addr for addr in dict.fromkeys(raw_to)
+                        if addr.lower() != email_from.lower()
+                    ]
+
+                    raw_cc_bcc = (
                         self.prepare_email_to(
                             msg.get_all('Cc', []), email_msg_id
                         )
@@ -509,13 +517,29 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                             msg.get_all('Bcc', []), email_msg_id
                         )
                     )
+                    _cc_bcc_check = {addr.lower() for addr in email_to}
+                    email_to_cc: list[str] = [
+                        addr for addr in dict.fromkeys(raw_cc_bcc)
+                        if (
+                            addr.lower() != email_from.lower()
+                            and addr.lower() not in _cc_bcc_check
+                        )
+                    ]
 
                     references: Optional[str] = msg.get('References')
                     email_msg_references = [
-                        self.prepare_msg_id(
-                            f'<{reference}'
-                        ) for reference in references.split('<') if reference
-                    ] if references else []
+                        prepared
+                        for reference in (
+                            references.split('<') if references else []
+                        )
+                        if (
+                            (prepared := self.prepare_msg_id(f'<{reference}'))
+                            and prepared.strip()
+                        )
+                    ]
+                    email_msg_references = list(
+                        dict.fromkeys(email_msg_references)
+                    )
 
                     email_attachments_urls = []
                     email_attachments_intext_urls = []

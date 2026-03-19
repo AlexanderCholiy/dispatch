@@ -1,12 +1,12 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
+from .views.energy import AppealViewSet, ClaimViewSet
 from .views.reports import (
     AVRContractorViewSet,
     IncidentReportViewSet,
     StatisticReportViewSet,
 )
-from .views.energy import ClaimViewSet
 
 router = DefaultRouter()
 router.register(
@@ -22,6 +22,9 @@ router.register(
 )
 router.register(
     'energy/claims', ClaimViewSet, basename='energy_api_claims'
+)
+router.register(
+    'energy/appeals', AppealViewSet, basename='energy_api_appeals'
 )
 
 urlpatterns = [

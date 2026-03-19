@@ -6,7 +6,6 @@ from django.db import transaction
 from django.db.models import Q
 
 from core.pretty_print import PrettyPrint
-from core.tg_bot import tg_manager
 from users.models import PendingUser
 
 
@@ -19,8 +18,6 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **kwargs):
-
-        tg_manager.check_debug_mode()
 
         User = get_user_model()
 

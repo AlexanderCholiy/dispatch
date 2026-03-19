@@ -134,7 +134,7 @@ class SpecialEmail(models.Model):
         max_length=MAX_EMAIL_ID_LEN,
         unique=True,
         null=False,
-        verbose_name='ID сообщения',
+        verbose_name='ID сообщения в почте',
     )
     incert_date = models.DateTimeField(
         auto_now_add=True,

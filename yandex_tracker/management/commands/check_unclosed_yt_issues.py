@@ -10,7 +10,6 @@ from django.utils import timezone
 from core.constants import MIN_WAIT_SEC_WITH_CRITICAL_EXC
 from core.loggers import yt_logger
 from core.pretty_print import PrettyPrint
-from core.tg_bot import tg_manager
 from core.threads import tasks_in_threads
 from core.wraps import min_wait_timer, timer
 from emails.email_parser import email_parser
@@ -79,16 +78,9 @@ class Command(BaseCommand):
     _devices_by_pole_last_update = 0
 
     def handle(self, *args, **kwargs):
-        tg_manager.send_startup_notification(__name__)
-
-        first_success_sent = False
-        had_errors_last_time = False
-        last_error_type = None
-
         duplicate_issues = set()
 
         while True:
-            err = None
             total_errors = 0
             total_operations = 0
 
@@ -104,25 +96,9 @@ class Command(BaseCommand):
                 return
             except Exception as e:
                 yt_logger.critical(e, exc_info=True)
-                err = e
                 time.sleep(MIN_WAIT_SEC_WITH_CRITICAL_EXC)
-            else:
-                if not first_success_sent and not total_errors:
-                    tg_manager.send_first_success_notification(__name__)
-                    first_success_sent = True
-
-                if total_errors and not had_errors_last_time:
-                    tg_manager.send_warning_counter_notification(
-                        __name__, total_errors, total_operations
-                    )
-
-                had_errors_last_time = total_errors > 0
 
             finally:
-                if err is not None and last_error_type != type(err).__name__:
-                    tg_manager.send_error_notification(__name__, err)
-                    last_error_type = type(err).__name__
-
                 if self._duplicate_issues != duplicate_issues:
                     duplicate_issues = self._duplicate_issues
                     yt_logger.warning(

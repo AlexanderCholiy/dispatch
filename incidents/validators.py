@@ -61,6 +61,34 @@ class IncidentValidator:
 
         return set(result)
 
+    def _clean_email_text(self, text: str) -> str:
+        """Тело сообщения, без цитирование и подписи."""
+        if not text:
+            return ''
+
+        # 1. Удаляем блоки цитирования (строки, начинающиеся с >)
+        text = re.sub(r'(?m)^>.*$', '', text)
+
+        # 2. Маркеры начала подписи или истории переписки
+        split_markers = [
+            r'--\s*',                       # Стандартный разделитель подписи
+            r'С\s+уважением,?',             # "С уважением" (с запятой или без)
+            r'From:',                       # Outlook/стандарт
+            r'От кого:',                    # Русская версия Outlook
+            r'Sent:',                       # Дата/время отправки
+            r'Дата:',
+            r'[\w\.-]+@[\w\.-]+\.\w+',      # Email адрес (без скобок)
+            r'(?:Понедельник|Вторник|Среда|Четверг|Пятница|Суббота|Воскресенье),'  # noqa: E501
+        ]
+
+        pattern = '|'.join(split_markers)
+
+        # Используем split и берем первую часть (самое свежее сообщение)
+        parts = re.split(pattern, text, flags=re.IGNORECASE | re.MULTILINE)
+        clean_text = parts[0].strip()
+
+        return clean_text
+
     def _find_pole_in_text(self, text: str) -> QuerySet[Pole]:
         """
         Поиск опоры по самому длинному найденному шифру в тексте.
@@ -68,9 +96,11 @@ class IncidentValidator:
         Возвращает QuerySet из одной или нескольких опор, если они совпадают с
         самым длинным словом.
         """
+        clean_text = self._clean_email_text(text)
+
         result = []
 
-        for word in self._find_num_in_text(text):
+        for word in self._find_num_in_text(clean_text):
             pattern = r'\d{5}-'
             if re.match(pattern, word):
                 poles = Pole.objects.filter(pole__istartswith=word)
@@ -97,8 +127,9 @@ class IncidentValidator:
         """
         result = []
         poles = self._find_pole_in_text(text)
+        clean_text = self._clean_email_text(text)
 
-        for word in self._find_num_in_text(text):
+        for word in self._find_num_in_text(clean_text):
             bs_stations = BaseStation.objects.filter(
                 bs_name__icontains=word
             ).annotate(

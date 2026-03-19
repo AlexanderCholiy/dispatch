@@ -1,11 +1,13 @@
 import re
-from django.conf import settings
 
+from django.conf import settings
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from django.urls import reverse
-from .models import User
+
 from notifications.models import Notification, NotificationLevel
+
+from .models import User
 
 
 def get_base_url():

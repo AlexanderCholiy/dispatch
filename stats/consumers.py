@@ -86,7 +86,8 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
         возвращаются клиенту в JSON.
         """
         from api.views.reports import (
-            AVRContractorViewSet, StatisticReportViewSet
+            AVRContractorViewSet,
+            StatisticReportViewSet,
         )
 
         now = timezone.localtime()

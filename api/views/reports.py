@@ -23,23 +23,6 @@ from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.throttling import ScopedRateThrottle
 
-from core.loggers import default_logger
-from core.views import send_x_accel_file
-from core.wraps import timer
-from incidents.annotations import (
-    annotate_incident_categories,
-    annotate_incident_subtypes,
-    annotate_incident_types,
-    annotate_is_power_issue,
-    annotate_sla_avr,
-    annotate_sla_dgu,
-    annotate_sla_rvr,
-)
-from incidents.constants import NOTIFIED_CONTRACTOR_STATUS_NAME
-from incidents.models import Incident, IncidentStatusHistory
-from ts.constants import UNDEFINED_CASE
-from ts.models import MacroRegion, PoleContractorEmail
-
 from api.constants import (
     ALL_CLOSED_INCIDENT_AGE_LIMIT,
     BASE_INCIDENT_VALID_FILTER,
@@ -66,6 +49,22 @@ from api.serializers.reports import (
 )
 from api.utils import get_first_day_prev_month, is_file_fresh
 from api.validators import validate_date_range
+from core.loggers import default_logger
+from core.views import send_x_accel_file
+from core.wraps import timer
+from incidents.annotations import (
+    annotate_incident_categories,
+    annotate_incident_subtypes,
+    annotate_incident_types,
+    annotate_is_power_issue,
+    annotate_sla_avr,
+    annotate_sla_dgu,
+    annotate_sla_rvr,
+)
+from incidents.constants import NOTIFIED_CONTRACTOR_STATUS_NAME
+from incidents.models import Incident, IncidentStatusHistory
+from ts.constants import UNDEFINED_CASE
+from ts.models import MacroRegion, PoleContractorEmail
 
 
 class IncidentSubtypeStat(TypedDict):
