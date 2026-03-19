@@ -6,6 +6,9 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django_ratelimit.decorators import ratelimit
 
+from core.constants import DATETIME_LOCAL_FORMAT
+from core.services.get_max_today_datetime import get_max_today_datetime
+from core.validators import get_aware_datetime
 from users.utils import role_required
 
 from .constants import (
@@ -14,9 +17,6 @@ from .constants import (
     PAGE_SIZE_EMAILS_CHOICES,
 )
 from .models import EmailFolder, EmailMessage
-from core.services.get_max_today_datetime import get_max_today_datetime
-from core.validators import get_aware_datetime
-from core.constants import DATETIME_LOCAL_FORMAT
 
 
 @login_required

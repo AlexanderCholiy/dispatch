@@ -22,7 +22,7 @@ from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 
 from api.constants import TOTAL_VALID_INCIDENTS_FILTER
-from core.constants import CURRENT_TZ
+from core.constants import CURRENT_TZ, DATETIME_LOCAL_FORMAT
 from core.exceptions import (
     ApiBadRequest,
     ApiNotFound,
@@ -30,7 +30,9 @@ from core.exceptions import (
     ApiTooManyRequests
 )
 from core.loggers import yt_logger
+from core.services.get_max_today_datetime import get_max_today_datetime
 from core.threads import tasks_in_threads
+from core.validators import get_aware_datetime
 from emails.constants import DISPATCHER_SIGNATURE
 from emails.email_parser import email_parser
 from emails.models import (
@@ -94,9 +96,6 @@ from .validators import (
     validate_notify_operator,
     validate_notify_rvr,
 )
-from core.validators import get_aware_datetime
-from core.constants import DATETIME_LOCAL_FORMAT
-from core.services.get_max_today_datetime import get_max_today_datetime
 
 
 @login_required

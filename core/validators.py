@@ -1,5 +1,5 @@
-from typing import Optional
 from datetime import datetime
+from typing import Optional
 
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
