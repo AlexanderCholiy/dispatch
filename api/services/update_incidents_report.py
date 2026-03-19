@@ -6,7 +6,7 @@ from api.constants import (
     CACHE_INCIDENTS_TTL,
 )
 from api.utils import get_first_day_prev_month, is_file_fresh
-from api.views import IncidentReportViewSet
+from api.views.reports import IncidentReportViewSet
 
 
 class IncidentsJsonBuilder:

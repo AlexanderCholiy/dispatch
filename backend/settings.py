@@ -239,11 +239,15 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.cleanup_old_task_results',
         'schedule': crontab(hour=0, minute=0),
     },
-    'rebuild_incidents_json': {
-        'task': 'api.tasks.rebuild_incidents_json',
+    'rebuild_incidents_reports': {
+        'task': 'api.tasks.rebuild_incidents_reports',
         'schedule': 180,  # каждые 3 мин (cache 5 мин)
     },
-    'check-overdue-notifications': {
+    'rebuild_energy_reports': {
+        'task': 'api.tasks.rebuild_energy_reports',
+        'schedule': 180,  # каждые 3 мин (cache 5 мин)
+    },
+    'check_overdue_notifications': {
         'task': 'notifications.tasks.check_overdue_notifications',
         'schedule': 300,  # каждые 5 минут
     },
