@@ -133,3 +133,5 @@ CONTROL_CHARS_RE = re.compile(r'[\r\n\t]+')
 CURRENT_TZ = timezone.get_current_timezone()
 
 FUNC_TIMEOUT = 5
+
+DATETIME_LOCAL_FORMAT = '%Y-%m-%dT%H:%M'

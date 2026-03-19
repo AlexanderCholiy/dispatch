@@ -5,6 +5,7 @@
   gap: var(--space-md);
   flex-wrap: wrap;
   margin-bottom: var(--space-md);
+  width: 100%;
 }
 
 .left-part,
@@ -12,25 +13,29 @@
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+  flex-wrap: wrap;
 }
 
 .left-part {
-  flex-wrap: wrap;
   justify-content: flex-start;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .right-parts {
   justify-content: flex-end;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .table-filter-form input[type="text"],
 .table-filter-form input[type="email"],
 .table-filter-form input[type="number"],
 .table-filter-form input[type="search"],
+.table-filter-form input[type="datetime-local"],
 .table-filter-form select {
   display: inline-block;
-  padding: var(--space-sm);
-  padding-right: calc(var(--space-sm) * 2.5);
+  padding: var(--space-sm) var(--space-xs);
   border-radius: var(--radius-md);
   background-color: var(--add-background-color);
   font-size: var(--font-sm);
@@ -44,9 +49,27 @@
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
+  max-width: 200px;
+}
+
+.table-filter-form input[type="text"] {
+  max-width: 120px;
+}
+
+.table-filter-form input[type="datetime-local"] {
+  max-width: 170px;
+  z-index: 1;
+}
+
+.table-filter-form select {
+  padding-right: calc(var(--space-sm) * 2.5);
 }
 
 .table-filter-form input[type="text"]:hover,
+.table-filter-form input[type="email"]:hover,
+.table-filter-form input[type="number"]:hover,
+.table-filter-form input[type="search"]:hover,
+.table-filter-form input[type="datetime-local"]:hover,
 .table-filter-form select:hover {
   outline: none;
   box-shadow: 0 0 var(--space-xs) var(--extra-color);
@@ -81,6 +104,7 @@
   .table-filter-form input[type="email"],
   .table-filter-form input[type="number"],
   .table-filter-form input[type="search"],
+  .table-filter-form input[type="datetime-local"],
   .table-filter-form select {
     flex: 1;
     min-width: 20%;

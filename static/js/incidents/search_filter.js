@@ -1,21 +1,10 @@
 document.addEventListener('DOMContentLoaded', function() {
   const searchForm = document.getElementById('search-form');
   const filterForm = document.getElementById('filter-form');
-
   const searchInput = document.getElementById('search-input');
-
-  const finishSelect = document.getElementById('finish-select');
-  const statusSelect = document.getElementById('status-select');
-  const categorySelect = document.getElementById('category-select');
-  const responsibleuserSelect = document.getElementById('responsible-user-select');
-  const slaavrSelect = document.getElementById('sla-avr');
-  const slarvrSelect = document.getElementById('sla-rvr');
-  const sladguSelect = document.getElementById('sla-dgu');
-  const poleInput = document.getElementById('pole-input');
-  const baseStationInput = document.getElementById('base-station-input');
-
   const perPageSelect = document.getElementById('per-page');
 
+  // Карта соответствия: Ключ для функций -> Имя куки
   const cookieNames = {
     finish: 'finish',
     status: 'status',
@@ -26,6 +15,9 @@ document.addEventListener('DOMContentLoaded', function() {
     pole: 'pole',
     base_station: 'base_station',
     responsible_user: 'responsible_user',
+    incident_date_to: 'incident_date_to',
+    incident_date_from: 'incident_date_from',
+    per_page: 'per_page'
   };
 
   // ---- COOKIE HELPERS ----
@@ -35,75 +27,83 @@ document.addEventListener('DOMContentLoaded', function() {
     document.cookie = `${name}=${value};path=/;expires=${d.toUTCString()}`;
   }
 
+  function deleteCookie(name) {
+    document.cookie = name + "=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT";
+  }
+
   function getCookie(name) {
     const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
     return match ? decodeURIComponent(match[1]) : null;
   }
 
-  // ---- ВОССТАНОВЛЕНИЕ ЗНАЧЕНИЙ ИЗ COOKIE ----
+  // ---- 1. ВОССТАНОВЛЕНИЕ ЗНАЧЕНИЙ ИЗ COOKIE ----
   function restoreValue(input, name) {
     if (!input) return;
-    const value = getCookie(cookieNames[name]);
-    if (value !== null && value !== undefined) {
-      input.value = value;
+    
+    // Если сервер прислал пусто (value == ""), пробуем восстановить из куки
+    if (input.value === "" || input.value === null) {
+      const cookieValue = getCookie(cookieNames[name]);
+      if (cookieValue) {
+        input.value = cookieValue;
+        // Генерируем событие change, чтобы отработала синхронизация со скрытыми полями
+        input.dispatchEvent(new Event('change'));
+      }
     }
   }
 
-  restoreValue(finishSelect, 'finish');
-  restoreValue(statusSelect, 'status');
-  restoreValue(categorySelect, 'category');
-  restoreValue(slaavrSelect, 'sla_avr');
-  restoreValue(slarvrSelect, 'sla_rvr');
-  restoreValue(sladguSelect, 'sla_dgu');
-  restoreValue(poleInput, 'pole');
-  restoreValue(baseStationInput, 'base_station');
-  restoreValue(responsibleuserSelect, 'responsible_user');
-
-  // ---- СОХРАНЕНИЕ В COOKIE ----
+  // ---- 2. СОХРАНЕНИЕ В COOKIE ПРИ ИЗМЕНЕНИИ ----
   function saveOnChange(input, name) {
     if (!input) return;
     input.addEventListener('change', () => {
-      setCookie(cookieNames[name], input.value);
+      if (input.value) {
+        setCookie(cookieNames[name], input.value);
+      } else {
+        deleteCookie(cookieNames[name]); // Удаляем куку, если поле очистили
+      }
     });
   }
 
-  saveOnChange(finishSelect, 'finish');
-  saveOnChange(statusSelect, 'status');
-  saveOnChange(categorySelect, 'category');
-  saveOnChange(slaavrSelect, 'sla_avr');
-  saveOnChange(slarvrSelect, 'sla_rvr');
-  saveOnChange(sladguSelect, 'sla_dgu');
-  saveOnChange(poleInput, 'pole');
-  saveOnChange(baseStationInput, 'base_station');
-  saveOnChange(responsibleuserSelect, 'responsible_user');
-
-  // ----- СИНХРОНИЗАЦИЯ СКРЫТЫХ ПОЛЕЙ В searchForm -----
+  // ---- 3. СИНХРОНИЗАЦИЯ СКРЫТЫХ ПОЛЕЙ В searchForm ----
   function syncHiddenField(input, fieldName) {
     if (!input || !searchForm) return;
-    input.addEventListener('change', () => {
+
+    const updateHidden = () => {
       let hidden = searchForm.querySelector(`input[name="${fieldName}"]`);
-      if (!hidden) {
-        hidden = document.createElement('input');
-        hidden.type = 'hidden';
-        hidden.name = fieldName;
-        searchForm.appendChild(hidden);
+      if (hidden) {
+        hidden.value = input.value;
       }
-      hidden.value = input.value;
-    });
+    };
+
+    input.addEventListener('change', updateHidden);
+    updateHidden(); // Вызываем сразу при загрузке
   }
 
-  syncHiddenField(finishSelect, 'finish');
-  syncHiddenField(statusSelect, 'status');
-  syncHiddenField(categorySelect, 'category');
-  syncHiddenField(responsibleuserSelect, 'responsible_user');
-  syncHiddenField(slaavrSelect, 'sla_avr');
-  syncHiddenField(slarvrSelect, 'sla_rvr');
-  syncHiddenField(sladguSelect, 'sla_dgu');
-  syncHiddenField(poleInput, 'pole');
-  syncHiddenField(baseStationInput, 'base_station');
-  syncHiddenField(perPageSelect, 'per_page')
+  // Список элементов для обработки
+  const elements = [
+    { el: document.getElementById('finish-select'), name: 'finish' },
+    { el: document.getElementById('status-select'), name: 'status' },
+    { el: document.getElementById('category-select'), name: 'category' },
+    { el: document.getElementById('responsible-user-select'), name: 'responsible_user' },
+    { el: document.getElementById('sla-avr'), name: 'sla_avr' },
+    { el: document.getElementById('sla-rvr'), name: 'sla_rvr' },
+    { el: document.getElementById('sla-dgu'), name: 'sla_dgu' },
+    { el: document.getElementById('pole-input'), name: 'pole' },
+    { el: document.getElementById('base-station-input'), name: 'base_station' },
+    { el: document.getElementById('incident-date-from'), name: 'incident_date_from' },
+    { el: document.getElementById('incident-date-to'), name: 'incident_date_to' },
+    { el: perPageSelect, name: 'per_page' }
+  ];
 
-  // ----- СИНХРОНИЗАЦИЯ Q -----
+  // Запуск всех функций для каждого элемента
+  elements.forEach(item => {
+    if (item.el) {
+      restoreValue(item.el, item.name);
+      saveOnChange(item.el, item.name);
+      syncHiddenField(item.el, item.name);
+    }
+  });
+
+  // ----- СИНХРОНИЗАЦИЯ ПОИСКОВОЙ СТРОКИ (Q) -----
   if (searchInput && filterForm) {
     searchInput.addEventListener('input', () => {
       let hiddenQ = filterForm.querySelector('input[name="q"]');

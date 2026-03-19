@@ -94,6 +94,9 @@ from .validators import (
     validate_notify_operator,
     validate_notify_rvr,
 )
+from core.validators import get_aware_datetime
+from core.constants import DATETIME_LOCAL_FORMAT
+from core.services.get_max_today_datetime import get_max_today_datetime
 
 
 @login_required
@@ -166,6 +169,23 @@ def index(request: HttpRequest) -> HttpResponse:
         or request.COOKIES.get('sla_dgu', '').strip()
         or None
     )
+
+    date_from = (
+        request.GET.get('incident_date_from', '').strip()
+        or request.COOKIES.get('incident_date_from', '').strip()
+        or None
+    )
+    date_from = get_aware_datetime(date_from)
+
+    date_to = (
+        request.GET.get('incident_date_to', '').strip()
+        or request.COOKIES.get('incident_date_to', '').strip()
+        or None
+    )
+    date_to = get_aware_datetime(date_to)
+
+    if date_from and date_to and date_from > date_to:
+        date_from, date_to = date_to, date_from
 
     sort = (
         request.GET.get('sort_incidents')
@@ -257,6 +277,12 @@ def index(request: HttpRequest) -> HttpResponse:
         base_qs = base_qs.filter(
             base_station__bs_name__startswith=base_station
         )
+
+    if date_from:
+        base_qs = base_qs.filter(incident_date__gte=date_from)
+
+    if date_to:
+        base_qs = base_qs.filter(incident_date__lte=date_to)
 
     if status_name:
         base_qs = base_qs.filter(latest_status_name=status_name)
@@ -395,9 +421,16 @@ def index(request: HttpRequest) -> HttpResponse:
             'sla_avr_status': sla_avr_status,
             'sla_rvr_status': sla_rvr_status,
             'sla_dgu_status': sla_dgu_status,
+            'date_from': (
+                date_from.strftime(DATETIME_LOCAL_FORMAT) if date_from else ''
+            ),
+            'date_to': (
+                date_to.strftime(DATETIME_LOCAL_FORMAT) if date_to else ''
+            ),
         },
         'page_size_choices': PAGE_SIZE_INCIDENTS_CHOICES,
         'can_manage': can_manage,
+        'max_datetime': get_max_today_datetime(),
     }
 
     return render(request, 'incidents/index.html', context)

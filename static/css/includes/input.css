@@ -96,7 +96,7 @@ input[type="number"]:disabled {
   right: var(--space-sm);
   pointer-events: none;
 
-  margin-top: var(--space-xs);
+  margin-top: calc(var(--space-xs) + 2px);
 
   font-size: var(--font-md);
   color: var(--gray-color);

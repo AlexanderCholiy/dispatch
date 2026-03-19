@@ -127,6 +127,23 @@
       class="tooltip"
       data-title="Только латинские буквы, цифры и дефис"
     >
+    <div>
+      <input 
+        type="datetime-local"
+        name="incident_date_from" 
+        id="incident-date-from" 
+        max="{{ max_datetime }}"
+        value="{{ selected.date_from|default:'' }}" 
+        class="tooltip" 
+        data-title="Дата регистрации ОТ">
+      <input 
+        type="datetime-local"
+        name="incident_date_to" 
+        id="incident-date-to" 
+        value="{{ selected.date_to|default:'' }}" 
+        class="tooltip" 
+        data-title="Дата регистрации ДО">
+    </div>
   </div>
     
   <div class="right-parts">
@@ -187,6 +204,7 @@
           <span>Дата регистрации</span>
         </label>
       </div>
+
     </div>
 
     <div class="select-wrapper">
