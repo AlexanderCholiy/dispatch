@@ -38,7 +38,12 @@ from energy.models import (
 
 
 class ClaimViewSet(viewsets.ReadOnlyModelViewSet):
-    """Энергосети (заявки)"""
+    """
+    Энергосети (заявки)
+
+    Полная выгрузка для CSV (без пагинации):
+    GET /api/v1/energy/claims/csv-export/
+    """
     permission_classes = (permissions.AllowAny,)
     serializer_class = ClaimSerializer
 
@@ -64,7 +69,7 @@ class ClaimViewSet(viewsets.ReadOnlyModelViewSet):
             )
         )
 
-    @action(detail=False, methods=['get'], url_path='export-csv')
+    @action(detail=False, methods=['get'], url_path='csv-export')
     def export_csv(self, request: Request):
         """Выгрузка в CSV через X-Accel-Redirect с кешированием файла."""
         cache_file = CACHE_ENERGY_CLAIMS_FILE
@@ -176,7 +181,12 @@ class ClaimViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class AppealViewSet(viewsets.ReadOnlyModelViewSet):
-    """Энергосети (обращения)"""
+    """
+    Энергосети (обращения)
+
+    Полная выгрузка для CSV (без пагинации):
+    GET /api/v1/energy/appeals/csv-export/
+    """
     permission_classes = (permissions.AllowAny,)
     serializer_class = AppealSerializer
 
@@ -202,7 +212,7 @@ class AppealViewSet(viewsets.ReadOnlyModelViewSet):
             )
         )
 
-    @action(detail=False, methods=['get'], url_path='export-csv')
+    @action(detail=False, methods=['get'], url_path='csv-export')
     def export_csv(self, request: Request):
         """Выгрузка в CSV через X-Accel-Redirect с кешированием файла."""
         cache_file = CACHE_ENERGY_APPEALS_FILE
