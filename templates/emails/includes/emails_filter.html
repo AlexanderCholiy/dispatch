@@ -28,6 +28,25 @@
       data-title="Адрес эл. почты"
     />
 
+    <div>
+      <input 
+        type="datetime-local"
+        name="email_date_from" 
+        id="email-date-from" 
+        max="{{ max_datetime }}"
+        value="{{ selected.date_from|default:'' }}" 
+        class="tooltip" 
+        data-title="Дата письма ОТ">
+      <input 
+        type="datetime-local"
+        name="email_date_to" 
+        id="email-date-to" 
+        max="{{ max_datetime }}"
+        value="{{ selected.date_to|default:'' }}" 
+        class="tooltip" 
+        data-title="Дата письма ДО">
+    </div>
+
   </div>
     
   <div class="right-parts">

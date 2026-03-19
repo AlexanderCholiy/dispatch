@@ -1,16 +1,15 @@
 document.addEventListener('DOMContentLoaded', function() {
   const searchForm = document.getElementById('search-form');
   const filterForm = document.getElementById('filter-form');
-
   const searchInput = document.getElementById('search-input');
-
-  const folderSelect = document.getElementById('folder-select');
-  const emailfromSelect = document.getElementById('email-from-input');
   const perPageSelect = document.getElementById('per-page');
 
   const cookieNames = {
     folder: 'folder',
-    email_from: 'email_from'
+    email_from: 'email_from',
+    email_date_to: 'email_date_to',
+    email_date_from: 'email_date_from',
+    per_page: 'per_page'
   };
 
   // ---- COOKIE HELPERS ----
@@ -20,54 +19,75 @@ document.addEventListener('DOMContentLoaded', function() {
     document.cookie = `${name}=${value};path=/;expires=${d.toUTCString()}`;
   }
 
+  function deleteCookie(name) {
+    document.cookie = name + "=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT";
+  }
+
   function getCookie(name) {
     const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
     return match ? decodeURIComponent(match[1]) : null;
   }
 
-  // ---- ВОССТАНОВЛЕНИЕ ЗНАЧЕНИЙ ИЗ COOKIE ----
+  // ---- 1. ВОССТАНОВЛЕНИЕ ЗНАЧЕНИЙ (Приоритет сервера) ----
   function restoreValue(input, name) {
     if (!input) return;
-    const value = getCookie(cookieNames[name]);
-    if (value !== null && value !== undefined) {
-      input.value = value;
+    
+    // Восстанавливаем только если сервер прислал пустое поле
+    if (input.value === "" || input.value === null) {
+      const value = getCookie(cookieNames[name]);
+      if (value !== null) {
+        input.value = value;
+        // Уведомляем систему о том, что значение появилось
+        input.dispatchEvent(new Event('change'));
+      }
     }
   }
 
-  restoreValue(folderSelect, 'folder');
-  restoreValue(emailfromSelect, 'email_from');
-
-  // ---- СОХРАНЕНИЕ В COOKIE ----
+  // ---- 2. СОХРАНЕНИЕ В COOKIE (С очисткой пустых) ----
   function saveOnChange(input, name) {
     if (!input) return;
     input.addEventListener('change', () => {
-      setCookie(cookieNames[name], input.value);
+      if (input.value) {
+        setCookie(cookieNames[name], input.value);
+      } else {
+        deleteCookie(cookieNames[name]);
+      }
     });
   }
 
-  saveOnChange(folderSelect, 'folder');
-  saveOnChange(emailfromSelect, 'email_from');
-
-  // ----- СИНХРОНИЗАЦИЯ СКРЫТЫХ ПОЛЕЙ В searchForm -----
+  // ---- 3. СИНХРОНИЗАЦИЯ СКРЫТЫХ ПОЛЕЙ (С вызовом при старте) ----
   function syncHiddenField(input, fieldName) {
     if (!input || !searchForm) return;
-    input.addEventListener('change', () => {
+
+    const update = () => {
       let hidden = searchForm.querySelector(`input[name="${fieldName}"]`);
-      if (!hidden) {
-        hidden = document.createElement('input');
-        hidden.type = 'hidden';
-        hidden.name = fieldName;
-        searchForm.appendChild(hidden);
+      if (hidden) {
+        hidden.value = input.value;
       }
-      hidden.value = input.value;
-    });
+    };
+
+    input.addEventListener('change', update);
+    update(); // Выполняем сразу, чтобы скрытое поле знало о куки или значении сервера
   }
 
-  syncHiddenField(folderSelect, 'folder');
-  syncHiddenField(emailfromSelect, 'email_from');
-  syncHiddenField(perPageSelect, 'per_page');
+  // Список элементов
+  const elements = [
+    { el: document.getElementById('folder-select'), name: 'folder' },
+    { el: document.getElementById('email-from-input'), name: 'email_from' },
+    { el: document.getElementById('email-date-to'), name: 'email_date_to' },
+    { el: document.getElementById('email-date-from'), name: 'email_date_from' },
+    { el: perPageSelect, name: 'per_page' }
+  ];
 
-  // ----- СИНХРОНИЗАЦИЯ Q -----
+  elements.forEach(item => {
+    if (item.el) {
+      restoreValue(item.el, item.name);
+      saveOnChange(item.el, item.name);
+      syncHiddenField(item.el, item.name);
+    }
+  });
+
+  // ----- СИНХРОНИЗАЦИЯ ПОИСКА (Q) -----
   if (searchInput && filterForm) {
     searchInput.addEventListener('input', () => {
       let hiddenQ = filterForm.querySelector('input[name="q"]');

@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // 4. Карта соответствия: ID элемента на странице -> Имя куки
       // Если элемент с таким ID есть на странице, то и его кука будет удалена
       const elementToCookieMap = {
+        // Инциденты
         'finish-select': 'finish',
         'status-select': 'status',
         'category-select': 'category',
@@ -32,15 +33,28 @@ document.addEventListener('DOMContentLoaded', () => {
         'sla-avr': 'sla_avr',
         'sla-rvr': 'sla_rvr',
         'sla-dgu': 'sla_dgu',
-        'folder-select': 'folder',
-        'role-select': 'role',
-        'company-select': 'company',
-        'declarant-select': 'declarant',
-        'read-select': 'read',
-        'level-select': 'level',
+        'pole-input': 'pole',
+        'base-station-input': 'base_station',
         'incident-date-from': 'incident_date_from',
         'incident-date-to': 'incident_date_to',
-        'email-from-input': 'email_from' // пример для других полей
+        
+        // Почта (Emails)
+        'folder-select': 'folder',
+        'email-from-input': 'email_from',
+        'email-date-from': 'email_date_from',
+        'email-date-to': 'email_date_to',
+        
+        // Пользователи
+        'role-select': 'role',
+        
+        // Энергетика
+        'type-select': 'type',
+        'company-select': 'company',
+        'declarant-select': 'declarant',
+        
+        // Уведомления
+        'read-select': 'read',
+        'level-select': 'level'
       };
 
       // Проходим по карте: сбрасываем элемент и удаляем куку ТОЛЬКО если элемент существует
@@ -60,9 +74,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // 5. Очищаем скрытые поля поиска (только если они есть)
       const hiddenIds = [
-        'search-hidden-finish', 'search-hidden-status', 'search-hidden-category',
-        'search-hidden-responsible-user', 'search-hidden-incident-date-from',
-        'search-hidden-incident-date-to', 'filter-hidden-q'
+        // Инциденты
+        'search-hidden-finish',
+        'search-hidden-type',
+        'search-hidden-status',
+        'search-hidden-category',
+        'search-hidden-responsible-user',
+        'search-hidden-sla-avr',
+        'search-hidden-sla-rvr',
+        'search-hidden-sla-dgu',
+        'search-hidden-pole',
+        'search-hidden-base-station',
+        'search-hidden-incident-date-from',
+        'search-hidden-incident-date-to',
+        // Почта (Emails)
+        'search-hidden-folder',
+        'search-hidden-email-from', 
+        'search-hidden-email-date-from',
+        'search-hidden-email-date-to',
+        // Пользователи
+        'search-hidden-role',
+        // Энергетика
+        'search-hidden-company',
+        'search-hidden-declarant',
+        // Уведомления
+        'search-hidden-read',
+        'search-hidden-level',
+        // Общее
+        'search-hidden-per-page',
+        'filter-hidden-q'
       ];
       hiddenIds.forEach(id => {
         const el = document.getElementById(id);

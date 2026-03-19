@@ -139,7 +139,8 @@
       <input 
         type="datetime-local"
         name="incident_date_to" 
-        id="incident-date-to" 
+        id="incident-date-to"
+        max="{{ max_datetime }}"
         value="{{ selected.date_to|default:'' }}" 
         class="tooltip" 
         data-title="Дата регистрации ДО">

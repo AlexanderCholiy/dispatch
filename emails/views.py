@@ -14,6 +14,9 @@ from .constants import (
     PAGE_SIZE_EMAILS_CHOICES,
 )
 from .models import EmailFolder, EmailMessage
+from core.services.get_max_today_datetime import get_max_today_datetime
+from core.validators import get_aware_datetime
+from core.constants import DATETIME_LOCAL_FORMAT
 
 
 @login_required
@@ -31,6 +34,23 @@ def emails_list(request: HttpRequest) -> HttpResponse:
         request.GET.get('email_from', '').strip()
         or request.COOKIES.get('email_from', '').strip()
     )
+
+    date_from = (
+        request.GET.get('email_date_from', '').strip()
+        or request.COOKIES.get('email_date_from', '').strip()
+        or None
+    )
+    date_from = get_aware_datetime(date_from)
+
+    date_to = (
+        request.GET.get('email_date_to', '').strip()
+        or request.COOKIES.get('email_date_to', '').strip()
+        or None
+    )
+    date_to = get_aware_datetime(date_to)
+
+    if date_from and date_to and date_from > date_to:
+        date_from, date_to = date_to, date_from
 
     per_page = int(
         request.GET.get('per_page')
@@ -54,11 +74,6 @@ def emails_list(request: HttpRequest) -> HttpResponse:
         .exclude(email_incident__isnull=True)
     )
 
-    if sort == 'asc':
-        base_qs = base_qs.order_by('email_date', 'is_first_email', 'id')
-    else:
-        base_qs = base_qs.order_by('-email_date', 'is_first_email', 'id')
-
     if query:
         filters = (
             Q(email_incident__code=query)
@@ -74,6 +89,17 @@ def emails_list(request: HttpRequest) -> HttpResponse:
 
     if email_from:
         base_qs = base_qs.filter(email_from=email_from)
+
+    if date_from:
+        base_qs = base_qs.filter(email_date__gte=date_from)
+
+    if date_to:
+        base_qs = base_qs.filter(email_date__lte=date_to)
+
+    if sort == 'asc':
+        base_qs = base_qs.order_by('email_date', 'is_first_email', 'id')
+    else:
+        base_qs = base_qs.order_by('-email_date', 'is_first_email', 'id')
 
     paginator = Paginator(base_qs.values_list('id', flat=True), per_page)
     page_number = request.GET.get('page')
@@ -123,10 +149,18 @@ def emails_list(request: HttpRequest) -> HttpResponse:
         'folders': folders,
         'selected': {
             'folder': folder_name,
+            'email_from': email_from,
+            'date_from': (
+                date_from.strftime(DATETIME_LOCAL_FORMAT) if date_from else ''
+            ),
+            'date_to': (
+                date_to.strftime(DATETIME_LOCAL_FORMAT) if date_to else ''
+            ),
             'per_page': per_page,
             'sort': sort,
         },
         'page_size_choices': PAGE_SIZE_EMAILS_CHOICES,
+        'max_datetime': get_max_today_datetime(),
     }
 
     return render(request, 'emails/emais_list.html', context)
