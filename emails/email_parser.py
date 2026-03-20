@@ -332,7 +332,7 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
             ]
 
     @min_wait_timer(email_parser_logger)
-    @timer(email_parser_logger, False)
+    @timer(email_parser_logger, True)
     def fetch_unread_emails(
         self,
         check_days: int = 0,
