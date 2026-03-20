@@ -1,6 +1,6 @@
 from typing import Optional
 
-from django.db.models import Case, When
+from django.db.models import Case, QuerySet, When
 
 from incidents.constants import DEFAULT_STATUS_NAME, STATUS_TRANSITIONS
 from incidents.models import IncidentStatus
@@ -8,7 +8,7 @@ from incidents.models import IncidentStatus
 
 def get_allowed_statuses(
     current_status: Optional[IncidentStatus] = None
-) -> list[IncidentStatus]:
+) -> QuerySet[IncidentStatus]:
     """
     Возвращает список статусов, в которые можно перейти из текущего статуса.
     """

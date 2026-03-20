@@ -1253,7 +1253,6 @@ class IncidentManager(IncidentValidator):
             )
             .prefetch_related(
                 'history',
-                'base_station__operator',
                 'categories',
                 Prefetch(
                     'status_history',

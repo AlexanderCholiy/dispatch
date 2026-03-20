@@ -469,7 +469,10 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
     can_manage = user.role in allowed_roles or user.is_superuser
 
     incident_form = IncidentForm(
-        instance=incident, can_edit=can_manage, author=user
+        instance=incident,
+        can_edit=can_manage,
+        author=user,
+        categories=incident.categories,
     )
 
     if request.method == 'POST':
@@ -499,6 +502,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
             instance=incident,
             can_edit=can_manage,
             author=user,
+            categories=incident.categories
         )
         if incident_form.is_valid():
             incident_form.save()
@@ -783,7 +787,11 @@ def create_incident(request: HttpRequest) -> HttpResponse:
     user: User = request.user
 
     if request.method == 'POST':
-        form = IncidentForm(data=request.POST, can_edit=True, author=user)
+        form = IncidentForm(
+            data=request.POST,
+            can_edit=True,
+            author=user,
+        )
 
         if form.is_valid():
             incident: Incident = form.save()
@@ -1082,7 +1090,7 @@ def notify_operator(request: HttpRequest, incident_id: int) -> HttpResponse:
                 )
 
                 category_names = {
-                    c.name for c in incident.prefetched_categories
+                    c.name for c in incident.categories.all()
                 }
                 comments = (
                     'Статус добавлен автоматически после '
@@ -1187,7 +1195,7 @@ def notify_avr_contractor(
     )
 
     category_names = {
-        c.name for c in incident.prefetched_categories
+        c.name for c in incident.categories.all()
     }
 
     error_message = validate_notify_avr(
@@ -1444,7 +1452,7 @@ def notify_rvr_contractor(
     )
 
     category_names = {
-        c.name for c in incident.prefetched_categories
+        c.name for c in incident.categories.all()
     }
 
     error_message = validate_notify_rvr(
@@ -1796,7 +1804,7 @@ def notify_incident_closed(
                 )
 
                 category_names = {
-                    c.name for c in incident.prefetched_categories
+                    c.name for c in incident.categories.all()
                 }
                 comments = (
                     'Статус добавлен автоматически после '
