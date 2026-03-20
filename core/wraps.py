@@ -1,4 +1,5 @@
 import functools
+import inspect
 import threading
 import time
 from datetime import datetime
@@ -19,6 +20,8 @@ from .utils import format_seconds
 def timer(logger: Logger, is_debug: bool = True) -> Callable:
     """Декоратор для измерения и логирования времени выполнения функции."""
     def decorator(func: Callable) -> Callable:
+        sig = inspect.signature(func)
+
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             start_time = datetime.now()
@@ -32,7 +35,16 @@ def timer(logger: Logger, is_debug: bool = True) -> Callable:
                     f'{format_seconds(total_seconds)}'
                 )
 
-                logger.debug(msg) if is_debug else logger.info(msg)
+                # Для парсинга почты из папки INBOX важно отслеживать время:
+                bound_args = sig.bind(*args, **kwargs)
+                bound_args.apply_defaults()
+                mailbox = bound_args.arguments.get('mailbox')
+
+                current_log_is_debug = (
+                    False if mailbox and mailbox == 'INBOX' else is_debug
+                )
+
+                logger.debug(msg) if current_log_is_debug else logger.info(msg)
 
         return wrapper
     return decorator

@@ -41,7 +41,7 @@ class ClaimViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Энергосети (заявки)
 
-    Полная выгрузка для CSV (без пагинации):
+    Полная выгрузка отчета в .csv файл:
     GET /api/v1/energy/claims/csv-export/
     """
     permission_classes = (permissions.AllowAny,)
@@ -72,23 +72,27 @@ class ClaimViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=['get'], url_path='csv-export')
     def export_csv(self, request: Request):
         """Выгрузка в CSV через X-Accel-Redirect с кешированием файла."""
+        self.pagination_class = None
         cache_file = CACHE_ENERGY_CLAIMS_FILE
 
-        fresh, _ = is_file_fresh(cache_file, CACHE_ENERGY_TTL)
-        if fresh:
-            return send_x_accel_file(cache_file)
+        # 1. Проверяем кэш
+        response = self._get_cached_file_response(cache_file)
+        if response:
+            return response
 
+        # 2. Блокировка на время генерации
         try:
             with cache.lock(
                 LOCK_KEY_CACHE_ENERGY_CLAIMS_FILE,
                 timeout=LOCK_ENERY_TIMEOUT_SEC,
                 blocking_timeout=LOCK_ENERGY_BLOCKING_TIMEOUT_SEC,
             ):
-                fresh, _ = is_file_fresh(cache_file, CACHE_ENERGY_TTL)
-                if fresh:
-                    return send_x_accel_file(cache_file)
+                response = self._get_cached_file_response(cache_file)
+                if response:
+                    return response
 
-                self._generate_csv_file(self.get_queryset(), cache_file)
+                queryset = self.get_queryset()
+                self._generate_csv_file(queryset, cache_file)
                 return send_x_accel_file(cache_file)
 
         except LockError:
@@ -96,6 +100,13 @@ class ClaimViewSet(viewsets.ReadOnlyModelViewSet):
                 'Файл все еще генерируется, попробуйте позже.',
                 status=HTTPStatus.SERVICE_UNAVAILABLE
             )
+
+    def _get_cached_file_response(self, cache_file: Path):
+        """Возвращает Response с файлом, если он свежий."""
+        fresh, _ = is_file_fresh(cache_file, CACHE_ENERGY_TTL)
+        if fresh:
+            return send_x_accel_file(cache_file)
+        return None
 
     @timer(default_logger)
     def _generate_csv_file(self, queryset: QuerySet, file_path: Path):
@@ -184,7 +195,7 @@ class AppealViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Энергосети (обращения)
 
-    Полная выгрузка для CSV (без пагинации):
+    Полная выгрузка отчета в .csv файл:
     GET /api/v1/energy/appeals/csv-export/
     """
     permission_classes = (permissions.AllowAny,)
@@ -213,25 +224,32 @@ class AppealViewSet(viewsets.ReadOnlyModelViewSet):
         )
 
     @action(detail=False, methods=['get'], url_path='csv-export')
-    def export_csv(self, request: Request):
-        """Выгрузка в CSV через X-Accel-Redirect с кешированием файла."""
+    def export_csv(self, request):
+        """
+        Полная выгрузка обращений в CSV с кешированием и X-Accel.
+        """
+        self.pagination_class = None
         cache_file = CACHE_ENERGY_APPEALS_FILE
 
-        fresh, _ = is_file_fresh(cache_file, CACHE_ENERGY_TTL)
-        if fresh:
-            return send_x_accel_file(cache_file)
+        # 1. Проверяем, есть ли свежий файл
+        response = self._get_cached_file_response(cache_file)
+        if response:
+            return response
 
+        # 2. Пытаемся захватить лок на генерацию
         try:
             with cache.lock(
                 LOCK_KEY_CACHE_ENERGY_APPEALS_FILE,
                 timeout=LOCK_ENERY_TIMEOUT_SEC,
-                blocking_timeout=LOCK_ENERGY_BLOCKING_TIMEOUT_SEC,
+                blocking_timeout=LOCK_ENERGY_BLOCKING_TIMEOUT_SEC
             ):
-                fresh, _ = is_file_fresh(cache_file, CACHE_ENERGY_TTL)
-                if fresh:
-                    return send_x_accel_file(cache_file)
+                response = self._get_cached_file_response(cache_file)
+                if response:
+                    return response
 
-                self._generate_csv_file(self.get_queryset(), cache_file)
+                queryset = self.get_queryset()
+                self._generate_csv_file(queryset, cache_file)
+
                 return send_x_accel_file(cache_file)
 
         except LockError:
@@ -239,6 +257,13 @@ class AppealViewSet(viewsets.ReadOnlyModelViewSet):
                 'Файл все еще генерируется, попробуйте позже.',
                 status=HTTPStatus.SERVICE_UNAVAILABLE
             )
+
+    def _get_cached_file_response(self, cache_file: Path):
+        """Проверка свежести файла."""
+        fresh, _ = is_file_fresh(cache_file, CACHE_ENERGY_TTL)
+        if fresh:
+            return send_x_accel_file(cache_file)
+        return None
 
     @timer(default_logger)
     def _generate_csv_file(self, queryset: QuerySet, file_path: Path):
