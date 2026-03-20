@@ -1,7 +1,7 @@
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 
-from emails.models import EmailMessage, EmailReference
+from emails.models import EmailMessage, EmailReference, EmailTo, EmailToCC
 from incidents.models import Incident, IncidentStatusHistory
 from ts.models import BaseStationOperator, PoleContractorEmail
 
@@ -25,8 +25,16 @@ class IncidentSelector:
                     queryset=references_qs,
                     to_attr='prefetched_references'
                 ),
-                'email_msg_to',
-                'email_msg_cc',
+                Prefetch(
+                    'email_msg_to',
+                    queryset=EmailTo.objects.order_by('email_to'),
+                    to_attr='prefetched_to'
+                ),
+                Prefetch(
+                    'email_msg_cc',
+                    queryset=EmailToCC.objects.order_by('email_to'),
+                    to_attr='prefetched_cc'
+                ),
             )
             .order_by('email_date', 'id')
         )

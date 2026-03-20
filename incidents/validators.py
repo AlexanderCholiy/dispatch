@@ -196,9 +196,17 @@ def validate_status_transition(
     allowed_transitions = STATUS_TRANSITIONS.get(last_status.name, [])
 
     if next_status_name not in allowed_transitions:
+        if not allowed_transitions:
+            return (
+                f'Для статуса «{last_status.name}» переходы не предусмотрены.'
+            )
+
+        options = ', '.join(f'«{s}»' for s in allowed_transitions)
+
         return (
-            'Недопустимый переход из статуса '
-            f'«{last_status.name}» в «{next_status_name}».'
+            'Нельзя перевести инцидент из '
+            f'«{last_status.name}» в «{next_status_name}».\n'
+            f'Выберите сначала один из доступных статусов: {options}.'
         )
 
     return None

@@ -820,25 +820,16 @@ def new_email(
     template_name = 'emails/new_email.html'
     incident = IncidentSelector.incidents_with_email_history(incident_id)
 
-    first_email: Optional[EmailMessage] = (
-        incident.all_incident_emails[0]
-        if incident.all_incident_emails else None
-    )
+    emails = incident.all_incident_emails
+
+    first_email: Optional[EmailMessage] = emails[0] if emails else None
 
     reply_to_email: Optional[EmailMessage] = None
     if reply_email_id is not None:
-        reply_to_email = EmailMessage.objects.prefetch_related(
-            Prefetch(
-                'email_msg_to', queryset=EmailTo.objects.order_by('email_to')
-            ),
-            Prefetch(
-                'email_msg_cc', queryset=EmailToCC.objects.order_by('email_to')
-            ),
-        ).filter(
-            id=reply_email_id,
-            email_incident=incident
-        ).first()
-
+        reply_to_email = next(
+            (e for e in emails if e.id == reply_email_id),
+            None
+        )
         if not reply_to_email:
             raise Http404
 
@@ -886,10 +877,7 @@ def new_email(
 
                 if reply_to_email:
                     # Копируем все references исходного письма:
-                    for ref in (
-                        reply_to_email.email_references.all()
-                        .order_by('email_msg__email_date', 'email_msg__id')
-                    ):
+                    for ref in reply_to_email.prefetched_references:
                         EmailReference.objects.create(
                             email_msg=email_msg,
                             email_msg_references=ref.email_msg_references
@@ -956,19 +944,17 @@ def new_email(
             initial_data['subject'] = f'Re: {clean_subj}'
 
             email_to = [
-                obj.email_to for obj in reply_to_email.email_msg_to.all()
+                obj.email_to for obj in reply_to_email.prefetched_to
                 if obj.email_to != email_parser.email_login
             ]
             if reply_to_email.email_from != email_parser.email_login:
                 email_to.append(reply_to_email.email_from)
 
             initial_data['to'] = ', '.join(email_to)
-            initial_data['cc'] = ', '.join(
-                [
-                    obj.email_to for obj in reply_to_email.email_msg_cc.all()
-                    if obj.email_to != email_parser.email_login
-                ]
-            )
+            initial_data['cc'] = ', '.join([
+                obj.email_to for obj in reply_to_email.prefetched_cc
+                if obj.email_to != email_parser.email_login
+            ])
 
         initial_data['body'] = f'\n\n\n{DISPATCHER_SIGNATURE}'
 
@@ -1008,10 +994,10 @@ def notify_operator(request: HttpRequest, incident_id: int) -> HttpResponse:
         messages.error(request, error_message)
         return redirect('incidents:incident_detail', incident_id=incident.id)
 
-    first_email: Optional[EmailMessage] = (
-        incident.all_incident_emails[0]
-        if incident.all_incident_emails else None
-    )
+    emails = incident.all_incident_emails
+
+    first_email: Optional[EmailMessage] = emails[0] if emails else None
+
     reply_to_email = first_email
 
     previous_plain, previous_html = None, None
@@ -1057,10 +1043,7 @@ def notify_operator(request: HttpRequest, incident_id: int) -> HttpResponse:
 
                 if reply_to_email:
                     # Копируем все references исходного письма:
-                    for ref in (
-                        reply_to_email.email_references.all()
-                        .order_by('email_msg__email_date', 'email_msg__id')
-                    ):
+                    for ref in reply_to_email.prefetched_references:
                         EmailReference.objects.create(
                             email_msg=email_msg,
                             email_msg_references=ref.email_msg_references
@@ -1098,8 +1081,9 @@ def notify_operator(request: HttpRequest, incident_id: int) -> HttpResponse:
                     .get_or_create(name=NOTIFY_OP_IN_WORK_STATUS_NAME)
                 )
 
-                cat_objs = incident.categories.all()
-                category_names = {c.name for c in cat_objs}
+                category_names = {
+                    c.name for c in incident.prefetched_categories
+                }
                 comments = (
                     'Статус добавлен автоматически после '
                     'начала отправки автоответа.'
@@ -1152,7 +1136,7 @@ def notify_operator(request: HttpRequest, incident_id: int) -> HttpResponse:
             initial_data['subject'] = f'Re: {clean_subj}'
 
             email_to = [
-                obj.email_to for obj in reply_to_email.email_msg_to.all()
+                obj.email_to for obj in reply_to_email.prefetched_to
                 if obj.email_to != email_parser.email_login
             ]
             if reply_to_email.email_from != email_parser.email_login:
@@ -1161,7 +1145,7 @@ def notify_operator(request: HttpRequest, incident_id: int) -> HttpResponse:
             initial_data['to'] = ', '.join(email_to)
             initial_data['cc'] = ', '.join(
                 [
-                    obj.email_to for obj in reply_to_email.email_msg_cc.all()
+                    obj.email_to for obj in reply_to_email.prefetched_cc
                     if obj.email_to != email_parser.email_login
                 ]
             )
@@ -1202,8 +1186,9 @@ def notify_avr_contractor(
         else None
     )
 
-    cat_objs = incident.categories.all()
-    category_names = {c.name for c in cat_objs}
+    category_names = {
+        c.name for c in incident.prefetched_categories
+    }
 
     error_message = validate_notify_avr(
         incident,
@@ -1458,8 +1443,9 @@ def notify_rvr_contractor(
         else None
     )
 
-    cat_objs = incident.categories.all()
-    category_names = {c.name for c in cat_objs}
+    category_names = {
+        c.name for c in incident.prefetched_categories
+    }
 
     error_message = validate_notify_rvr(
         incident,
@@ -1664,7 +1650,7 @@ def notify_rvr_contractor(
 
         if incident.sla_rvr_deadline:
             sla_deadline = (
-                incident.sla_avr_deadline
+                incident.sla_rvr_deadline
                 .astimezone(CURRENT_TZ)
                 .strftime('%d.%m.%Y %H:%M')
             )
@@ -1771,10 +1757,7 @@ def notify_incident_closed(
 
                 if reply_to_email:
                     # Копируем все references исходного письма:
-                    for ref in (
-                        reply_to_email.email_references.all()
-                        .order_by('email_msg__email_date', 'email_msg__id')
-                    ):
+                    for ref in reply_to_email.prefetched_references:
                         EmailReference.objects.create(
                             email_msg=email_msg,
                             email_msg_references=ref.email_msg_references
@@ -1812,8 +1795,9 @@ def notify_incident_closed(
                     .get_or_create(name=NOTIFY_OP_END_STATUS_NAME)
                 )
 
-                cat_objs = incident.categories.all()
-                category_names = {c.name for c in cat_objs}
+                category_names = {
+                    c.name for c in incident.prefetched_categories
+                }
                 comments = (
                     'Статус добавлен автоматически после '
                     'начала отправки автоответа.'
@@ -1888,7 +1872,7 @@ def notify_incident_closed(
             initial_data['subject'] = f'Re: {clean_subj}'
 
             email_to = [
-                obj.email_to for obj in reply_to_email.email_msg_to.all()
+                obj.email_to for obj in reply_to_email.prefetched_to
                 if obj.email_to != email_parser.email_login
             ]
             if reply_to_email.email_from != email_parser.email_login:
@@ -1897,7 +1881,7 @@ def notify_incident_closed(
             initial_data['to'] = ', '.join(email_to)
             initial_data['cc'] = ', '.join(
                 [
-                    obj.email_to for obj in reply_to_email.email_msg_cc.all()
+                    obj.email_to for obj in reply_to_email.prefetched_cc
                     if obj.email_to != email_parser.email_login
                 ]
             )

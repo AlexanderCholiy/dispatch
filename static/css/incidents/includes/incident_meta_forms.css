@@ -69,6 +69,27 @@
   top: var(--space-lg);
 }
 
+.pole-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: var(--space-sm);
+}
+
+.pole-label-right {
+  color: var(--add-color);
+}
+
+.pole-link {
+  color: var(--gray-color);
+  transition: color var(--transition-value);
+}
+
+.pole-link:hover {
+  color: var(--red-color);
+}
+
 @media (max-width: 768px) {
   .incident-meta-row {
     grid-template-columns: 1fr;

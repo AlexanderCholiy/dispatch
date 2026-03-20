@@ -128,8 +128,18 @@
 
     <div class="incident-row">
       <div class="form-group {% if incident_form.pole.errors %}has-error{% endif %}">
-        <label for="{{ incident_form.pole.id_for_label }}" class="field-label">
-          {{ incident_form.pole.label }}
+        <label for="{{ incident_form.pole.id_for_label }}" class="field-label pole-label">
+          <div class="pole-label-left">{{ incident_form.pole.label }}:</div>
+          <div class="pole-label-right">
+            {% if incident.pole %}
+              <a href="https://fridge.newtowers.ru/site/passport/{{ incident.pole.site_id }}?proj={{ incident.pole.site_id }}" 
+                class="pole-link tooltip" data-title="{{ incident.pole.region.macroregion|default:incident.pole.region }}" target="_blank">
+                {{ incident.pole }}
+              </a>
+            {% else %}
+              —
+            {% endif %}
+          </div>
         </label>
 
         {{ incident_form.pole }}
