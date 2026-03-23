@@ -1,3 +1,4 @@
+import re
 from functools import partial
 from typing import Optional
 
@@ -104,24 +105,29 @@ from .validators import (
 def index(request: HttpRequest) -> HttpResponse:
     query = request.GET.get('q', '').strip()
 
+    code_pattern = r"^(NT|AVRSERVICE)-\d+$"
+    search_only_by_code = (
+        True if re.match(code_pattern, query, re.IGNORECASE) else False
+    )
+
     pole = (
         request.GET.get('pole', '').strip()
         or request.COOKIES.get('pole', '').strip()
-    )
+    ) if not search_only_by_code else None
 
     base_station = (
         request.GET.get('base_station', '').strip()
         or request.COOKIES.get('base_station', '').strip()
-    )
+    ) if not search_only_by_code else None
 
     status_name = (
         request.GET.get('status', '').strip()
         or request.COOKIES.get('status', '').strip()
-    )
+    ) if not search_only_by_code else None
 
     category_id = (
         request.GET.get('category') or request.COOKIES.get('category')
-    )
+    ) if not search_only_by_code else None
     if category_id and category_id.isdigit():
         category_id = int(category_id)
     else:
@@ -130,7 +136,7 @@ def index(request: HttpRequest) -> HttpResponse:
     responsible_user_id = (
         request.GET.get('responsible_user')
         or request.COOKIES.get('responsible_user')
-    )
+    ) if not search_only_by_code else None
 
     if responsible_user_id and responsible_user_id.isdigit():
         responsible_user_id = int(responsible_user_id)
@@ -142,7 +148,7 @@ def index(request: HttpRequest) -> HttpResponse:
     is_incident_finish = (
         request.GET.get('finish', '').strip()
         or request.COOKIES.get('finish', '').strip()
-    )
+    ) if not search_only_by_code else None
 
     if is_incident_finish == 'true':
         is_incident_finish = True
@@ -155,32 +161,32 @@ def index(request: HttpRequest) -> HttpResponse:
         request.GET.get('sla_avr', '').strip()
         or request.COOKIES.get('sla_avr', '').strip()
         or None
-    )
+    ) if not search_only_by_code else None
 
     sla_rvr_status = (
         request.GET.get('sla_rvr', '').strip()
         or request.COOKIES.get('sla_rvr', '').strip()
         or None
-    )
+    ) if not search_only_by_code else None
 
     sla_dgu_status = (
         request.GET.get('sla_dgu', '').strip()
         or request.COOKIES.get('sla_dgu', '').strip()
         or None
-    )
+    ) if not search_only_by_code else None
 
     date_from = (
         request.GET.get('incident_date_from', '').strip()
         or request.COOKIES.get('incident_date_from', '').strip()
         or None
-    )
+    ) if not search_only_by_code else None
     date_from = get_aware_datetime(date_from)
 
     date_to = (
         request.GET.get('incident_date_to', '').strip()
         or request.COOKIES.get('incident_date_to', '').strip()
         or None
-    )
+    ) if not search_only_by_code else None
     date_to = get_aware_datetime(date_to)
 
     if date_from and date_to and date_from > date_to:

@@ -20,6 +20,23 @@ document.addEventListener('DOMContentLoaded', function() {
     per_page: 'per_page'
   };
 
+  // -------------------- HELPERS --------------------
+  function getQuery() {
+    return searchInput ? searchInput.value.trim() : '';
+  }
+
+  function isSearchByCode(query) {
+    if (!query) return false;
+
+    // Проверяем строгое соответствие: только префикс, дефис и цифры
+    // ^(NT|AVRSERVICE) — только эти варианты в начале
+    // -\d+$ — дефис и цифры до самого конца строки
+    return /^(NT|AVRSERVICE)-\d+$/i.test(query.trim());
+  }
+  function isSearchMode() {
+    return isSearchByCode(getQuery());
+  }
+
   // ---- COOKIE HELPERS ----
   function setCookie(name, value, days = 30) {
     const d = new Date();
@@ -36,9 +53,11 @@ document.addEventListener('DOMContentLoaded', function() {
     return match ? decodeURIComponent(match[1]) : null;
   }
 
-  // ---- 1. ВОССТАНОВЛЕНИЕ ЗНАЧЕНИЙ ИЗ COOKIE ----
+  // ---- 1. ВОССТАНОВЛЕНИЕ ЗНАЧЕНИЙ ИЗ COOKIE (НО НЕ В РЕЖИМЕ ПОИСКА ПО КОДУ) ----
   function restoreValue(input, name) {
     if (!input) return;
+
+    if (isSearchMode()) return;
     
     // Если сервер прислал пусто (value == ""), пробуем восстановить из куки
     if (input.value === "" || input.value === null) {
@@ -51,14 +70,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // ---- 2. СОХРАНЕНИЕ В COOKIE ПРИ ИЗМЕНЕНИИ ----
+  // ---- 2. СОХРАНЕНИЕ В COOKIE ПРИ ИЗМЕНЕНИИ (НО НЕ В РЕЖИМЕ ПОИСКА ПО КОДУ) ----
   function saveOnChange(input, name) {
     if (!input) return;
+  
     input.addEventListener('change', () => {
+      if (isSearchMode()) {
+        deleteCookie(cookieNames[name]); // не даём сохранять
+        return;
+      }
+
       if (input.value) {
         setCookie(cookieNames[name], input.value);
       } else {
-        deleteCookie(cookieNames[name]); // Удаляем куку, если поле очистили
+        deleteCookie(cookieNames[name]);
       }
     });
   }

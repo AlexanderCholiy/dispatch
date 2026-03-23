@@ -142,8 +142,8 @@ class AutoReply:
                 )
                 notif_msg = self.truncate_text(
                     (
-                        'Система автоматически ответила на письмо от '
-                        f'{email.email_from}.\n'
+                        'Система автоматически ответила на письмо ID: '
+                        f'{email.pk}.\n'
                         f'Тема: "{email.email_subject or "Без темы"}".'
                     ),
                     MAX_NOTIFICATION_TEXT_LEN,
@@ -186,7 +186,7 @@ class AutoReply:
                 )
                 notif_msg = self.truncate_text(
                     (
-                        f'Входящее письмо от {email.email_from}.\n'
+                        f'Входящее письмо ID: {email.pk}.\n'
                         f'Тема: "{email.email_subject or "Без темы"}".'
                     ),
                     MAX_NOTIFICATION_TEXT_LEN,
@@ -259,7 +259,7 @@ class AutoReply:
                 )
                 notif_msg = self.truncate_text(
                     (
-                        f'Получено новое письмо от {email.email_from}.\n'
+                        f'Получено новое письмо ID: {email.pk}.\n'
                         f'Тема: "{email.email_subject or "Без темы"}".\n'
                         'Инцидент возвращён в работу.'
                     ),

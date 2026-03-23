@@ -1,5 +1,7 @@
 from django.contrib import admin
 
+from core.admin import ReadOnlyAdmin
+
 from .constants import REQUESTS_PER_PAGE
 from .models import (
     Appeal,
@@ -15,7 +17,7 @@ from .models import (
 
 
 @admin.register(Declarant)
-class DeclarantAdmin(admin.ModelAdmin):
+class DeclarantAdmin(ReadOnlyAdmin):
     list_display = ('name',)
     search_fields = ('name',)
     ordering = ('name', 'id',)
@@ -23,7 +25,7 @@ class DeclarantAdmin(admin.ModelAdmin):
 
 
 @admin.register(Company)
-class CompanyAdmin(admin.ModelAdmin):
+class CompanyAdmin(ReadOnlyAdmin):
     list_display = ('name',)
     search_fields = ('name',)
     ordering = ('name', 'id',)
@@ -31,7 +33,7 @@ class CompanyAdmin(admin.ModelAdmin):
 
 
 @admin.register(AttrType)
-class AttrTypeAdmin(admin.ModelAdmin):
+class AttrTypeAdmin(ReadOnlyAdmin):
     list_display = ('attribute_id', 'name', 'description')
     search_fields = ('name', 'description')
     ordering = ('attribute_id', 'id',)
@@ -87,7 +89,7 @@ class AppealAttrInline(EnergyAttrInline):
     model = AppealAttr
 
 
-class EnergyRequestAdmin(admin.ModelAdmin):
+class EnergyRequestAdmin(ReadOnlyAdmin):
     list_display = ('number', 'company', 'declarant')
     search_fields = ('number',)
     ordering = ('id',)

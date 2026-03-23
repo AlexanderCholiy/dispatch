@@ -6,12 +6,13 @@
   max-height: 480px;
   background-color: transparent;
   border-radius: var(--radius-lg);
-  box-shadow: 0 0 var(--space-xxs) var(--extra-color);
+  box-shadow: 0 0 var(--space-sm) var(--extra-color);
   display: none;
   flex-direction: column;
   overflow: hidden;
   z-index: 1000;
   transition: all var(--transition-value);
+  border: 0.5px solid var(--extra-color);
 }
 
 .notifications-panel .notifications-header {

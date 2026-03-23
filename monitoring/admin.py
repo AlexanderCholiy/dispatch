@@ -1,5 +1,6 @@
 from django.contrib import admin
 
+from core.admin import ReadOnlyAdmin
 from core.constants import EMPTY_VALUE
 
 from .constants import (
@@ -13,7 +14,7 @@ admin.site.empty_value_display = EMPTY_VALUE
 
 
 @admin.register(MSysModem)
-class MSysModemAdmin(admin.ModelAdmin):
+class MSysModemAdmin(ReadOnlyAdmin):
     list_per_page = MSYS_MODEMS_PER_PAGE
     list_display = (
         'modem_ip',
@@ -30,7 +31,7 @@ class MSysModemAdmin(admin.ModelAdmin):
 
 
 @admin.register(MSysPoles)
-class MSysPolesAdmin(admin.ModelAdmin):
+class MSysPolesAdmin(ReadOnlyAdmin):
     list_per_page = MSYS_POLES_PER_PAGE
     list_display = (
         'pole',
@@ -41,7 +42,7 @@ class MSysPolesAdmin(admin.ModelAdmin):
 
 
 @admin.register(MSysStatus)
-class MSysStatusAdmin(admin.ModelAdmin):
+class MSysStatusAdmin(ReadOnlyAdmin):
     list_per_page = MSYS_STATUSES_PER_PAGE
     list_display = (
         'id',

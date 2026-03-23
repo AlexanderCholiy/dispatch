@@ -225,6 +225,14 @@ class IncidentStatusAdmin(admin.ModelAdmin):
     search_fields = ('name', 'description',)
     ordering = ('name',)
 
+    readonly_fields = ('name',)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
 
 @admin.register(IncidentCategory)
 class IncidentCategoryAdmin(admin.ModelAdmin):
@@ -233,3 +241,11 @@ class IncidentCategoryAdmin(admin.ModelAdmin):
     list_editable = ('description',)
     search_fields = ('name', 'description',)
     ordering = ('name',)
+
+    readonly_fields = ('name',)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
