@@ -7,7 +7,6 @@ export function connectWS({ onMessage }) {
         socket = new WebSocket(`${protocol}://${window.location.host}/ws/notifications/`);
 
         socket.onopen = () => {
-            console.log("WS connected");
             if (!heartbeatInterval) {
                 heartbeatInterval = setInterval(() => {
                     if (socket.readyState === WebSocket.OPEN) {

@@ -12,8 +12,13 @@ from django.db.models import (
     Prefetch,
     Q,
     QuerySet,
+    ExpressionWrapper,
+    Value,
+    FloatField,
+    IntegerField,
+    F,
 )
-from django.db.models.functions import ExtractHour, TruncDate
+from django.db.models.functions import ExtractHour, TruncDate, Coalesce
 from django.http import HttpResponse
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
@@ -46,6 +51,7 @@ from api.serializers.reports import (
     ContractorStatSerializer,
     IncidentReportSerializer,
     StatisticReportSerializer,
+    DispatchStatSerializer,
 )
 from api.utils import get_first_day_prev_month, is_file_fresh
 from api.validators import validate_date_range
@@ -60,8 +66,12 @@ from incidents.annotations import (
     annotate_sla_avr,
     annotate_sla_dgu,
     annotate_sla_rvr,
+    annotate_sla_dispatch,
 )
-from incidents.constants import NOTIFIED_CONTRACTOR_STATUS_NAME
+from incidents.constants import (
+    NOTIFIED_CONTRACTOR_STATUS_NAME,
+    RUSSIA_EMPTY_MACRO_ID,
+)
 from incidents.models import Incident, IncidentStatusHistory
 from ts.constants import UNDEFINED_CASE
 from ts.models import MacroRegion, PoleContractorEmail
@@ -437,6 +447,13 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                 pole__pole=UNDEFINED_CASE
             )
             .select_related('pole', 'incident_type')
+            .annotate(
+                macroregion_id=Coalesce(
+                    'pole__region__macroregion',
+                    Value(RUSSIA_EMPTY_MACRO_ID),
+                    output_field=IntegerField()
+                )
+            )
         )
 
         # -------- EXISTS вместо JOIN --------
@@ -459,7 +476,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
         subtype_map: dict[int, dict[int, IncidentTypeStat]] = {}
 
         for row in subtype_qs:
-            macro_id = row['pole__region__macroregion']
+            macro_id = row['macroregion_id']
             type_name = row['incident_type__name']
             subtype_name = row['incident_subtype__name'] or 'Без подкатегории'
             count = row['count']
@@ -471,7 +488,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
         # -------- Агрегация --------
         incident_stats = (
             incidents
-            .values('pole__region__macroregion')
+            .values('macroregion_id')
             .annotate(
                 # Общее количество:
                 total_closed_incidents=Count(
@@ -568,48 +585,44 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
             )
         )
 
+        stats_map = {item['macroregion_id']: item for item in incident_stats}
+
         # Отдельно считаем открытые и закрытые с проблемой питания
         power_qs = annotate_is_power_issue(
             incidents, monitoring_check=monitoring_check
         ).filter(is_power_issue=True)
 
         open_power_map = {
-            row['pole__region__macroregion']: row['c']
+            row['macroregion_id']: row['c']
             for row in (
                 power_qs
                 .filter(OPEN_INCIDENTS_VALID_FILTER)
-                .values('pole__region__macroregion')
+                .values('macroregion_id')
                 .annotate(c=Count('id', distinct=True))
             )
         }
 
         closed_power_map = {
-            row['pole__region__macroregion']: row['c']
+            row['macroregion_id']: row['c']
             for row in (
                 power_qs
                 .filter(CLOSED_INCIDENTS_VALID_FILTER)
-                .values('pole__region__macroregion')
+                .values('macroregion_id')
                 .annotate(c=Count('id', distinct=True))
             )
         }
-
-        stats_map = {
-            item['pole__region__macroregion']: item for item in incident_stats
-        }
-
-        macroregions = list(MacroRegion.objects.order_by('name', 'id'))
 
         # -------- Считаем инциденты по дням --------
         daily_qs = (
             incidents
             .annotate(day=TruncDate('incident_date'))
-            .values('pole__region__macroregion', 'day')
+            .values('macroregion_id', 'day')
             .annotate(count=Count('id'))
-            .order_by('pole__region__macroregion', 'day')
+            .order_by('macroregion_id', 'day')
         )
         daily_map = {}
         for row in daily_qs:
-            macro_id = row['pole__region__macroregion']
+            macro_id = row['macroregion_id']
             day = row['day']
             count = row['count']
             daily_map.setdefault(macro_id, {})[day] = count
@@ -618,18 +631,25 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
         hourly_qs = (
             incidents
             .annotate(hour=ExtractHour('incident_date'))
-            .values('pole__region__macroregion', 'hour')
+            .values('macroregion_id', 'hour')
             .annotate(count=Count('id'))
-            .order_by('pole__region__macroregion', 'hour')
+            .order_by('macroregion_id', 'hour')
         )
         hourly_map = {}
         for row in hourly_qs:
-            macro_id = row['pole__region__macroregion']
+            macro_id = row['macroregion_id']
             hour = row['hour']  # 0-23
             count = row['count']
             hourly_map.setdefault(macro_id, {})[hour] = count
 
         # -------- Заполняем макрорегионы данными --------
+        macroregions = list(MacroRegion.objects.order_by('name'))
+        empty_macro = MacroRegion(
+            id=RUSSIA_EMPTY_MACRO_ID,
+            name='Без макрегиона'
+        )
+        macroregions.append(empty_macro)
+
         for macro in macroregions:
             macro_stats = stats_map.get(macro.pk, {})
             for field in [
@@ -928,3 +948,151 @@ class AVRContractorViewSet(viewsets.ReadOnlyModelViewSet):
         start_key = start.isoformat() if start else 'none'
         end_key = end.isoformat() if end else 'none'
         return f'avr_contractor_stat:{start_key}:{end_key}'
+
+
+class DispatchViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Статистика по диспетчерам.
+
+    Query-параметры:
+
+    - start_date (YYYY-MM-DD):
+        Начальная дата инцидента (включительно).
+        Если не указана — фильтрация снизу не применяется.
+
+    - end_date (YYYY-MM-DD):
+        Конечная дата инцидента (включительно).
+        Если не указана — фильтрация сверху не применяется.
+
+    ПРИМЕРЫ ЗАПРОСОВ:
+
+    Получить статистику за период:
+        GET /api/v1/report/statistics/dispatch/?start_date=2025-01-01&
+        end_date=2025-01-31
+    """
+    serializer_class = DispatchStatSerializer
+    permission_classes = (permissions.AllowAny,)
+    pagination_class = None
+
+    throttle_classes = (ScopedRateThrottle,)
+    throttle_scope = 'stats_request'
+
+    def get_queryset(self):
+        params = self.request.query_params
+
+        start, end = validate_date_range(
+            params.get('start_date'),
+            params.get('end_date'),
+        )
+
+        cache_key = self._build_cache_key(start, end)
+        cached = cache.get(cache_key)
+        if cached:
+            return cached
+
+        incident_date_filter = get_incident_date_filter(start, end)
+
+        incidents = (
+            Incident.objects
+            .filter(TOTAL_VALID_INCIDENTS_FILTER)
+            .filter(incident_date_filter)
+            .exclude(pole__pole=UNDEFINED_CASE)
+            .select_related('responsible_user',)
+        )
+
+        incidents = annotate_sla_dispatch(incidents)
+
+        incidents = (
+            incidents
+            .values(
+                'responsible_user_id',
+                'responsible_user__role',
+                'responsible_user__first_name',
+                'responsible_user__last_name',
+            )
+            .annotate(
+                total=Count('id'),
+                open_incidents=Count(
+                    'id',
+                    filter=OPEN_INCIDENTS_VALID_FILTER
+                ),
+                closed_incidents=Count(
+                    'id',
+                    filter=CLOSED_INCIDENTS_VALID_FILTER
+                ),
+                sla_ok=Count(
+                    'id',
+                    filter=Q(dispatch_sla_ok=True)
+                ),
+                sla_failed=Count(
+                    'id',
+                    filter=Q(dispatch_sla_ok=False)
+                ),
+                open_sla_ok=Count(
+                    'id',
+                    filter=(
+                        OPEN_INCIDENTS_VALID_FILTER
+                        & Q(dispatch_sla_ok=True)
+                    )
+                ),
+                open_sla_failed=Count(
+                    'id',
+                    filter=(
+                        OPEN_INCIDENTS_VALID_FILTER
+                        & Q(dispatch_sla_ok=False)
+                    )
+                ),
+
+                # --- SLA ЗАКРЫТЫЕ ---
+                closed_sla_ok=Count(
+                    'id',
+                    filter=(
+                        CLOSED_INCIDENTS_VALID_FILTER
+                        & Q(dispatch_sla_ok=True)
+                    )
+                ),
+                closed_sla_failed=Count(
+                    'id',
+                    filter=(
+                        CLOSED_INCIDENTS_VALID_FILTER
+                        & Q(dispatch_sla_ok=False)
+                    )
+                ),
+            )
+        )
+
+        result = list(incidents)
+
+        for row in result:
+            total = row.get('total', 0)
+            open_total = row.get('open_incidents', 0)
+            closed_total = row.get('closed_incidents', 0)
+
+            sla_ok = row.get('sla_ok', 0)
+            open_ok = row.get('open_sla_ok', 0)
+            closed_ok = row.get('closed_sla_ok', 0)
+
+            row['sla_percent'] = (sla_ok / total * 100) if total else 0
+            row['open_sla_percent'] = (
+                (open_ok / open_total * 100) if open_total else 0
+            )
+            row['closed_sla_percent'] = (
+                (closed_ok / closed_total * 100) if closed_total else 0
+            )
+
+        result.sort(
+            key=lambda x: (
+                x['sla_percent'],
+                x['open_sla_percent'],
+                x['responsible_user_id'],
+            )
+        )
+
+        cache.set(cache_key, result, STATISTIC_CACHE_TIMEOUT)
+
+        return result
+
+    def _build_cache_key(self, start: date | None, end: date | None) -> str:
+        start_key = start.isoformat() if start else 'none'
+        end_key = end.isoformat() if end else 'none'
+        return f'dispatch_stat:{start_key}:{end_key}'

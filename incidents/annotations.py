@@ -16,9 +16,12 @@ from django.db.models import (
     QuerySet,
     Value,
     When,
+    Subquery,
+    IntegerField,
 )
 from django.utils import timezone
 
+from django.db.models.functions import Coalesce
 from monitoring.constants import NORMAL_POLES_CACHE_TIMEOUT
 from monitoring.models import DeviceStatus, MSysPoles
 from ts.constants import UNDEFINED_CASE
@@ -36,8 +39,11 @@ from .constants import (
     POWER_ISSUE_TYPES,
     RVR_CATEGORY,
     RVR_SLA_DEADLINE_IN_HOURS,
+    DISPATCH_SLA_DEADLINE,
+    NOTIFIED_CONTRACTOR_STATUS_NAME,
+    RUSSIA_EMPTY_MACRO_ID,
 )
-from .models import Incident, IncidentCategoryRelation
+from .models import Incident, IncidentCategoryRelation, IncidentStatusHistory
 
 
 class IncidentStateStats(TypedDict):
@@ -435,12 +441,20 @@ def annotate_incident_subtypes(
     """
     return (
         incidents
+        .annotate(
+            macroregion_id=Coalesce(
+                'macroregion_id',
+                'pole__region__macroregion',
+                Value(RUSSIA_EMPTY_MACRO_ID),
+                output_field=IntegerField()
+            )
+        )
         .exclude(
             incident_type__isnull=True,
             incident_subtype__isnull=True,
         )
         .values(
-            'pole__region__macroregion',
+            'macroregion_id',
             'incident_type__id',
             'incident_type__name',
             'incident_subtype__id',
@@ -570,3 +584,74 @@ def aggregate_sla_percentages(
             stats['dgu_on_time'], stats['dgu_total']
         ),
     }
+
+
+def annotate_sla_dispatch(queryset: QuerySet[Incident]):
+    contractor_subquery = (
+        IncidentStatusHistory.objects
+        .filter(
+            incident=OuterRef('pk'),
+            status__name=NOTIFIED_CONTRACTOR_STATUS_NAME,
+        )
+        .order_by('insert_date')
+    )
+
+    queryset = queryset.annotate(
+        transfer_to_contractor_date=Subquery(
+            contractor_subquery.values('insert_date')[:1],
+            output_field=DateTimeField(),
+        )
+    )
+
+    queryset = queryset.annotate(
+        dispatch_end_date=Case(
+            # 1. Передано подрядчику
+            When(
+                transfer_to_contractor_date__isnull=False,
+                then=F('transfer_to_contractor_date'),
+            ),
+            # 2. Закрыт инцидент
+            When(
+                incident_finish_date__isnull=False,
+                then=F('incident_finish_date'),
+            ),
+            # 3. До текущего времени
+            default=Value(timezone.now()),
+            output_field=DateTimeField(),
+        )
+    )
+
+    queryset = queryset.annotate(
+        dispatch_end_date=Case(
+            When(
+                transfer_to_contractor_date__isnull=False,
+                then=F('transfer_to_contractor_date'),
+            ),
+            When(
+                incident_finish_date__isnull=False,
+                then=F('incident_finish_date'),
+            ),
+            default=Value(timezone.now()),
+            output_field=DateTimeField(),
+        )
+    )
+
+    queryset = queryset.annotate(
+        dispatch_duration=ExpressionWrapper(
+            F('dispatch_end_date') - F('incident_date'),
+            output_field=DurationField(),
+        )
+    )
+
+    queryset = queryset.annotate(
+        dispatch_sla_ok=Case(
+            When(
+                dispatch_duration__lte=DISPATCH_SLA_DEADLINE,
+                then=Value(True),
+            ),
+            default=Value(False),
+            output_field=BooleanField(),
+        )
+    )
+
+    return queryset

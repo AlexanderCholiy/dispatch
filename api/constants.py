@@ -6,7 +6,8 @@ from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.db.models import Q
 
-STATISTIC_CACHE_TIMEOUT = 20  # сек
+# STATISTIC_CACHE_TIMEOUT = 20  # секccccccccccccccccccccccccccccccccccccccccccccccccccccc
+STATISTIC_CACHE_TIMEOUT = 1
 
 BASE_INCIDENT_VALID_FILTER = Q(code__isnull=False)
 

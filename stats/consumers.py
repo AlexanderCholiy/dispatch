@@ -88,6 +88,7 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
         from api.views.reports import (
             AVRContractorViewSet,
             StatisticReportViewSet,
+            DispatchViewSet,
         )
 
         now = timezone.localtime()
@@ -153,12 +154,32 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
             ) >= HTTPStatus.BAD_REQUEST:
                 avr_data = {'error': avr_data}
         except Exception as e:
-            django_logger.debug("AVR error", exc_info=True)
+            django_logger.debug('AVR error', exc_info=True)
             avr_data = {'error': str(e)}
+
+        dispatch_request = APIRequestFactory().get(
+            reverse('dispatch_statistics_report-list'), query
+        )
+        force_authenticate(dispatch_request, user=None)
+
+        try:
+            dispatch_response = (
+                DispatchViewSet
+                .as_view({'get': 'list'})(dispatch_request)
+            )
+            dispatch_data = dispatch_response.data
+            if getattr(
+                dispatch_response, 'status_code', HTTPStatus.OK
+            ) >= HTTPStatus.BAD_REQUEST:
+                dispatch_data = {'error': dispatch_data}
+        except Exception as e:
+            django_logger.debug('Dispatch error', exc_info=True)
+            dispatch_data = {'error': str(e)}
 
         return {
             'period': data,
             'avr_period': avr_data,
+            'dispatch_data': dispatch_data,
             'meta': {
                 'generated_at': now.isoformat(),
                 'period': {

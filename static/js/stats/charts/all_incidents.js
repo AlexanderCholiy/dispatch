@@ -88,7 +88,7 @@ export function createAllIncidentsChart(ctx, initialData, label, horizontal = fa
                         color: colors.add_color,
                         font: { size: fonts.sm },
                     },
-                    ticks: { color: colors.add_color, min: 0, stepSize: horizontal ? 1 : undefined },
+                    ticks: { color: colors.add_color, min: 0 },
                     grid: { color: colors.extra },
                     stacked: horizontal
                 },
@@ -99,7 +99,7 @@ export function createAllIncidentsChart(ctx, initialData, label, horizontal = fa
                         color: colors.add_color,
                         font: { size: fonts.sm }
                     },
-                    ticks: { color: colors.add_color, precision: 0, min: 0, beginAtZero: true, stepSize: horizontal ? undefined : 1 },
+                    ticks: { color: colors.add_color, precision: 0, min: 0, beginAtZero: true },
                     beginAtZero: true,
                     grid: { color: colors.extra },
                     stacked: horizontal

@@ -6,6 +6,7 @@ from .views.reports import (
     AVRContractorViewSet,
     IncidentReportViewSet,
     StatisticReportViewSet,
+    DispatchViewSet,
 )
 
 router = DefaultRouter()
@@ -16,6 +17,11 @@ router.register(
     'report/statistics/avr-contractor',
     AVRContractorViewSet,
     basename='avr_contractor_statistics_report'
+)
+router.register(
+    'report/statistics/dispatch',
+    DispatchViewSet,
+    basename='dispatch_statistics_report'
 )
 router.register(
     'report/statistics', StatisticReportViewSet, basename='statistics_report'

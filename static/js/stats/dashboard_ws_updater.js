@@ -5,13 +5,17 @@ import { updateTotalCount, updateSlaTotalCounts, updateCategoryTotals, updateCha
 import { updateHourlyGrid } from './data/hourly_grid_updater.js';
 import { initWeeklyMacroregionsTable, updateWeeklyMacroregionsTable } from './data/weekly_macroregions_table.js';
 import { initAvrContractorsTable, updateAvrContractorsTable } from './data/avr_contractors_table.js';
+import { updateDispatchSlaTables } from './data/dispatch_sla_table.js'; // ✅ ДОБАВИЛИ
 
 let ws = null;
 const lastMsgRef = { current: null };
+
 let lastWeeklyStart = null;
 let lastWeeklyEnd = null;
+
 let lastAvrStart = null;
 let lastAvrEnd = null;
+
 
 export function startStatisticsWebSocket(charts) {
     const startInput = document.getElementById('start-date');
@@ -37,20 +41,24 @@ export function startStatisticsWebSocket(charts) {
     ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
-        console.log("WS connected");
         sendParams(confirmedStart, confirmedEnd);
     };
 
     ws.onmessage = (e) => {
         try {
             const data = JSON.parse(e.data);
-            if (data.error) return showMessage(data.error, 'error', messagesContainer, lastMsgRef);
 
-            // Данные могут быть в разных форматах
+            if (data.error) {
+                return showMessage(data.error, 'error', messagesContainer, lastMsgRef);
+            }
+
+            // ✅ ВАЖНО: правильно достаём все уровни
             const apiData = data.period ?? data;
             const avrData = data.avr_period ?? null;
-            
-            updateCharts(apiData, avrData);
+            const dispatchData = data.dispatch_data ?? null;
+
+            updateCharts(apiData, avrData, dispatchData);
+
         } catch (err) {
             console.error("WS parse error", err);
         }
@@ -62,12 +70,11 @@ export function startStatisticsWebSocket(charts) {
     function sendParams(start, end) {
         const payload = { start_date: start };
         if (end) payload.end_date = end;
-        console.log("SEND FILTER", payload);
         ws.send(JSON.stringify(payload));
     }
 
     /* ---------- UPDATE CHARTS + COPY DATA ---------- */
-    function updateCharts(apiData, avrData = null) {
+    function updateCharts(apiData, avrData = null, dispatchData = null) {
         const macroregionLabels = apiData.map(r => r.macroregion);
 
         // DAILY
@@ -75,6 +82,7 @@ export function startStatisticsWebSocket(charts) {
         updateTotalCount(charts.daily, [
             { id: 'daily-total-count' }
         ]);
+
         if (apiData.length > 0) {
             updateHourlyGrid(apiData[0], 'hours-total-grid');
         }
@@ -103,12 +111,12 @@ export function startStatisticsWebSocket(charts) {
 
         // AVR CONTRACTORS TABLE
         const avrTableContainer = document.getElementById('avr-contractors-table');
+
         if (avrTableContainer && avrData) {
             const needRebuildAvr =
                 startDate !== lastAvrStart ||
                 endDate !== lastAvrEnd;
 
-            // Проверяем, нет ли ошибки в данных
             if (avrData.error) {
                 console.warn('AVR data error:', avrData.error);
                 showMessage('Ошибка загрузки данных по подрядчикам', 'warning', messagesContainer, lastMsgRef);
@@ -122,13 +130,12 @@ export function startStatisticsWebSocket(charts) {
                     startDate,
                     endDate
                 );
+
                 lastAvrStart = startDate;
                 lastAvrEnd = endDate;
             } else {
                 updateAvrContractorsTable(avrData);
             }
-        } else if (avrTableContainer && !avrData) {
-            console.warn('AVR data not available');
         }
 
         // CLOSED
@@ -136,6 +143,7 @@ export function startStatisticsWebSocket(charts) {
             'total_closed_incidents',
             'closed_incidents_with_power_issue'
         ], macroregionLabels);
+
         updateTotalCount(charts.closed, [
             { id: 'closed-total-count', field: 'Всего' },
             { id: 'closed-energy-total-count', field: 'Без питания' }
@@ -146,6 +154,7 @@ export function startStatisticsWebSocket(charts) {
             'total_open_incidents',
             'open_incidents_with_power_issue'
         ], macroregionLabels);
+
         updateTotalCount(charts.open, [
             { id: 'open-total-count', field: 'Всего' },
             { id: 'open-energy-total-count', field: 'Без питания' }
@@ -159,6 +168,7 @@ export function startStatisticsWebSocket(charts) {
             'avr-less-hour-total',
             'avr-in-work-total',
         ]);
+
         updateSlaCharts(charts.sla.rvr, apiData, 'rvr');
         updateSlaTotalCounts(charts.sla.rvr, [
             'rvr-expired-total',
@@ -166,6 +176,7 @@ export function startStatisticsWebSocket(charts) {
             'rvr-less-hour-total',
             'rvr-in-work-total',
         ]);
+
         updateSlaCharts(charts.sla.dgu, apiData, 'dgu');
         updateSlaTotalCounts(charts.sla.dgu, [
             'dgu-expired-total',
@@ -188,6 +199,7 @@ export function startStatisticsWebSocket(charts) {
             ],
             macroregionLabels
         );
+
         updateCategoryTotals(charts.types, [
             { id: 'total-power', index: 0 },
             { id: 'total-ams', index: 1 },
@@ -196,12 +208,13 @@ export function startStatisticsWebSocket(charts) {
             { id: 'total-destruction', index: 4 },
             { id: 'total-access', index: 5 },
         ]);
+
         updateChartTotals(charts.types, [
             { id: 'types-power-total', indexes: [0] },
             { id: 'types-other-total', indexes: [1,2,3,4,5] }
         ]);
 
-        // SUBTYPES (Power Issues)
+        // SUBTYPES
         if (charts.subtypes?.power) {
             updateSubtypesChart(
                 charts.subtypes.power.chart,
@@ -210,6 +223,7 @@ export function startStatisticsWebSocket(charts) {
                 charts.subtypes.power.labels,
                 macroregionLabels
             );
+
             updateCategoryTotals(charts.subtypes.power.chart, [
                 { id: 'eo-nb-vl-1kv', index: 0 },
                 { id: 'eo-nb-vl-1kv-plus', index: 1 },
@@ -229,10 +243,12 @@ export function startStatisticsWebSocket(charts) {
                 { id: 'eo-no-scheme', index: 15 },
                 { id: 'eo-no-subtype', index: 16 },
             ]);
+
             updateChartTotals(charts.subtypes.power.chart, [
                 { id: 'power-no-subtype-total', indexes: [16] },
                 { id: 'power-other-total', indexes: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15] }
             ]);
+
             updateCopyButton(
                 'energy-subtypes-chart-card',
                 charts.subtypes.power.chart,
@@ -240,16 +256,20 @@ export function startStatisticsWebSocket(charts) {
             );
         }
 
-        // ===== COPY DATA =====
+        // COPY
         updateCopyButton('daily-chart-card', charts.daily, 'Дата/Регион');
         updateCopyButton('closed-chart-card', charts.closed, 'Регион/Количество инцидентов');
         updateCopyButton('open-chart-card', charts.open, 'Регион/Количество инцидентов');
         updateCopyButton('types-chart-card', charts.types, 'Регион/Тип аварии');
 
-        // SLA таблицы
         updateSlaCopyData('avr-sla-grid', apiData, 'avr');
         updateSlaCopyData('rvr-sla-grid', apiData, 'rvr');
         updateSlaCopyData('dgu-sla-grid', apiData, 'dgu');
+
+        // ✅ DISPATCH SLA TABLES (FIX)
+        if (dispatchData) {
+            updateDispatchSlaTables(dispatchData);
+        }
     }
 
     /* ---------- APPLY FILTER ---------- */
@@ -263,6 +283,7 @@ export function startStatisticsWebSocket(charts) {
 
         confirmedStart = start;
         confirmedEnd = end;
+
         sendParams(confirmedStart, confirmedEnd);
     });
 

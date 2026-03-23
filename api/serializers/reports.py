@@ -7,6 +7,7 @@ from api.utils import conversion_utc_datetime
 from incidents.constants import POWER_ISSUE_TYPES
 from incidents.models import Incident
 from ts.models import Region
+from users.models import Roles
 
 
 class IncidentReportSerializer(serializers.ModelSerializer):
@@ -377,3 +378,63 @@ class ContractorStatSerializer(serializers.Serializer):
         if isinstance(value, float) and value.is_integer():
             return int(value)
         return value
+
+
+class DispatchStatSerializer(serializers.Serializer):
+    responsible_user_id = serializers.IntegerField()
+    responsible_user_name = serializers.SerializerMethodField()
+
+    total = serializers.IntegerField()
+
+    open_incidents = serializers.IntegerField()
+    closed_incidents = serializers.IntegerField()
+
+    sla_ok = serializers.IntegerField()
+    sla_failed = serializers.IntegerField()
+
+    open_sla_ok = serializers.IntegerField()
+    open_sla_failed = serializers.IntegerField()
+
+    closed_sla_ok = serializers.IntegerField()
+    closed_sla_failed = serializers.IntegerField()
+
+    sla_percent = serializers.SerializerMethodField()
+    open_sla_percent = serializers.SerializerMethodField()
+    closed_sla_percent = serializers.SerializerMethodField()
+
+    def _format_percent(self, value):
+        value = round(value, PERCENT_ACCURACY)
+        if isinstance(value, float) and value.is_integer():
+            return int(value)
+        return value
+
+    def get_sla_percent(self, obj):
+        return self._format_percent(obj.get('sla_percent', 0))
+
+    def get_open_sla_percent(self, obj):
+        return self._format_percent(obj.get('open_sla_percent', 0))
+
+    def get_closed_sla_percent(self, obj):
+        return self._format_percent(obj.get('closed_sla_percent', 0))
+
+    def get_responsible_user_name(self, obj):
+        user_id = obj.get('responsible_user_id')
+        if not user_id:
+            return None
+
+        first = (obj.get('responsible_user__first_name') or '').strip()
+        last = (obj.get('responsible_user__last_name') or '').strip()
+        full_name = f'{first} {last}'.strip()
+
+        if full_name:
+            return full_name
+
+        role_value = obj.get('responsible_user__role')
+        try:
+            role_label = (
+                Roles(role_value).label if role_value else 'Пользователь'
+            )
+        except ValueError:
+            role_label = 'Пользователь'
+
+        return f'{role_label} (ID: {user_id})'

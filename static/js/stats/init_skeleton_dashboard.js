@@ -7,7 +7,7 @@ import { updateCopyButton, updateSlaCopyData } from './data/copy_chart_data.js';
 import { startStatisticsWebSocket } from './dashboard_ws_updater.js';
 import { initWeeklyMacroregionsTable } from './data/weekly_macroregions_table.js';
 import { getFirstDayOfPreviousMonth } from './charts_utils.js';
-import { initAvrContractorsTable, maybeUpdateAvrContractorsTable } from './data/avr_contractors_table.js';
+import { initAvrContractorsTable } from './data/avr_contractors_table.js';
 
 
 if (window.Chart && window.ChartZoom) {
@@ -23,7 +23,7 @@ window.dashboardCharts = {};
 
 const DAILY_COLOR_KEYS = [
     'gray','pink','cyan','blue','red',
-    'yellow','brown','slate','magenta','green'
+    'yellow','brown','slate','magenta','green','extra'
 ];
 
 const TYPES_COLOR_KEYS = [
