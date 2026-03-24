@@ -301,9 +301,9 @@ def index(request: HttpRequest) -> HttpResponse:
         base_qs = base_qs.filter(responsible_user__id=responsible_user_id)
 
     if sort == 'asc':
-        base_qs = base_qs.order_by('update_date', 'incident_date', 'id')
+        base_qs = base_qs.order_by('incident_date', 'update_date', 'id')
     else:
-        base_qs = base_qs.order_by('-update_date', '-incident_date', 'id')
+        base_qs = base_qs.order_by('-incident_date', '-update_date', 'id')
 
     paginator = Paginator(base_qs.values_list('id', flat=True), per_page)
     page_number = request.GET.get('page')
@@ -459,7 +459,6 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         instance=incident,
         can_edit=can_manage,
         author=user,
-        categories=incident.categories,
     )
 
     if request.method == 'POST':
@@ -489,7 +488,6 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
             instance=incident,
             can_edit=can_manage,
             author=user,
-            categories=incident.categories
         )
         if incident_form.is_valid():
             incident_form.save()

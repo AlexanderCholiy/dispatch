@@ -215,6 +215,11 @@ def validate_status_transition(
 def validate_notify_operator(
     incident: Incident, last_status: Optional[IncidentStatus]
 ) -> Optional[str]:
+    if incident.is_yt_tracker_controlled:
+        return (
+            'Управление этим инцидентом происходит из интерфейса YandexTracker'
+        )
+
     if (
         last_status
         and last_status.name in (
@@ -237,6 +242,11 @@ def validate_notify_operator(
 def validate_notify_incident_closed(
     incident: Incident, last_status: Optional[IncidentStatus]
 ) -> Optional[str]:
+    if incident.is_yt_tracker_controlled:
+        return (
+            'Управление этим инцидентом происходит из интерфейса YandexTracker'
+        )
+
     if (
         last_status
         and last_status.name in (
@@ -261,6 +271,11 @@ def validate_notify_avr(
     last_status: Optional[IncidentStatus],
     category_names: set[str],
 ) -> Optional[str]:
+    if incident.is_yt_tracker_controlled:
+        return (
+            'Управление этим инцидентом происходит из интерфейса YandexTracker'
+        )
+
     if (
         last_status
         and last_status.name in (
@@ -306,6 +321,11 @@ def validate_notify_rvr(
     last_status: Optional[IncidentStatus],
     category_names: set[str],
 ) -> Optional[str]:
+    if incident.is_yt_tracker_controlled:
+        return (
+            'Управление этим инцидентом происходит из интерфейса YandexTracker'
+        )
+
     if (
         last_status
         and last_status.name in (

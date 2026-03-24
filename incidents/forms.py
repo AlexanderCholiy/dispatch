@@ -358,16 +358,12 @@ class IncidentForm(forms.ModelForm):
         self,
         can_edit: bool = False,
         author: Optional[User] = None,
-        categories=None,
         *args,
         **kwargs
     ):
         self.can_edit = can_edit
         self.author = author
         super().__init__(*args, **kwargs)
-
-        if categories is not None:
-            self.fields['categories'].queryset = categories
 
         # Значение по умолчанию для категории и статуса:
         if not self.instance.pk and not self.data:
