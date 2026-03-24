@@ -250,7 +250,7 @@ class StatisticReportSerializer(serializers.ModelSerializer):
     incident_subtype_stats = serializers.SerializerMethodField()
 
     class Meta:
-        model = Region
+        model = Incident
         fields = (
             'macroregion',
             # Общее количество:

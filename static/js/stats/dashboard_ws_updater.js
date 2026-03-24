@@ -5,7 +5,7 @@ import { updateTotalCount, updateSlaTotalCounts, updateCategoryTotals, updateCha
 import { updateHourlyGrid } from './data/hourly_grid_updater.js';
 import { initWeeklyMacroregionsTable, updateWeeklyMacroregionsTable } from './data/weekly_macroregions_table.js';
 import { initAvrContractorsTable, updateAvrContractorsTable } from './data/avr_contractors_table.js';
-import { updateDispatchSlaTables } from './data/dispatch_sla_table.js'; // ✅ ДОБАВИЛИ
+import { updateDispatchSlaTables } from './data/dispatch_sla_table.js';
 
 let ws = null;
 const lastMsgRef = { current: null };
@@ -16,10 +16,12 @@ let lastWeeklyEnd = null;
 let lastAvrStart = null;
 let lastAvrEnd = null;
 
-
 export function startStatisticsWebSocket(charts) {
     const startInput = document.getElementById('start-date');
     const endInput = document.getElementById('end-date');
+    const responsibleSelect = document.getElementById('responsible-user-select');
+    const operatorSelect = document.getElementById('operator-group-select');
+
     const applyBtn = document.getElementById('apply-period');
     const resetBtn = document.getElementById('reset-period');
     const messagesContainer = document.querySelector('.messages-container');
@@ -36,12 +38,14 @@ export function startStatisticsWebSocket(charts) {
 
     let confirmedStart = defaultStart;
     let confirmedEnd = null;
+    let confirmedResponsible = '';
+    let confirmedOperator = '';
 
     /* ---------- CONNECT ---------- */
     ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
-        sendParams(confirmedStart, confirmedEnd);
+        sendParams();
     };
 
     ws.onmessage = (e) => {
@@ -52,7 +56,6 @@ export function startStatisticsWebSocket(charts) {
                 return showMessage(data.error, 'error', messagesContainer, lastMsgRef);
             }
 
-            // ✅ ВАЖНО: правильно достаём все уровни
             const apiData = data.period ?? data;
             const avrData = data.avr_period ?? null;
             const dispatchData = data.dispatch_data ?? null;
@@ -67,21 +70,36 @@ export function startStatisticsWebSocket(charts) {
     ws.onerror = e => console.error("WS error", e);
     ws.onclose = () => console.warn("WS closed");
 
-    function sendParams(start, end) {
-        const payload = { start_date: start };
-        if (end) payload.end_date = end;
+    /* ---------- SEND PARAMS ---------- */
+    function sendParams() {
+        const payload = {
+            start_date: confirmedStart,
+        };
+
+        if (confirmedEnd) {
+            payload.end_date = confirmedEnd;
+        }
+
+        if (confirmedResponsible !== '') {
+            payload.responsible_user = confirmedResponsible === 'none'
+                ? null
+                : confirmedResponsible;
+        }
+
+        if (confirmedOperator !== '') {
+            payload.operator_group = confirmedOperator;
+        }
+
         ws.send(JSON.stringify(payload));
     }
 
-    /* ---------- UPDATE CHARTS + COPY DATA ---------- */
+    /* ---------- UPDATE CHARTS ---------- */
     function updateCharts(apiData, avrData = null, dispatchData = null) {
         const macroregionLabels = apiData.map(r => r.macroregion);
 
         // DAILY
         updateDailyChart(charts.daily, apiData);
-        updateTotalCount(charts.daily, [
-            { id: 'daily-total-count' }
-        ]);
+        updateTotalCount(charts.daily, [{ id: 'daily-total-count' }]);
 
         if (apiData.length > 0) {
             updateHourlyGrid(apiData[0], 'hours-total-grid');
@@ -96,20 +114,14 @@ export function startStatisticsWebSocket(charts) {
             endDate !== lastWeeklyEnd;
 
         if (needRebuildWeekly) {
-            initWeeklyMacroregionsTable(
-                'weekly-incidents-table',
-                apiData,
-                startDate,
-                endDate
-            );
-
+            initWeeklyMacroregionsTable('weekly-incidents-table', apiData, startDate, endDate);
             lastWeeklyStart = startDate;
             lastWeeklyEnd = endDate;
         } else {
             updateWeeklyMacroregionsTable(apiData);
         }
 
-        // AVR CONTRACTORS TABLE
+        // AVR TABLE
         const avrTableContainer = document.getElementById('avr-contractors-table');
 
         if (avrTableContainer && avrData) {
@@ -118,19 +130,12 @@ export function startStatisticsWebSocket(charts) {
                 endDate !== lastAvrEnd;
 
             if (avrData.error) {
-                console.warn('AVR data error:', avrData.error);
                 showMessage('Ошибка загрузки данных по подрядчикам', 'warning', messagesContainer, lastMsgRef);
                 return;
             }
 
             if (needRebuildAvr) {
-                initAvrContractorsTable(
-                    avrTableContainer,
-                    avrData,
-                    startDate,
-                    endDate
-                );
-
+                initAvrContractorsTable(avrTableContainer, avrData, startDate, endDate);
                 lastAvrStart = startDate;
                 lastAvrEnd = endDate;
             } else {
@@ -162,43 +167,23 @@ export function startStatisticsWebSocket(charts) {
 
         // SLA DONUTS
         updateSlaCharts(charts.sla.avr, apiData, 'avr');
-        updateSlaTotalCounts(charts.sla.avr, [
-            'avr-expired-total',
-            'avr-on-time-total',
-            'avr-less-hour-total',
-            'avr-in-work-total',
-        ]);
+        updateSlaTotalCounts(charts.sla.avr, ['avr-expired-total','avr-on-time-total','avr-less-hour-total','avr-in-work-total']);
 
         updateSlaCharts(charts.sla.rvr, apiData, 'rvr');
-        updateSlaTotalCounts(charts.sla.rvr, [
-            'rvr-expired-total',
-            'rvr-on-time-total',
-            'rvr-less-hour-total',
-            'rvr-in-work-total',
-        ]);
+        updateSlaTotalCounts(charts.sla.rvr, ['rvr-expired-total','rvr-on-time-total','rvr-less-hour-total','rvr-in-work-total']);
 
         updateSlaCharts(charts.sla.dgu, apiData, 'dgu');
-        updateSlaTotalCounts(charts.sla.dgu, [
-            'dgu-expired-total',
-            'dgu-on-time-total',
-            'dgu-less-hour-total',
-            'dgu-in-work-total',
-        ]);
+        updateSlaTotalCounts(charts.sla.dgu, ['dgu-expired-total','dgu-on-time-total','dgu-less-hour-total','dgu-in-work-total']);
 
         // TYPES
-        updateBarChart(
-            charts.types,
-            apiData,
-            [
-                'is_power_issue_type',
-                'is_ams_issue_type',
-                'is_goverment_request_issue_type',
-                'is_vols_issue_type',
-                'is_object_destruction_issue_type',
-                'is_object_access_issue_type'
-            ],
-            macroregionLabels
-        );
+        updateBarChart(charts.types, apiData, [
+            'is_power_issue_type',
+            'is_ams_issue_type',
+            'is_goverment_request_issue_type',
+            'is_vols_issue_type',
+            'is_object_destruction_issue_type',
+            'is_object_access_issue_type'
+        ], macroregionLabels);
 
         updateCategoryTotals(charts.types, [
             { id: 'total-power', index: 0 },
@@ -214,7 +199,7 @@ export function startStatisticsWebSocket(charts) {
             { id: 'types-other-total', indexes: [1,2,3,4,5] }
         ]);
 
-        // SUBTYPES
+        // 🔥 SUBTYPES ВОЗВРАЩЕНЫ
         if (charts.subtypes?.power) {
             updateSubtypesChart(
                 charts.subtypes.power.chart,
@@ -266,13 +251,13 @@ export function startStatisticsWebSocket(charts) {
         updateSlaCopyData('rvr-sla-grid', apiData, 'rvr');
         updateSlaCopyData('dgu-sla-grid', apiData, 'dgu');
 
-        // ✅ DISPATCH SLA TABLES (FIX)
+        // DISPATCH TABLES
         if (dispatchData) {
             updateDispatchSlaTables(dispatchData);
         }
     }
 
-    /* ---------- APPLY FILTER ---------- */
+    /* ---------- APPLY ---------- */
     applyBtn.addEventListener('click', () => {
         const start = startInput.value;
         const end = endInput.value || null;
@@ -283,21 +268,28 @@ export function startStatisticsWebSocket(charts) {
 
         confirmedStart = start;
         confirmedEnd = end;
+        confirmedResponsible = responsibleSelect.value;
+        confirmedOperator = operatorSelect.value;
 
-        sendParams(confirmedStart, confirmedEnd);
+        sendParams();
     });
 
     /* ---------- RESET ---------- */
     resetBtn.addEventListener('click', () => {
         startInput.value = defaultStart;
-        endInput.value = defaultEnd;
+        endInput.value = '';
+
+        responsibleSelect.value = '';
+        operatorSelect.value = '';
 
         confirmedStart = defaultStart;
         confirmedEnd = null;
+        confirmedResponsible = '';
+        confirmedOperator = '';
 
         messagesContainer.querySelectorAll('.message').forEach(m => m.remove());
         lastMsgRef.current = null;
 
-        sendParams(confirmedStart, confirmedEnd);
+        sendParams();
     });
 }

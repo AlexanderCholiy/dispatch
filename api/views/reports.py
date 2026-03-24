@@ -8,17 +8,14 @@ from django.core.cache import cache
 from django.db.models import (
     Count,
     Exists,
+    IntegerField,
     OuterRef,
     Prefetch,
     Q,
     QuerySet,
-    ExpressionWrapper,
     Value,
-    FloatField,
-    IntegerField,
-    F,
 )
-from django.db.models.functions import ExtractHour, TruncDate, Coalesce
+from django.db.models.functions import Coalesce, ExtractHour, TruncDate
 from django.http import HttpResponse
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
@@ -45,16 +42,25 @@ from api.constants import (
     STATISTIC_CACHE_TIMEOUT,
     TOTAL_VALID_INCIDENTS_FILTER,
 )
-from api.filters import IncidentReportFilter, get_incident_date_filter
+from api.filters import (
+    IncidentReportFilter,
+    apply_bs_operator_group_filter,
+    apply_responsible_user_filter,
+    get_incident_date_filter,
+)
 from api.pagination import IncidentReportPagination
 from api.serializers.reports import (
     ContractorStatSerializer,
+    DispatchStatSerializer,
     IncidentReportSerializer,
     StatisticReportSerializer,
-    DispatchStatSerializer,
 )
 from api.utils import get_first_day_prev_month, is_file_fresh
-from api.validators import validate_date_range
+from api.validators import (
+    validate_date_range,
+    validate_operator_group,
+    validate_responsible_user,
+)
 from core.loggers import default_logger
 from core.views import send_x_accel_file
 from core.wraps import timer
@@ -65,8 +71,8 @@ from incidents.annotations import (
     annotate_is_power_issue,
     annotate_sla_avr,
     annotate_sla_dgu,
-    annotate_sla_rvr,
     annotate_sla_dispatch,
+    annotate_sla_rvr,
 )
 from incidents.constants import (
     NOTIFIED_CONTRACTOR_STATUS_NAME,
@@ -396,6 +402,12 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
         мониторинга (сторонняя БД). Если false — используется только
         эвристика по типу инцидента и данным инцидента.
 
+    - responsible_user (int | "none")
+        ID диспетчера или none если ответсвенный диспетчер отсутствует.
+
+    - operator_group (str | "none")
+        Название группы операторов базовой станции или none если группы нет.
+
     ПРИМЕРЫ ЗАПРОСОВ:
     Получить статистику за всё время:
         GET /api/v1/report/statistics/
@@ -429,8 +441,14 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
             '1', 'true', 'yes'
         )
 
+        responsible_user = params.get('responsible_user')
+        validate_responsible_user(responsible_user)
+
+        operator_group = params.get('operator_group')
+        validate_operator_group(operator_group)
+
         cache_key = self._build_statistic_cache_key(
-            start, end, monitoring_check
+            start, end, monitoring_check, responsible_user, operator_group
         )
         cached = cache.get(cache_key)
 
@@ -446,7 +464,10 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
             .exclude(
                 pole__pole=UNDEFINED_CASE
             )
-            .select_related('pole', 'incident_type')
+            .select_related(
+                'pole',
+                'incident_type',
+            )
             .annotate(
                 macroregion_id=Coalesce(
                     'pole__region__macroregion',
@@ -455,6 +476,8 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                 )
             )
         )
+        incidents = apply_responsible_user_filter(incidents, responsible_user)
+        incidents = apply_bs_operator_group_filter(incidents, operator_group)
 
         # -------- EXISTS вместо JOIN --------
         notified_exists = IncidentStatusHistory.objects.filter(
@@ -712,11 +735,24 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
         start: Optional[date],
         end: Optional[date],
         monitoring_check: bool,
+        responsible_user: Optional[int],
+        operator_group: Optional[str],
     ) -> str:
         start_key = start.isoformat() if start else 'none'
         end_key = end.isoformat() if end else 'none'
         monitoring_key = 'mon1' if monitoring_check else 'mon0'
-        return f'statistic_report:{start_key}:{end_key}:{monitoring_key}'
+
+        user_key = str(responsible_user) if responsible_user else 'all'
+        group_key = operator_group if operator_group else 'all'
+
+        return (
+            f'statistic_report:'
+            f'{start_key}:'
+            f'{end_key}:'
+            f'{monitoring_key}:'
+            f'user_{user_key}:'
+            f'group_{group_key}'
+        )
 
     def _build_summary(self, macroregions: list[MacroRegion]) -> MacroRegion:
         """Создает итоговую строку по всем макрорегионам."""
@@ -798,6 +834,12 @@ class AVRContractorViewSet(viewsets.ReadOnlyModelViewSet):
         Конечная дата инцидента (включительно).
         Если не указана — фильтрация сверху не применяется.
 
+    - responsible_user (int | "none")
+        ID диспетчера или none если ответсвенный диспетчер отсутствует.
+
+    - operator_group (str | "none")
+        Название группы операторов базовой станции или none если группы нет.
+
     ПРИМЕРЫ ЗАПРОСОВ:
 
     Получить статистику за период:
@@ -820,7 +862,15 @@ class AVRContractorViewSet(viewsets.ReadOnlyModelViewSet):
             params.get('end_date'),
         )
 
-        cache_key = self._build_cache_key(start, end)
+        responsible_user = params.get('responsible_user')
+        validate_responsible_user(responsible_user)
+
+        operator_group = params.get('operator_group')
+        validate_operator_group(operator_group)
+
+        cache_key = self._build_cache_key(
+            start, end, responsible_user, operator_group
+        )
         cached = cache.get(cache_key)
         if cached:
             return cached
@@ -847,6 +897,9 @@ class AVRContractorViewSet(viewsets.ReadOnlyModelViewSet):
                 'incident_type',
             )
         )
+
+        incidents = apply_responsible_user_filter(incidents, responsible_user)
+        incidents = apply_bs_operator_group_filter(incidents, operator_group)
 
         incidents = annotate_sla_avr(incidents)
 
@@ -944,10 +997,26 @@ class AVRContractorViewSet(viewsets.ReadOnlyModelViewSet):
 
         return contractors
 
-    def _build_cache_key(self, start: date | None, end: date | None) -> str:
+    def _build_cache_key(
+        self,
+        start: date | None,
+        end: date | None,
+        responsible_user: int | str | None,
+        operator_group: str | None
+    ) -> str:
         start_key = start.isoformat() if start else 'none'
         end_key = end.isoformat() if end else 'none'
-        return f'avr_contractor_stat:{start_key}:{end_key}'
+
+        user_key = str(responsible_user) if responsible_user else 'all'
+        group_key = operator_group if operator_group else 'all'
+
+        return (
+            f'avr_contractor_statistic_report:'
+            f'{start_key}:'
+            f'{end_key}:'
+            f'user_{user_key}:'
+            f'group_{group_key}'
+        )
 
 
 class DispatchViewSet(viewsets.ReadOnlyModelViewSet):
@@ -963,6 +1032,12 @@ class DispatchViewSet(viewsets.ReadOnlyModelViewSet):
     - end_date (YYYY-MM-DD):
         Конечная дата инцидента (включительно).
         Если не указана — фильтрация сверху не применяется.
+
+    - responsible_user (int | "none")
+        ID диспетчера или none если ответсвенный диспетчер отсутствует.
+
+    - operator_group (str | "none")
+        Название группы операторов базовой станции или none если группы нет.
 
     ПРИМЕРЫ ЗАПРОСОВ:
 
@@ -985,7 +1060,15 @@ class DispatchViewSet(viewsets.ReadOnlyModelViewSet):
             params.get('end_date'),
         )
 
-        cache_key = self._build_cache_key(start, end)
+        responsible_user = params.get('responsible_user')
+        validate_responsible_user(responsible_user)
+
+        operator_group = params.get('operator_group')
+        validate_operator_group(operator_group)
+
+        cache_key = self._build_cache_key(
+            start, end, responsible_user, operator_group
+        )
         cached = cache.get(cache_key)
         if cached:
             return cached
@@ -999,6 +1082,9 @@ class DispatchViewSet(viewsets.ReadOnlyModelViewSet):
             .exclude(pole__pole=UNDEFINED_CASE)
             .select_related('responsible_user',)
         )
+
+        incidents = apply_responsible_user_filter(incidents, responsible_user)
+        incidents = apply_bs_operator_group_filter(incidents, operator_group)
 
         incidents = annotate_sla_dispatch(incidents)
 
@@ -1092,7 +1178,23 @@ class DispatchViewSet(viewsets.ReadOnlyModelViewSet):
 
         return result
 
-    def _build_cache_key(self, start: date | None, end: date | None) -> str:
+    def _build_cache_key(
+        self,
+        start: date | None,
+        end: date | None,
+        responsible_user: int | str | None,
+        operator_group: str | None
+    ) -> str:
         start_key = start.isoformat() if start else 'none'
         end_key = end.isoformat() if end else 'none'
-        return f'dispatch_stat:{start_key}:{end_key}'
+
+        user_key = str(responsible_user) if responsible_user else 'all'
+        group_key = operator_group if operator_group else 'all'
+
+        return (
+            f'dispatch_statistic_report:'
+            f'{start_key}:'
+            f'{end_key}:'
+            f'user_{user_key}:'
+            f'group_{group_key}'
+        )

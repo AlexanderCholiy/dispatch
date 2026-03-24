@@ -1,5 +1,4 @@
 import os
-from datetime import timedelta
 
 from core.constants import PUBLIC_SUBFOLDER_NAME
 

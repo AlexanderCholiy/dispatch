@@ -47,3 +47,33 @@ def get_incident_date_filter(start: Optional[date], end: Optional[date]) -> Q:
         q &= Q(incident_date__date__lte=end)
 
     return q
+
+
+def apply_responsible_user_filter(
+    queryset: QuerySet[Incident],
+    responsible_user_id: Optional[int | str],
+) -> QuerySet[Incident]:
+    if not responsible_user_id:
+        return queryset
+
+    if responsible_user_id == 'none':
+        return queryset.filter(responsible_user_id__isnull=True)
+
+    return queryset.filter(responsible_user_id=responsible_user_id)
+
+
+def apply_bs_operator_group_filter(
+    queryset: QuerySet[Incident],
+    operator_group: Optional[str],
+) -> QuerySet[Incident]:
+    if not operator_group:
+        return queryset
+
+    if operator_group == 'none':
+        return queryset.filter(
+            base_station__operator__operator_group__isnull=True
+        ).distinct()
+
+    return queryset.filter(
+        base_station__operator__operator_group=operator_group
+    ).distinct()

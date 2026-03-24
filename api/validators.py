@@ -6,7 +6,7 @@ from django.utils.dateparse import parse_date
 
 
 def validate_date_range(
-    start_date: str | None, end_date: str | None
+    start_date: Optional[str], end_date: Optional[str]
 ) -> tuple[Optional[date], Optional[date]]:
     """Универсальный валидатор дат."""
 
@@ -27,3 +27,22 @@ def validate_date_range(
         raise ValidationError('start_date не может быть больше end_date')
 
     return start, end
+
+
+def validate_responsible_user(responsible_user: Optional[int | str]):
+    if responsible_user is not None and responsible_user != 'none':
+        try:
+            responsible_user = int(responsible_user)
+        except (TypeError, ValueError):
+            raise ValidationError({
+                'responsible_user': 'Должен быть числом'
+            })
+
+
+def validate_operator_group(operator_group: Optional[str]):
+    if operator_group is not None:
+        operator_group = operator_group.strip()
+        if not operator_group:
+            raise ValidationError({
+                'operator_group': 'Не может быть пустой строкой'
+            })

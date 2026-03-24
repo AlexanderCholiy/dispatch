@@ -4,9 +4,9 @@ from rest_framework.routers import DefaultRouter
 from .views.energy import AppealViewSet, ClaimViewSet
 from .views.reports import (
     AVRContractorViewSet,
+    DispatchViewSet,
     IncidentReportViewSet,
     StatisticReportViewSet,
-    DispatchViewSet,
 )
 
 router = DefaultRouter()

@@ -26,19 +26,8 @@ from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.timezone import now
 from django_ratelimit.decorators import ratelimit
 
-from api.constants import TOTAL_VALID_INCIDENTS_FILTER
 from core.loggers import django_logger
 from core.utils import timedelta_to_human_time
-from incidents.annotations import (
-    aggregate_sla_percentages,
-    aggregate_total_incident,
-    annotate_incident_categories,
-    annotate_sla_avr,
-    annotate_sla_dgu,
-    annotate_sla_rvr,
-)
-from incidents.models import Incident
-from stats.constants import STATS_INTERVAL_SECONDS
 
 from .constants import PAGE_SIZE_USERS_CHOICES, USERS_PER_PAGE
 from .forms import (
@@ -477,33 +466,7 @@ def user_detail(request: HttpRequest, user_id: int):
         is_active=True
     )
 
-    cache_key = f'user:{user.pk}:incident_stats'
-    stats = cache.get(cache_key)
-
-    if stats is None:
-        incidents = Incident.objects.filter(
-            Q(responsible_user=user) & TOTAL_VALID_INCIDENTS_FILTER
-        )
-
-        incidents = annotate_incident_categories(incidents)
-        incidents = annotate_sla_avr(incidents)
-        incidents = annotate_sla_rvr(incidents)
-        incidents = annotate_sla_dgu(incidents)
-
-        general_incidents_state = aggregate_total_incident(incidents)
-        sla_incidents_state = aggregate_sla_percentages(incidents)
-
-        stats = {
-            'general_incidents_state': general_incidents_state,
-            'sla_incidents_state': sla_incidents_state,
-        }
-
-        cache.set(cache_key, stats, STATS_INTERVAL_SECONDS)
-
-    context = {
-        'user_info': user,
-        **stats
-    }
+    context = {'user_info': user}
 
     return render(request, 'users/user_detail.html', context)
 

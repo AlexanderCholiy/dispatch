@@ -53,7 +53,6 @@ from monitoring.models import DeviceStatus, DeviceType
 from monitoring.services.monitoring_equipment import (
     get_monitiring_cache_equipment,
 )
-from users.constants import USERS_CACHE_TTL
 from users.models import Roles, User
 from users.utils import role_required
 from yandex_tracker.utils import yt_manager
@@ -89,6 +88,7 @@ from .models import (
     TimeStatus,
 )
 from .selectors.incidents import IncidentSelector
+from .services.get_incident_responsible_users import get_responsible_users
 from .services.normalize_incident_subject import normalize_incident_subject
 from .utils import IncidentManager
 from .validators import (
@@ -374,26 +374,7 @@ def index(request: HttpRequest) -> HttpResponse:
         MAX_INCIDENTS_INFO_CACHE_SEC,
     )
 
-    responsible_users = cache.get_or_set(
-        'incident_filter_responsible_users',
-        lambda: [
-            {
-                'id': user.id,
-                'full_name': user.get_full_name() or 'Новый пользователь'
-            }
-            for user in (
-                User.objects.filter(
-                    Q(role=Roles.DISPATCH, is_active=True)
-                    | Q(id__in=Incident.objects.values_list(
-                        'responsible_user_id', flat=True
-                    ))
-                )
-                .distinct()
-                .order_by('username')
-            )
-        ],
-        USERS_CACHE_TTL,
-    )
+    responsible_users = get_responsible_users()
 
     query_params = request.GET.copy()
     query_params.pop('page', None)

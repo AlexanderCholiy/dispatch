@@ -11,17 +11,17 @@ from django.db.models import (
     Exists,
     ExpressionWrapper,
     F,
+    IntegerField,
     OuterRef,
     Q,
     QuerySet,
+    Subquery,
     Value,
     When,
-    Subquery,
-    IntegerField,
 )
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
-from django.db.models.functions import Coalesce
 from monitoring.constants import NORMAL_POLES_CACHE_TIMEOUT
 from monitoring.models import DeviceStatus, MSysPoles
 from ts.constants import UNDEFINED_CASE
@@ -31,17 +31,17 @@ from .constants import (
     DGU_CATEGORY,
     DGU_SLA_IN_PROGRESS_DEADLINE_IN_HOURS,
     DGU_SLA_WAITING_DEADLINE_IN_HOURS,
+    DISPATCH_SLA_DEADLINE,
     INCIDENT_ACCESS_TO_OBJECT_TYPE,
     INCIDENT_AMS_STRUCTURE_TYPE,
     INCIDENT_DESTRUCTION_OBJECT_TYPE,
     INCIDENT_GOVERMENT_REQUEST_TYPE,
     INCIDENT_VOLS_TYPE,
+    NOTIFIED_CONTRACTOR_STATUS_NAME,
     POWER_ISSUE_TYPES,
+    RUSSIA_EMPTY_MACRO_ID,
     RVR_CATEGORY,
     RVR_SLA_DEADLINE_IN_HOURS,
-    DISPATCH_SLA_DEADLINE,
-    NOTIFIED_CONTRACTOR_STATUS_NAME,
-    RUSSIA_EMPTY_MACRO_ID,
 )
 from .models import Incident, IncidentCategoryRelation, IncidentStatusHistory
 
@@ -638,7 +638,7 @@ def annotate_sla_dispatch(queryset: QuerySet[Incident]):
 
     queryset = queryset.annotate(
         dispatch_duration=ExpressionWrapper(
-            F('dispatch_end_date') - F('incident_date'),
+            F('dispatch_end_date') - F('insert_date'),
             output_field=DurationField(),
         )
     )

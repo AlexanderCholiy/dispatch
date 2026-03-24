@@ -87,8 +87,8 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
         """
         from api.views.reports import (
             AVRContractorViewSet,
-            StatisticReportViewSet,
             DispatchViewSet,
+            StatisticReportViewSet,
         )
 
         now = timezone.localtime()
@@ -113,6 +113,12 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
                     str(params['monitoring_check']).lower()
                     in ('1', 'true', 'yes')
                 )
+            if 'responsible_user' in params:
+                value = params['responsible_user'] or 'none'
+                query['responsible_user'] = value
+            if 'operator_group' in params:
+                value = params['operator_group'] or 'none'
+                query['operator_group'] = value
 
         request = APIRequestFactory().get(
             reverse('statistics_report-list'), query
