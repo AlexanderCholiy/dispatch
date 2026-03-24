@@ -1,0 +1,19 @@
+.dispatch-sla-table-container {
+  margin-top: var(--space-lg);
+}
+
+.dispatch-sla-table .excellent {
+  color: var(--green-color);
+}
+
+.dispatch-sla-table .high {
+  color: var(--blue-color);
+}
+
+.dispatch-sla-table .medium {
+  color: var(--yellow-color);
+}
+
+.dispatch-sla-table .bad {
+  color: var(--red-color);
+}

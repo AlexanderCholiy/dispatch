@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="{% static 'css/stats/tables.css' %}">
 <link rel="stylesheet" href="{% static 'css/stats/weekly_table.css' %}">
 <link rel="stylesheet" href="{% static 'css/stats/avr_contractor_table.css' %}">
+<link rel="stylesheet" href="{% static 'css/stats/dispatch_sla_table.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -88,7 +89,7 @@
         </div>
       </div>
       <canvas id="all-closed-incidents-chart"></canvas>
-      <div id="closed-dispatch-sla-table-container" class="table-wrapper"></div>
+      <div id="closed-dispatch-sla-table-container" class="table-wrapper dispatch-sla-table-container"></div>
     </div>
 
     <div class="chart-card" id="open-chart-card">
@@ -105,7 +106,7 @@
         </div>
       </div>
       <canvas id="all-open-incidents-chart"></canvas>
-      <div id="open-dispatch-sla-table-container" class="table-wrapper"></div>
+      <div id="open-dispatch-sla-table-container" class="table-wrapper dispatch-sla-table-container"></div>
     </div>
 
     <div id="avr-sla-grid">

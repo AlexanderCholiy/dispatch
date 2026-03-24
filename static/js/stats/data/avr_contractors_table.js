@@ -123,7 +123,7 @@ export function updateAvrContractorsTable(data, tbody = null) {
 
                 const percent = contractor.on_time_percentage ?? 0;
                 if (percent < 50) tdPercent.classList.add('low');
-                else if (percent < 75) tdPercent.classList.add('medium');
+                else if (percent < 70) tdPercent.classList.add('medium');
                 else if (percent < 90) tdPercent.classList.add('high');
                 else tdPercent.classList.add('excellent');
 

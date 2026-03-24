@@ -17,15 +17,73 @@ export function initDispatchSlaTable(containerId, type) {
             <thead>
                 <tr>
                     <th>Диспетчер</th>
-                    <th>Всего</th>
-                    <th>SLA OK</th>
-                    <th>SLA FAIL</th>
-                    <th>% SLA</th>
+                    <th>Всего заявок</th>
+                    <th>В рамках SLA</th>
+                    <th>Просрочено</th>
+                    <th>SLA, %</th>
                 </tr>
             </thead>
             <tbody></tbody>
         </table>
     `;
+}
+
+/**
+ * Получить класс для числа
+ */
+function getValueClass(value) {
+    return value === 0 ? 'empty' : '';
+}
+
+/**
+ * Получить класс для SLA
+ */
+function getSlaClass(percent) {
+    if (!percent || percent === 0) return 'empty';
+    if (percent >= 90) return 'excellent';
+    if (percent >= 70) return 'high';
+    if (percent >= 50) return 'medium';
+    return 'bad';
+}
+
+/**
+ * Сортировка dispatch SLA
+ */
+function sortDispatchData(data, type) {
+    return [...data].sort((a, b) => {
+        let percentA, percentB;
+        let totalA, totalB;
+
+        if (type === 'open') {
+            percentA = a.open_sla_percent ?? 0;
+            percentB = b.open_sla_percent ?? 0;
+
+            totalA = a.open_incidents ?? 0;
+            totalB = b.open_incidents ?? 0;
+        } else {
+            percentA = a.closed_sla_percent ?? 0;
+            percentB = b.closed_sla_percent ?? 0;
+
+            totalA = a.closed_incidents ?? 0;
+            totalB = b.closed_incidents ?? 0;
+        }
+
+        // 1. SLA (меньше = хуже → вверх)
+        if (percentA !== percentB) {
+            return percentA - percentB;
+        }
+
+        // 2. Кол-во (больше = выше)
+        if (totalA !== totalB) {
+            return totalB - totalA;
+        }
+
+        // 3. ID (меньше = выше)
+        const idA = a.responsible_user_id ?? 999999;
+        const idB = b.responsible_user_id ?? 999999;
+
+        return idA - idB;
+    });
 }
 
 /**
@@ -38,13 +96,11 @@ export function updateDispatchSlaTable(containerId, data, type) {
     const tbody = container.querySelector('tbody');
     if (!tbody) return;
 
-    // очищаем только body (заголовки остаются)
     tbody.innerHTML = '';
 
     data.forEach(row => {
         const tr = document.createElement('tr');
 
-        // определяем поля в зависимости от типа
         let total, slaOk, slaFail, percent;
 
         if (type === 'open') {
@@ -61,10 +117,22 @@ export function updateDispatchSlaTable(containerId, data, type) {
 
         tr.innerHTML = `
             <td>${row.responsible_user_name || 'Отсутствует'}</td>
-            <td>${total}</td>
-            <td class="text-success">${slaOk}</td>
-            <td class="text-danger">${slaFail}</td>
-            <td>${percent}%</td>
+            
+            <td class="${getValueClass(total)}">
+                ${total}
+            </td>
+            
+            <td class="${getValueClass(slaOk)}">
+                ${slaOk}
+            </td>
+            
+            <td class="${getValueClass(slaFail)}">
+                ${slaFail}
+            </td>
+            
+            <td class="${getSlaClass(percent)}">
+                ${percent}%
+            </td>
         `;
 
         tbody.appendChild(tr);
@@ -77,10 +145,9 @@ export function updateDispatchSlaTable(containerId, data, type) {
 export function updateDispatchSlaTables(dispatchData) {
     if (!Array.isArray(dispatchData)) return;
 
-    // сортировка (например по total убыванию)
-    const sorted = [...dispatchData].sort((a, b) => b.total - a.total);
+    const openSorted = sortDispatchData(dispatchData, 'open');
+    const closedSorted = sortDispatchData(dispatchData, 'closed');
 
-    // INIT (один раз)
     if (!isInitialized.open) {
         initDispatchSlaTable('open-dispatch-sla-table-container', 'open');
         isInitialized.open = true;
@@ -91,7 +158,15 @@ export function updateDispatchSlaTables(dispatchData) {
         isInitialized.closed = true;
     }
 
-    // UPDATE
-    updateDispatchSlaTable('open-dispatch-sla-table-container', sorted, 'open');
-    updateDispatchSlaTable('closed-dispatch-sla-table-container', sorted, 'closed');
+    updateDispatchSlaTable(
+        'open-dispatch-sla-table-container',
+        openSorted,
+        'open'
+    );
+
+    updateDispatchSlaTable(
+        'closed-dispatch-sla-table-container',
+        closedSorted,
+        'closed'
+    );
 }

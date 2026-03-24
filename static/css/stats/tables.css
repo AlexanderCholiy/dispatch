@@ -1,3 +1,4 @@
+.dispatch-sla-table-container,
 .avr-contractors-container,
 .weekly-table-container {
   width: calc(100% - 2 * var(--space-md) + 8px);
@@ -7,6 +8,7 @@
   box-shadow: 0 0 var(--space-xxs) var(--extra-color);
 }
 
+.dispatch-sla-table,
 .avr-contractors-table,
 .stats-table {
   border-collapse: collapse;
@@ -16,6 +18,8 @@
   font-size: var(--font-sm);
 }
 
+.dispatch-sla-table th,
+.dispatch-sla-table td,
 .avr-contractors-table th,
 .avr-contractors-table td,
 .stats-table th,
@@ -23,7 +27,12 @@
   padding: var(--space-sm) var(--space-xs) !important;
 }
 
+.dispatch-sla-table .empty,
 .avr-contractors-table .empty,
 .stats-table .empty{
   color: var(--gray-color);
+}
+
+.dispatch-sla-table .empty {
+  text-align: left;
 }
