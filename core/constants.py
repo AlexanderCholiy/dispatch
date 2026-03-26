@@ -135,3 +135,18 @@ CURRENT_TZ = timezone.get_current_timezone()
 FUNC_TIMEOUT = 5
 
 DATETIME_LOCAL_FORMAT = '%Y-%m-%dT%H:%M'
+
+MONTHS_RU = {
+    1: 'янв',
+    2: 'фев',
+    3: 'мар',
+    4: 'апр',
+    5: 'май',
+    6: 'июн',
+    7: 'июл',
+    8: 'авг',
+    9: 'сен',
+    10: 'окт',
+    11: 'ноя',
+    12: 'дек',
+}

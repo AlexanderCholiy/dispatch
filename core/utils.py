@@ -1,6 +1,6 @@
 import multiprocessing
 import os
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any, Callable, Optional
 
 from django.http import HttpRequest
@@ -9,9 +9,10 @@ from django.utils.translation import ngettext
 
 from .constants import (
     CONTROL_CHARS_RE,
+    MONTHS_RU,
     SUBFOLDER_DATE_FORMAT,
     SUBFOLDER_EMAIL_NAME,
-    SUBFOLDER_MIME_EMAIL_NAME
+    SUBFOLDER_MIME_EMAIL_NAME,
 )
 from .exceptions import ConfigEnvError
 from .loggers import default_logger
@@ -186,3 +187,33 @@ def check_same_page(request: HttpRequest) -> bool:
     is_same_page = referer.split('?')[0] == current_url
 
     return is_same_page
+
+
+def humanize_datetime(dt: datetime) -> str:
+    if not dt:
+        return '—'
+
+    now = timezone.localtime()
+    dt = timezone.localtime(dt)
+
+    diff = now - dt
+
+    if diff < timedelta(minutes=1):
+        return 'только что'
+
+    if diff < timedelta(hours=1):
+        minutes = diff.seconds // 60
+        return f'{minutes} мин назад'
+
+    if diff < timedelta(hours=24):
+        hours = diff.seconds // 3600
+        return f'{hours} ч назад'
+
+    if (now.date() - dt.date()).days == 1:
+        return f'вчера в {dt.strftime("%H:%M")}'
+
+    if now.year == dt.year:
+        month = MONTHS_RU[dt.month]
+        return f'{dt.day} {month} в {dt.strftime("%H:%M")}'
+
+    return dt.strftime('%d.%m.%Y')

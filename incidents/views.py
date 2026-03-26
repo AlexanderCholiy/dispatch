@@ -33,6 +33,7 @@ from core.exceptions import (
 from core.loggers import yt_logger
 from core.services.get_max_today_datetime import get_max_today_datetime
 from core.threads import tasks_in_threads
+from core.utils import humanize_datetime
 from core.validators import get_aware_datetime
 from emails.constants import DISPATCHER_SIGNATURE
 from emails.email_parser import email_parser
@@ -369,6 +370,8 @@ def index(request: HttpRequest) -> HttpResponse:
         incident.sla_avr_status_val = incident.sla_avr_status
         incident.sla_rvr_status_val = incident.sla_rvr_status
         incident.sla_dgu_status_val = incident.sla_dgu_status
+
+        incident.updated_human = humanize_datetime(incident.update_date)
 
     statuses = cache.get_or_set(
         'incident_filter_statuses',

@@ -74,7 +74,7 @@
                     <span class="badge badge-unread"><i class="bx check-icon bx-x" style="font-weight: bold"></i></span>
                   {% endif %}
                 </td>
-                <td>{{ incident.update_date|date:"d.m.Y H:i" }}</td>
+                <td>{{ incident.updated_human }}</td>
                 <td class="category">
                   {% for cat in incident.categories.all %}
                     <span class="{% if cat.name == 'АВР' %}avr-category
