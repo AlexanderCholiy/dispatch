@@ -113,6 +113,10 @@
           name="finish"
           id="search-hidden-finish"
           value="{% if selected.is_incident_finish is True %}true{% elif selected.is_incident_finish is False %}false{% else %}{% endif %}">
+    <input type="hidden"
+          name="was_read"
+          id="search-hidden-was-read"
+          value="{% if selected.was_read is True %}true{% elif selected.was_read is False %}false{% else %}{% endif %}">
     <input type="hidden" name="status" value="{{ selected.status }}" id="search-hidden-status">
     <input type="hidden" name="category" value="{{ selected.category }}" id="search-hidden-category">
     <input type="hidden" name="responsible_user" value="{{ selected.responsible_user }}" id="search-hidden-responsible-user">

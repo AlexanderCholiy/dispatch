@@ -157,6 +157,18 @@ def index(request: HttpRequest) -> HttpResponse:
     else:
         is_incident_finish = None
 
+    was_read = (
+        request.GET.get('was_read', '').strip()
+        or request.COOKIES.get('was_read', '').strip()
+    ) if not search_only_by_code else None
+
+    if was_read == 'true':
+        was_read = True
+    elif was_read == 'false':
+        was_read = False
+    else:
+        was_read = None
+
     sla_avr_status = (
         request.GET.get('sla_avr', '').strip()
         or request.COOKIES.get('sla_avr', '').strip()
@@ -268,6 +280,9 @@ def index(request: HttpRequest) -> HttpResponse:
 
     if is_incident_finish is not None:
         base_qs = base_qs.filter(is_incident_finish=is_incident_finish)
+
+    if was_read is not None:
+        base_qs = base_qs.filter(was_read=was_read)
 
     if query:
         base_qs = base_qs.filter(
@@ -397,6 +412,7 @@ def index(request: HttpRequest) -> HttpResponse:
         'time_statuses': TimeStatus,
         'selected': {
             'is_incident_finish': is_incident_finish,
+            'was_read': was_read,
             'status': status_name,
             'category': category_id,
             'responsible_user': responsible_user_id,

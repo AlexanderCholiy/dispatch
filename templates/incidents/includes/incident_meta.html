@@ -20,12 +20,7 @@
     <div class="card-header-top-wrapper">
       <div class="card-header-top">
         <p class="incident-title">
-          {% if incident.first_email_subject %}
-            <strong class="incident-code copy-text" data-text="{{ incident.code|default:incident.id }}">{{ incident }}:</strong>
-            {{ incident.first_email_subject|default:"—" }}
-          {% else %}
-            <strong class="incident-code copy-text" data-text="{{ incident.code|default:incident.id }}">{{ incident }}</strong>
-          {% endif %}
+          {{ incident.first_email_subject|default:"—" }}
         </p>
         <div class="select-wrapper status-select">
           <select name="{{ incident_form.new_status.name }}">
@@ -55,18 +50,15 @@
           Сохранить
         </button>
 
-        <button type="button" 
-                class="btn btn-secondary refresh-button tooltip" 
-                onclick="window.location.href=window.location.href;"
-                data-title="Перезагрузить страницу">
-          <i class="bx bx-refresh"></i>
-        </button>
-
         <a href="{% url 'notifications:notification_create_from_incident' incident.id %}" 
           class="btn btn-warning new-notification-button tooltip" 
           data-title="Создать уведомление по инциденту">
           <i class="bx bx-bell"></i>
         </a>
+
+        <div class="select-wrapper incident-was-read">
+          {{ incident_form.was_read }}
+        </div>
 
       </div>
       <p class="incident-date">

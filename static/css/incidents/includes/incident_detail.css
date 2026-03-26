@@ -77,3 +77,10 @@
     text-align: left;
   }
 }
+
+.incident-code {
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-sm);
+  font-weight: 500;
+  color: var(--add-color);
+}

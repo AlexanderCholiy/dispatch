@@ -29,6 +29,15 @@
     </div>
 
     <div class="select-wrapper">
+      <select name="status" id="status-select" class="select tooltip" data-title="Последний статус инцидента">
+        <option value="" {% if not selected.status %}selected{% endif %}>Статус: Все</option>
+        {% for s in statuses %}
+        <option value="{{ s }}" {% if selected.status == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="select-wrapper">
       <select name="responsible_user" id="responsible-user-select" class="select tooltip" data-title="Диспетчер">
         <option value="" {% if not selected.responsible_user %}selected{% endif %}>Ответсвенный: Все</option>
         <option value="none" {% if selected.responsible_user == "none" %}selected{% endif %}>Отсутствует</option>
@@ -39,13 +48,25 @@
         {% endfor %}
       </select>
     </div>
-
+  
     <div class="select-wrapper">
-      <select name="status" id="status-select" class="select tooltip" data-title="Последний статус инцидента">
-        <option value="" {% if not selected.status %}selected{% endif %}>Статус: Все</option>
-        {% for s in statuses %}
-          <option value="{{ s }}" {% if selected.status == s %}selected{% endif %}>{{ s }}</option>
-        {% endfor %}
+      <select name="was_read"
+              id="was-read"
+              class="select tooltip"
+              data-title="Статус обработки входящих писем">
+
+        <option value="" {% if selected.was_read is None %}selected{% endif %}>
+          Обработка: Все
+        </option>
+
+        <option value="true" {% if selected.was_read is True %}selected{% endif %}>
+          Прочитаные
+        </option>
+
+        <option value="false" {% if selected.was_read is False %}selected{% endif %}>
+          Не прочитаные
+        </option>
+
       </select>
     </div>
 
@@ -166,13 +187,18 @@
         </label>
         <label class="column-option">
           <i class="bx check-icon"></i>
-          <input type="checkbox" data-col="updated">
-          <span>Обновлено</span>
+          <input type="checkbox" data-col="user">
+          <span>Ответственный</span>
         </label>
         <label class="column-option">
           <i class="bx check-icon"></i>
-          <input type="checkbox" data-col="user">
-          <span>Ответственный</span>
+          <input type="checkbox" data-col="was_read">
+          <span>Прочитано</span>
+        </label>
+        <label class="column-option">
+          <i class="bx check-icon"></i>
+          <input type="checkbox" data-col="updated">
+          <span>Обновлено</span>
         </label>
         <label class="column-option">
           <i class="bx check-icon"></i>
@@ -204,11 +230,11 @@
           <input type="checkbox" data-col="bs">
           <span>Номер БС</span>
         </label>
-        <!-- <label class="column-option">
+        <label class="column-option">
           <i class="bx check-icon"></i>
           <input type="checkbox" data-col="created">
           <span>Дата регистрации</span>
-        </label> -->
+        </label>
       </div>
 
     </div>

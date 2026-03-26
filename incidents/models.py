@@ -195,6 +195,10 @@ class Incident(models.Model):
             'YandexTracker'
         )
     )
+    was_read = models.BooleanField(
+        default=True,
+        verbose_name='Был ли просмотрен диспетчером',
+    )
 
     class Meta:
         verbose_name = 'инцидент'

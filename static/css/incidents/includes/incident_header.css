@@ -81,3 +81,14 @@
     max-width: 100%;
   }
 }
+
+.incident-was-read .select {
+  box-shadow: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-sm);
+  border-color: var(--extra-color);
+}
+
+.incident-was-read::after {
+  margin-top: calc(var(--space-xs) + 1px);
+}

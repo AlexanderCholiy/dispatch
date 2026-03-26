@@ -10,7 +10,7 @@
               {% for email_id in group %}
               <a class="email-link" href="#email-{{ email_id }}">{{ email_id }}</a>{% if not forloop.last %}, {% endif %}
               {% endfor %}
-              {% if not forloop.last %}; {% endif %}
+              {% if not forloop.last %}, {% endif %}
           {% endfor %}
           </p>
           <input type="hidden" name="source_incident_id" value="{{ source_incident.id }}">

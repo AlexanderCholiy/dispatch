@@ -267,6 +267,7 @@ class IncidentForm(forms.ModelForm):
     class Meta:
         model = Incident
         fields = (
+            'was_read',
             'new_status',
             'pole',
             'base_station',
@@ -319,6 +320,13 @@ class IncidentForm(forms.ModelForm):
             ),
         }
         widgets = {
+            'was_read': forms.Select(
+                choices=(
+                    (False, 'Не прочитано'),
+                    (True, 'Прочитано'),
+                ),
+                attrs={'class': 'select'}
+            ),
             'pole': autocomplete.ModelSelect2(
                 url='ts:pole_autocomplete',
                 attrs={'data-placeholder': 'Не выбрано'}

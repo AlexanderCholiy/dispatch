@@ -1,6 +1,14 @@
 .tabs-header {
   display: flex;
   border-bottom: 1px solid var(--extra-color);
+  gap: var(--space-md);
+  justify-content: space-between;
+}
+
+.left-tabs-part,
+.right-tabs-part {
+  display: flex;
+  align-items: center;
 }
 
 .tab-btn {

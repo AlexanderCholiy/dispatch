@@ -218,6 +218,8 @@ class AutoReply:
                             level=NotificationLevel.LOW,
                             data=notif_data,
                         )
+            incident.was_read = False
+            incident.save()
 
             return
 
@@ -250,6 +252,7 @@ class AutoReply:
                     is_dgu_category=DGU_CATEGORY in category_names,
                 )
                 incident.statuses.add(new_status)
+                incident.was_read = False
 
                 incident.save()
 

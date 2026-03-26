@@ -20,9 +20,14 @@
     <div class="tabs" data-default-tab="{{ active_tab|default:'incident' }}">
 
       <div class="tabs-header">
-        <button class="tab-btn" data-tab="incident">Инцидент</button>
-        <button class="tab-btn" data-tab="email">Почта</button>
-        <button class="tab-btn" data-tab="comments">Комментарии</button>
+        <div class="left-tabs-part">
+          <button class="tab-btn" data-tab="incident">Инцидент</button>
+          <button class="tab-btn" data-tab="email">Почта</button>
+          <button class="tab-btn" data-tab="comments">Комментарии</button>
+        </div>
+        <div class="right-tabs-part">
+          <strong class="incident-code copy-text" data-text="{{ incident.code|default:incident.id }}">{{ incident }}</strong>
+        </div>
       </div>
 
       <div class="tabs-content">

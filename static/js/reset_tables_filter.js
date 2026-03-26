@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const elementToCookieMap = {
         // Инциденты
         'finish-select': 'finish',
+        'was-read': 'was_read',
         'status-select': 'status',
         'category-select': 'category',
         'responsible-user-select': 'responsible_user',
@@ -76,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const hiddenIds = [
         // Инциденты
         'search-hidden-finish',
+        'search-hidden-was-read',
         'search-hidden-type',
         'search-hidden-status',
         'search-hidden-category',

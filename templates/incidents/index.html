@@ -18,8 +18,9 @@
               <th data-col="code">Код</th>
               <th data-col="subject">Инцидент</th>
               <th data-col="status">Статус</th>
-              <th data-col="updated">Обновлено</th>
               <th data-col="user">Ответственный</th>
+              <th data-col="was_read">Прочитано</th>
+              <th data-col="updated">Обновлено</th>
               <th data-col="category">Категория</th>
               <th data-col="sla_avr">SLA АВР</th>
               <th data-col="sla_rvr">SLA РВР</th>
@@ -49,24 +50,31 @@
                 <td class="tooltip"
                   data-title="{{ incident.latest_status_date|date:'d.m.Y H:i'|default:'—' }}">
                   {% if incident.latest_status_name %}
-                    <span class="status-badge {{ incident.latest_status_class|default:'status-unknown' }}">
-                      {{ incident.latest_status_name }}
-                    </span>
+                  <span class="status-badge {{ incident.latest_status_class|default:'status-unknown' }}">
+                    {{ incident.latest_status_name }}
+                  </span>
                   {% else %}
-                    —
+                  —
                   {% endif %}
                 </td>
-                <td>{{ incident.update_date|date:"d.m.Y H:i" }}</td>
                 <td class="tooltip"
                     data-title="{{ incident.responsible_user.email|default:'' }}">
                   {% if incident.responsible_user %}
                     <a href="{% url 'users:user_detail' incident.responsible_user.id %}" class="link">
-                      {{ incident.responsible_user.get_full_name|default:"Новый пользователь" }}
+                      {{ incident.responsible_user }}
                     </a>
                   {% else %}
                     —
                   {% endif %}
                 </td>
+                <td>
+                  {% if incident.was_read %}
+                    <span class="badge badge-read"><i class="bx check-icon bx-check" style="font-weight: bold"></i></span>
+                  {% else %}
+                    <span class="badge badge-unread"><i class="bx check-icon bx-x" style="font-weight: bold"></i></span>
+                  {% endif %}
+                </td>
+                <td>{{ incident.update_date|date:"d.m.Y H:i" }}</td>
                 <td class="category">
                   {% for cat in incident.categories.all %}
                     <span class="{% if cat.name == 'АВР' %}avr-category
@@ -122,7 +130,7 @@
                 <td>{{ incident.incident_date|date:"d.m.Y H:i" }}</td>
               </tr>
             {% empty %}
-              <tr><td colspan="11" class="empty">Нет данных...</td></tr>
+              <tr><td colspan="13" class="empty">Нет данных...</td></tr>
             {% endfor %}
           </tbody>
         </table>

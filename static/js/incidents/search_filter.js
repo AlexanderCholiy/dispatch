@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Карта соответствия: Ключ для функций -> Имя куки
   const cookieNames = {
     finish: 'finish',
+    was_read: 'was_read',
     status: 'status',
     category: 'category',
     sla_avr: 'sla_avr',
@@ -106,6 +107,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Список элементов для обработки
   const elements = [
     { el: document.getElementById('finish-select'), name: 'finish' },
+    { el: document.getElementById('was-read'), name: 'was_read' },
     { el: document.getElementById('status-select'), name: 'status' },
     { el: document.getElementById('category-select'), name: 'category' },
     { el: document.getElementById('responsible-user-select'), name: 'responsible_user' },

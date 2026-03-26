@@ -96,10 +96,10 @@
   display: none;
 }
 
-.bx-x {
+.column-select-wrapper .bx-x {
   color: var(--gray-color);
 }
 
-.bx-check {
+.column-select-wrapper .bx-check {
   color: var(--green-color);
 }
