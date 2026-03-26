@@ -3,7 +3,7 @@
 }
 
 .incident-title {
-  font-size: var(--font-md);
+  font-size: var(--font-lg);
   font-weight: 500;
   color: var(--color);
   margin: 0;
@@ -52,7 +52,7 @@
 }
 
 .incident-date {
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
   color: var(--gray-color);
   margin: 0;
   font-weight: 450;

@@ -91,7 +91,7 @@
 .buttons-row .btn {
   padding: var(--space-xs) var(--space-sm);
   border-radius: var(--radius-md);
-  font-size: var(--font-sm);
+  font-size: var(--font-md);
 }
 
 .incident-link {

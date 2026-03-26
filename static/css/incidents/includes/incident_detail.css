@@ -13,7 +13,7 @@
 .status-tag {
   padding: var(--space-xs) var(--space-sm);
   border-radius: var(--radius-sm);
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
   font-weight: 500;
   color: var(--background-color) !important;
   justify-self: end;
@@ -34,7 +34,7 @@
   margin-top: var(--space-sm);
   margin-bottom: var(--space-xs);
   padding: var(--space-xs) var(--space-sm);
-  font-size: var(--font-sm);
+  font-size: var(--font-md);
   border: 1px solid var(--add-background-color);
   border-collapse: collapse;
   border-radius: var(--radius-sm);

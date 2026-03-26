@@ -13,7 +13,7 @@
 
 .card-text {
   line-height: 1.6;
-  font-size: var(--font-sm);
+  font-size: var(--font-md);
   margin-block: var(--space-lg);
   text-align: justify;
   hyphens: auto;
@@ -41,7 +41,7 @@
   color: var(--gray-color);
   font-weight: 600;
   padding: var(--space-sm);
-  font-size: var(--font-sm);
+  font-size: var(--font-md);
   border-bottom: 1px solid var(--gray-color);
 }
 
@@ -62,7 +62,7 @@
 .contacts td {
   padding: var(--space-sm);
   vertical-align: top;
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
 }
 
 .contact-cell {

@@ -47,13 +47,13 @@
 
 .incident-meta-row label {
   margin-bottom: var(--space-xs);
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
 }
 
 .incident-meta-row .select-wrapper label {
   display: block;
   margin-bottom: var(--space-xs);
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
 }
 
 .incident-meta-row .select-wrapper::after {
@@ -79,6 +79,9 @@
 
 .pole-label-right {
   color: var(--add-color);
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
 }
 
 .pole-link {
@@ -88,6 +91,15 @@
 
 .pole-link:hover {
   color: var(--red-color);
+}
+
+.ts-pole-status {
+  color: var(--background-color);
+  font-weight: 400;
+  font-size: var(--font-xs);
+  background-color: var(--gray-color);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
 }
 
 @media (max-width: 768px) {

@@ -3,7 +3,7 @@
 }
 
 .email-title {
-  font-size: var(--font-md);
+  font-size: var(--font-lg);
   font-weight: 600;
   margin: 0;
   display: flex;
@@ -53,7 +53,7 @@
   font-weight: 500;
   min-width: 50px;
   font-size: var(--font-sm);
-  margin-right: var(--space-md); 
+  margin-right: var(--space-sm); 
 }
 
 .email-body .form-error {
@@ -72,6 +72,6 @@
 
 .email-body .btn {
   padding: var(--space-xxs) var(--space-sm);
-  font-size: var(--font-xs);
+  font-size: var(--font-md);
   font-weight: 500;
 }

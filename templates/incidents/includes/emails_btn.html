@@ -1,0 +1,35 @@
+<a href="{% url 'incidents:new_email' incident.id %}" 
+    class="btn btn-success new-email-button tooltip" 
+    data-title="Создать новое письмо"
+    {% if not can_manage %}disabled{% endif %}>
+    <i class="bx bx-envelope"></i>
+</a>
+
+<div class="dropdown">
+    <button type="button" class="dropdown-toggle">
+    Шаблоны
+    <span class="dropdown-arrow">▾</span>
+    </button>
+
+    <div class="dropdown-menu">
+    <a href="{% url 'incidents:notify_operator' incident.id %}"
+        class="dropdown-item">
+        Уведомить оператора
+    </a>
+
+    <a href="{% url 'incidents:notify_avr_contractor' incident.id %}"
+        class="dropdown-item">
+        Передать подрядчику АВР
+    </a>
+
+    <a href="{% url 'incidents:notify_rvr_contractor' incident.id %}"
+        class="dropdown-item">
+        Передать подрядчику РВР
+    </a>
+
+    <a href="{% url 'incidents:notify_incident_closed' incident.id %}"
+        class="dropdown-item">
+        Уведомить о закрытии
+    </a>
+    </div>
+</div>

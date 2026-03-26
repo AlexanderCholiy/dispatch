@@ -37,7 +37,7 @@
 
 .toggle-tree-btn {
   padding: var(--space-xs);
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
   min-width: 140px;
 }
 
@@ -48,7 +48,7 @@
 }
 
 .email-tree-dates {
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
   color: var(--gray-color);
   white-space: nowrap;
 }
@@ -71,7 +71,7 @@
 }
 
 .email-tree-ids {
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-xs);
@@ -89,4 +89,13 @@
 
 .email-tree-body.hidden {
   display: none;
+}
+
+.empty-emails {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: var(--gray-color);
+  font-size: var(--font-md);
 }

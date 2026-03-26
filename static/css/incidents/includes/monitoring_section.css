@@ -1,12 +1,13 @@
 .monitoring-toggle-btn {
-  background-color: var(--add-background-color);
-  color: var(--add-color);
+  background-color: var(--priority-color);
+  color: var(--add-background-color);
   width: 100%;
+  font-weight: bold;
 }
 
 .monitoring-toggle-btn:hover {
-  background-color: var(--add-background-color);
-  color: var(--color);
+  background-color: var(--priority-color);
+  color: var(--background-color);
 }
 
 .monitoring-content {

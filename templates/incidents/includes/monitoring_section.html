@@ -12,6 +12,7 @@
             <th>S/N</th>
             <th>Тип</th>
             <th>Статус</th>
+            <th>Номер шкафа</th>
             <th>Дата обновления</th>
           </tr>
         </thead>
@@ -26,23 +27,27 @@
                 {{ data.modem_serial|default:"—" }}
               </td>
     
-              <td class="device-type tooltip" data-title="{{ data.cabinet|default:'' }}">
+              <td class="device-type">
                 {{ data.level_val|default:"—" }}
               </td>
-    
+              
               <td>
                 <span class="status-badge monitoring-status-{{ data.status }}">
                   {{ data.status_val|default:"—" }}
                 </span>
               </td>
-    
+              
+              <td class="cabinet-num">
+                {{ data.cabinet|default:"—" }}
+              </td>
+
               <td class="updated-cell">
                 {{ data.updated_at|date:"d.m.Y H:i:s"|default:"—" }}
               </td>
             </tr>
             {% empty %}
               <tr>
-                <td colspan="5" class="empty">
+                <td colspan="6" class="empty">
                   Нет данных мониторинга
                 </td>
               </tr>

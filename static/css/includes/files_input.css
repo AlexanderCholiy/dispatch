@@ -45,7 +45,7 @@
 
 .file-uploader-text {
   font-weight: 500;
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
 }
 
 .file-uploader-count {

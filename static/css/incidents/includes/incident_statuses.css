@@ -1,10 +1,12 @@
 .toggle-status-history {
-  background-color: var(--priority-color);
+  background-color: var(--green-color);
   color: var(--add-background-color);
+  font-weight: bold;
+  width: 100%;
 }
 
 .toggle-status-history:hover {
-  background-color: var(--priority-color);
+  background-color: var(--green-color);
   color: var(--background-color);
 }
 
@@ -34,14 +36,14 @@
 }
 
 .status-name {
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
   text-align: center;
-  min-width: 160px;
-  max-width: 160px;
+  min-width: 200px;
+  max-width: 200px;
 }
 
 .status-date {
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
   color: var(--add-color);
 }
 

@@ -1,6 +1,8 @@
 .toggle-incident-history {
   background-color: var(--green-color);
   color: var(--add-background-color);
+  font-weight: bold;
+  width: 100%;
 }
 
 .toggle-incident-history:hover {
@@ -42,8 +44,8 @@
 }
 
 .history-date {
-  font-size: var(--font-xs);
-  color: var(--gray-color);
+  font-size: var(--font-sm);
+  color: var(--add-color);
 }
 
 .history-action {

@@ -8,7 +8,7 @@ MAX_TOTAL_ATTACHMENTS_SIZE = 5 * MAX_ATTACHMENT_SIZE
 
 # Кол-во дней через которое для не актуальных инцидентов будут удалены
 # вложения:
-MAX_EMAILS_ATTACHMENT_DAYS = 180
+MAX_EMAILS_ATTACHMENT_DAYS = 365
 
 EMAILS_FILES_2_DEL_BATCH_SIZE = 500
 

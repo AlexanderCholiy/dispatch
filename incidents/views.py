@@ -603,6 +603,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
                 'can_manage': can_manage,
                 'incident_form': incident_form,
                 'monitoring': sorted_monitoring,
+                'active_tab': 'email',
             }
             return render(request, template_name, context)
 
@@ -624,6 +625,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         'can_manage': can_manage,
         'incident_form': incident_form,
         'monitoring': sorted_monitoring,
+        'active_tab': 'incident',
     }
 
     return render(request, template_name, context)
@@ -796,7 +798,8 @@ def create_incident(request: HttpRequest) -> HttpResponse:
         )
 
     context = {
-        'form': form
+        'form': form,
+        'active_tab': 'incident',
     }
 
     return render(request, template_name, context)
@@ -960,6 +963,7 @@ def new_email(
         'reply_to_email': reply_to_email,
         'previous_plain': previous_plain,
         'previous_html': previous_html,
+        'active_tab': 'email',
     }
 
     return render(request, template_name, context)
@@ -1159,6 +1163,7 @@ def notify_operator(request: HttpRequest, incident_id: int) -> HttpResponse:
         'previous_plain': previous_plain,
         'previous_html': previous_html,
         'email_header': 'Уведомление оператору о принятии в работу инцидента',
+        'active_tab': 'email',
     }
 
     return render(request, template_name, context)
@@ -1416,6 +1421,7 @@ def notify_avr_contractor(
         'email_header': (
             'Уведомление подрядчику по АВР о передаче инцидента'
         ),
+        'active_tab': 'email',
     }
 
     return render(request, template_name, context)
@@ -1673,6 +1679,7 @@ def notify_rvr_contractor(
         'email_header': (
             'Уведомление подрядчику по РВР о передаче инцидента'
         ),
+        'active_tab': 'email',
     }
 
     return render(request, template_name, context)
@@ -1898,6 +1905,7 @@ def notify_incident_closed(
         'previous_plain': previous_plain,
         'previous_html': previous_html,
         'email_header': 'Уведомление заявителю о закрытии инцидента',
+        'active_tab': 'email',
     }
 
     return render(request, template_name, context)

@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/includes/tabs.css' %}">
 <link rel="stylesheet" href="{% static 'css/incidents/includes/incident_detail.css' %}">
 <link rel="stylesheet" href="{% static 'css/incidents/includes/email_three.css' %}">
 <link rel="stylesheet" href="{% static 'css/incidents/includes/email_node.css' %}">
@@ -14,135 +15,37 @@
 {% block title %}{{ incident }}{% endblock %}
 
 {% block content %}
-<div class="container-sm">
+<div class="container">
   <div class="card">
-    {% include "incidents/includes/incident_meta.html" with incident=incident %}
-      {% if confirm_stage and email_three and can_manage %}
-        <form id="confirm-move-emails-form" method="post" action="{% url 'incidents:confirm_move_emails' %}">
-          {% csrf_token %}
-          <div class="form-controls">
-            <div class="form-controls-left">
-              <p>
-                Выбранные письма:
-                {% for group in selected_email_ids %}
-                  {% for email_id in group %}
-                    <a class="email-link" href="#email-{{ email_id }}">{{ email_id }}</a>{% if not forloop.last %}, {% endif %}
-                  {% endfor %}
-                  {% if not forloop.last %}; {% endif %}
-                {% endfor %}
-              </p>
-              <input type="hidden" name="source_incident_id" value="{{ source_incident.id }}">
-              <input type="hidden" name="target_incident_code" value="{{ move_email_form.target_incident_code.value }}">
-              <input type="hidden" name="email_ids" value='{{ selected_email_ids|safe|escapejs }}'>
-            </div>
-            <div class="form-controls-right">
-              <div class="form-actions">
-                <a href="{% url 'incidents:incident_detail' source_incident.id %}" class="btn btn-secondary cancel-move-email">Отмена</a>
-                <button type="submit" class="btn btn-success submit-move-email">Подтвердить перенос</button>
-              </div>
-            </div>
-          </div>
-        </form>
-      {% elif not confirm_stage and email_three and can_manage %}
-        <form id="move-emails-form" method="post">
-          {% csrf_token %}
-          <div class="form-controls">
-            <div class="form-controls-left">
-              <button type="button" class="btn btn-secondary sort-emails-btn tooltip" data-sort="asc" data-title="Сначала новые">
-                <i class='bx bx-chevrons-down'></i>
-              </button>
-              <button type="button" class="btn btn-secondary sort-emails-btn tooltip" data-sort="desc" data-title="Сначала старые">
-                <i class='bx bx-chevrons-up'></i>
-              </button>
-            </div>
-            <div class="form-controls-right">
-              <input type="hidden" name="{{ move_email_form.email_ids.html_name }}"
-                      id="{{ move_email_form.email_ids.id_for_label }}"
-                      value='{{ move_email_form.email_ids.value|default:"[]" }}'>
-              <input type="text"
-                      name="{{ move_email_form.target_incident_code.html_name }}"
-                      id="{{ move_email_form.target_incident_code.id_for_label }}"
-                      placeholder="Код инцидента"
-                      class="code-input tooltip"
-                      maxlength="32"
-                      required
-                      pattern="[A-Za-z0-9-]+"
-                      data-title="Целевой код инцидента для переноса писем"
-                      value="{{ move_email_form.target_incident_code.value|default_if_none:'' }}">
-              <button id="move-emails-btn" name="move_emails_submit" class="btn btn-warning" type="submit" disabled>Переместить письма</button>
-            </div>
-          </div>
-        </form>
-      {% elif email_three %}
-        <div class="form-controls">
-          <div class="form-controls-left"></div>
-          <div class="form-controls-right">
-            <button type="button" class="btn btn-secondary sort-emails-btn tooltip" data-sort="asc" data-title="Сначала новые">
-              <i class='bx bx-chevrons-down'></i>
-            </button>
-            <button type="button" class="btn btn-secondary sort-emails-btn tooltip" data-sort="desc" data-title="Сначала старые">
-              <i class='bx bx-chevrons-up'></i>
-            </button>
-          </div>
-        </div>
-      {% endif %}
+    <div class="tabs" data-default-tab="{{ active_tab|default:'incident' }}">
 
-      <div class="email-three">
-        {% if email_three %}
-          {% for root in email_three %}
-            <div class="email-tree{% if confirm_stage and root.branch_ids in selected_email_ids %} chosen{% endif %}" id="email-tree-{{ forloop.counter }}">
-              <div class="email-tree-header">
-                <div class="email-tree-header-top">
-                  <button class="btn btn-secondary toggle-tree-btn" type="button"
-                          data-tree-id="email-tree-{{ forloop.counter }}">
-                    Показать переписку
-                  </button>
-
-                  <div class="email-tree-header-right">
-                    {% if root.min_date and root.max_date %}
-                      <span class="email-tree-dates">
-                        {{ root.min_date|date:"d.m.Y H:i" }} — {{ root.max_date|date:"d.m.Y H:i" }}
-                      </span>
-                    {% endif %}
-
-                    {% if not confirm_stage and can_manage %}
-                      <label class="custom-checkbox-wrapper email-tree-checkbox-label">
-                        <input type="checkbox"
-                              class="email-tree-checkbox"
-                              data-ids='{{ root.branch_ids|safe }}'
-                              {% for node_id in root.branch_ids %}
-                                  {% if node_id|safe in selected_email_ids %}checked{% endif %}
-                              {% endfor %}>
-                        <i class="bx bx-check check-icon"></i>
-                      </label>
-                    {% endif %}
-                  </div>
-
-                  <div class="email-tree-ids">
-                    <strong>ID писем:</strong>
-                    {% for node in root.branch_ids %}
-                      <a class="email-link" href="#email-{{ node }}">{{ node }}</a>
-                    {% endfor %}
-                  </div>
-                </div>
-              </div>
-
-              <div class="email-tree-body hidden">
-                {% include "incidents/includes/email_node.html" with node=root level=0 %}
-              </div>
-            </div>
-          {% endfor %}
-        {% endif %}
+      <div class="tabs-header">
+        <button class="tab-btn" data-tab="incident">Инцидент</button>
+        <button class="tab-btn" data-tab="email">Почта</button>
+        <button class="tab-btn" data-tab="comments">Комментарии</button>
       </div>
 
-      {% include "incidents/includes/status_history.html" with incident=incident %}
-      {% include "incidents/includes/incident_history.html" with incident=incident %}
+      <div class="tabs-content">
+        <div class="tab-panel" data-tab-content="incident">
+          {% include "incidents/includes/incident_meta.html" with incident=incident %}
+        </div>
+  
+        <div class="tab-panel" data-tab-content="email">
+          {% include "incidents/includes/email_three_block.html" with incident=incident %}
+        </div>
+  
+        <div class="tab-panel" data-tab-content="comments">
+          {% include "incidents/includes/comments.html" with incident=incident %}
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/tabs.js' %}"></script>
 <script src="{% static 'js/incidents/hide_sections.js' %}"></script>
 <script src="{% static 'js/incidents/email_root.js' %}"></script>
 {% if not confirm_stage %}

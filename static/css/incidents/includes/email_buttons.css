@@ -10,7 +10,7 @@ display: flex;
 .form-controls-left {
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
+  gap: var(--space-sm);
   flex-wrap: wrap;
   max-width: 70%;
 }
@@ -26,7 +26,7 @@ display: flex;
 .form-controls-right button {
   display: flex;
   align-items: center;
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
   line-height: 1;
 }
 
@@ -42,5 +42,5 @@ display: flex;
 #move-emails-btn,
 .sort-emails-btn {
   padding: 0.16rem;
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
 }

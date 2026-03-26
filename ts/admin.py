@@ -52,7 +52,12 @@ class PoleAdmin(admin.ModelAdmin):
         'region',
     )
     search_fields = ('pole', 'bs_name',)
-    list_filter = ('infrastructure_company', 'avr_contractor', 'region')
+    list_filter = (
+        'pole_status',
+        'region__macroregion',
+        'infrastructure_company',
+        'avr_contractor',
+    )
     inlines = [PoleEmailsInline, PolePhonesInline]
     ordering = ('pole', 'bs_name',)
     autocomplete_fields = ('region',)
@@ -61,7 +66,7 @@ class PoleAdmin(admin.ModelAdmin):
         qs = super().get_queryset(request)
         return (
             qs
-            .select_related('avr_contractor', 'region')
+            .select_related('avr_contractor', 'region', 'region__macroregion')
             .prefetch_related('avr_emails', 'avr_phones')
         )
 
