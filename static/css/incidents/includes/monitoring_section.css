@@ -2,7 +2,7 @@
   background-color: var(--priority-color);
   color: var(--add-background-color);
   width: 100%;
-  font-weight: bold;
+  font-weight: 500;
 }
 
 .monitoring-toggle-btn:hover {

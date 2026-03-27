@@ -35,7 +35,6 @@ from core.services.get_max_today_datetime import get_max_today_datetime
 from core.threads import tasks_in_threads
 from core.utils import humanize_datetime
 from core.validators import get_aware_datetime
-from emails.constants import DISPATCHER_SIGNATURE
 from emails.email_parser import email_parser
 from emails.models import (
     EmailAttachment,
@@ -90,6 +89,7 @@ from .models import (
 )
 from .selectors.incidents import IncidentSelector
 from .services.get_incident_responsible_users import get_responsible_users
+from .services.incident_signature import get_incident_signature
 from .services.normalize_incident_subject import normalize_incident_subject
 from .utils import IncidentManager
 from .validators import (
@@ -971,7 +971,7 @@ def new_email(
                 if obj.email_to != email_parser.email_login
             ])
 
-        initial_data['body'] = f'\n\n\n{DISPATCHER_SIGNATURE}'
+        initial_data['body'] = get_incident_signature(incident)
 
         form = NewEmailForm(initial=initial_data)
 
@@ -1168,9 +1168,11 @@ def notify_operator(request: HttpRequest, incident_id: int) -> HttpResponse:
 
         incident_label = f'{incident.code} ' if incident.code else ''
 
+        signature = get_incident_signature(incident)
+
         initial_data['body'] = (
             f'Заявка {incident_label} принята в работу.'
-            f'\n\n\n{DISPATCHER_SIGNATURE}'
+            f'{signature}'
         )
 
         form = NewEmailForm(initial=initial_data)
@@ -1391,7 +1393,7 @@ def notify_avr_contractor(
         incident_date = (
             incident.incident_date
             .astimezone(CURRENT_TZ)
-            .strftime('%d.%m.%Y %H:%M')
+            .strftime('%d.%m.%Y %H:%M (МСК)')
         )
 
         text_parts.append(f'  • Дата регистрации: {incident_date}')
@@ -1412,15 +1414,13 @@ def notify_avr_contractor(
             sla_deadline = (
                 incident.sla_avr_deadline
                 .astimezone(CURRENT_TZ)
-                .strftime('%d.%m.%Y %H:%M')
+                .strftime('%d.%m.%Y %H:%M (МСК)')
             )
             text_parts.append(f'  • SLA дедлайн: {sla_deadline}')
 
-        text_parts.append(
-            '\nПожалуйста не меняйте тему письма.'
-        )
+        signature = get_incident_signature(incident, True)
 
-        text_parts.append(f'\n\n\n{DISPATCHER_SIGNATURE}')
+        text_parts.append(signature)
 
         if first_email:
             first_email_plain, _ = get_previous_email_body(first_email)
@@ -1649,7 +1649,7 @@ def notify_rvr_contractor(
         incident_date = (
             incident.incident_date
             .astimezone(CURRENT_TZ)
-            .strftime('%d.%m.%Y %H:%M')
+            .strftime('%d.%m.%Y %H:%M (МСК)')
         )
 
         text_parts.append(f'  • Дата регистрации: {incident_date}')
@@ -1670,15 +1670,13 @@ def notify_rvr_contractor(
             sla_deadline = (
                 incident.sla_rvr_deadline
                 .astimezone(CURRENT_TZ)
-                .strftime('%d.%m.%Y %H:%M')
+                .strftime('%d.%m.%Y %H:%M (МСК)')
             )
             text_parts.append(f'  • SLA дедлайн: {sla_deadline}')
 
-        text_parts.append(
-            '\nПожалуйста не меняйте тему письма.'
-        )
+        signature = get_incident_signature(incident, True)
 
-        text_parts.append(f'\n\n\n{DISPATCHER_SIGNATURE}')
+        text_parts.append(signature)
 
         if first_email:
             first_email_plain, _ = get_previous_email_body(first_email)
@@ -1907,12 +1905,14 @@ def notify_incident_closed(
 
         incident_label = f'{incident.code} ' if incident.code else ''
 
+        signature = get_incident_signature(incident)
+
         initial_data['body'] = (
             f'Инцидент {incident_label}устранён.'
             '\n\nПросим проверить и подтвердить. '
             'Если в течение 12 часов обратная связь не поступит, '
             'заявка будет автоматически закрыта.'
-            f'\n\n\n{DISPATCHER_SIGNATURE}'
+            f'{signature}'
         )
 
         form = NewEmailForm(initial=initial_data)

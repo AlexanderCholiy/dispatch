@@ -80,7 +80,7 @@
 
 .incident-code {
   padding: var(--space-sm) var(--space-md);
-  font-size: var(--font-sm);
+  font-size: var(--font-md);
   font-weight: 500;
   color: var(--add-color);
 }

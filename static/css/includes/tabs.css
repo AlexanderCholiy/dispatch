@@ -19,6 +19,7 @@
   color: var(--gray-color);
   transition: all var(--transition-value);
   font-weight: 500;
+  font-size: var(--font-md);
   border-bottom: 2px solid transparent;
 }
 

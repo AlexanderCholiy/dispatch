@@ -122,7 +122,8 @@ MAX_STACK_EMAILS_TTL = 3600
 
 DISPATCHER_SIGNATURE = (
     'С уважением,\n'
-    'Диспетчерская служба «Новые Башни»'
+    'Диспетчерская служба «Новые Башни»\n'
+    'Тел.: +7 (911) 371-61-48'
 )
 
 EMAIL_SUBJECT_NOT_FOR_YT_CONTROLLED = 'V8ieFf'
