@@ -1,12 +1,21 @@
+import os
+from datetime import datetime
+
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db.models import Prefetch, Q
-from django.http import HttpRequest, HttpResponse
+from django.http import (
+    Http404,
+    HttpRequest,
+    HttpResponse,
+    StreamingHttpResponse,
+)
 from django.shortcuts import redirect, render
 from django_ratelimit.decorators import ratelimit
+from stream_zip import ZIP_32, ZIP_64, stream_zip
 
-from core.constants import DATETIME_LOCAL_FORMAT
+from core.constants import DATETIME_LOCAL_FORMAT, ZIP64_THRESHOLD
 from core.services.get_max_today_datetime import get_max_today_datetime
 from core.validators import get_aware_datetime
 from users.utils import role_required
@@ -16,7 +25,12 @@ from .constants import (
     MAX_EMAILS_INFO_CACHE_SEC,
     PAGE_SIZE_EMAILS_CHOICES,
 )
-from .models import EmailFolder, EmailMessage
+from .models import (
+    EmailAttachment,
+    EmailFolder,
+    EmailInTextAttachment,
+    EmailMessage,
+)
 
 
 @login_required
@@ -164,3 +178,83 @@ def emails_list(request: HttpRequest) -> HttpResponse:
     }
 
     return render(request, 'emails/emais_list.html', context)
+
+
+@login_required
+@role_required()
+@ratelimit(key='user_or_ip', rate='20/m', block=True)
+def download_email_attachments(
+    request: HttpRequest, email_id: int
+) -> StreamingHttpResponse:
+    """
+    Генерирует и отдает ZIP-архив со всеми вложениями инцидента на лету.
+    Не сохраняет архив на диск.
+    """
+    try:
+        email_msg = EmailMessage.objects.prefetch_related(
+            'email_attachments',
+            'email_intext_attachments',
+        ).get(id=email_id)
+    except EmailMessage.DoesNotExist:
+        raise Http404('Email не найден')
+
+    files_data = []
+    total_uncompressed_size = 0
+
+    all_attachments: list[EmailAttachment | EmailInTextAttachment] = (
+        list(email_msg.email_attachments.all())
+        + list(email_msg.email_intext_attachments.all())
+    )
+
+    for att in all_attachments:
+        if not att.file_url:
+            continue
+
+        if not att.file_url.storage.exists(att.file_url.name):
+            continue
+
+        file_path = att.file_url.path
+        zip_name = os.path.basename(att.file_url.name)
+
+        stat = os.stat(file_path)
+        file_size = stat.st_size
+        mtime = datetime.fromtimestamp(stat.st_mtime)
+
+        total_uncompressed_size += file_size
+
+        files_data.append({
+            'path': file_path,
+            'name': zip_name,
+            'size': file_size,
+            'mtime': mtime
+        })
+
+    if not files_data:
+        raise Http404('Нет доступных вложений для скачивания')
+
+    archive_format = (
+        ZIP_64 if total_uncompressed_size > ZIP64_THRESHOLD else ZIP_32
+    )
+
+    def file_entries_generator():
+        for f_info in files_data:
+            yield (
+                f_info['name'],
+                f_info['mtime'],
+                0o644,
+                archive_format,
+                open(f_info['path'], 'rb')
+            )
+
+    entries = file_entries_generator()
+
+    archive_name = f'email_{email_id}_attachments.zip'
+
+    response = StreamingHttpResponse(
+        stream_zip(entries),
+        content_type='application/x-zip-compressed'
+    )
+
+    response['Content-Disposition'] = f'attachment; filename="{archive_name}"'
+
+    return response

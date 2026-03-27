@@ -1,12 +1,21 @@
 {% with fname=att.file_name|lower %}
+  {% with last_4_chars=fname|slice:"-4:" %}
+  {% with last_5_chars=fname|slice:"-5:" %}
   <li class="attachment-item">
-    <a href="{{ att.protected_url }}" target="_blank" class="attachment-file">
-      {% if fname|slice:"-4:" in ".jpg.png.gif" or fname|slice:"-5:" == ".jpeg" or fname|slice:"-5:" == ".webp" or fname|slice:"-4:" == ".bmp" or fname|slice:"-4:" == ".svg" or fname|slice:"-5:" == ".jfif" %}
-      <img src="{{ att.protected_url }}" 
-          alt="{{ att.file_name }}" 
-          class="attachment-preview" 
-          onerror="this.onerror=null; this.outerHTML='<i class=\'bx bx-image\'></i>';">
-      {% else %}
+    {% if last_4_chars == ".jpg" or last_4_chars == ".png" or last_4_chars == ".gif" or last_4_chars == ".bmp" or last_4_chars == ".svg" or last_5_chars == ".jpeg" or last_5_chars == ".webp" or last_5_chars == ".jfif" %}
+      <!-- ДЛЯ КАРТИНОК -->
+      <div class="attachment-file image-preview-trigger">
+      <img src="{{ att.protected_url }}"
+          alt="{{ att.file_name }}"
+          class="attachment-preview">
+
+        <p class="attachment-name">{{ att.file_name }}</p>
+      </div>
+
+    {% else %}
+      <!-- ОБЫЧНЫЕ ФАЙЛЫ -->
+      <a href="{{ att.protected_url }}" target="_blank" class="attachment-file">
+
         <span class="attachment-icon
           {% if fname|slice:"-4:" == ".pdf" %}pdf
           {% elif fname|slice:"-5:" == ".xlsx" %}xlsx
@@ -50,8 +59,12 @@
           {% elif fname|slice:"-4:" == ".eml" %}email
           {% else %}file{% endif %}">
         </span>
-      {% endif %}
-      <p class="attachment-name">{{ att.file_name }}</p>
-    </a>
+
+        <p class="attachment-name">{{ att.file_name }}</p>
+      </a>
+    {% endif %}
+
   </li>
+  {% endwith %}
+  {% endwith %}
 {% endwith %}

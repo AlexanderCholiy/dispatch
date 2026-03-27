@@ -4,6 +4,12 @@
   border-top: 1px dashed var(--extra-color);
 }
 
+.attachments-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .email-attachments ul {
   list-style: none;
   margin: var(--space-xs) 0;
@@ -94,7 +100,8 @@
 .email-attachments.hidden {
   display: none;
 }
-.toggle-attachments-btn {
+.toggle-attachments-btn,
+.btn-download-all {
   margin-bottom: var(--space-xs);
   padding: var(--space-xs) var(--space-sm);
   border-radius: var(--radius-sm);
@@ -105,6 +112,11 @@
   font-size: var(--font-sm);
 }
 
-.toggle-attachments-btn:hover {
+.toggle-attachments-btn:hover,
+.btn-download-all:hover {
   background-color: var(--extra-color);
+}
+
+.btn-download-all {
+  text-decoration: none;
 }

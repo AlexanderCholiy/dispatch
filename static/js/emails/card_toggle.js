@@ -54,16 +54,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const btn = event.target.closest(".toggle-attachments-btn");
     if (!btn) return;
 
-    const attachments = btn.nextElementSibling;
-    if (!attachments) return;
-
+    const wrapper = btn.closest(".email-attachments-wrapper");
+    const attachments = wrapper.querySelector(".email-attachments");
     const body = btn.closest(".email-body");
-    if (!body) return;
+    
+    if (!attachments || !body) return;
 
     attachments.classList.toggle("hidden");
     btn.textContent = attachments.classList.contains("hidden") ? "Показать вложения" : "Скрыть вложения";
 
-    // Пересчёт maxHeight родительского body
+    // Пересчёт maxHeight родительского body, чтобы контент не обрезался
     requestAnimationFrame(() => {
       body.style.maxHeight = body.scrollHeight + "px";
     });

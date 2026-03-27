@@ -18,9 +18,16 @@
     
       <div class="email-attachments-wrapper">
         {% if node.email.email_attachments.all or node.email.email_intext_attachments.all or node.email.email_mime %}
-          <button type="button" class="toggle-attachments-btn" onclick="this.nextElementSibling.classList.toggle('hidden'); this.textContent = this.nextElementSibling.classList.contains('hidden') ? 'Показать вложения' : 'Скрыть вложения';">
-            Показать вложения
-          </button>
+          <div class="attachments-header">
+            <button type="button" class="toggle-attachments-btn" onclick="toggleAttachments(this)">
+              Показать вложения
+            </button>
+            {% if node.email.email_attachments.all or node.email.email_intext_attachments.all %}
+            <a href="{% url 'emails:download_email_attachments' node.email.id %}" class="btn-download-all">
+              Скачать файлы
+            </a>
+            {% endif %}
+          </div>
           <div class="email-attachments hidden">
             <ul>
               {% if node.email.email_mime %}

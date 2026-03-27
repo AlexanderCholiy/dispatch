@@ -1,0 +1,19 @@
+{% load static %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/includes/image_viewer.css' %}">
+{% endblock %}
+
+<div id="image-viewer" class="image-viewer hidden">
+  <div class="image-viewer-backdrop"></div>
+
+  <div class="image-viewer-content">
+    <span class="viewer-close">&times;</span>
+
+    <span class="viewer-prev">&#10094;</span>
+    <img id="viewer-image" src="" alt="">
+    <span class="viewer-next">&#10095;</span>
+
+    <div id="viewer-title"></div>
+  </div>
+</div>
