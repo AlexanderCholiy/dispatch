@@ -37,6 +37,8 @@
   /* Ограничиваем область контента, чтобы кнопки не вылезали */
   padding: 40px; 
   box-sizing: border-box;
+
+  pointer-events: none; 
   
   opacity: 0;
   transform: scale(0.95);
@@ -111,6 +113,24 @@
   line-height: 1;
   border-radius: var(--radius-md); /* Квадратные с легким скруглением */
   box-shadow: 0 4px 12px var(--add-background-color);
+}
+
+/* Возвращаем возможность кликать только на элементы внутри контента */
+#viewer-image, 
+.viewer-close, 
+.viewer-prev, 
+.viewer-next, 
+#viewer-title {
+  pointer-events: auto;
+  cursor: pointer; /* Для заголовка тоже можно вернуть курсор, если нужно */
+}
+
+/* Если у картинки курсор grab, он должен сохраняться */
+#viewer-image {
+  cursor: grab;
+}
+#viewer-image:active {
+  cursor: grabbing;
 }
 
 /* Показываем кнопки при наведении на весь просмотрщик */

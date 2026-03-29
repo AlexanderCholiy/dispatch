@@ -21,6 +21,7 @@ class ImageViewer {
   }
 
   init() {
+    // Слушаем клик по всему документу для открытия
     document.addEventListener('click', (e) => {
       const trigger = e.target.closest('.image-preview-trigger');
       if (!trigger) return;
@@ -28,7 +29,6 @@ class ImageViewer {
       const img = trigger.querySelector('img');
       if (!img) return;
       
-      // Логика сбора списка картинок (как было раньше)
       const wrapper = trigger.closest('.email-attachments-wrapper');
       if (wrapper) {
         this.images = [...wrapper.querySelectorAll('.image-preview-trigger img')];
@@ -46,11 +46,26 @@ class ImageViewer {
   }
 
   setupControls() {
-    // Закрытие
-    document.querySelector('.viewer-close')?.addEventListener('click', () => this.close());
-    document.querySelector('.image-viewer-backdrop')?.addEventListener('click', () => this.close());
-    
-    // Навигация
+    // 1. Закрытие по крестику
+    document.querySelector('.viewer-close')?.addEventListener('click', (e) => {
+        e.stopPropagation(); // Важно: предотвращаем всплытие, чтобы не триггерить другие события
+        this.close();
+    });
+
+    // 2. ЗАКРЫТИЕ ПО ФОНУ (Backdrops)
+    // Находим элемент фона
+    const backdrop = document.querySelector('.image-viewer-backdrop');
+    if (backdrop) {
+        backdrop.addEventListener('click', (e) => {
+            // Дополнительная проверка: если клик был по чему-то внутри фона (хотя там пусто), 
+            // но target совпадает с backdrop - закрываем.
+            if (e.target === backdrop) {
+                this.close();
+            }
+        });
+    }
+
+    // Навигация (Стрелки)
     document.querySelector('.viewer-prev')?.addEventListener('click', (e) => {
         e.stopPropagation(); 
         this.prev();
@@ -145,7 +160,6 @@ class ImageViewer {
 
   updateTransform() {
     this.img.style.transform = `translate3d(${this.state.pointX}px, ${this.state.pointY}px, 0) scale(${this.state.scale})`;
-    // Убираем анимацию во время драга для мгновенного отклика
     this.img.style.transition = this.state.panning ? 'none' : 'transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
   }
 
@@ -155,7 +169,7 @@ class ImageViewer {
     this.state.startX = e.clientX - this.state.pointX;
     this.state.startY = e.clientY - this.state.pointY;
     this.img.style.cursor = 'grabbing';
-    e.preventDefault(); // Важно для предотвращения выделения текста
+    e.preventDefault();
   }
 
   doPan(e) {
@@ -164,7 +178,6 @@ class ImageViewer {
     const clientX = e.clientX || e.pageX;
     const clientY = e.clientY || e.pageY;
     
-    // Прямое обновление координат БЕЗ ограничений
     this.state.pointX = clientX - this.state.startX;
     this.state.pointY = clientY - this.state.startY;
     
