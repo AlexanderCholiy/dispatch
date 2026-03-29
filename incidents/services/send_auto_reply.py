@@ -218,7 +218,7 @@ class AutoReply:
                             level=NotificationLevel.LOW,
                             data=notif_data,
                         )
-            incident.was_read = False
+            incident.was_read = incident.is_yt_tracker_controlled
             incident.save()
 
             return
@@ -252,7 +252,7 @@ class AutoReply:
                     is_dgu_category=DGU_CATEGORY in category_names,
                 )
                 incident.statuses.add(new_status)
-                incident.was_read = False
+                incident.was_read = incident.is_yt_tracker_controlled
 
                 incident.save()
 
