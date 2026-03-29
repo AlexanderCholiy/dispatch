@@ -1,13 +1,13 @@
 class ImageViewer {
   constructor() {
-    this.images = [];       // Список картинок ТОЛЬКО текущей карточки
+    this.images = [];
     this.currentIndex = 0;
     this.viewer = document.getElementById('image-viewer');
     this.img = document.getElementById('viewer-image');
     this.title = document.getElementById('viewer-title');
     
     if (!this.viewer || !this.img) return;
-
+    
     this.state = {
       scale: 1,
       panning: false,
@@ -21,34 +21,27 @@ class ImageViewer {
   }
 
   init() {
-    // Слушаем клик по всему документу
     document.addEventListener('click', (e) => {
       const trigger = e.target.closest('.image-preview-trigger');
       if (!trigger) return;
       
       const img = trigger.querySelector('img');
       if (!img) return;
-
-      // --- ГЛАВНОЕ ИЗМЕНЕНИЕ: Ищем контекст ---
-      // Находим ближайшего родителя с классом email-attachments-wrapper
-      const wrapper = trigger.closest('.email-attachments-wrapper');
       
+      // Логика сбора списка картинок (как было раньше)
+      const wrapper = trigger.closest('.email-attachments-wrapper');
       if (wrapper) {
-        // Если нашли обертку, собираем картинки ТОЛЬКО внутри неё
         this.images = [...wrapper.querySelectorAll('.image-preview-trigger img')];
       } else {
-        // Если обертки нет (например, фото вне письма), берем все как раньше
         this.images = [...document.querySelectorAll('.image-preview-trigger img')];
       }
-
-      // Находим индекс текущей картинки в этом локальном списке
-      this.currentIndex = this.images.indexOf(img);
       
+      this.currentIndex = this.images.indexOf(img);
       if (this.currentIndex === -1) this.currentIndex = 0;
       
       this.open(img);
     });
-
+    
     this.setupControls();
   }
 
@@ -56,8 +49,8 @@ class ImageViewer {
     // Закрытие
     document.querySelector('.viewer-close')?.addEventListener('click', () => this.close());
     document.querySelector('.image-viewer-backdrop')?.addEventListener('click', () => this.close());
-
-    // Навигация (с stopPropagation, чтобы не триггерить другие события)
+    
+    // Навигация
     document.querySelector('.viewer-prev')?.addEventListener('click', (e) => {
         e.stopPropagation(); 
         this.prev();
@@ -66,7 +59,7 @@ class ImageViewer {
         e.stopPropagation(); 
         this.next();
     });
-
+    
     // Клавиатура
     document.addEventListener('keydown', (e) => {
       if (this.viewer.classList.contains('hidden')) return;
@@ -74,15 +67,15 @@ class ImageViewer {
       if (e.key === 'ArrowLeft') this.prev();
       if (e.key === 'ArrowRight') this.next();
     });
-
+    
     // Зум колесиком
     this.img.addEventListener('wheel', (e) => {
         e.stopPropagation(); 
         e.preventDefault(); 
         this.zoom(e);
     }, { passive: false });
-
-    // Перетаскивание
+    
+    // Перетаскивание (Mouse)
     this.img.addEventListener('mousedown', (e) => this.startPan(e));
     window.addEventListener('mousemove', (e) => this.doPan(e));
     window.addEventListener('mouseup', () => this.endPan());
@@ -102,10 +95,8 @@ class ImageViewer {
 
   open(imgElement) {
     if (!imgElement) return;
-    
-    // Проверка, есть ли картинки в списке
     if (!this.images.length) return;
-
+    
     const tempImg = new Image();
     tempImg.src = imgElement.src;
     
@@ -131,9 +122,8 @@ class ImageViewer {
     const delta = e.deltaY < 0 ? 0.1 : -0.1;
     const oldScale = this.state.scale;
     let newScale = oldScale + delta;
-
     newScale = Math.min(Math.max(newScale, 1), 5);
-
+    
     if (newScale !== oldScale) {
         if (newScale <= 1) {
             this.state.scale = 1;
@@ -155,6 +145,7 @@ class ImageViewer {
 
   updateTransform() {
     this.img.style.transform = `translate3d(${this.state.pointX}px, ${this.state.pointY}px, 0) scale(${this.state.scale})`;
+    // Убираем анимацию во время драга для мгновенного отклика
     this.img.style.transition = this.state.panning ? 'none' : 'transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
   }
 
@@ -164,14 +155,19 @@ class ImageViewer {
     this.state.startX = e.clientX - this.state.pointX;
     this.state.startY = e.clientY - this.state.pointY;
     this.img.style.cursor = 'grabbing';
+    e.preventDefault(); // Важно для предотвращения выделения текста
   }
 
   doPan(e) {
     if (!this.state.panning) return;
+    
     const clientX = e.clientX || e.pageX;
     const clientY = e.clientY || e.pageY;
+    
+    // Прямое обновление координат БЕЗ ограничений
     this.state.pointX = clientX - this.state.startX;
     this.state.pointY = clientY - this.state.startY;
+    
     this.updateTransform();
   }
 

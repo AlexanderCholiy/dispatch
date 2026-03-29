@@ -55,7 +55,6 @@ def get_monitiring_cache_equipment(
     cached_data: Optional[dict[str, list[MonitoringEquipment]]] = cache.get(
         MONITORING_EQUIPMENT_CACHE_KEY
     )
-    cached_data = None
 
     if cached_data is not None:
         return cached_data.get(pole)

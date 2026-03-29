@@ -5,20 +5,21 @@
 .image-viewer {
   position: fixed;
   inset: 0;
-  z-index: 9999; /* Увеличил z-index, чтобы точно было поверх всего */
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
   height: 100%;
-  background: transparent; /* Фон управляется backdrop */
+  background: transparent;
+  overflow: hidden; /* Важно: скрывает всё, что выходит за рамки экрана */
 }
 
 .image-viewer-backdrop {
-  position: absolute; /* Changed from fixed to absolute relative to viewer */
+  position: absolute;
   inset: 0;
-  background: var(--extra-color); /* Более глубокий черный цвет */
-  backdrop-filter: blur(5px);
+  background: var(--extra-color);
+  backdrop-filter: blur(8px); /* Сильнее размытие */
   z-index: 1;
   opacity: 0;
   animation: fadeInBackdrop 0.3s forwards;
@@ -31,12 +32,12 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  max-width: 95%;
-  max-height: 95%;
-  gap: var(--space-lg);
-  transform-origin: center;
+  width: 100%;
+  height: 100%;
+  /* Ограничиваем область контента, чтобы кнопки не вылезали */
+  padding: 40px; 
+  box-sizing: border-box;
   
-  /* Анимация появления контента */
   opacity: 0;
   transform: scale(0.95);
   transition: opacity var(--transition-value), transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -47,97 +48,125 @@
   transform: scale(1);
 }
 
+/* Изображение */
 #viewer-image {
   max-width: 100%;
-  max-height: 85vh; /* Чуть больше места по высоте */
+  max-height: 100%; /* Позволяет использовать всю высоту, но ограничено parent */
   object-fit: contain;
   border-radius: var(--radius-lg);
   box-shadow: 0 10px 40px var(--extra-color);
-  user-select: none; /* Чтобы текст не выделялся при драге */
-  -webkit-user-drag: none; /* Отключаем стандартный драг браузера */
-  touch-action: none; /* Важно для мобильных жестов */
+  user-select: none;
+  -webkit-user-drag: none;
+  touch-action: none;
   cursor: grab;
   will-change: transform;
+  
+  /* Гарантируем, что изображение не выйдет за пределы родителя при трансформации */
+  /* Но мы будем контролировать это через JS, здесь просто базовые стили */
 }
 
 #viewer-image:active {
   cursor: grabbing;
 }
 
+/* Заголовок */
 #viewer-title {
   color: var(--color);
   font-size: var(--font-md);
   font-weight: 400;
   text-align: center;
   text-shadow: 0 2px 4px var(--extra-color);
-  z-index: 1;
-  margin-top: 10px;
+  margin-top: 15px;
   opacity: 0;
   transition: opacity var(--transition-value);
+  max-width: 90%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .image-viewer:not(.hidden) #viewer-title {
   opacity: 1;
 }
 
-/* Кнопки управления */
-.viewer-close {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  font-size: var(--font-xl);
-  line-height: 1;
-  color: var(--add-background-color);
-  background: var(--extra-color);
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 100%;
-  cursor: pointer;
-  z-index: 10;
-  opacity: 0;
-  transition: all var(--transition-value);
-}
+/* --- НОВЫЙ СТИЛЬ КНОПОК (Без кружочков) --- */
 
-.viewer-prev, .viewer-next {
+/* Общий стиль для всех кнопок */
+.viewer-close,
+.viewer-prev,
+.viewer-next {
   position: absolute;
-  transform: translateY(-50%);
-  font-size: var(--font-xl);
   color: var(--add-background-color);
-  background: var(--extra-color);
-  width: 50px;
-  height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--extra-color);
   cursor: pointer;
   z-index: 10;
   opacity: 0;
   transition: all var(--transition-value);
   user-select: none;
-  backdrop-filter: blur(4px);
-  transition: color var(--transition-value);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-xl);
+  line-height: 1;
+  border-radius: var(--radius-md); /* Квадратные с легким скруглением */
+  box-shadow: 0 4px 12px var(--add-background-color);
 }
 
-/* Показываем кнопки при наведении на контейнер */
+/* Показываем кнопки при наведении на весь просмотрщик */
 .image-viewer:hover .viewer-close,
 .image-viewer:hover .viewer-prev,
 .image-viewer:hover .viewer-next {
   opacity: 1;
 }
 
+/* Ховер эффект */
 .viewer-close:hover,
 .viewer-prev:hover,
 .viewer-next:hover {
+  background: var(--extra-color);
   color: var(--background-color);
+  transform: scale(1.05);
+}
+
+/* Кнопка закрытия */
+.viewer-close {
+  top: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  font-size: var(--font-xxl); /* Крупный крестик */
+}
+
+/* Стрелки навигации */
+.viewer-prev, .viewer-next {
+  width: 50px;
+  height: 80px; /* Высокие узкие кнопки */
+  font-size: var(--font-xxl);
 }
 
 .viewer-prev { left: 20px; }
 .viewer-next { right: 20px; }
 
+/* Анимация появления фона */
 @keyframes fadeInBackdrop {
   to { opacity: 1; }
+}
+
+/* Адаптив для мобильных */
+@media (max-width: 768px) {
+  .image-viewer-content {
+    padding: 10px;
+  }
+  .viewer-prev, .viewer-next {
+    width: 40px;
+    height: 60px;
+    font-size: var(--font-xl);
+  }
+  .viewer-close {
+    width: 36px;
+    height: 36px;
+    top: 10px;
+    right: 10px;
+  }
 }
