@@ -112,7 +112,7 @@
   font-size: var(--font-xl);
   line-height: 1;
   border-radius: var(--radius-md); /* Квадратные с легким скруглением */
-  box-shadow: 0 4px 12px var(--add-background-color);
+  box-shadow: 0 2px 12px var(--extra-color);
 }
 
 /* Возвращаем возможность кликать только на элементы внутри контента */
