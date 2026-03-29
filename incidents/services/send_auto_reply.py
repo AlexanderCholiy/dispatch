@@ -19,6 +19,7 @@ from incidents.constants import (
     IN_WORK_STATUS_NAME,
     MAX_EMAILS_ON_CLOSED_INCIDENTS,
     RVR_CATEGORY,
+    AUTO_REPLY_MAX_AGE_TTL,
 )
 from incidents.models import IncidentStatus, IncidentStatusHistory
 from notifications.constants import (
@@ -45,12 +46,14 @@ class AutoReply:
     ):
         """Отправка автоответа по закрытом инциденту"""
         incident = email.email_incident
+        now = timezone.now()
 
         if (
             SEND_AUTO_EMAIL_ON_CLOSED_INCIDENT
             and incident
             and incident.is_incident_finish
             and not incident.is_yt_tracker_controlled
+            and (now - email.email_date) <= AUTO_REPLY_MAX_AGE_TTL
             and email.folder == EmailFolder.get_inbox()
         ):
             now = timezone.now()

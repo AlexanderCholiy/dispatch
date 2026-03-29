@@ -16,6 +16,7 @@ from .constants import (
     NOTIFY_OP_IN_WORK_STATUS_NAME,
     RVR_CATEGORY,
     STATUS_TRANSITIONS,
+    FINISHED_STATUS_NAMES,
 )
 from .models import BaseStation, Incident, IncidentStatus, Pole
 
@@ -184,6 +185,34 @@ class IncidentValidator:
         return None, None
 
 
+def validate_actual_email_incident(
+    incident: Incident, last_status: Optional[IncidentStatus]
+) -> Optional[str]:
+    if incident.is_yt_tracker_controlled:
+        return (
+            'Управление этим инцидентом происходит из интерфейса YandexTracker'
+        )
+
+    if not last_status or last_status.name not in FINISHED_STATUS_NAMES:
+        return None
+
+    allowed_transitions = STATUS_TRANSITIONS.get(last_status.name, [])
+
+    if not allowed_transitions or incident.is_incident_finish:
+        return (
+            'Инцидент закрыт. '
+            'Прежде чем писать письмо, необходимо изменить его статус.'
+        )
+
+    statuses_str = ', '.join(allowed_transitions)
+
+    return (
+        'Инцидент закрыт. '
+        'Прежде чем писать письмо, необходимо перевести его в один из '
+        f'статусов: {statuses_str}'
+    )
+
+
 def validate_status_transition(
     last_status: Optional[IncidentStatus],
     next_status_name: str,
@@ -215,10 +244,9 @@ def validate_status_transition(
 def validate_notify_operator(
     incident: Incident, last_status: Optional[IncidentStatus]
 ) -> Optional[str]:
-    if incident.is_yt_tracker_controlled:
-        return (
-            'Управление этим инцидентом происходит из интерфейса YandexTracker'
-        )
+    err_msg = validate_actual_email_incident(incident, last_status)
+    if err_msg:
+        return err_msg
 
     if (
         last_status
@@ -271,10 +299,9 @@ def validate_notify_avr(
     last_status: Optional[IncidentStatus],
     category_names: set[str],
 ) -> Optional[str]:
-    if incident.is_yt_tracker_controlled:
-        return (
-            'Управление этим инцидентом происходит из интерфейса YandexTracker'
-        )
+    err_msg = validate_actual_email_incident(incident, last_status)
+    if err_msg:
+        return err_msg
 
     if (
         last_status
@@ -321,10 +348,9 @@ def validate_notify_rvr(
     last_status: Optional[IncidentStatus],
     category_names: set[str],
 ) -> Optional[str]:
-    if incident.is_yt_tracker_controlled:
-        return (
-            'Управление этим инцидентом происходит из интерфейса YandexTracker'
-        )
+    err_msg = validate_actual_email_incident(incident, last_status)
+    if err_msg:
+        return err_msg
 
     if (
         last_status

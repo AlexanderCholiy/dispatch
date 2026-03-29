@@ -97,6 +97,7 @@ from .validators import (
     validate_notify_incident_closed,
     validate_notify_operator,
     validate_notify_rvr,
+    validate_actual_email_incident,
 )
 
 
@@ -834,6 +835,18 @@ def new_email(
 ) -> HttpResponse:
     template_name = 'emails/new_email.html'
     incident = IncidentSelector.incidents_with_email_history(incident_id)
+
+    last_status: Optional[IncidentStatus] = (
+        incident.prefetched_status_history[0].status
+        if incident.prefetched_status_history
+        else None
+    )
+
+    error_message = validate_actual_email_incident(incident, last_status)
+
+    if error_message:
+        messages.error(request, error_message)
+        return redirect('incidents:incident_detail', incident_id=incident.id)
 
     emails = incident.all_incident_emails
 
