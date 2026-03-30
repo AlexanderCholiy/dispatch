@@ -71,6 +71,9 @@
   flex: 1 1 45%;
   min-width: 220px;
   gap: var(--space-xs);
+  padding-bottom: var(--space-sm);
+  height: stretch;
+  justify-content: space-between;
 }
 
 .incident-info {
@@ -116,4 +119,8 @@
     flex-direction: column;
     gap: var(--space-xs);
   }
+}
+
+.infrastructure-company {
+  font-size: var(--font-md);
 }

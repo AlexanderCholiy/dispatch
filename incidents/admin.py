@@ -24,6 +24,7 @@ from .models import (
     IncidentType,
     StatusType,
     TypeSubTypeRelation,
+    Comment,
 )
 
 admin.site.empty_value_display = EMPTY_VALUE
@@ -250,3 +251,36 @@ class IncidentCategoryAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(Comment)
+class CommentAdmin(admin.ModelAdmin):
+    list_display = (
+        'author', 'content_excerpt', 'link_to_incident', 'created_at'
+    )
+    list_filter = ('created_at', 'author')
+    search_fields = (
+        'content', 'author__username', 'incident__id', 'incident__code'
+    )
+    list_select_related = ('incident', 'author')
+    readonly_fields = ('created_at', 'updated_at')
+    autocomplete_fields = ('incident', 'author')
+
+    readonly_fields = ('created_at', 'updated_at', 'link_to_incident')
+
+    @admin.display(description='Сообщение')
+    def content_excerpt(self, obj: Comment):
+        return (
+            obj.content[:32] + '...' if len(obj.content) > 32 else obj.content
+        )
+
+    @admin.display(description='Инцидент')
+    def link_to_incident(self, obj: Comment):
+        url = reverse(
+            (
+                f'admin:{obj.incident._meta.app_label}_'
+                f'{obj.incident._meta.model_name}_change'
+            ),
+            args=[obj.incident.id]
+        )
+        return format_html('<a href="{}">Инцидент {}</a>', url, obj.incident)

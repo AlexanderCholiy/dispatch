@@ -26,6 +26,7 @@ from .constants import (
     MAX_FUTURE_END_DELTA,
     MAX_STATUS_COMMENT_LEN,
     RVR_SLA_DEADLINE_IN_HOURS,
+    MAX_COMMENT_TEXT_LEN,
 )
 
 User = get_user_model()
@@ -817,3 +818,46 @@ class IncidentStatusHistory(models.Model):
 
     def __str__(self):
         return f'{self.status.name} [{self.insert_date}]'
+
+
+class Comment(models.Model):
+    """Комментарии к инцидентам"""
+    incident = models.ForeignKey(
+        Incident,
+        on_delete=models.CASCADE,
+        related_name='comments',
+        verbose_name='Инцидент'
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='comments',
+        verbose_name='Автор комментария'
+    )
+    content = models.CharField(
+        max_length=MAX_COMMENT_TEXT_LEN,
+        verbose_name='Сообщение',
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата создания',
+        db_index=True
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Дата обновления'
+    )
+
+    class Meta:
+        ordering = ['created_at']
+        verbose_name = 'Комментарий'
+        verbose_name_plural = 'Комментарии'
+        constraints = [
+            models.CheckConstraint(
+                check=~Q(content__regex=r'^\s|\s$') & ~Q(content=''),
+                name='content_not_empty_or_whitespace_edges'
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.content[:32]}'

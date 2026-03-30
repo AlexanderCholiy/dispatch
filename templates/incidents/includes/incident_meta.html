@@ -107,14 +107,17 @@
       </div>
 
       <div class="incident-info">
-        <label class="field-label">Подрядчик по АВР</label>
-        <span class="field-value {% if incident.avr_contractor %}copy-text{% endif %}" data-text="{% for e in incident.pole.prefetched_avr_emails %}{{ e.email }}{% if not forloop.last %}, {% endif %}{% endfor %}">
-          {% if incident.avr_contractor %}
-            {{ incident.avr_contractor }}
-          {% else %}
-            —
-          {% endif %}
-        </span>
+        <div class="infrastructure-company">{{ incident.pole.infrastructure_company }}</div>
+        <div>
+          <label class="field-label">Подрядчик по АВР</label>
+          <span class="field-value {% if incident.avr_contractor %}copy-text{% endif %}" data-text="{% for e in incident.pole.prefetched_avr_emails %}{{ e.email }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+            {% if incident.avr_contractor %}
+              {{ incident.avr_contractor }}
+            {% else %}
+              —
+            {% endif %}
+          </span>
+        </div>
       </div>
     </div>
 

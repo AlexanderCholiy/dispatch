@@ -59,6 +59,7 @@ class IncidentReportSerializer(serializers.ModelSerializer):
     class Meta:
         model = Incident
         fields = (
+            'id',
             'code',
             'last_status',
             'incident_type',

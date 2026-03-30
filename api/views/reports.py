@@ -185,9 +185,14 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
 
     serializer_class = IncidentReportSerializer
     permission_classes = (permissions.AllowAny,)
-    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
+    filter_backends = (
+        DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter
+    )
     filterset_class = IncidentReportFilter
     pagination_class = IncidentReportPagination
+
+    search_fields = ('=code',)
+
     ordering_fields = ('incident_date', 'id')
     ordering = ('-incident_date', '-id')
 

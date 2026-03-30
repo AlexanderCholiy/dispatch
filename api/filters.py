@@ -15,6 +15,7 @@ from django_filters import (
     BooleanFilter,
     DateFromToRangeFilter,
     FilterSet,
+    CharFilter,
 )
 
 from incidents.models import Incident
@@ -24,18 +25,28 @@ from .utils import get_first_day_prev_month
 
 class IncidentReportFilter(FilterSet):
     incident_date = DateFromToRangeFilter()
+    is_incident_finish = BooleanFilter(field_name='is_incident_finish')
     last_month = BooleanFilter(
         method='filter_last_month',
         label='Последний месяц',
         help_text=(
             'Возвращает инциденты с первого числа предыдущего месяца по '
-            'сегодняшний день'
+            'сегодняшний день.'
+        )
+    )
+    contractor_name = CharFilter(
+        field_name='pole__avr_contractor__contractor_name',
+        lookup_expr='exact',
+        label='Подрядчик',
+        help_text=(
+            'Возвращает инциденты с опорой закрепленной за указанным '
+            'подрядчиком.'
         )
     )
 
     class Meta:
         model = Incident
-        fields = ('incident_date', 'last_month')
+        fields = ('incident_date', 'last_month', 'contractor_name')
 
     def filter_last_month(
         self, queryset: QuerySet[Incident], name: str, value: bool
