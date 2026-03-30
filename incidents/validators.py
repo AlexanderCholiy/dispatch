@@ -8,6 +8,7 @@ from emails.models import EmailMessage
 
 from .constants import (
     AVR_CATEGORY,
+    FINISHED_STATUS_NAMES,
     NOTIFIED_CONTRACTOR_STATUS_NAME,
     NOTIFIED_OP_END_STATUS_NAME,
     NOTIFIED_OP_IN_WORK_STATUS_NAME,
@@ -16,7 +17,6 @@ from .constants import (
     NOTIFY_OP_IN_WORK_STATUS_NAME,
     RVR_CATEGORY,
     STATUS_TRANSITIONS,
-    FINISHED_STATUS_NAMES,
 )
 from .models import BaseStation, Incident, IncidentStatus, Pole
 

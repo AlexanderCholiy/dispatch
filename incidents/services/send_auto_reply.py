@@ -14,12 +14,12 @@ from emails.services.generate_email_msg_id import generate_message_id
 from emails.tasks import send_incident_email_task
 from emails.utils import EmailManager
 from incidents.constants import (
+    AUTO_REPLY_MAX_AGE_TTL,
     AVR_CATEGORY,
     DGU_CATEGORY,
     IN_WORK_STATUS_NAME,
     MAX_EMAILS_ON_CLOSED_INCIDENTS,
     RVR_CATEGORY,
-    AUTO_REPLY_MAX_AGE_TTL,
 )
 from incidents.models import IncidentStatus, IncidentStatusHistory
 from notifications.constants import (

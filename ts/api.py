@@ -100,7 +100,13 @@ class Api(SocialValidators):
             f'"{col}"' if col != 'RegionRu' else '"Регион ru" AS "RegionRu"'
             for col in COLUMNS_TO_KEEP_POLES_TL
         )
-        query = f'SELECT {columns_quoted} FROM "{TS_POLE_TABLE}";'
+        query = (
+            f'''
+            SELECT {columns_quoted}
+            FROM "{TS_POLE_TABLE}"
+            WHERE "Регион" IS NOT NULL;
+            '''
+        )
 
         with connections['ts'].cursor() as cursor:
             cursor.execute(query)
@@ -724,7 +730,11 @@ class Api(SocialValidators):
             f'"{col}"' for col in COLUMNS_TO_KEEP_BS_OPERATORS_REPORT
         )
         query = (
-            f'SELECT {columns_quoted} FROM "{TS_BASE_STATION_TABLE}";'
+            f'''
+            SELECT {columns_quoted}
+            FROM "{TS_BASE_STATION_TABLE}"
+            WHERE "Оператор" IS NOT NULL;
+            '''
         )
 
         with connections['ts'].cursor() as cursor:

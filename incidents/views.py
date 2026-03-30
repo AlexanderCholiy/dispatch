@@ -93,11 +93,11 @@ from .services.incident_signature import get_incident_signature
 from .services.normalize_incident_subject import normalize_incident_subject
 from .utils import IncidentManager
 from .validators import (
+    validate_actual_email_incident,
     validate_notify_avr,
     validate_notify_incident_closed,
     validate_notify_operator,
     validate_notify_rvr,
-    validate_actual_email_incident,
 )
 
 
