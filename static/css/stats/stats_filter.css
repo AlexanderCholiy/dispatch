@@ -27,3 +27,7 @@
   color-scheme: light dark;
   max-height: 16px;
 }
+
+#incident-duration-min {
+  max-width: 80px;
+}

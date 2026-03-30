@@ -45,6 +45,7 @@ from api.constants import (
 from api.filters import (
     IncidentReportFilter,
     apply_bs_operator_group_filter,
+    apply_incident_duration_min_filter,
     apply_responsible_user_filter,
     get_incident_date_filter,
 )
@@ -58,6 +59,7 @@ from api.serializers.reports import (
 from api.utils import get_first_day_prev_month, is_file_fresh
 from api.validators import (
     validate_date_range,
+    validate_incident_duration_min,
     validate_operator_group,
     validate_responsible_user,
 )
@@ -408,6 +410,9 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
     - operator_group (str | "none")
         Название группы операторов базовой станции или none если группы нет.
 
+    - incident_duration_min (int)
+        TTL обработки инцидента
+
     ПРИМЕРЫ ЗАПРОСОВ:
     Получить статистику за всё время:
         GET /api/v1/report/statistics/
@@ -447,8 +452,19 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
         operator_group = params.get('operator_group')
         validate_operator_group(operator_group)
 
+        incident_duration_min = params.get('incident_duration_min')
+        validate_incident_duration_min(incident_duration_min)
+        incident_duration_min = (
+            int(incident_duration_min) if incident_duration_min else None
+        )
+
         cache_key = self._build_statistic_cache_key(
-            start, end, monitoring_check, responsible_user, operator_group
+            start,
+            end,
+            monitoring_check,
+            responsible_user,
+            operator_group,
+            incident_duration_min,
         )
         cached = cache.get(cache_key)
 
@@ -475,6 +491,9 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                     output_field=IntegerField()
                 )
             )
+        )
+        incidents = apply_incident_duration_min_filter(
+            incidents, incident_duration_min
         )
         incidents = apply_responsible_user_filter(incidents, responsible_user)
         incidents = apply_bs_operator_group_filter(incidents, operator_group)
@@ -737,6 +756,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
         monitoring_check: bool,
         responsible_user: Optional[int],
         operator_group: Optional[str],
+        incident_duration_min: Optional[int],
     ) -> str:
         start_key = start.isoformat() if start else 'none'
         end_key = end.isoformat() if end else 'none'
@@ -744,6 +764,9 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
 
         user_key = str(responsible_user) if responsible_user else 'all'
         group_key = operator_group if operator_group else 'all'
+        incident_duration_min = (
+            str(incident_duration_min) if incident_duration_min else 'all'
+        )
 
         return (
             f'statistic_report:'
@@ -752,6 +775,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
             f'{monitoring_key}:'
             f'user_{user_key}:'
             f'group_{group_key}'
+            f'incident_duration_min_{incident_duration_min}'
         )
 
     def _build_summary(self, macroregions: list[MacroRegion]) -> MacroRegion:
@@ -840,6 +864,9 @@ class AVRContractorViewSet(viewsets.ReadOnlyModelViewSet):
     - operator_group (str | "none")
         Название группы операторов базовой станции или none если группы нет.
 
+    - incident_duration_min (int)
+        TTL обработки инцидента
+
     ПРИМЕРЫ ЗАПРОСОВ:
 
     Получить статистику за период:
@@ -868,8 +895,14 @@ class AVRContractorViewSet(viewsets.ReadOnlyModelViewSet):
         operator_group = params.get('operator_group')
         validate_operator_group(operator_group)
 
+        incident_duration_min = params.get('incident_duration_min')
+        validate_incident_duration_min(incident_duration_min)
+        incident_duration_min = (
+            int(incident_duration_min) if incident_duration_min else None
+        )
+
         cache_key = self._build_cache_key(
-            start, end, responsible_user, operator_group
+            start, end, responsible_user, operator_group, incident_duration_min
         )
         cached = cache.get(cache_key)
         if cached:
@@ -898,6 +931,9 @@ class AVRContractorViewSet(viewsets.ReadOnlyModelViewSet):
             )
         )
 
+        incidents = apply_incident_duration_min_filter(
+            incidents, incident_duration_min
+        )
         incidents = apply_responsible_user_filter(incidents, responsible_user)
         incidents = apply_bs_operator_group_filter(incidents, operator_group)
 
@@ -999,16 +1035,20 @@ class AVRContractorViewSet(viewsets.ReadOnlyModelViewSet):
 
     def _build_cache_key(
         self,
-        start: date | None,
-        end: date | None,
-        responsible_user: int | str | None,
-        operator_group: str | None
+        start: Optional[date],
+        end: Optional[date],
+        responsible_user: Optional[int | str],
+        operator_group: Optional[str],
+        incident_duration_min: Optional[int]
     ) -> str:
         start_key = start.isoformat() if start else 'none'
         end_key = end.isoformat() if end else 'none'
 
         user_key = str(responsible_user) if responsible_user else 'all'
         group_key = operator_group if operator_group else 'all'
+        incident_duration_min = (
+            incident_duration_min if incident_duration_min else 'all'
+        )
 
         return (
             f'avr_contractor_statistic_report:'
@@ -1016,6 +1056,7 @@ class AVRContractorViewSet(viewsets.ReadOnlyModelViewSet):
             f'{end_key}:'
             f'user_{user_key}:'
             f'group_{group_key}'
+            f'incident_duration_min_{incident_duration_min}'
         )
 
 
@@ -1038,6 +1079,9 @@ class DispatchViewSet(viewsets.ReadOnlyModelViewSet):
 
     - operator_group (str | "none")
         Название группы операторов базовой станции или none если группы нет.
+
+    - incident_duration_min (int)
+        TTL обработки инцидента
 
     ПРИМЕРЫ ЗАПРОСОВ:
 
@@ -1066,8 +1110,14 @@ class DispatchViewSet(viewsets.ReadOnlyModelViewSet):
         operator_group = params.get('operator_group')
         validate_operator_group(operator_group)
 
+        incident_duration_min = params.get('incident_duration_min')
+        validate_incident_duration_min(incident_duration_min)
+        incident_duration_min = (
+            int(incident_duration_min) if incident_duration_min else None
+        )
+
         cache_key = self._build_cache_key(
-            start, end, responsible_user, operator_group
+            start, end, responsible_user, operator_group, incident_duration_min
         )
         cached = cache.get(cache_key)
         if cached:
@@ -1083,6 +1133,9 @@ class DispatchViewSet(viewsets.ReadOnlyModelViewSet):
             .select_related('responsible_user',)
         )
 
+        incidents = apply_incident_duration_min_filter(
+            incidents, incident_duration_min
+        )
         incidents = apply_responsible_user_filter(incidents, responsible_user)
         incidents = apply_bs_operator_group_filter(incidents, operator_group)
 
@@ -1180,16 +1233,20 @@ class DispatchViewSet(viewsets.ReadOnlyModelViewSet):
 
     def _build_cache_key(
         self,
-        start: date | None,
-        end: date | None,
-        responsible_user: int | str | None,
-        operator_group: str | None
+        start: Optional[date],
+        end: Optional[date],
+        responsible_user: Optional[int | str],
+        operator_group: Optional[str],
+        incident_duration_min: Optional[int]
     ) -> str:
         start_key = start.isoformat() if start else 'none'
         end_key = end.isoformat() if end else 'none'
 
         user_key = str(responsible_user) if responsible_user else 'all'
         group_key = operator_group if operator_group else 'all'
+        incident_duration_min = (
+            incident_duration_min if incident_duration_min else 'all'
+        )
 
         return (
             f'dispatch_statistic_report:'
@@ -1197,4 +1254,5 @@ class DispatchViewSet(viewsets.ReadOnlyModelViewSet):
             f'{end_key}:'
             f'user_{user_key}:'
             f'group_{group_key}'
+            f'incident_duration_min_{incident_duration_min}'
         )

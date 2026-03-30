@@ -1,7 +1,16 @@
-from datetime import date
+from datetime import date, timedelta
 from typing import Optional
 
-from django.db.models import Q, QuerySet
+from django.db.models import (
+    Case,
+    DurationField,
+    ExpressionWrapper,
+    F,
+    Q,
+    QuerySet,
+    When,
+)
+from django.utils import timezone
 from django_filters import (
     BooleanFilter,
     DateFromToRangeFilter,
@@ -77,3 +86,29 @@ def apply_bs_operator_group_filter(
     return queryset.filter(
         base_station__operator__operator_group=operator_group
     ).distinct()
+
+
+def apply_incident_duration_min_filter(
+    queryset: QuerySet[Incident],
+    incident_duration_min: Optional[int],
+) -> QuerySet[Incident]:
+    if not incident_duration_min or incident_duration_min <= 0:
+        return queryset
+
+    threshold_td = timedelta(minutes=incident_duration_min)
+
+    duration_expr = Case(
+        When(
+            is_incident_finish=True,
+            then=F('incident_finish_date') - F('insert_date')
+        ),
+        default=ExpressionWrapper(
+            timezone.now() - F('insert_date'),
+            output_field=DurationField()
+        ),
+        output_field=DurationField()
+    )
+
+    return queryset.annotate(duration_seconds=duration_expr).filter(
+        duration_seconds__gte=threshold_td
+    )

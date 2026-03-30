@@ -120,6 +120,17 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
                 value = params['operator_group'] or 'none'
                 query['operator_group'] = value
 
+            if 'incident_duration_min' in params:
+                val = params['incident_duration_min']
+                try:
+                    duration_val = int(val)
+                    if duration_val >= 1:
+                        query['incident_duration_min'] = duration_val
+                    else:
+                        pass
+                except (ValueError, TypeError):
+                    pass
+
         request = APIRequestFactory().get(
             reverse('statistics_report-list'), query
         )

@@ -37,6 +37,22 @@
         </div>
       </div>
 
+      <div>
+        <div class="input-group">
+          <div class="input-wrapper">
+            <input 
+              type="number" 
+              id="incident-duration-min" 
+              min="1" 
+              step="1" 
+              placeholder="мин." 
+              data-title="TTL обработки инцидента (мин)" 
+              class="tooltip"
+            >
+          </div>
+        </div>
+      </div>
+
       <div class="select-wrapper">
         <select name="responsible_user" id="responsible-user-select" class="select tooltip" data-title="Диспетчер">
           <option value="">Диспетчер: Все</option>
@@ -57,6 +73,7 @@
           {% endfor %}
         </select>
       </div>      
+
     </div>
 
     <div class="right-parts">

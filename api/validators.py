@@ -46,3 +46,17 @@ def validate_operator_group(operator_group: Optional[str]):
             raise ValidationError({
                 'operator_group': 'Не может быть пустой строкой'
             })
+
+
+def validate_incident_duration_min(incident_duration_min: Optional[int]):
+    if incident_duration_min is not None:
+        try:
+            incident_duration_min = int(incident_duration_min)
+            if incident_duration_min < 1:
+                raise ValidationError(
+                    {'incident_duration_min': 'TTL должен быть > 0'}
+                )
+        except Exception:
+            raise ValidationError({
+                'incident_duration_min': 'Не верный формат TTL'
+            })
