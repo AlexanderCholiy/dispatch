@@ -142,7 +142,7 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
         except Exception as e:
             django_logger.debug(e, exc_info=True)
             return {
-                'error': str(e),
+                'error': '500: Server Error',
                 'status_code': HTTPStatus.BAD_REQUEST,
                 'query': query
             }
@@ -170,9 +170,9 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
                 avr_response, 'status_code', HTTPStatus.OK
             ) >= HTTPStatus.BAD_REQUEST:
                 avr_data = {'error': avr_data}
-        except Exception as e:
+        except Exception:
             django_logger.debug('AVR error', exc_info=True)
-            avr_data = {'error': str(e)}
+            avr_data = {'error': '500: Server Error'}
 
         dispatch_request = APIRequestFactory().get(
             reverse('dispatch_statistics_report-list'), query
@@ -189,9 +189,9 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
                 dispatch_response, 'status_code', HTTPStatus.OK
             ) >= HTTPStatus.BAD_REQUEST:
                 dispatch_data = {'error': dispatch_data}
-        except Exception as e:
+        except Exception:
             django_logger.debug('Dispatch error', exc_info=True)
-            dispatch_data = {'error': str(e)}
+            dispatch_data = {'error': '500: Server Error'}
 
         return {
             'period': data,
