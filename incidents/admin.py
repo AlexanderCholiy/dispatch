@@ -8,12 +8,14 @@ from emails.models import EmailMessage
 
 from .constants import (
     INCIDENT_CATEGORIES_PER_PAGE,
+    INCIDENT_COMMENT_MAX_PREVIEW_LEN,
     INCIDENT_STATUSES_PER_PAGE,
     INCIDENT_SUBTYPES_PER_PAGE,
     INCIDENT_TYPES_PER_PAGE,
     INCIDENTS_PER_PAGE,
 )
 from .models import (
+    Comment,
     Incident,
     IncidentCategory,
     IncidentCategoryRelation,
@@ -24,7 +26,6 @@ from .models import (
     IncidentType,
     StatusType,
     TypeSubTypeRelation,
-    Comment,
 )
 
 admin.site.empty_value_display = EMPTY_VALUE
@@ -271,7 +272,9 @@ class CommentAdmin(admin.ModelAdmin):
     @admin.display(description='Сообщение')
     def content_excerpt(self, obj: Comment):
         return (
-            obj.content[:32] + '...' if len(obj.content) > 32 else obj.content
+            obj.content[:INCIDENT_COMMENT_MAX_PREVIEW_LEN] + '...'
+            if len(obj.content) > INCIDENT_COMMENT_MAX_PREVIEW_LEN
+            else obj.content
         )
 
     @admin.display(description='Инцидент')

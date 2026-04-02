@@ -13,9 +13,9 @@ from django.db.models import (
 from django.utils import timezone
 from django_filters import (
     BooleanFilter,
+    CharFilter,
     DateFromToRangeFilter,
     FilterSet,
-    CharFilter,
 )
 
 from incidents.models import Incident

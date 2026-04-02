@@ -22,11 +22,12 @@ from .constants import (
     DGU_SLA_IN_PROGRESS_DEADLINE_IN_HOURS,
     DGU_SLA_WAITING_DEADLINE_IN_HOURS,
     INCIDENT_CODE_PREFIX,
+    INCIDENT_COMMENT_MAX_PREVIEW_LEN,
     MAX_CODE_LEN,
+    MAX_COMMENT_TEXT_LEN,
     MAX_FUTURE_END_DELTA,
     MAX_STATUS_COMMENT_LEN,
     RVR_SLA_DEADLINE_IN_HOURS,
-    MAX_COMMENT_TEXT_LEN,
 )
 
 User = get_user_model()
@@ -860,4 +861,8 @@ class Comment(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.content[:32]}'
+        return (
+            self.content[:INCIDENT_COMMENT_MAX_PREVIEW_LEN] + '...'
+            if len(self.content) > INCIDENT_COMMENT_MAX_PREVIEW_LEN
+            else self.content
+        )

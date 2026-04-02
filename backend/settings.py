@@ -68,7 +68,9 @@ INSTALLED_APPS = [
     'energy.apps.EnergyConfig',
     'stats.apps.StatsConfig',
     'notifications.apps.NotificationsConfig',
+    'mqtt.apps.MqttConfig',
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'django_filters',
     'djoser',
     'drf_yasg',
@@ -345,7 +347,6 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
-
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
@@ -357,6 +358,7 @@ REST_FRAMEWORK = {
         'user': '10000/day',
         'anon': '1000/day',
         'stats_request': '600/minute',
+        'comment_request': '600/minute'
     },
     'DEFAULT_PAGINATION_CLASS': (
         'rest_framework.pagination.PageNumberPagination'
@@ -364,8 +366,20 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
 }
 
+DJOSER = {
+    'LOGIN_FIELD': 'username',
+    'USER_CREATE_PASSWORD_RETYPE': False,
+    'SEND_ACTIVATION_EMAIL': False,
+}
+
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': False,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 

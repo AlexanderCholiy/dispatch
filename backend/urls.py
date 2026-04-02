@@ -102,6 +102,7 @@ auth_urlpatterns = [
 
 app_urls = [
     path('admin/', admin.site.urls),
+    path('api/v1/auth/', include('djoser.urls.jwt')),
     path('api/v1/', include('api.urls')),
     path('users/', include('users.urls')),
     path('', include('incidents.urls')),
