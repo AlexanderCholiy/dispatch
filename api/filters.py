@@ -16,11 +16,39 @@ from django_filters import (
     CharFilter,
     DateFromToRangeFilter,
     FilterSet,
+    NumberFilter,
 )
 
-from incidents.models import Incident
+from incidents.models import Incident, Comment
 
 from .utils import get_first_day_prev_month
+
+
+class CommentFilter(FilterSet):
+    incident_code = CharFilter(
+        field_name='incident__code',
+        lookup_expr='exact'
+    )
+
+    author_id = NumberFilter(field_name='author__id')
+
+    my_comments = BooleanFilter(method='filter_my_comments')
+
+    class Meta:
+        model = Comment
+        fields = ['incident_code', 'author_id', 'my_comments']
+
+    def filter_my_comments(self, queryset: QuerySet, name, value):
+        """
+        Если value=True, фильтруем по автору = текущему пользователю.
+        Если False, фильтруем по автору != текущему пользователю.
+        Если None фильтрация не применяется.
+        """
+        if value is True and self.request.user.is_authenticated:
+            return queryset.filter(author=self.request.user)
+        elif value is False and self.request.user.is_authenticated:
+            return queryset.exclude(author=self.request.user)
+        return queryset
 
 
 class IncidentReportFilter(FilterSet):

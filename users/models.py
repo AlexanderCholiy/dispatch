@@ -79,8 +79,8 @@ class User(AbstractUser):
         verbose_name_plural = 'Пользователи'
 
     def __str__(self):
-        role = self.get_role_display()
-        return self.get_full_name() or f'Новый {role}'
+        role: str = self.get_role_display()
+        return self.get_full_name() or f'Новый {role.lower()}'
 
     @property
     def temporary_username(self):

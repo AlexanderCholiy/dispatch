@@ -36,6 +36,9 @@ ALLOWED_MIME_PREFIXES = {
     'application/epub+zip',  # .epub
     'application/json',  # .json
 
+    # Веб-страницы
+    'text/html',  # .html, .htm
+
     # Google Workspace
     'application/vnd.google-apps',  # sheets, docs, slides, etc.
 
@@ -86,6 +89,7 @@ ALLOWED_EXTENSIONS = {
     '.epub',  # eBook
     '.json',  # JSON
     '.sor',  # GIS
+    '.html', '.htm',  # HTML
 
     # Google Workspace (расширения, которые часто встречаются при экспорте)
     '.gsheet', '.gdoc', '.gslides', '.gdraw', '.gform',

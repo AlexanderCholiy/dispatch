@@ -78,7 +78,11 @@
             <span class="file-uploader-count">Файлы не выбраны</span>
           </label>
           {{ form.attachments }}
-          <ul class="file-list"></ul>
+          <ul class="file-list">
+            {% for error in form.attachments.errors %}
+              <div class="form-error">{{ error }}</div>
+            {% endfor %}
+          </ul>
         </div>
 
         {% if previous_html %}

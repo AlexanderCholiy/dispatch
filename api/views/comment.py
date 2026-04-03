@@ -7,7 +7,9 @@ from api.pagination import CommentPagination
 from api.permissions import UserPermission
 from api.serializers.comment import CommentSerializer
 from incidents.models import Comment
-from users.models import User
+from users.models import User, Roles
+from api.filters import CommentFilter
+from django.db.models import Q
 
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -31,19 +33,22 @@ class CommentViewSet(viewsets.ModelViewSet):
         DjangoFilterBackend,
         filters.OrderingFilter,
     )
-    filterset_fields = {
-        'author__id': ['exact'],
-        'incident__code': ['exact'],
-    }
+    filterset_class = CommentFilter
 
     ordering_fields = ['created_at', 'id']
     ordering = ['-created_at', '-id']
 
     def get_queryset(self):
-        return (
+        user: User = self.request.user
+        qs = (
             Comment.objects
             .select_related('incident', 'author')
             .filter(incident__code__isnull=False)
+        )
+        if user.role == Roles.DISPATCH or user.is_superuser or user.is_staff:
+            return qs
+        return qs.filter(
+            Q(author=user) | Q(author__role=Roles.DISPATCH)
         )
 
     def perform_create(self, serializer: CommentSerializer):

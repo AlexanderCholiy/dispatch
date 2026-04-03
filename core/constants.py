@@ -113,6 +113,9 @@ INLINE_EXTS = {
     # pdf
     '.pdf',
 
+    # web
+    '.html', '.htm',
+
     # text
     '.txt', '.rtf', '.json',
 
