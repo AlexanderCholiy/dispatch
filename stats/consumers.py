@@ -132,7 +132,7 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
                     pass
 
         request = APIRequestFactory().get(
-            reverse('statistics_report-list'), query
+            reverse('api:statistics_report-list'), query
         )
         force_authenticate(request, user=None)
 
@@ -157,7 +157,7 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
             }
 
         avr_request = APIRequestFactory().get(
-            reverse('avr_contractor_statistics_report-list'), query
+            reverse('api:avr_contractor_statistics_report-list'), query
         )
         force_authenticate(avr_request, user=None)
 
@@ -175,7 +175,7 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
             avr_data = {'error': '500: Server Error'}
 
         dispatch_request = APIRequestFactory().get(
-            reverse('dispatch_statistics_report-list'), query
+            reverse('api:dispatch_statistics_report-list'), query
         )
         force_authenticate(dispatch_request, user=None)
 

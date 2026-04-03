@@ -1,3 +1,56 @@
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/incidents/includes/comments.css' %}">
+{% endblock %}
+
 <div class="card-body">
-  Комментарии скоро появятся...
+  <div id="comments-widget" class="comments-widget">
+      <div class="cw-header">         
+          <!-- Кнопки сортировки -->
+          <div class="cw-sort-controls">
+              <button type="button" class="btn btn-secondary sort-comments-btn tooltip" id="comment-sort-asc" data-sort="asc" data-title="Сначала новые">
+                <i class='bx bx-chevrons-down'></i>
+              </button>
+              <button type="button" class="btn btn-secondary sort-comments-btn tooltip" id="comment-sort-desc" data-sort="desc" data-title="Сначала старые">
+                <i class='bx bx-chevrons-up'></i>
+              </button>
+          </div>
+          <!-- Фильтры -->
+          <div class="cw-filters">
+            <select id="filter-my-comments" class="cw-select">
+              <option value="all">Все комментарии</option>
+              <option value="my">Только мои</option>
+              <option value="others">Только чужие</option>
+            </select>
+          </div>
+      </div>
+
+      <!-- Список -->
+      <div id="cw-list" class="cw-list"></div>
+      <div id="cw-empty" class="cw-empty">Нет комментариев</div>
+
+      <!-- Форма -->
+      <div class="cw-form-container">
+          <textarea id="cw-input" placeholder="Написать комментарий..."></textarea>
+          <div class="cw-form-actions">
+            <span id="cw-error-msg" class="cw-error"></span>
+            <button id="cw-cancel-edit" class="cw-btn-secondary" style="display:none;">Отмена</button>
+            <button id="cw-submit" class="cw-btn-primary" disabled>Отправить</button>
+          </div>
+          <input type="hidden" id="cw-edit-id" value="">
+      </div>
+  </div>
+
+  <!-- Конфиг -->
+  <div id="cw-config" 
+      data-incident-id="{{ incident.id }}" 
+      data-ws-url="/ws/incidents/comments/{{ incident.id }}/"
+      data-current-user-id="{{ request.user.id }}">
+  </div>
+
 </div>
+
+{% block extra_js %}
+  <script type="module" src="{% static 'js/comments/main.js' %}"></script>
+{% endblock %}

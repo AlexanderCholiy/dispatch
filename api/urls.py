@@ -10,6 +10,8 @@ from .views.reports import (
     StatisticReportViewSet,
 )
 
+app_name = 'api'
+
 router = DefaultRouter()
 router.register(
     'report/incidents', IncidentReportViewSet, basename='incidents_report'

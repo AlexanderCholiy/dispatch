@@ -7,35 +7,32 @@ from api.serializers.comment import CommentSerializer
 
 
 @receiver(post_save, sender=Comment)
-def comment_saved_signal(sender, instance, created, update_fields, **kwargs):
+def comment_saved_signal(sender, instance: Comment, created, **kwargs):
     channel_layer = get_channel_layer()
     room_group_name = f'comments_{instance.incident_id}'
 
     serializer = CommentSerializer(instance)
-    data = serializer.data
-
-    event_type = 'comment_updated' if not created else 'comment_created'
 
     async_to_sync(channel_layer.group_send)(
         room_group_name,
         {
-            'type': 'comment_event',
-            'event_type': event_type,
-            'data': data
+            'type': 'broadcast_update',
+            'action': 'created' if created else 'updated',
+            'payload': serializer.data
         }
     )
 
 
 @receiver(pre_delete, sender=Comment)
-def comment_deleted_signal(sender, instance, **kwargs):
+def comment_deleted_signal(sender, instance: Comment, **kwargs):
     channel_layer = get_channel_layer()
     room_group_name = f'comments_{instance.incident_id}'
 
     async_to_sync(channel_layer.group_send)(
         room_group_name,
         {
-            'type': 'comment_event',
-            'event_type': 'comment_deleted',
-            'data': {'id': instance.id}
+            'type': 'broadcast_update',
+            'action': 'deleted',
+            'payload': {'id': instance.id}
         }
     )
