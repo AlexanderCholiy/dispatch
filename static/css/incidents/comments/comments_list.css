@@ -15,6 +15,7 @@
   text-align: center;
   color: var(--gray-color);
   font-size: var(--font-md);
+  min-height: 180px;
 }
 
 .cw-comment-item {

@@ -4,7 +4,6 @@ import json
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.core.exceptions import ValidationError
-from django.db.models import Q
 
 from api.serializers.comment import CommentSerializer
 from core.loggers import django_logger
@@ -44,15 +43,11 @@ class CommentConsumer(AsyncWebsocketConsumer):
         queryset = (
             Comment.objects.filter(incident_id=self.incident_id)
             .select_related('author', 'incident')
-            .order_by('-created_at', '-id')[:MAX_INCIDENT_COMMENTS_PER_PAGE]
+            .order_by('-created_at', '-id')
+            [:MAX_INCIDENT_COMMENTS_PER_PAGE]
         )
 
         is_admin = user.is_staff or user.is_superuser
-
-        if not is_admin:
-            queryset = queryset.filter(
-                Q(author=user) | Q(author__role=Roles.DISPATCH)
-            )
 
         serializer_data = CommentSerializer(queryset, many=True).data
 

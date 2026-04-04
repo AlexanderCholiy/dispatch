@@ -241,7 +241,7 @@ export class CommentsUI {
         this.listEl.innerHTML = '';
         
         if (sorted.length === 0) {
-            this.emptyEl.style.display = 'block';
+            this.emptyEl.style.display = 'flex';
             return;
         }
         this.emptyEl.style.display = 'none';
@@ -325,6 +325,9 @@ export class CommentsUI {
         this.inputEl.value = comment.content;
         this.editIdInput.value = comment.id;
         this.submitBtn.textContent = 'Сохранить'; // Меняем текст на "Сохранить"
+
+        this.submitBtn.classList.add('btn-success');   // Добавляем синий стиль
+        this.submitBtn.classList.remove('btn-primary'); // Убираем зеленый стиль
         
         // Показываем кнопку отмены (убираем класс скрытия)
         if (this.cancelBtn) {
@@ -344,6 +347,9 @@ export class CommentsUI {
         this.editIdInput.value = '';
         this.submitBtn.textContent = 'Отправить'; // Возвращаем текст "Отправить"
         this.submitBtn.disabled = true; // Блокируем, пока пусто
+
+        this.submitBtn.classList.add('btn-primary');   // Добавляем зеленый стиль
+        this.submitBtn.classList.remove('btn-success'); // Убираем синий стиль
         
         // Скрываем кнопку отмены (добавляем класс скрытия)
         if (this.cancelBtn) {

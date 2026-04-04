@@ -8,7 +8,7 @@
   width: 100%;
   box-sizing: border-box;
 
-  min-height: calc(var(--font-md) * 1.5 + var(--space-md) * 10);
+  min-height: 180px;
   max-height: 420px;
   font-size: var(--font-md);
   line-height: 1.5;
