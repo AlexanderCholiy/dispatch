@@ -19,7 +19,7 @@ from django_filters import (
     NumberFilter,
 )
 
-from incidents.models import Incident, Comment
+from incidents.models import Comment, Incident
 
 from .utils import get_first_day_prev_month
 

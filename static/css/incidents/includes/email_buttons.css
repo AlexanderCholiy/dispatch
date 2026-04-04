@@ -41,6 +41,6 @@ display: flex;
 .submit-move-email,
 #move-emails-btn,
 .sort-emails-btn {
-  padding: 0.16rem;
+  padding: var(--space-xxs);
   font-size: var(--font-sm);
 }

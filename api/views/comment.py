@@ -1,15 +1,15 @@
+from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, viewsets
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.throttling import ScopedRateThrottle
 
+from api.filters import CommentFilter
 from api.pagination import CommentPagination
 from api.permissions import UserPermission
 from api.serializers.comment import CommentSerializer
 from incidents.models import Comment
-from users.models import User, Roles
-from api.filters import CommentFilter
-from django.db.models import Q
+from users.models import Roles, User
 
 
 class CommentViewSet(viewsets.ModelViewSet):

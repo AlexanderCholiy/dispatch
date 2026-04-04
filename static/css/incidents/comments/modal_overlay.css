@@ -1,0 +1,44 @@
+.cw-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: var(--extra-color);
+  display: flex; justify-content: center; align-items: center;
+  z-index: 10;
+  opacity: 0; visibility: hidden;
+  transition: opacity var(--transition-value), visibility var(--transition-value);
+  backdrop-filter: blur(3px);
+}
+.cw-modal-overlay.active-modal-comment {
+  opacity: 1; visibility: visible;
+}
+
+.cw-modal-box {
+  background: var(--add-background-color);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  max-width: 400px;
+  box-shadow: 0 var(--space-xs) var(--space-md) var(--extra-color);
+  transform: translateY(-20px);
+  transition: transform var(--transition-value);
+}
+.cw-modal-overlay.active-modal-comment .cw-modal-box {
+  transform: translateY(0);
+}
+
+.cw-modal-body {
+  margin-bottom: var(--space-lg);
+  text-align: center;
+}
+.cw-modal-footer { 
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md); 
+}
+
+.cw-modal-cancel,
+.cw-modal-confirm {
+  padding: var(--space-xxs) var(--space-sm);
+  font-size: var(--font-md);
+  font-weight: 500;
+}
+

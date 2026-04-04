@@ -1,0 +1,131 @@
+.cw-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  max-height: 920px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: var(--space-sm);
+}
+
+.cw-empty {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: var(--gray-color);
+  font-size: var(--font-md);
+}
+
+.cw-comment-item {
+  max-width: 95%;
+  padding: var(--space-sm);
+  border-radius: var(--radius-md);
+  position: relative;
+  box-shadow: 0 0 var(--space-xs) var(--extra-color);
+}
+
+.cw-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--extra-color);
+}
+
+.cw-avatar-placeholder {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: var(--gray-color);
+  color: var(--background-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: var(--font-lg);
+}
+
+.cw-avatar-link {
+  display: inline-block;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.cw-comment-item.other-comment {
+  align-self: flex-start;
+  border-left: 3px solid var(--red-color);
+}
+
+.cw-comment-item.my-comment {
+  align-self: flex-end;
+  border-left: 3px solid var(--priority-color);
+}
+
+.cw-comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-xs);
+  font-size: var(--font-sm);
+  gap: var(--space-md);
+}
+
+.cw-comment-item.my-comment .cw-author-info {
+  display: none;
+}
+
+.cw-date {
+  margin-left: auto;
+  color: var(--gray-color);
+}
+
+.cw-author-info {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.cw-author-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  font-weight: 500;
+  gap: var(--space-xxs);
+}
+
+.cw-role {
+  font-size: var(--font-xs);
+  color: var(--gray-color);
+}
+
+.cw-actions {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.cw-btn-edit, .cw-btn-delete {
+  background: none;
+  border: 1px solid var(--extra-color);
+  cursor: pointer;
+  font-size: var(--font-sm);
+  padding: var(--space-xs);
+  border-radius: var(--radius-md);
+  color: var(--gray-color);
+  transition: color var(--transition-value);
+  font-weight: bold;
+}
+
+.cw-btn-edit:hover { color: var(--green-color); box-shadow: 0 0 var(--space-xs) var(--green-color); }
+.cw-btn-delete:hover { color: var(--red-color); box-shadow: 0 0 var(--space-xs) var(--red-color); }
+
+.cw-comment-body {
+  color: var(--add-color);
+  font-size: var(--font-sm);
+  white-space: pre-line; 
+  word-break: break-word;
+  line-height: 1.45;
+  margin: 0;
+  padding: 0;
+}

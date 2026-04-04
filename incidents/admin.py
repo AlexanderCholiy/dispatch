@@ -268,6 +268,7 @@ class CommentAdmin(admin.ModelAdmin):
     autocomplete_fields = ('incident', 'author')
 
     readonly_fields = ('created_at', 'updated_at', 'link_to_incident')
+    ordering = ('-created_at', '-id')
 
     @admin.display(description='Сообщение')
     def content_excerpt(self, obj: Comment):

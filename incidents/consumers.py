@@ -1,15 +1,17 @@
 # incidents/consumers.py
 import json
-from channels.generic.websocket import AsyncWebsocketConsumer
+
 from channels.db import database_sync_to_async
-from .models import Comment
-from users.models import User, Roles
+from channels.generic.websocket import AsyncWebsocketConsumer
+from django.core.exceptions import ValidationError
+from django.db.models import Q
+
 from api.serializers.comment import CommentSerializer
 from core.loggers import django_logger
-from django.db.models import Q
-from django.core.exceptions import ValidationError
+from users.models import Roles, User
 
-from .constants import MAX_INCIDENT_COMMENTS_PER_PAGE, MAX_COMMENT_TEXT_LEN
+from .constants import MAX_COMMENT_TEXT_LEN, MAX_INCIDENT_COMMENTS_PER_PAGE
+from .models import Comment
 
 
 class CommentConsumer(AsyncWebsocketConsumer):
@@ -72,6 +74,7 @@ class CommentConsumer(AsyncWebsocketConsumer):
                         item['avatar_url'] = None
                 else:
                     item['avatar_url'] = None
+                item['username'] = author_obj.username
 
         return serializer_data
 
@@ -132,8 +135,10 @@ class CommentConsumer(AsyncWebsocketConsumer):
                 data['avatar_url'] = author.avatar.url
             else:
                 data['avatar_url'] = None
+            data['username'] = author.username
         else:
             data['avatar_url'] = None
+            data['username'] = None
 
         await self.channel_layer.group_send(
             room_group_name,
@@ -205,8 +210,33 @@ class CommentConsumer(AsyncWebsocketConsumer):
         return True
 
     async def broadcast_update(self, event):
+        user = self.scope['user']
+
+        payload = event.get('payload', {})
+        action = event.get('action')
+
+        if action == 'deleted':
+            await self.send(text_data=json.dumps({
+                'type': 'update',
+                'action': action,
+                'payload': payload
+            }))
+            await self.send_initial_history()
+            return
+
+        author_id = payload['author_id']
+
+        is_my_comment = (int(author_id) == user.id)
+
+        is_admin = user.is_staff or user.is_superuser
+
+        can_edit = is_admin or is_my_comment
+
+        payload['is_my_comment'] = is_my_comment
+        payload['can_edit'] = can_edit
+
         await self.send(text_data=json.dumps({
             'type': 'update',
-            'action': event['action'], 
-            'payload': event['payload']
+            'action': action,
+            'payload': payload
         }))

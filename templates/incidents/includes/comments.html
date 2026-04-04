@@ -1,30 +1,34 @@
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/incidents/includes/comments.css' %}">
+<link rel="stylesheet" href="{% static 'css/incidents/comments/comments_filter.css' %}">
+<link rel="stylesheet" href="{% static 'css/incidents/comments/comments_list.css' %}">
+<link rel="stylesheet" href="{% static 'css/incidents/comments/comment_area.css' %}">
+<link rel="stylesheet" href="{% static 'css/incidents/comments/modal_overlay.css' %}">
 {% endblock %}
+<div class="card-header">         
+    <div class="comment-filter">
+      <div class="cw-sort-controls">
+          <button type="button" class="btn btn-secondary sort-comments-btn tooltip" id="comment-sort-asc" data-sort="asc" data-title="Сначала новые">
+            <i class='bx bx-chevrons-down'></i>
+          </button>
+          <button type="button" class="btn btn-secondary sort-comments-btn tooltip" id="comment-sort-desc" data-sort="desc" data-title="Сначала старые">
+            <i class='bx bx-chevrons-up'></i>
+          </button>
+      </div>
+  
+      <div class="cw-filters select-wrapper">
+        <select id="filter-my-comments" class="cw-select select">
+          <option value="all">Все комментарии</option>
+          <option value="my">Только мои</option>
+          <option value="others">Только чужие</option>
+        </select>
+      </div>
+    </div>
+</div>
 
 <div class="card-body">
   <div id="comments-widget" class="comments-widget">
-      <div class="cw-header">         
-          <!-- Кнопки сортировки -->
-          <div class="cw-sort-controls">
-              <button type="button" class="btn btn-secondary sort-comments-btn tooltip" id="comment-sort-asc" data-sort="asc" data-title="Сначала новые">
-                <i class='bx bx-chevrons-down'></i>
-              </button>
-              <button type="button" class="btn btn-secondary sort-comments-btn tooltip" id="comment-sort-desc" data-sort="desc" data-title="Сначала старые">
-                <i class='bx bx-chevrons-up'></i>
-              </button>
-          </div>
-          <!-- Фильтры -->
-          <div class="cw-filters">
-            <select id="filter-my-comments" class="cw-select">
-              <option value="all">Все комментарии</option>
-              <option value="my">Только мои</option>
-              <option value="others">Только чужие</option>
-            </select>
-          </div>
-      </div>
 
       <!-- Список -->
       <div id="cw-list" class="cw-list"></div>
@@ -35,8 +39,8 @@
           <textarea id="cw-input" placeholder="Написать комментарий..."></textarea>
           <div class="cw-form-actions">
             <span id="cw-error-msg" class="cw-error"></span>
-            <button id="cw-cancel-edit" class="cw-btn-secondary" style="display:none;">Отмена</button>
-            <button id="cw-submit" class="cw-btn-primary" disabled>Отправить</button>
+            <button id="cw-cancel-edit" class="btn btn-secondary cw-btn-secondary hidden">Отмена</button>
+            <button id="cw-submit" class="btn btn-primary cw-btn-primary" disabled>Отправить</button>
           </div>
           <input type="hidden" id="cw-edit-id" value="">
       </div>

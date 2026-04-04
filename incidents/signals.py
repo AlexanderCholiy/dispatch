@@ -1,24 +1,38 @@
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.db.models.signals import post_save, pre_delete
 from django.dispatch import receiver
-from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
-from .models import Comment
+
 from api.serializers.comment import CommentSerializer
+
+from .models import Comment
 
 
 @receiver(post_save, sender=Comment)
-def comment_saved_signal(sender, instance: Comment, created, **kwargs):
+def comment_saved_signal(sender, instance: Comment, created: bool, **kwargs):
     channel_layer = get_channel_layer()
     room_group_name = f'comments_{instance.incident_id}'
 
     serializer = CommentSerializer(instance)
+    data = serializer.data
+
+    if hasattr(instance, 'author'):
+        author = instance.author
+        if hasattr(author, 'avatar') and author.avatar:
+            data['avatar_url'] = author.avatar.url
+        else:
+            data['avatar_url'] = None
+        data['username'] = author.username
+    else:
+        data['avatar_url'] = None
+        data['username'] = None
 
     async_to_sync(channel_layer.group_send)(
         room_group_name,
         {
             'type': 'broadcast_update',
             'action': 'created' if created else 'updated',
-            'payload': serializer.data
+            'payload': data
         }
     )
 
