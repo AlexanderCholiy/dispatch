@@ -2,7 +2,7 @@
   position: fixed;
   bottom: var(--space-md);
   right: var(--space-md);
-  width: 320px;
+  width: 340px;
   max-height: 480px;
   background-color: transparent;
   border-radius: var(--radius-lg);

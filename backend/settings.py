@@ -253,6 +253,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'notifications.tasks.check_overdue_notifications',
         'schedule': 300,  # каждые 5 минут
     },
+    'schedule_birthday_notifications': {
+        'task': 'notifications.tasks.schedule_birthday_notifications',
+        'schedule': crontab(hour=9, minute=0),
+    },
 }
 
 CACHES = {
