@@ -4,7 +4,8 @@
   align-items: center;
   gap: var(--space-sm);
   flex-wrap: wrap;
-  padding: var(--space-sm) 0
+  padding: var(--space-sm) 0;
+  border-color: var(--extra-color);
 }
 
 .cw-sort-controls {
@@ -36,6 +37,11 @@
   padding: var(--space-xs);
   padding-right: calc(var(--space-sm) * 2.5);
   border-radius: var(--radius-sm);
+  box-shadow: none;
+}
+
+#filter-my-comments:hover {
+  box-shadow: 0 0 var(--space-xs) var(--extra-color);
 }
 
 .sort-comments-btn {
