@@ -5,7 +5,6 @@
   gap: var(--space-sm);
   flex-wrap: wrap;
   padding: var(--space-sm) 0;
-  border-color: var(--extra-color);
 }
 
 .cw-sort-controls {
@@ -25,19 +24,22 @@
 }
 
 .cw-filters::after {
-  margin-top: 1px;
+  margin-top: 2px;
 }
 
 .cw-filters.open::after {
-  margin-top: 3px;
+  margin-top: 4px;
 }
 
 #filter-my-comments {
   font-size: var(--font-sm);
-  padding: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
   padding-right: calc(var(--space-sm) * 2.5);
   border-radius: var(--radius-sm);
   box-shadow: none;
+  border-color: var(--extra-color);
+  transition: all var(--transition-value);
+  color: var(--add-color);
 }
 
 #filter-my-comments:hover {
