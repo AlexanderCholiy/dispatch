@@ -1,4 +1,5 @@
 amqp==5.3.1
+annotated-types==0.7.0
 anyio==4.12.1
 asgiref==3.9.1
 attrs==25.4.0
@@ -80,6 +81,8 @@ pyasn1_modules==0.4.2
 pycodestyle==2.14.0
 pycparser==2.23
 pycryptodome==3.23.0
+pydantic==2.12.5
+pydantic_core==2.41.5
 pyflakes==3.4.0
 PyJWT==2.10.1
 pymongo==4.16.0
@@ -105,8 +108,10 @@ soupsieve==2.7
 sqlparse==0.5.3
 stream-zip==0.0.84
 tabulate==0.9.0
+tqdm==4.67.3
 Twisted==25.5.0
 txaio==25.12.2
+typing-inspection==0.4.2
 typing_extensions==4.14.1
 tzdata==2025.2
 tzlocal==5.3.1

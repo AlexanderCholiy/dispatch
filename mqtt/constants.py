@@ -1,3 +1,8 @@
 import os
 
 MQTT_MONGO_DB_URL = os.environ.get('MQTT_MONGO_DB_URL')
+MQTT_MONGO_DB_NAME = 'mqtt'
+MQTT_MONGO_DB_COLLECTION = 'data'
+
+MQTT_CONN_TIMEOUT = 5000  # мс
+MQTT_BATCH_SIZE = 10_000

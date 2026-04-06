@@ -51,6 +51,9 @@ DJANGO_LOG_ROTATING_FILE = os.path.join(
 CELLERY_LOG_ROTATING_FILE = os.path.join(
     BASE_DIR, 'logs', 'celery', 'celery.log'
 )
+MQTT_LOG_ROTATING_FILE = os.path.join(
+    BASE_DIR, 'logs', 'mqtt', 'mqtt.log'
+)
 
 os.makedirs(os.path.dirname(DEFAULT_ROTATING_LOG_FILE), exist_ok=True)
 os.makedirs(os.path.dirname(EMAIL_PARSER_LOG_ROTATING_FILE), exist_ok=True)
@@ -64,6 +67,7 @@ os.makedirs(
 )
 os.makedirs(os.path.dirname(DJANGO_LOG_ROTATING_FILE), exist_ok=True)
 os.makedirs(os.path.dirname(CELLERY_LOG_ROTATING_FILE), exist_ok=True)
+os.makedirs(os.path.dirname(MQTT_LOG_ROTATING_FILE), exist_ok=True)
 
 UPDATE_DATA_FROM_TS_LOCK_FILE = os.path.join(
     DATA_DIR, 'lock', 'update_data_from_ts.lock'
