@@ -42,7 +42,7 @@ class Command(BaseCommand):
 
                 query = {
                     '_id': {'$gte': ObjectId('69c600000000000000000000')},
-                    # macaddress не пустой:
+                    # MAC-адрес не пустой:
                     'data.modem.macaddress': {'$nin': [None, '', 'undefined']}
                 }
                 total_docs = collection.count_documents(query)
@@ -56,7 +56,7 @@ class Command(BaseCommand):
                 with tqdm(
                     cursor,
                     total=total_docs,
-                    desc='Обработка',
+                    desc='Обработка данных MQTT из MongoDB',
                     colour='green',
                     position=0,
                     leave=True,

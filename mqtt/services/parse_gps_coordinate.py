@@ -1,5 +1,7 @@
 from typing import Optional
 
+from core.loggers import mqtt_logger
+
 
 def parse_gps_coordinate(value: str, is_latitude: bool) -> Optional[float]:
     """Парсит GPS координату из формата N5319.78106 в десятичные градусы."""
@@ -49,5 +51,10 @@ def parse_gps_coordinate(value: str, is_latitude: bool) -> Optional[float]:
 
         return result
 
-    except ValueError:
+    except ValueError as e:
+        mqtt_logger.warning(
+            f'Ошибка валидации gps: {e}. '
+            'Сырые данные (первые 300 символов):\n'
+            f'{value[:300]}'
+        )
         return None

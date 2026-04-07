@@ -81,7 +81,12 @@ class ParseAops:
                     earfcn=int(match.group(7)),
                     net_type='4G'
                 ))
-            except ValueError:
+            except ValueError as e:
+                mqtt_logger.warning(
+                    f'Ошибка валидации CellInfo: {e}. '
+                    'Сырые данные (первые 300 символов):\n'
+                    f'{self.aops_raw[:300]}'
+                )
                 continue
 
         pattern_op = re.compile(
@@ -90,7 +95,7 @@ class ParseAops:
             \s* (\d+),        # Группа 1: Индекс оператора в списке
             \s* (\d+),        # Группа 2: Статус (0-дл, 1-кр, 2-цифра)
             \s* ["\']?        # Опциональная открывающая кавычка
-            ([^\s"\']+?)      # Группа 3: Оператор
+            ([^",\'\n]+)      # Группа 3: Оператор
             ["\']?            # Опциональная закрывающая кавычка
             ''',
             re.VERBOSE
@@ -100,9 +105,14 @@ class ParseAops:
                 ops.append(OperatorEntry(
                     index=int(match.group(1)),
                     status=int(match.group(2)),
-                    operator_code=match.group(3)
+                    operator_code=match.group(3).strip()
                 ))
-            except ValueError:
+            except ValueError as e:
+                mqtt_logger.warning(
+                    f'Ошибка валидации OperatorEntry: {e}. '
+                    'Сырые данные (первые 300 символов):\n'
+                    f'{self.aops_raw[:300]}'
+                )
                 continue
 
         return cells, ops
@@ -113,20 +123,14 @@ class ParseAops:
 
         header_pattern = re.compile(
             r'''
-            \+AOPS:          # Префикс команды
-            \s* ["\']        # Открывающая кавычка 1-го поля
-            ([^"\']+)        # Группа 1: Содержимое кода оператора
-            ["\'],           # Закрывающая кавычка и запятая
-
-            \s* ["\']        # Открывающая кавычка 2-го поля
-            ([^"\']+)        # Группа 2: Содержимое второго поля
-            ["\'],           # Закрывающая кавычка и запятая
-
-            \s* ["\']        # Открывающая кавычка 3-го поля
-            ([^"\']+)        # Группа 3: Содержимое названия оператора
-            ["\']            # Закрывающая кавычка последнего поля
+            \+AOPS:\s*          # Префикс
+            ["\']([^"\']+)["\'] # Группа 1: Имя оператора (первое поле)
+            ,\s*
+            ["\']([^"\']+)["\'] # Группа 2: Второе поле (часто дублирует имя)
+            ,\s*
+            ["\']([^"\']+)["\'] # Группа 3: Код оператора (третье поле)
             ''',
-            re.VERBOSE
+            re.VERBOSE | re.IGNORECASE
         )
 
         headers = list(header_pattern.finditer(self.aops_raw))
@@ -156,9 +160,9 @@ class ParseAops:
             # Строка вида: 1,"2G",Freq:70,RSSI:-72,bsic:14,LAC:27077...
             line_pattern = re.compile(
                 r'''
-                ^ (\d+) ,        # Группа 1: Порядковый номер
-                \s* " ([^"]+) " , # Группа 2: Тип сети в двойных кавычках
-                \s* (.+) $       # Группа 3: Вся остальная часть строки
+                ^\s* (\d+) \s* ,      # Группа 1: Индекс
+                \s* " ([^"]+) " \s* , # Группа 2: Тип сети
+                \s* (.*)              # Группа 3: Параметры (до конца)
                 ''',
                 re.MULTILINE | re.VERBOSE
             )
@@ -209,6 +213,10 @@ class ParseAops:
                         cell_obj.bsic = param_map['bsic']
                     if 'lac' in param_map:
                         cell_obj.lac = param_map['lac']  # LAC для 2G
+                    if 'rxlev' in param_map:
+                        cell_obj.rxlev = param_map['rxlev']
+                    if 'c1' in param_map:
+                        cell_obj.c1 = param_map['c1']
 
                 if any(
                     v is not None
