@@ -58,36 +58,61 @@ class ParseAops:
 
         pattern_cell = re.compile(
             r'''
-            \+EIntraINFO: \s* (\d+),        # ID
-            \s* MCC-MNC:  \s* ([^,\n]+?),   # MCC-MNC
-            \s* TAC:      \s* (\d+),        # TAC
-            \s* cellid:   \s* (\d+),        # CellID
-            \s* rsrp:     \s* (-?\d+),      # RSRP
-            \s* rsrq:     \s* (-?\d+),      # RSRQ
-            \s* euArfcn:  \s* (\d+)         # euArfcn
+            (?:\+EIntraINFO:\s*)?  # Опциональный префикс +EIntraINFO
+            |                      # Или просто ищем структуру полей
+            (?=.*MCC-MNC.*cellid)  # Проверка наличия ключевых слов
+            # Основная группа захвата, которая должна сработать для строки
+            (?:^|\n)               # Начало строки или перенос
+            .*?                    # Любые символы до начала нужных полей
+            MCC-MNC:\s*([^,\n]+?)  # Группа 1: MCC-MNC
+            ,\s*TAC:\s*(\d+),      # Группа 2: TAC
+            ,\s*cellid:\s*(\d+),   # Группа 3: CellID
+            ,\s*rsrp:\s*(-?\d+),   # Группа 4: RSRP
+            ,\s*rsrq:\s*(-?\d+),   # Группа 5: RSRQ
+            ,\s*euArfcn:\s*(\d+)   # Группа 6: euArfcn
             ''',
             re.VERBOSE | re.IGNORECASE
         )
 
-        for match in pattern_cell.finditer(self.aops_raw):
-            try:
-                cells.append(CellInfo(
-                    index=int(match.group(1)),
-                    mcc_mnc=match.group(2).strip(),
-                    tac=int(match.group(3)),
-                    cellid=int(match.group(4)),
-                    rsrp=int(match.group(5)),
-                    rsrq=int(match.group(6)),
-                    earfcn=int(match.group(7)),
-                    net_type='4G'
-                ))
-            except ValueError as e:
-                mqtt_logger.warning(
-                    f'Ошибка валидации CellInfo: {e}. '
-                    'Сырые данные (первые 300 символов):\n'
-                    f'{self.aops_raw[:300]}'
-                )
+        lines = self.aops_raw.split('\n')
+        for line in lines:
+            line = line.strip()
+            if not line:
                 continue
+
+            if 'cellid:' not in line or 'MCC-MNC:' not in line:
+                continue
+
+            match = re.search(
+                r'MCC-MNC:\s*([^,\n]+?),\s*TAC:\s*(\d+),\s*cellid:\s*(\d+),\s*rsrp:\s*(-?\d+),\s*rsrq:\s*(-?\d+),\s*euArfcn:\s*(\d+)',
+                line,
+                re.IGNORECASE
+            )
+
+            if match:
+                try:
+                    index = 0
+                    prefix_match = re.match(r'(?:\+?EIntraINFO|NFO):\s*(\d+)', line)
+                    if prefix_match:
+                        index = int(prefix_match.group(1))
+                    
+                    cells.append(CellInfo(
+                        index=index,
+                        mcc_mnc=match.group(1).strip(),
+                        tac=int(match.group(2)),
+                        cellid=int(match.group(3)),
+                        rsrp=int(match.group(4)),
+                        rsrq=int(match.group(5)),
+                        earfcn=int(match.group(6)),
+                        net_type='4G'
+                    ))
+                except ValueError as e:
+                    mqtt_logger.warning(
+                        f'Ошибка валидации CellInfo: {e}. '
+                        'Сырые данные (первые 300 символов):\n'
+                        f'{self.aops_raw[:300]}'
+                    )
+                    continue
 
         pattern_op = re.compile(
             r'''

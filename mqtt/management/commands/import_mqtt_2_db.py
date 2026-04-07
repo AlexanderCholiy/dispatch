@@ -77,6 +77,17 @@ class Command(BaseCommand):
                         if not validated_model:
                             continue
 
+                        if validated_model.aops_raw:
+                            print('---mac---')
+                            print(validated_model.macaddress)
+                            print('---aops_raw---')
+                            print(validated_model.aops_raw)
+                            print('---cells---')
+                            print(validated_model.aops.cells)
+                            print('---operators---')
+                            print(validated_model.aops.operators)
+                            raise KeyboardInterrupt
+
                         processed_count += 1
                         current_event_time = validated_model.event_datetime
                         device_mac = validated_model.macaddress
@@ -146,12 +157,44 @@ class Command(BaseCommand):
                                 if not cell_data.cellid:
                                     continue
 
+                                # Оператора определяем по индексу:
+                                operator_obj = None
+                                if validated_model.aops.operators:
+                                    # Находим оператора с таким же индексом
+                                    matching_ops = [
+                                        op
+                                        for op in (
+                                            validated_model.aops.operators
+                                        )
+                                        if op.index == cell_data.index
+                                    ]
+
+                                    if matching_ops:
+                                        op_entry = matching_ops[0]
+                                        code = op_entry.operator_code
+
+                                        if code in operators_dict:
+                                            operator_obj = operators_dict[code]
+                                        else:
+                                            operator_obj, _ = (
+                                                Operator.objects.get_or_create(
+                                                    code=code,
+                                                    defaults={
+                                                        'name': (
+                                                            op_entry
+                                                            .operator_name
+                                                        )
+                                                    }
+                                                )
+                                            )
+                                            operators_dict[code] = operator_obj
+
                                 cells_to_save.append(CellInfo(
                                     device=device,
+                                    operator=operator_obj,
                                     index=cell_data.index,
                                     cell_id=cell_data.cellid,
                                     event_datetime=current_event_time,
-                                    mcc_mnc=cell_data.mcc_mnc,
                                     network_type=(
                                         cell_data.net_type.value
                                         if cell_data.net_type else None
@@ -240,20 +283,115 @@ class Command(BaseCommand):
             self._error_cnt += 1
         return None
 
-    def _flush_to_db(self, operators_list, cells_list):
-        """Выполняет массовую запись в БД"""
+    def _flush_to_db(
+        self,
+        operators_list: list[DeviceOperator],
+        cells_list: list[CellInfo],
+    ):
+        """Выполняет массовую запись в БД с поддержкой обновления"""
         try:
             if cells_list:
-                CellInfo.objects.bulk_create(
-                    cells_list, ignore_conflicts=True
-                )
+                search_keys = [
+                    {
+                        'device_id': c.device_id,
+                        'cell_id': c.cell_id,
+                        'event_datetime': c.event_datetime
+                    }
+                    for c in cells_list
+                ]
+
+                existing_cells_qs = CellInfo.objects.filter(
+                    device_id__in=[k['device_id'] for k in search_keys],
+                    cell_id__in=[k['cell_id'] for k in search_keys],
+                    event_datetime__in=[
+                        k['event_datetime'] for k in search_keys
+                    ]
+                ).values('id', 'device_id', 'cell_id', 'event_datetime')
+
+                existing_map = {
+                    (
+                        c['device_id'], c['cell_id'], c['event_datetime']
+                    ): c['id']
+                    for c in existing_cells_qs
+                }
+
+                cells_to_create = []
+                cells_to_update = []
+
+                for cell in cells_list:
+                    key = (cell.device_id, cell.cell_id, cell.event_datetime)
+                    if key in existing_map:
+                        cell.id = existing_map[key]
+                        cells_to_update.append(cell)
+                    else:
+                        cells_to_create.append(cell)
+
+                if cells_to_create:
+                    CellInfo.objects.bulk_create(
+                        cells_to_create, ignore_conflicts=True
+                    )
+
+                if cells_to_update:
+                    fields_to_update = [
+                        'index',
+                        'network_type',
+                        'freq',
+                        'tac',
+                        'lac',
+                        'rsrp',
+                        'rsrq',
+                        'pci',
+                        'earfcn',
+                        'rscp',
+                        'ecno',
+                        'psc',
+                        'rssi',
+                        'rxlev',
+                        'bsic',
+                        'c1',
+                        'operator_id',
+                    ]
+                    CellInfo.objects.bulk_update(
+                        cells_to_update, fields=fields_to_update
+                    )
 
             if operators_list:
-                DeviceOperator.objects.bulk_create(
-                    operators_list, ignore_conflicts=True
-                )
+                search_keys = [
+                    {'device_id': op.device_id, 'operator_id': op.operator_id}
+                    for op in operators_list
+                ]
 
-        except Exception:
-            mqtt_logger.exception(
-                'Ошибка при пакетной записи CellInfo и DeviceOperator в БД.'
-            )
+                existing_ops_qs = DeviceOperator.objects.filter(
+                    device_id__in=[k['device_id'] for k in search_keys],
+                    operator_id__in=[k['operator_id'] for k in search_keys]
+                ).values('id', 'device_id', 'operator_id')
+
+                existing_map = {
+                    (op['device_id'], op['operator_id']): op['id']
+                    for op in existing_ops_qs
+                }
+
+                ops_to_create = []
+                ops_to_update = []
+
+                for op in operators_list:
+                    key = (op.device_id, op.operator_id)
+                    if key in existing_map:
+                        op.id = existing_map[key]
+                        ops_to_update.append(op)
+                    else:
+                        ops_to_create.append(op)
+
+                if ops_to_create:
+                    DeviceOperator.objects.bulk_create(
+                        ops_to_create, ignore_conflicts=True
+                    )
+
+                if ops_to_update:
+                    fields_to_update = ['index', 'status', 'last_seen']
+                    DeviceOperator.objects.bulk_update(
+                        ops_to_update, fields=fields_to_update
+                    )
+
+        except Exception as e:
+            mqtt_logger.exception(f'Ошибка при пакетной записи в БД: {e}')

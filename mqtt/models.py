@@ -4,7 +4,6 @@ from django.utils import timezone
 from mqtt.constants import (
     MAX_DEVICE_VERSION_LEN,
     MAX_MAC_LEN,
-    MAX_MCC_MNC_LEN,
     MAX_NETWORK_TYPE_LEN,
     MAX_OPERATOR_CODE_LEN,
     MAX_OPERATOR_NAME_LEN,
@@ -79,12 +78,42 @@ class Device(models.Model):
         return f'MAC: {self.mac_address}'
 
 
+class Operator(models.Model):
+    code = models.CharField(
+        max_length=MAX_OPERATOR_CODE_LEN,
+        unique=True,
+        verbose_name='Код оператора (MNC+MCC)',
+    )
+    name = models.CharField(
+        max_length=MAX_OPERATOR_NAME_LEN,
+        null=True,
+        blank=True,
+        verbose_name='Имя оператора',
+    )
+
+    class Meta:
+        verbose_name = 'оператор связи'
+        verbose_name_plural = 'Операторы связи'
+        ordering = ('name', 'id')
+
+    def __str__(self):
+        return f'{self.code} ({self.name or "N/A"})'
+
+
 class CellInfo(models.Model):
     device = models.ForeignKey(
         Device,
         on_delete=models.CASCADE,
         related_name='cells',
         verbose_name='Устройство',
+    )
+    operator = models.ForeignKey(
+        Operator,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='operator',
+        verbose_name='Оператор',
     )
     index = models.PositiveSmallIntegerField(
         verbose_name='Индекс соты в списке',
@@ -97,12 +126,6 @@ class CellInfo(models.Model):
         db_index=True,
         default=timezone.now,
         verbose_name='Время регистрации',
-    )
-    mcc_mnc = models.CharField(
-        max_length=MAX_MCC_MNC_LEN,
-        null=True,
-        blank=True,
-        verbose_name='MCC-MNC код оператора',
     )
     network_type = models.CharField(
         max_length=MAX_NETWORK_TYPE_LEN,
@@ -263,28 +286,6 @@ class CellInfo(models.Model):
     def __str__(self):
         sig = self.rsrp or self.rscp or self.rssi or self.rxlev or 'NaN'
         return f'Сота {self.cell_id} ({self.network_type}): {sig} dBm'
-
-
-class Operator(models.Model):
-    code = models.CharField(
-        max_length=MAX_OPERATOR_CODE_LEN,
-        unique=True,
-        verbose_name='Код оператора (MNC+MCC)',
-    )
-    name = models.CharField(
-        max_length=MAX_OPERATOR_NAME_LEN,
-        null=True,
-        blank=True,
-        verbose_name='Имя оператора',
-    )
-
-    class Meta:
-        verbose_name = 'оператор связи'
-        verbose_name_plural = 'Операторы связи'
-        ordering = ('name', 'id')
-
-    def __str__(self):
-        return f'{self.code} ({self.name or "N/A"})'
 
 
 class DeviceOperator(models.Model):

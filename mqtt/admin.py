@@ -54,16 +54,16 @@ class CellInfoAdmin(admin.ModelAdmin):
         'rsrp',
         'rscp',
         'rssi',
-        'rxlev',
         'freq',
         'tac',
         'lac',
         'event_datetime',
+        'operator_link',
         'device_link',
     )
-    list_filter = ('network_type', 'event_datetime')
-    search_fields = ('cell_id', 'mcc_mnc', 'device__mac_address')
-    autocomplete_fields = ('device',)
+    list_filter = ('network_type', 'operator__name')
+    search_fields = ('cell_id', 'device__mac_address')
+    autocomplete_fields = ('device', 'operator')
     list_per_page = CELL_INFO_PER_PAGE
 
     def device_link(self, obj: CellInfo):
@@ -75,12 +75,20 @@ class CellInfoAdmin(admin.ModelAdmin):
     device_link.short_description = 'Устройство'
     device_link.admin_order_field = 'device'
 
+    def operator_link(self, obj: CellInfo):
+        if not obj.operator:
+            return '-'
+        url = reverse('admin:mqtt_operator_change', args=[obj.operator.pk])
+        return format_html('<a href="{}">{}</a>', url, str(obj.operator))
+
+    operator_link.short_description = 'Оператор'
+    operator_link.admin_order_field = 'operator'
+
     fieldsets = (
         ('Идентификация', {
             'fields': (
                 'index',
                 'cell_id',
-                'mcc_mnc',
                 'network_type',
                 'freq',
                 'event_datetime',
@@ -98,8 +106,8 @@ class CellInfoAdmin(admin.ModelAdmin):
             'fields': ('bsic', 'rssi', 'rxlev', 'c1'),
             'classes': ('collapse',)
         }),
-        ('Связь с устройством', {
-            'fields': ('device',)
+        ('Связь с устройством и оператором', {
+            'fields': ('device', 'operator')
         }),
     )
 
