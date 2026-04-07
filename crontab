@@ -13,10 +13,14 @@ CRON_TZ=Europe/Moscow
 
 # Удаление не актуальных данных:
 15 3 * * * nice -n 19 ionice -c 3 /usr/local/bin/python /app/manage.py cleanup_notifications >> /app/logs/cron/cron.log 2>&1
+30 4 * * * nice -n 15 ionice -c 2 /usr/local/bin/python /app/manage.py cleanup_coverage_data >> /app/logs/cron/cron.log 2>&1
 
 # Обновление данных:
 # Добавляем небольшую задержку (sleep), чтобы не стартовать ровно в 00 секунд вместе с другими системными задачами
 */20 * * * * sleep 15 && nice -n 15 /usr/local/bin/python /app/manage.py update_data_from_ts >> /app/logs/cron/cron.log 2>&1
+45 3 * * * sleep 10 && nice -n 15 ionice -c 2 -n 7 /usr/local/bin/python /app/manage.py import_mqtt_2_db >> /app/logs/cron/cron.log 2>&1
+45 11 * * * sleep 10 && nice -n 15 ionice -c 2 -n 7 /usr/local/bin/python /app/manage.py import_mqtt_2_db >> /app/logs/cron/cron.log 2>&1
+45 19 * * * sleep 10 && nice -n 15 ionice -c 2 -n 7 /usr/local/bin/python /app/manage.py import_mqtt_2_db >> /app/logs/cron/cron.log 2>&1
 
 # Резервное копирование:
 # Сдвигаем на 45-ю минуту, чтобы не пересекаться с началом часа, когда срабатывают многие скрипты
