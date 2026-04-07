@@ -2,6 +2,7 @@ from typing import Optional
 
 from bson.objectid import ObjectId
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 from pydantic import ValidationError
 from pymongo import MongoClient, errors
 from tqdm import tqdm
@@ -10,6 +11,7 @@ from core.constants import DEBUG_MODE
 from core.loggers import mqtt_logger
 from core.wraps import timer
 from mqtt.constants import (
+    MONGO_RETENTION_TTL,
     MQTT_BATCH_SIZE,
     MQTT_CONN_TIMEOUT,
     MQTT_DB_BATCH_SIZE,
@@ -37,9 +39,13 @@ class Command(BaseCommand):
                 db = client[MQTT_MONGO_DB_NAME]
                 collection = db[MQTT_MONGO_DB_COLLECTION]
 
+                cutoff_date = timezone.now() - MONGO_RETENTION_TTL
+                date_filter_str = cutoff_date.strftime("%d.%m.%Y")
+
                 query = {
                     '_id': {'$gte': ObjectId('69c600000000000000000000')},
-                    'data.modem.macaddress': {'$nin': [None, '', 'undefined']}
+                    'data.modem.macaddress': {'$nin': [None, '', 'undefined']},
+                    'data.modem.date': {'$gte': date_filter_str}
                 }
 
                 total_docs = collection.count_documents(query)

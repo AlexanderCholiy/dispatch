@@ -243,10 +243,15 @@ class CellInfo(models.Model):
             '-event_datetime', 'device', '-rsrp', '-rscp', '-rssi', 'id'
         ]
         indexes = [
-            models.Index(fields=['device', 'cell_id']),
-            models.Index(fields=['network_type', 'rsrp']),
-            models.Index(fields=['network_type', 'rscp']),
-            models.Index(fields=['network_type', 'rssi']),
+            models.Index(
+                fields=['device', '-event_datetime'],
+                name='idx_device_event_desc',
+            ),
+
+            models.Index(
+                fields=['device', 'cell_id'],
+                name='idx_device_cell',
+            ),
         ]
         constraints = [
             models.UniqueConstraint(

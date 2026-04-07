@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 MQTT_MONGO_DB_URL = os.environ.get('MQTT_MONGO_DB_URL')
 MQTT_MONGO_DB_NAME = 'mqtt'
@@ -6,6 +7,7 @@ MQTT_MONGO_DB_COLLECTION = 'data'
 
 MQTT_CONN_TIMEOUT = 5000  # мс
 MQTT_BATCH_SIZE = 10_000
+MONGO_RETENTION_TTL = timedelta(days=1)
 
 MQTT_DB_BATCH_SIZE = 1000
 
@@ -20,3 +22,5 @@ DEVICE_PER_PAGE = 50
 CELL_INFO_PER_PAGE = 50
 DEVICE_OPERATOR_PER_PAGE = 50
 OPERATOR_PER_PAGE = 50
+
+CELL_INFO_TTL = timedelta(days=14)

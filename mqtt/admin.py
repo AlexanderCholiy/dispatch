@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.urls import reverse
+from django.utils.html import format_html
 
 from mqtt.constants import (
     CELL_INFO_PER_PAGE,
@@ -65,9 +67,10 @@ class CellInfoAdmin(admin.ModelAdmin):
     list_per_page = CELL_INFO_PER_PAGE
 
     def device_link(self, obj: CellInfo):
-        if obj.device:
-            return str(obj.device)
-        return '-'
+        if not obj.device:
+            return '-'
+        url = reverse('admin:mqtt_device_change', args=[obj.device.pk])
+        return format_html('<a href="{}">{}</a>', url, str(obj.device))
 
     device_link.short_description = 'Устройство'
     device_link.admin_order_field = 'device'
@@ -128,17 +131,19 @@ class DeviceOperatorAdmin(admin.ModelAdmin):
     list_per_page = DEVICE_OPERATOR_PER_PAGE
 
     def device_link(self, obj: DeviceOperator):
-        if obj.device:
-            return str(obj.device)
-        return '-'
+        if not obj.device:
+            return '-'
+        url = reverse('admin:mqtt_device_change', args=[obj.device.pk])
+        return format_html('<a href="{}">{}</a>', url, str(obj.device))
 
     device_link.short_description = 'Устройство'
     device_link.admin_order_field = 'device'
 
     def operator_link(self, obj: DeviceOperator):
-        if obj.operator:
-            return str(obj.operator)
-        return '-'
+        if not obj.operator:
+            return '-'
+        url = reverse('admin:mqtt_operator_change', args=[obj.operator.pk])
+        return format_html('<a href="{}">{}</a>', url, str(obj.operator))
 
     operator_link.short_description = 'Оператор'
     operator_link.admin_order_field = 'operator'
