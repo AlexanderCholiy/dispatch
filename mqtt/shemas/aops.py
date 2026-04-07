@@ -87,7 +87,7 @@ class CellInfo(BaseModel):
         None, description='RXLEV (Received Signal Level - 2G)'
     )
     c1: Optional[int] = Field(
-        None, ge=0, description='C1 (Cell selection criterion - 2G)'
+        None, description='C1 (Cell selection criterion - 2G)'
     )
 
     # Общие/Дополнительные

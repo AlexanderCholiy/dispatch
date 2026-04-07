@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 from mqtt.constants import (
     MAX_DEVICE_VERSION_LEN,
@@ -24,15 +25,11 @@ class OperatorStatus(models.IntegerChoices):
     HOME = (3, 'Home (Домашняя)')
 
 
-class MQTT(models.Model):
+class Device(models.Model):
     mac_address = models.CharField(
         max_length=MAX_MAC_LEN,
-        db_index=True,
+        unique=True,
         verbose_name='MAC адрес контроллера',
-    )
-    event_datetime = models.DateTimeField(
-        db_index=True,
-        verbose_name='Дата и время регистрации',
     )
     gps_lat = models.FloatField(
         null=True,
@@ -56,6 +53,11 @@ class MQTT(models.Model):
         blank=True,
         verbose_name='Версия прошивки',
     )
+    last_seen = models.DateTimeField(
+        db_index=True,
+        default=timezone.now,
+        verbose_name='Дата и время последнего события',
+    )
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='Дата создания',
@@ -68,30 +70,21 @@ class MQTT(models.Model):
     class Meta:
         verbose_name = 'устройство'
         verbose_name_plural = 'Устройства'
-        constraints = [
-            models.UniqueConstraint(
-                fields=['mac_address', 'event_datetime'],
-                name='unique_mac_event'
-            )
-        ]
         indexes = [
-            models.Index(fields=['mac_address', '-event_datetime']),
+            models.Index(fields=['mac_address', '-last_seen']),
             models.Index(fields=['gps_lat', 'gps_lon']),
         ]
 
     def __str__(self):
-        return (
-            f'MAC: {self.mac_address} '
-            f'({self.event_datetime.strftime("%d.%m.%Y %H:%M")})'
-        )
+        return f'MAC: {self.mac_address}'
 
 
 class CellInfo(models.Model):
-    mqtt = models.ForeignKey(
-        MQTT,
+    device = models.ForeignKey(
+        Device,
         on_delete=models.CASCADE,
         related_name='cells',
-        verbose_name='устройство',
+        verbose_name='Устройство',
     )
     index = models.PositiveSmallIntegerField(
         verbose_name='Индекс соты в списке',
@@ -99,6 +92,11 @@ class CellInfo(models.Model):
     cell_id = models.PositiveBigIntegerField(
         db_index=True,
         verbose_name='Cell ID',
+    )
+    event_datetime = models.DateTimeField(
+        db_index=True,
+        default=timezone.now,
+        verbose_name='Время регистрации',
     )
     mcc_mnc = models.CharField(
         max_length=MAX_MCC_MNC_LEN,
@@ -219,6 +217,15 @@ class CellInfo(models.Model):
             'радиосигнала в сетях 2G'
         ),
     )
+    c1 = models.SmallIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='C1',
+        help_text=(
+            'C1 (Cell selection criterion) - критерий «пригодности» сигнала '
+            'для работы в сетях 2G'
+        ),
+    )
     bsic = models.PositiveSmallIntegerField(
         null=True,
         blank=True,
@@ -228,30 +235,23 @@ class CellInfo(models.Model):
             'в сетях 2G'
         ),
     )
-    c1 = models.PositiveSmallIntegerField(
-        null=True,
-        blank=True,
-        verbose_name='C1',
-        help_text=(
-            'C1 (Cell selection criterion) - критерий «пригодности» сигнала '
-            'для работы в сетях 2G'
-        ),
-    )
 
     class Meta:
         verbose_name = 'данные соты'
         verbose_name_plural = 'Данные сот'
-        ordering = ['mqtt', '-rsrp', '-rscp', '-rssi', 'id']
+        ordering = [
+            '-event_datetime', 'device', '-rsrp', '-rscp', '-rssi', 'id'
+        ]
         indexes = [
-            models.Index(fields=['mqtt', 'cell_id']),
+            models.Index(fields=['device', 'cell_id']),
             models.Index(fields=['network_type', 'rsrp']),
             models.Index(fields=['network_type', 'rscp']),
             models.Index(fields=['network_type', 'rssi']),
         ]
         constraints = [
             models.UniqueConstraint(
-                fields=['mqtt', 'cell_id'],
-                name='unique_mqtt_cell'
+                fields=['device', 'cell_id', 'event_datetime'],
+                name='unique_device_cell'
             ),
         ]
 
@@ -260,27 +260,43 @@ class CellInfo(models.Model):
         return f'Сота {self.cell_id} ({self.network_type}): {sig} dBm'
 
 
-class AvailableOperator(models.Model):
-    mqtt = models.ForeignKey(
-        MQTT,
-        on_delete=models.CASCADE,
-        related_name='operators',
-        verbose_name='Устройства'
-    )
-
-    index = models.PositiveIntegerField(
-        verbose_name='Индекс в списке',
-    )
-    operator_code = models.CharField(
+class Operator(models.Model):
+    code = models.CharField(
         max_length=MAX_OPERATOR_CODE_LEN,
-        db_index=True,
+        unique=True,
         verbose_name='Код оператора (MNC+MCC)',
     )
-    operator_name = models.CharField(
+    name = models.CharField(
         max_length=MAX_OPERATOR_NAME_LEN,
         null=True,
         blank=True,
-        verbose_name='Имя оператора'
+        verbose_name='Имя оператора',
+    )
+
+    class Meta:
+        verbose_name = 'оператор связи'
+        verbose_name_plural = 'Операторы связи'
+        ordering = ('name', 'id')
+
+    def __str__(self):
+        return f'{self.code} ({self.name or "N/A"})'
+
+
+class DeviceOperator(models.Model):
+    device = models.ForeignKey(
+        Device,
+        on_delete=models.CASCADE,
+        related_name='operators',
+        verbose_name='Устройство'
+    )
+    operator = models.ForeignKey(
+        Operator,
+        on_delete=models.CASCADE,
+        related_name='seen_by_devices',
+        verbose_name='Оператор',
+    )
+    index = models.PositiveIntegerField(
+        verbose_name='Индекс в списке',
     )
     status = models.PositiveSmallIntegerField(
         choices=OperatorStatus.choices,
@@ -288,16 +304,25 @@ class AvailableOperator(models.Model):
         blank=True,
         verbose_name='Статус',
     )
+    last_seen = models.DateTimeField(
+        db_index=True,
+        default=timezone.now,
+        verbose_name='Видел последний раз',
+    )
 
     class Meta:
-        verbose_name = 'оператор соты'
-        verbose_name_plural = 'Операторы сот'
-        unique_together = ['mqtt', 'operator_code']
-        ordering = ['index']
+        verbose_name = 'видимый оператор'
+        verbose_name_plural = 'Видимые операторы'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['device', 'operator',],
+                name='unique_device_operator_pair'
+            ),
+        ]
+        ordering = ('-last_seen', 'id')
 
     def __str__(self):
         status_label = self.get_status_display() if self.status else 'Unknown'
         return (
-            f'{self.operator_code} ({self.operator_name or "N/A"}): '
-            f'{status_label}'
+            f'{self.device} - {self.operator}: {status_label}'
         )

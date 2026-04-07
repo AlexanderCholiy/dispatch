@@ -1,5 +1,5 @@
 import base64
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timezone
 from typing import Any, Optional
 
 from pydantic import (
@@ -164,7 +164,9 @@ class ModemData(BaseModel):
             h, m, s = map(int, time_val.split(':'))
             parsed_date = date(year, month, day)
             parsed_time = time(h, m, s)
-            self.event_datetime = datetime.combine(parsed_date, parsed_time)
+            self.event_datetime = datetime.combine(
+                parsed_date, parsed_time, timezone.utc
+            )
         except (ValueError, IndexError) as e:
             raise ValueError(f'Ошибка формата даты/времени: {e}') from e
 
