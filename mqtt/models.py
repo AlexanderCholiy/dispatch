@@ -14,14 +14,6 @@ class NetworkType(models.TextChoices):
     GSM = ('2G', 'GSM (2G)')
     UMTS = ('3G', 'UMTS (3G)')
     LTE = ('4G', 'LTE (4G)')
-    NR = ('5G', 'NR (5G)')
-
-
-class OperatorStatus(models.IntegerChoices):
-    FORBIDDEN = (0, 'Forbidden (Запрещена)')
-    CURRENT = (1, 'Current (Выбрана)')
-    AVAILABLE = (2, 'Available (Доступна)')
-    HOME = (3, 'Home (Домашняя)')
 
 
 class Device(models.Model):
@@ -100,46 +92,32 @@ class Operator(models.Model):
         return f'{self.code} ({self.name or "N/A"})'
 
 
-class CellInfo(models.Model):
-    device = models.ForeignKey(
-        Device,
-        on_delete=models.CASCADE,
-        related_name='cells',
-        verbose_name='Устройство',
+class Cell(models.Model):
+    cell_id = models.PositiveBigIntegerField(
+        db_index=True,
+        verbose_name='Cell ID',
     )
     operator = models.ForeignKey(
         Operator,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='operator',
+        related_name='cells',
         verbose_name='Оператор',
     )
-    index = models.PositiveSmallIntegerField(
-        verbose_name='Индекс соты в списке',
-    )
-    cell_id = models.PositiveBigIntegerField(
-        db_index=True,
-        verbose_name='Cell ID',
-    )
-    event_datetime = models.DateTimeField(
-        db_index=True,
-        default=timezone.now,
-        verbose_name='Время регистрации',
-    )
-    network_type = models.CharField(
+    rat = models.CharField(
         max_length=MAX_NETWORK_TYPE_LEN,
         choices=NetworkType.choices,
-        null=True,
-        blank=True,
         verbose_name='Тип сети',
     )
-
-    # Общие параметры
     freq = models.PositiveIntegerField(
         null=True,
         blank=True,
-        verbose_name='Частота',
+        verbose_name='Номер частотного канала',
+        help_text=(
+            'Arfcn or Uarfcn or Earfcn - Абсолютный номер частотного канала '
+            'в зависимости от типа сети'
+        ),
     )
     tac = models.PositiveIntegerField(
         null=True,
@@ -159,6 +137,94 @@ class CellInfo(models.Model):
             'в сотовой связи 2G и 3G'
         ),
     )
+    pci = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='PCI',
+        help_text=(
+            'PCI (Physical Cell ID) — идентификатор базовой станции в сетях '
+            '4G'
+        ),
+    )
+    psc = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='PSC',
+        help_text=(
+            'PSC (Primary Scrambling Code) - идентификатор базовой станции '
+            'в сетях 3G'
+        ),
+    )
+    bsic = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='BSIC',
+        help_text=(
+            'BSIC (Base station ID code) - идентификатор базовой станции '
+            'в сетях 2G'
+        ),
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата создания',
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Дата обновления',
+    )
+
+    class Meta:
+        verbose_name = 'сота'
+        verbose_name_plural = 'Соты'
+        ordering = ['-cell_id', 'operator']
+        indexes = [
+            models.Index(
+                fields=['cell_id', 'operator'],
+                name='idx_operator_cell_id',
+            ),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['operator', 'cell_id'],
+                name='unique_cell'
+            ),
+        ]
+
+    def __str__(self):
+        return f'Сота {self.cell_id} ({self.rat})'
+
+
+class CellMeasure(models.Model):
+    cell = models.ForeignKey(
+        Cell,
+        on_delete=models.CASCADE,
+        related_name='measurements',
+        verbose_name='Сота',
+    )
+    device = models.ForeignKey(
+        Device,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='measurements',
+        verbose_name='Устройство',
+    )
+    index = models.PositiveSmallIntegerField(
+        verbose_name='Индекс соты в списке',
+    )
+    cba = models.BooleanField(
+        null=True,
+        blank=True,
+        verbose_name='Запрет доступа к соте',
+        help_text=(
+            'Cell Bar indicator (TRUE=доступ запрещен, FALSE=доступ разрешен)'
+        )
+    )
+    event_datetime = models.DateTimeField(
+        db_index=True,
+        default=timezone.now,
+        verbose_name='Время регистрации',
+    )
 
     # LTE (4G)
     rsrp = models.SmallIntegerField(
@@ -172,27 +238,9 @@ class CellInfo(models.Model):
     rsrq = models.SmallIntegerField(
         null=True,
         blank=True,
-        verbose_name="RSRQ (dB)",
+        verbose_name='RSRQ (dB)',
         help_text=(
             'RSRQ (Reference Signal Received Quality) - качество сигнала 4G',
-        ),
-    )
-    pci = models.PositiveSmallIntegerField(
-        null=True,
-        blank=True,
-        verbose_name='PCI',
-        help_text=(
-            'PCI (Physical Cell ID) — идентификатор базовой станции в сетях '
-            '4G'
-        ),
-    )
-    earfcn = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        verbose_name='EARFCN',
-        help_text=(
-            'EARFCN (E-UTRA Absolute Radio Frequency Channel Number) - '
-            'уникальный номер частоты для 4G'
         ),
     )
 
@@ -210,15 +258,6 @@ class CellInfo(models.Model):
         help_text=(
             'Ec/No (Ratio of energy per modulating bit to the noise spectral '
             'density) - качество сигнала 3G'
-        ),
-    )
-    psc = models.PositiveSmallIntegerField(
-        null=True,
-        blank=True,
-        verbose_name='PSC',
-        help_text=(
-            'PSC (Primary Scrambling Code) - идентификатор базовой станции '
-            'в сетях 3G'
         ),
     )
 
@@ -249,86 +288,40 @@ class CellInfo(models.Model):
             'для работы в сетях 2G'
         ),
     )
-    bsic = models.PositiveSmallIntegerField(
-        null=True,
-        blank=True,
-        verbose_name='BSIC',
-        help_text=(
-            'BSIC (Base station ID code) - идентификатор базовой станции '
-            'в сетях 2G'
-        ),
-    )
 
     class Meta:
-        verbose_name = 'данные соты'
-        verbose_name_plural = 'Данные сот'
+        verbose_name = 'показание соты'
+        verbose_name_plural = 'Показания сот'
         ordering = [
-            '-event_datetime', 'device', '-rsrp', '-rscp', '-rssi', 'id'
+            '-event_datetime',
+            'cell',
+            'device',
+            '-rsrp',
+            '-rscp',
+            '-rssi',
+            'id',
         ]
         indexes = [
             models.Index(
                 fields=['device', '-event_datetime'],
                 name='idx_device_event_desc',
             ),
-
             models.Index(
-                fields=['device', 'cell_id'],
+                fields=['cell', '-event_datetime'],
+                name='idx_cell_event_desc',
+            ),
+            models.Index(
+                fields=['device', 'cell'],
                 name='idx_device_cell',
             ),
         ]
         constraints = [
             models.UniqueConstraint(
-                fields=['device', 'cell_id', 'event_datetime'],
+                fields=['device', 'cell', 'event_datetime'],
                 name='unique_device_cell'
             ),
         ]
 
     def __str__(self):
         sig = self.rsrp or self.rscp or self.rssi or self.rxlev or 'NaN'
-        return f'Сота {self.cell_id} ({self.network_type}): {sig} dBm'
-
-
-class DeviceOperator(models.Model):
-    device = models.ForeignKey(
-        Device,
-        on_delete=models.CASCADE,
-        related_name='operators',
-        verbose_name='Устройство'
-    )
-    operator = models.ForeignKey(
-        Operator,
-        on_delete=models.CASCADE,
-        related_name='seen_by_devices',
-        verbose_name='Оператор',
-    )
-    index = models.PositiveIntegerField(
-        verbose_name='Индекс в списке',
-    )
-    status = models.PositiveSmallIntegerField(
-        choices=OperatorStatus.choices,
-        null=True,
-        blank=True,
-        verbose_name='Статус',
-    )
-    last_seen = models.DateTimeField(
-        db_index=True,
-        default=timezone.now,
-        verbose_name='Видел последний раз',
-    )
-
-    class Meta:
-        verbose_name = 'видимый оператор'
-        verbose_name_plural = 'Видимые операторы'
-        constraints = [
-            models.UniqueConstraint(
-                fields=['device', 'operator',],
-                name='unique_device_operator_pair'
-            ),
-        ]
-        ordering = ('-last_seen', 'id')
-
-    def __str__(self):
-        status_label = self.get_status_display() if self.status else 'Unknown'
-        return (
-            f'{self.device} - {self.operator}: {status_label}'
-        )
+        return f'{self.event_datetime.strftime("%Y-%m-%d %H:%M")}: {sig} dBm'

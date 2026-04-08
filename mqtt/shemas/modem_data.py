@@ -11,8 +11,9 @@ from pydantic import (
 )
 
 from mqtt.services.parse_aops import ParseAops
+from mqtt.services.parse_my_cell_info import ParseMyCellInfo
 from mqtt.services.parse_gps_coordinate import parse_gps_coordinate
-from mqtt.shemas.aops import AopsData
+from mqtt.shemas.aops import CellMeasure
 
 
 class GpsRawData(BaseModel):
@@ -33,6 +34,9 @@ class ModemData(BaseModel):
     """Данные модема для валидации и нормализации информации из MongoDB."""
 
     model_config = ConfigDict(extra='ignore', populate_by_name=True)
+    _skip_manual_validation_fields: tuple[str] = (
+        'gps', 'aops', 'my_cell_info'
+    )
 
     # Основная информация об устройстве:
     macaddress: str = Field(..., description='MAC-адрес контроллера')
@@ -93,10 +97,16 @@ class ModemData(BaseModel):
     cnetci_raw: Optional[str] = Field(
         None, alias='cnetci', description='Инфо ячейки CNETCI'
     )
+    my_cell_info_row: Optional[str] = Field(
+        None, alias='mycellinfo', description='Сырые данные CellInfo'
+    )
+    my_cell_info: Optional[list[CellMeasure]] = Field(
+        None, description='Структурированные данные AOPS'
+    )
     aops_raw: Optional[str] = Field(
         None, alias='aops', description='Сырые данные AOPS'
     )
-    aops: Optional[AopsData] = Field(
+    aops: Optional[list[CellMeasure]] = Field(
         None, description='Структурированные данные AOPS'
     )
 
@@ -142,11 +152,9 @@ class ModemData(BaseModel):
         except Exception:
             return None
 
-    @field_validator('gps', 'aops', mode='before')
+    @field_validator(*_skip_manual_validation_fields, mode='before')
     @classmethod
     def skip_manual_fields_validation(cls, value: Any):
-        if isinstance(value, (GpsData, AopsData)):
-            return value
         return None
 
     @model_validator(mode='after')
@@ -189,7 +197,7 @@ class ModemData(BaseModel):
         b64_fields = (
             'ati_raw', 'cpsi_raw', 'creg_raw', 'cgmr_raw', 'cimi_raw',
             'csq_raw', 'cops_raw', 'cnsmod_raw', 'cpol_raw', 'cnetci_raw',
-            'aops_raw',
+            'aops_raw', 'my_cell_info_row',
         )
 
         for field_name in b64_fields:
@@ -198,5 +206,8 @@ class ModemData(BaseModel):
             setattr(self, field_name, decoded_text)
 
         self.aops = ParseAops(self.aops_raw).parse_aops_string()
+        self.my_cell_info = (
+            ParseMyCellInfo(self.my_cell_info_row).parse_my_cell_info_string()
+        )
 
         return self

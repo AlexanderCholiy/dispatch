@@ -1,8 +1,9 @@
 import re
-from typing import Optional
+from typing import Any, Optional
 
 from core.loggers import mqtt_logger
-from mqtt.shemas.aops import AopsData, CellInfo, OperatorEntry
+from mqtt.constants import ERR_PARSER_MSG_LIMIT
+from mqtt.shemas.aops import Cell, CellBar, CellMeasure, NetType, Operator
 
 
 class ParseAops:
@@ -10,29 +11,23 @@ class ParseAops:
     def __init__(self, aops_raw: Optional[str]):
         self.aops_raw = aops_raw
 
-    def parse_aops_string(self) -> Optional[AopsData]:
-        if not self.aops_raw or self._is_service_message():
+    def parse_aops_string(self) -> Optional[list[CellMeasure]]:
+        if not self.aops_raw:
             return None
 
-        result = AopsData()
         found_anything = False
 
-        # Сначала более специфичные, потом общие:
-        strategies = [
-            self._parse_aops_v1,
-            self._parse_aops_v2,
-        ]
+        strategies = [self._parse_aops_v1,]
 
         for strategy in strategies:
-            try:
-                cells, ops = strategy()
+            result = None
 
-                if cells:
-                    result.cells.extend(cells)
+            try:
+                result = strategy()
+
+                if result:
                     found_anything = True
-                if ops:
-                    result.operators.extend(ops)
-                    found_anything = True
+                    break
 
             except KeyboardInterrupt:
                 raise
@@ -43,247 +38,168 @@ class ParseAops:
                 )
                 continue
 
-        if not found_anything:
+        if not found_anything and not self._is_service_message():
             mqtt_logger.error(
                 f'Не удалось распарсить данные ни одной стратегией. '
-                f'Сырые данные (первые 300 символов):\n{self.aops_raw[:300]}'
+                f'Сырые данные (первые {ERR_PARSER_MSG_LIMIT} символов):\n'
+                f'{self.aops_raw[:ERR_PARSER_MSG_LIMIT]}'
             )
             return None
 
         return result
 
-    def _parse_aops_v1(self) -> tuple[list[CellInfo], list[OperatorEntry]]:
-        cells = []
-        ops = []
+    def _parse_aops_v1(self) -> list[CellMeasure]:
+        cells: list[CellMeasure] = []
 
-        pattern_cell = re.compile(
-            r'''
-            (?:\+EIntraINFO:\s*)?  # Опциональный префикс +EIntraINFO
-            |                      # Или просто ищем структуру полей
-            (?=.*MCC-MNC.*cellid)  # Проверка наличия ключевых слов
-            # Основная группа захвата, которая должна сработать для строки
-            (?:^|\n)               # Начало строки или перенос
-            .*?                    # Любые символы до начала нужных полей
-            MCC-MNC:\s*([^,\n]+?)  # Группа 1: MCC-MNC
-            ,\s*TAC:\s*(\d+),      # Группа 2: TAC
-            ,\s*cellid:\s*(\d+),   # Группа 3: CellID
-            ,\s*rsrp:\s*(-?\d+),   # Группа 4: RSRP
-            ,\s*rsrq:\s*(-?\d+),   # Группа 5: RSRQ
-            ,\s*euArfcn:\s*(\d+)   # Группа 6: euArfcn
-            ''',
-            re.VERBOSE | re.IGNORECASE
+        header_pattern = re.compile(
+            r'^\+AOPS:"(?P<operator_name>[^"]*)",'
+            r'"(?P<operator_st_name>[^"]*)",'
+            r'"(?P<operator_code>[^"]*)"$'
         )
 
-        lines = self.aops_raw.split('\n')
+        measure_pattern = re.compile(
+            r'^'
+            r'(?P<index>\d+),'
+            r'"(?P<rat>[^"]*)",'
+            r'(?:Freq:(?P<freq>\d+),)?'
+            r'(?P<signal_key>\w+):(?P<signal_val>-?\d+),'
+            r'.*?'
+            r'cellBar:(?P<cell_bar>\d+)'
+            r'$'
+        )
+
+        kv_pattern = re.compile(r'(\w+):(-?\d+)')
+
+        lines = self.aops_raw.splitlines()
+        current_operator: Optional[Operator] = None
+
         for line in lines:
             line = line.strip()
             if not line:
                 continue
 
-            if 'cellid:' not in line or 'MCC-MNC:' not in line:
-                continue
-
-            match = re.search(
-                r'MCC-MNC:\s*([^,\n]+?),\s*TAC:\s*(\d+),\s*cellid:\s*(\d+),\s*rsrp:\s*(-?\d+),\s*rsrq:\s*(-?\d+),\s*euArfcn:\s*(\d+)',
-                line,
-                re.IGNORECASE
-            )
-
-            if match:
-                try:
-                    index = 0
-                    prefix_match = re.match(r'(?:\+?EIntraINFO|NFO):\s*(\d+)', line)
-                    if prefix_match:
-                        index = int(prefix_match.group(1))
-                    
-                    cells.append(CellInfo(
-                        index=index,
-                        mcc_mnc=match.group(1).strip(),
-                        tac=int(match.group(2)),
-                        cellid=int(match.group(3)),
-                        rsrp=int(match.group(4)),
-                        rsrq=int(match.group(5)),
-                        earfcn=int(match.group(6)),
-                        net_type='4G'
-                    ))
-                except ValueError as e:
-                    mqtt_logger.warning(
-                        f'Ошибка валидации CellInfo: {e}. '
-                        'Сырые данные (первые 300 символов):\n'
-                        f'{self.aops_raw[:300]}'
-                    )
-                    continue
-
-        pattern_op = re.compile(
-            r'''
-            \+CPOL:           # Поиск префикса команды AT+CPOL
-            \s* (\d+),        # Группа 1: Индекс оператора в списке
-            \s* (\d+),        # Группа 2: Статус (0-дл, 1-кр, 2-цифра)
-            \s* ["\']?        # Опциональная открывающая кавычка
-            ([^",\'\n]+)      # Группа 3: Оператор
-            ["\']?            # Опциональная закрывающая кавычка
-            ''',
-            re.VERBOSE
-        )
-        for match in pattern_op.finditer(self.aops_raw):
-            try:
-                ops.append(OperatorEntry(
-                    index=int(match.group(1)),
-                    status=int(match.group(2)),
-                    operator_code=match.group(3).strip()
-                ))
-            except ValueError as e:
-                mqtt_logger.warning(
-                    f'Ошибка валидации OperatorEntry: {e}. '
-                    'Сырые данные (первые 300 символов):\n'
-                    f'{self.aops_raw[:300]}'
+            header_match = header_pattern.match(line)
+            if header_match:
+                data = header_match.groupdict()
+                current_operator = Operator(
+                    operator_code=data['operator_code'],
+                    operator_name=data['operator_name'],
+                    operator_st_name=data['operator_st_name']
                 )
                 continue
 
-        return cells, ops
+            if not current_operator:
+                continue
 
-    def _parse_aops_v2(self) -> tuple[list[CellInfo], list[OperatorEntry]]:
-        cells = []
-        ops = []
+            measure_match = measure_pattern.match(line)
+            if measure_match:
+                m_data = measure_match.groupdict()
 
-        header_pattern = re.compile(
-            r'''
-            \+AOPS:\s*          # Префикс
-            ["\']([^"\']+)["\'] # Группа 1: Имя оператора (первое поле)
-            ,\s*
-            ["\']([^"\']+)["\'] # Группа 2: Второе поле (часто дублирует имя)
-            ,\s*
-            ["\']([^"\']+)["\'] # Группа 3: Код оператора (третье поле)
-            ''',
-            re.VERBOSE | re.IGNORECASE
-        )
+                try:
+                    index = m_data['index']
+                    rat_str = m_data['rat']
+                    freq = m_data['freq']
+                    cell_bar_int = int(m_data['cell_bar'])
+                    rat = NetType(rat_str)
 
-        headers = list(header_pattern.finditer(self.aops_raw))
+                    all_kvs = dict(kv_pattern.findall(line))
 
-        if not headers:
-            return [], []
+                    cell_kwargs: dict[str, Any] = {}
+                    measure_kwargs: dict[str, Any] = {}
 
-        for i, header_match in enumerate(headers):
-            op_name = header_match.group(1)
-            op_code = header_match.group(3)
+                    cell_id = all_kvs['CellID']
 
-            ops.append(OperatorEntry(
-                index=i + 1,
-                status=None,
-                operator_code=op_code,
-                operator_name=op_name
-            ))
+                    cell_kwargs['cellid'] = cell_id
+                    cell_kwargs['operator'] = current_operator
+                    cell_kwargs['rat'] = rat
+                    cell_kwargs['freq'] = freq
 
-            start_pos = header_match.end()
-            end_pos = (
-                headers[i + 1].start()
-                if i + 1 < len(headers)
-                else len(self.aops_raw)
-            )
-            block_text = self.aops_raw[start_pos:end_pos]
+                    cell_kwargs['lac'] = all_kvs.get('LAC')
+                    cell_kwargs['bsic'] = all_kvs.get('bsic')
 
-            # Строка вида: 1,"2G",Freq:70,RSSI:-72,bsic:14,LAC:27077...
-            line_pattern = re.compile(
-                r'''
-                ^\s* (\d+) \s* ,      # Группа 1: Индекс
-                \s* " ([^"]+) " \s* , # Группа 2: Тип сети
-                \s* (.*)              # Группа 3: Параметры (до конца)
-                ''',
-                re.MULTILINE | re.VERBOSE
-            )
+                    measure_kwargs['rssi'] = all_kvs.get('RSSI')
+                    measure_kwargs['rxlev'] = all_kvs.get('rxLev')
+                    measure_kwargs['c1'] = all_kvs.get('c1')
 
-            for line_match in line_pattern.finditer(block_text):
-                idx = int(line_match.group(1))
-                net_type = line_match.group(2).upper()
-                params_str = line_match.group(3)
+                    cell_kwargs['lac'] = all_kvs.get('LAC')
+                    cell_kwargs['psc'] = all_kvs.get('PSC')
 
-                param_map = {}
-                for k, v in re.findall(r'(\w+):\s*(-?\d+)', params_str):
-                    param_map[k.lower()] = int(v)
+                    measure_kwargs['rscp'] = all_kvs.get('RSCP')
+                    measure_kwargs['ecno'] = all_kvs.get('ecno')
 
-                # Конструируем объект CellInfo динамически
-                cell_obj = CellInfo(index=idx, net_type=net_type)
+                    cell_kwargs['tac'] = all_kvs.get('TAC')
+                    cell_kwargs['pci'] = all_kvs.get('PCI')
 
-                # Заполняем общие поля
-                if 'cellid' in param_map:
-                    cell_obj.cellid = param_map['cellid']
-                if 'freq' in param_map:
-                    cell_obj.freq = param_map['freq']
+                    measure_kwargs['rsrp'] = all_kvs.get('RSRP')
+                    measure_kwargs['rsrq'] = all_kvs.get('RSRQ')
 
-                # Специфичные поля по типу сети
-                if net_type == '4G':
-                    if 'rsrp' in param_map:
-                        cell_obj.rsrp = param_map['rsrp']
-                    if 'rsrq' in param_map:
-                        cell_obj.rsrq = param_map['rsrq']
-                    if 'pci' in param_map:
-                        cell_obj.pci = param_map['pci']
-                    if 'tac' in param_map:
-                        cell_obj.tac = param_map['tac']
-                    if 'earfcn' in param_map:
-                        cell_obj.earfcn = param_map['earfcn']
-                elif net_type == '3G':
-                    if 'rscp' in param_map:
-                        cell_obj.rscp = param_map['rscp']
-                    if 'ecno' in param_map:
-                        cell_obj.ecno = param_map['ecno']
-                    if 'psc' in param_map:
-                        cell_obj.psc = param_map['psc']
-                    if 'lac' in param_map:
-                        cell_obj.lac = param_map['lac']  # LAC для 3G
-                elif net_type == '2G':
-                    if 'rssi' in param_map:
-                        cell_obj.rssi = param_map['rssi']
-                    if 'bsic' in param_map:
-                        cell_obj.bsic = param_map['bsic']
-                    if 'lac' in param_map:
-                        cell_obj.lac = param_map['lac']  # LAC для 2G
-                    if 'rxlev' in param_map:
-                        cell_obj.rxlev = param_map['rxlev']
-                    if 'c1' in param_map:
-                        cell_obj.c1 = param_map['c1']
+                    measure_kwargs['cba'] = CellBar(cell_bar_int)
 
-                if any(
-                    v is not None
-                    for v in [cell_obj.rsrp, cell_obj.rscp, cell_obj.rssi]
-                ):
-                    cells.append(cell_obj)
+                    cell_obj = Cell(**cell_kwargs)
+                    measure_obj = CellMeasure(
+                        cell=cell_obj,
+                        index=index,
+                        **measure_kwargs
+                    )
 
-        return cells, ops
+                    cells.append(measure_obj)
+
+                except (ValueError, KeyError) as e:
+                    mqtt_logger.warning(
+                        f'Не удалось распарсить данные: {e}.\n'
+                        'Сырые данные '
+                        f'(первые {ERR_PARSER_MSG_LIMIT} символов):\n'
+                        f'{self.aops_raw[:ERR_PARSER_MSG_LIMIT]}'
+                    )
+                    continue
+
+        return cells
 
     def _is_service_message(self) -> bool:
-        """Проверяет, является ли текст служебным мусором (ошибка + статус)"""
+        """Проверяет является ли ответ служебным выводом ошибки."""
+        is_err_start = self.aops_raw.startswith('ERROR')
 
-        if not self.aops_raw:
+        if self.aops_raw == 'ERROR':
             return True
 
-        lines = [
-            line.strip() for line in self.aops_raw.split('\n') if line.strip()
-        ]
-        if not lines:
+        if is_err_start and 'DISCONNECTED' in self.aops_raw:
             return True
 
-        aops_keywords = ['+AOPS', '+EIntraINFO', '+CPOL']
-        has_aops_data = any(
-            any(kw in line for kw in aops_keywords) for line in lines
-        )
-        if has_aops_data:
-            return False
+        if (
+            is_err_start
+            and '+EIntraINFO' in self.aops_raw
+            and self.aops_raw.endswith('OK')
+        ):
+            pattern_aops = re.compile(
+                r'^(?:NFO:|\+EIntraINFO:|\+CPOL:)',
+                re.MULTILINE | re.IGNORECASE
+            )
+            if pattern_aops.search(self.aops_raw):
+                return True
 
-        status_pattern = re.compile(
-            r'^\+(C(R|G)?REG|COPS|CGATT|CSQ|CNSMOD)(.*)$'
-            r'|^OK$|^ERROR$'
-            r'|^[^+].*,.*$',
-            re.IGNORECASE
-        )
-        first_line_is_error = lines[0] == 'ERROR'
+        lines = self.aops_raw.splitlines()
+        last_line = lines[-1]
 
-        is_all_status = all(status_pattern.match(line) for line in lines)
+        if is_err_start:
+            pattern_creg = re.compile(
+                r'^\+CREG:\s*\d+,\s*[A-Fa-f0-9]+,\s*[A-Fa-f0-9]+$'
+            )
+            if pattern_creg.match(last_line):
+                return True
 
-        if first_line_is_error and is_all_status:
-            return True
+        if is_err_start:
+            pattern_creg = re.compile(
+                r'^\+AOPS:\s*"[^"]*",\s*"[^"]*",\s*"\d+"$'
+            )
+            if pattern_creg.match(last_line):
+                return True
 
-        if self.aops_raw.strip() == 'ERROR':
-            return True
+        if is_err_start and last_line == 'K':
+            pattern_aops = re.compile(
+                r'\+AOPS:\s*"[^"]*",\s*"[^"]*",\s*"\d+"',
+                re.IGNORECASE
+            )
+            if pattern_aops.search(self.aops_raw):
+                return True
 
         return False
