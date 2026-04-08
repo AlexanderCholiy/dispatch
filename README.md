@@ -431,8 +431,14 @@ server {
 
         location / {
             proxy_set_header Host $http_host;
-            proxy_pass http://127.0.0.1:8000;
+            proxy_pass http://<ваш_ip_адрес>:8000;
+  
+            # WebSocket:
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
         }
+
 }
 ```
 2. Проверьте и примените конфигурацию:
