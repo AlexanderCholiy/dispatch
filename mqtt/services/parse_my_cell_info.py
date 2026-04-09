@@ -40,7 +40,8 @@ class ParseMyCellInfo:
 
         if not found_anything and not self._is_service_message():
             mqtt_logger.error(
-                f'Не удалось распарсить данные ни одной стратегией. '
+                'Не удалось распарсить данные ни одной стратегией. '
+                f'в {self.__class__.__name__}. '
                 f'Сырые данные (первые {ERR_PARSER_MSG_LIMIT} символов):\n'
                 f'{self.my_cell_info_row[:ERR_PARSER_MSG_LIMIT]}'
             )

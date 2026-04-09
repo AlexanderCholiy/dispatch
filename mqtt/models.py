@@ -99,9 +99,7 @@ class Cell(models.Model):
     )
     operator = models.ForeignKey(
         Operator,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        on_delete=models.CASCADE,
         related_name='cells',
         verbose_name='Оператор',
     )
