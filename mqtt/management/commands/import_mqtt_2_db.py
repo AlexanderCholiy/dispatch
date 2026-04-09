@@ -1,5 +1,6 @@
 from typing import Optional
 from bson.objectid import ObjectId
+from django.db.models import Q
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from pydantic import ValidationError
@@ -36,11 +37,14 @@ class Command(BaseCommand):
     _operators_to_create: dict[str, Operator] = {}
 
     # Ключ для сот: (operator_code, cell_id) -> объект Cell
-    _cells_id_operator_in_db: set[tuple[str, int]] = set(
+    _cells_key_in_db: set[tuple[str, int]] = set(
         Cell.objects.values_list('operator__code', 'cell_id')
     )
     _cells_to_create: dict[tuple[str, int], Cell] = {}
     _cells_to_update: dict[tuple[str, int], Cell] = {}
+    _operators_in_db: dict[str, Operator] = {
+        op.code: op for op in Operator.objects.all()
+    }
 
     _measures_to_create = []
 
@@ -101,12 +105,16 @@ class Command(BaseCommand):
                         self._processed_count += 1
                         self._add_device_2_butch(validated_model)
                         self._add_operator_2_butch(validated_model)
+                        self._add_cell_2_butch(validated_model)
 
                 # Добавляем / обновляем хвосты:
                 self._devices_butch_create(create_anyway=True)
                 self._devices_butch_update(update_anyway=True)
 
                 self._operators_butch_create(create_anyway=True)
+
+                self._cells_butch_create(create_anyway=True)
+                self._cells_butch_update(update_anyway=True)
 
                 mqtt_logger.info(
                     'Импорт завершен. '
@@ -220,12 +228,13 @@ class Command(BaseCommand):
                 else:
                     Device.objects.get_or_create(
                         mac_address=temp_device.mac_address,
-                        gps_lat=temp_device.gps_lat,
-                        gps_lon=temp_device.gps_lon,
-                        sys_version=temp_device.sys_version,
-                        app_version=temp_device.app_version,
-                        last_seen=temp_device.last_seen,
-
+                        defaults={
+                            'gps_lat': temp_device.gps_lat,
+                            'gps_lon': temp_device.gps_lon,
+                            'sys_version': temp_device.sys_version,
+                            'app_version': temp_device.app_version,
+                            'last_seen': temp_device.last_seen,
+                        }
                     )
 
             if batch:
@@ -284,3 +293,153 @@ class Command(BaseCommand):
 
             self._created_operators += len(batch)
             self._operators_to_create.clear()
+
+    def _add_cell_2_butch(self, validated_model: ModemData):
+        if not validated_model.aops:
+            return
+
+        for aop in validated_model.aops:
+            operator = aop.cell.operator
+            cell = aop.cell
+
+            cell_key = (operator.operator_code, cell.cellid)
+            is_in_db = cell_key in self._cells_key_in_db
+
+            operator_db = self._operators_in_db.get(operator.operator_code)
+
+            if not operator_db:
+                try:
+                    operator_db = Operator.objects.get(
+                        code=operator.operator_code
+                    )
+                    self._operators_in_db[operator.operator_code] = operator_db
+                except Operator.DoesNotExist:
+                    name = operator.operator_name or operator.operator_st_name
+                    operator_db, _ = Operator.objects.get_or_create(
+                        code=operator.operator_code,
+                        defaults={'name': name}
+                    )
+                    self._operators_in_db[operator_db.code] = operator_db
+                    self._operators_code_in_db.add(operator_db.code)
+                    self._operators_to_create.pop(operator_db.code, None)
+
+            cell_db = Cell(
+                cell_id=cell.cellid,
+                operator=operator_db,
+                rat=cell.rat,
+                freq=cell.freq,
+                tac=cell.tac,
+                lac=cell.lac,
+                pci=cell.pci,
+                psc=cell.psc,
+                bsic=cell.bsic,
+            )
+
+            if is_in_db:
+                self._cells_to_update[cell_key] = cell_db
+                self._cells_butch_update()
+            else:
+                self._cells_to_create[cell_key] = cell_db
+                self._cells_butch_create()
+
+    def _cells_butch_create(self, create_anyway: bool = False):
+        if not self._cells_to_create:
+            return
+
+        if len(self._cells_to_create) >= MQTT_DB_BATCH_SIZE or create_anyway:
+            batch = list(self._cells_to_create.values())
+            Cell.objects.bulk_create(batch, ignore_conflicts=not DEBUG_MODE)
+
+            new_keys = [(c.operator.code, c.cell_id) for c in batch]
+            self._cells_key_in_db.update(new_keys)
+
+            self._created_cells += len(batch)
+            self._cells_to_create.clear()
+
+    def _cells_butch_update(self, update_anyway: bool = False):
+        if not self._cells_to_update:
+            return
+
+        if len(self._cells_to_update) >= MQTT_DB_BATCH_SIZE or update_anyway:
+            cells_to_update = list(self._cells_to_update.keys())
+
+            conditions = []
+            for op_code, cell_id in cells_to_update:
+                conditions.append(
+                    Q(operator__code=op_code) & Q(cell_id=cell_id)
+                )
+
+            combined_q = conditions[0]
+            for condition in conditions[1:]:
+                combined_q |= condition
+
+            db_cells_qs = (
+                Cell.objects.filter(combined_q).select_related('operator')
+            )
+
+            db_cells_map = {
+                (c.operator.code, c.cell_id): c for c in db_cells_qs
+            }
+
+            batch = []
+            for cell_key, temp_cell in self._cells_to_update.items():
+                if cell_key in db_cells_map:
+                    cell_obj = db_cells_map[cell_key]
+                    cell_obj.operator = temp_cell.operator
+                    cell_obj.rat = temp_cell.rat
+                    cell_obj.freq = temp_cell.freq
+                    cell_obj.tac = temp_cell.tac
+                    cell_obj.lac = temp_cell.lac
+                    cell_obj.pci = temp_cell.pci
+                    cell_obj.psc = temp_cell.psc
+                    cell_obj.bsic = temp_cell.bsic
+                    batch.append(cell_obj)
+                else:
+                    op_code = temp_cell.operator.code
+                    operator_db = self._operators_in_db.get(op_code)
+                    if not operator_db:
+                        try:
+                            operator_db = Operator.objects.get(code=op_code)
+                            self._operators_in_db[op_code] = operator_db
+                        except Operator.DoesNotExist:
+                            name = temp_cell.operator.name
+                            operator_db, _ = Operator.objects.get_or_create(
+                                code=op_code, defaults={'name': name}
+                            )
+                            self._operators_in_db[op_code] = operator_db
+                            self._operators_code_in_db.add(op_code)
+                            self._operators_to_create.pop(
+                                operator_db.code, None
+                            )
+
+                    Cell.objects.get_or_create(
+                        cell_id=temp_cell.cell_id,
+                        operator=temp_cell.operator,
+                        defaults={
+                            'rat': temp_cell.rat,
+                            'freq': temp_cell.freq,
+                            'tac': temp_cell.tac,
+                            'lac': temp_cell.lac,
+                            'pci': temp_cell.pci,
+                            'psc': temp_cell.psc,
+                            'bsic': temp_cell.bsic,
+                        }
+                    )
+
+            if batch:
+                Cell.objects.bulk_update(
+                    batch,
+                    fields=[
+                        'operator',
+                        'rat',
+                        'freq',
+                        'tac',
+                        'lac',
+                        'pci',
+                        'psc',
+                        'bsic',
+                    ],
+                )
+
+            self._updated_cells += len(batch)
+            self._cells_to_update.clear()
