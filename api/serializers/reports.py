@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from api.constants import API_DATE_FORMAT, PERCENT_ACCURACY
 from api.utils import conversion_utc_datetime
+from core.utils import timedelta_to_human_time
 from incidents.constants import POWER_ISSUE_TYPES
 from incidents.models import Incident
 from ts.models import Region
@@ -56,6 +57,11 @@ class IncidentReportSerializer(serializers.ModelSerializer):
     categories = serializers.SerializerMethodField()
     macroregion = serializers.SerializerMethodField()
 
+    responsible_user_id = serializers.IntegerField()
+    responsible_user_name = serializers.SerializerMethodField()
+    is_sla_dispatch_expired = serializers.SerializerMethodField()
+    dispatch_sla_duration = serializers.SerializerMethodField()
+
     class Meta:
         model = Incident
         fields = (
@@ -94,6 +100,11 @@ class IncidentReportSerializer(serializers.ModelSerializer):
             'macroregion',
             'base_station',
             'operator_group',
+
+            'responsible_user_id',
+            'responsible_user_name',
+            'is_sla_dispatch_expired',
+            'dispatch_sla_duration',
         )
 
     def get_last_status(self, obj: Incident):
@@ -203,6 +214,18 @@ class IncidentReportSerializer(serializers.ModelSerializer):
         ):
             return None
         return obj.pole.region.macroregion.name
+
+    def get_responsible_user_name(self, obj: Incident):
+        return str(obj.responsible_user) if obj.responsible_user else None
+
+    def get_dispatch_sla_duration(self, obj: Incident):
+        return (
+            timedelta_to_human_time(obj.dispatch_duration)
+            if obj.dispatch_duration else None
+        )
+
+    def get_is_sla_dispatch_expired(self, obj: Incident):
+        return not obj.dispatch_sla_ok if obj.dispatch_sla_ok else None
 
 
 class StatisticReportSerializer(serializers.ModelSerializer):

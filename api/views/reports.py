@@ -139,6 +139,11 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
     - base_station: Базовая станция.
     - operator_group: Группа операторов базовой станции.
 
+    - responsible_user_id: Идентификатор ответственного пользователя.
+    - responsible_user_name: Имя ответственного пользователя в системе.
+    - is_sla_dispatch_expired: Просрочен ли SLA диспетчера.
+    - dispatch_sla_duration: Текущая длительность обработки заявки по SLA
+
     ДОСТУПНЫЕ ЭНДПОИНТЫ:
 
     1) Пагинированный список инцидентов:
@@ -182,6 +187,7 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
             to_attr='prefetched_statuses'
         ),
     )
+    queryset = annotate_sla_dispatch(queryset)
 
     serializer_class = IncidentReportSerializer
     permission_classes = (permissions.AllowAny,)

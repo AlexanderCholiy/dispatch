@@ -37,6 +37,7 @@ def get_cached_base_stations_all():
         cache.set(
             'autocomplete_all_base_stations', bs_list, BASE_STATION_CACHE_TTL
         )
+
     return bs_list
 
 
@@ -122,6 +123,7 @@ class BaseStationAutocomplete(autocomplete.Select2QuerySetView):
                 if len(results) >= BASE_STATIONS_PER_PAGE:
                     break
                 i += 1
+
             return results
 
         return candidates[:BASE_STATIONS_PER_PAGE]
