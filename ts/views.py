@@ -85,6 +85,15 @@ class PoleAutocomplete(autocomplete.Select2QuerySetView):
                 if len(results) >= POLES_PER_PAGE:
                     break
                 i += 1
+
+            # Если кэш устарел:
+            if not results:
+                results = list(
+                    Pole.objects
+                    .filter(pole__istartswith=q)
+                    [:POLES_PER_PAGE]
+                )
+
             return results
 
         return list(qs[:POLES_PER_PAGE])
@@ -123,6 +132,24 @@ class BaseStationAutocomplete(autocomplete.Select2QuerySetView):
                 if len(results) >= BASE_STATIONS_PER_PAGE:
                     break
                 i += 1
+
+            # Если кэш устарел:
+            if not results:
+                if pole_id:
+                    results = list(
+                        BaseStation.objects
+                        .filter(
+                            bs_name__istartswith=q,
+                            pole__pole__istartswith=pole_id,
+                        )
+                        [:BASE_STATIONS_PER_PAGE]
+                    )
+                else:
+                    results = list(
+                        BaseStation.objects
+                        .filter(bs_name__istartswith=q)
+                        [:BASE_STATIONS_PER_PAGE]
+                    )
 
             return results
 
