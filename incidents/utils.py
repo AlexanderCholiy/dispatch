@@ -43,6 +43,7 @@ from .constants import (
     IN_WORK_STATUS_DESC,
     IN_WORK_STATUS_NAME,
     INCIDENT_CODE_PREFIX,
+    INCIDENT_YT_CODE_PREFIX,
     NOTIFIED_CONTRACTOR_STATUS_DESC,
     NOTIFIED_CONTRACTOR_STATUS_NAME,
     NOTIFIED_OP_END_STATUS_DESC,
@@ -184,11 +185,15 @@ class IncidentManager(IncidentValidator):
     def find_default_code_number_in_text(text: str) -> Optional[str]:
         """Ищет первое вхождение: префикс кода, дефис и цифры"""
         match = re.search(rf'{INCIDENT_CODE_PREFIX}-\d+', text)
+        if match:
+            return match.group(0) if match else None
+
+        match = re.search(rf'{INCIDENT_YT_CODE_PREFIX}-\d+', text)
         return match.group(0) if match else None
 
     @staticmethod
     def get_incident_by_code_in_subject(
-        email_msg: EmailMessage, yt_manager: YandexTrackerManager
+        email_msg: EmailMessage, yt_manager: Optional[YandexTrackerManager]
     ) -> Optional[Incident]:
         """
         Получаем локальный Incident по письму.
@@ -205,7 +210,7 @@ class IncidentManager(IncidentValidator):
 
         yt_incident_key = yt_manager.find_yt_number_in_text(
             email_msg.email_subject
-        )
+        ) if yt_manager else None
         default_incident_key = (
             IncidentManager.find_default_code_number_in_text(
                 email_msg.email_subject
@@ -227,6 +232,9 @@ class IncidentManager(IncidentValidator):
                 return incident
             except Incident.DoesNotExist:
                 pass
+
+        if not yt_manager:
+            return
 
         # Ключ в YT уникален:
         issues = yt_manager.select_issue(key=yt_incident_key)
@@ -291,7 +299,7 @@ class IncidentManager(IncidentValidator):
             active_users_with_incidents = active_users_with_incidents.filter(
                 incident_count__lt=max_incident_num_per_user)
 
-        if yt_manager is not None:
+        if yt_manager:
             active_users_with_incidents = active_users_with_incidents.filter(
                 username__in=set(yt_manager.real_users_in_yt_tracker.keys())
             )
@@ -627,7 +635,7 @@ class IncidentManager(IncidentValidator):
         thread_incidents = list({i.pk: i for i in thread_incidents}.values())
 
         # 1. Если инцидентов несколько — приоритет по теме письма:
-        if len(thread_incidents) > 1 and yt_manager:
+        if len(thread_incidents) > 1:
             actual_email_incident = self.get_incident_by_code_in_subject(
                 email_msg, yt_manager
             )
@@ -671,7 +679,7 @@ class IncidentManager(IncidentValidator):
                 email_msg.save()
 
         # 5. Резервный поиск по коду инцидента в теме письма:
-        if not actual_email_incident and yt_manager:
+        if not actual_email_incident:
             actual_email_incident = self.get_incident_by_code_in_subject(
                 email_msg, yt_manager
             )

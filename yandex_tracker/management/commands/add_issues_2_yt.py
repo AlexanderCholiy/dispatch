@@ -19,6 +19,10 @@ class Command(BaseCommand):
     min_seconds = 5
 
     def handle(self, *args, **kwargs):
+        if not yt_manager:
+            yt_logger.warning('YandexTrackerManager отсутсвует')
+            return
+
         while True:
 
             try:

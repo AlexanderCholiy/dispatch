@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
 
+from core.loggers import yt_logger
 from yandex_tracker.utils import yt_manager
 
 
@@ -7,6 +8,10 @@ class Command(BaseCommand):
     help = 'Обновление видимости кастомных полей в YandexTracker.'
 
     def handle(self, *args, **kwargs):
+        if not yt_manager:
+            yt_logger.warning('YandexTrackerManager отсутсвует')
+            return
+
         yt_manager.update_custom_field(
             field_id=yt_manager.database_global_field_id,
             name_en='Local ID',

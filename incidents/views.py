@@ -729,7 +729,7 @@ def confirm_move_emails(request: HttpRequest) -> HttpResponse:
         )
 
         try:
-            if source_incident.is_yt_tracker_controlled:
+            if source_incident.is_yt_tracker_controlled and yt_manager:
                 yt_comments = yt_manager.select_issue_comments(
                     source_incident.code
                 )

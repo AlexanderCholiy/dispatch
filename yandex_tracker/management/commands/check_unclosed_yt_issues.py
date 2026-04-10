@@ -78,6 +78,10 @@ class Command(BaseCommand):
     _devices_by_pole_last_update = 0
 
     def handle(self, *args, **kwargs):
+        if not yt_manager:
+            yt_logger.warning('YandexTrackerManager отсутсвует')
+            return
+
         duplicate_issues = set()
 
         while True:

@@ -38,6 +38,10 @@ class Command(BaseCommand):
     min_wait = 30
 
     def handle(self, *args, **kwargs):
+        if not yt_manager:
+            yt_logger.warning('YandexTrackerManager отсутсвует')
+            return
+
         duplicate_issues = set()
 
         while True:
