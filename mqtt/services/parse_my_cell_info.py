@@ -1,9 +1,9 @@
 import re
-
 from typing import Optional
-from mqtt.shemas.aops import CellMeasure, Operator, Cell, NetType
+
 from core.loggers import mqtt_logger
 from mqtt.constants import ERR_PARSER_MSG_LIMIT
+from mqtt.shemas.aops import Cell, CellMeasure, NetType, Operator
 
 
 class ParseMyCellInfo:

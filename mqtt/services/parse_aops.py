@@ -163,7 +163,16 @@ class ParseAops:
         if self.aops_raw == 'ERROR':
             return True
 
-        if is_err_start and 'DISCONNECTED' in self.aops_raw:
+        if is_err_start and any(
+            word in self.aops_raw for word in [
+                'DISCONNECTED',
+                'SMan"go',
+                'Manufacturer:',
+                'Model:',
+                'Revision:',
+                'KIL',
+            ]
+        ):
             return True
 
         if (

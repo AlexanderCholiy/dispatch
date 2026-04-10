@@ -11,8 +11,8 @@ from pydantic import (
 )
 
 from mqtt.services.parse_aops import ParseAops
-from mqtt.services.parse_my_cell_info import ParseMyCellInfo
 from mqtt.services.parse_gps_coordinate import parse_gps_coordinate
+from mqtt.services.parse_my_cell_info import ParseMyCellInfo
 from mqtt.shemas.aops import CellMeasure
 
 

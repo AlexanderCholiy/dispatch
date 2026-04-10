@@ -201,9 +201,7 @@ class CellMeasure(models.Model):
     )
     device = models.ForeignKey(
         Device,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        on_delete=models.CASCADE,
         related_name='measurements',
         verbose_name='Устройство',
     )

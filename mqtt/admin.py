@@ -1,13 +1,15 @@
 from django.contrib import admin
 from django.urls import reverse
 from django.utils.html import format_html
-from .models import Device, Operator, Cell, CellMeasure
+
 from mqtt.constants import (
+    CELL_MEASSURE_PER_PAGE,
+    CELL_PER_PAGE,
     DEVICE_PER_PAGE,
     OPERATOR_PER_PAGE,
-    CELL_PER_PAGE,
-    CELL_MESSURE_PER_PAGE,
 )
+
+from .models import Cell, CellMeasure, Device, Operator
 
 
 @admin.register(Device)
@@ -50,6 +52,10 @@ class OperatorAdmin(admin.ModelAdmin):
     search_fields = ('code', 'name')
     ordering = ('name', 'id')
     list_per_page = OPERATOR_PER_PAGE
+
+    def has_delete_permission(self, request, obj=None):
+        """Запрещает удаление операторов, операция может быть тяжелой."""
+        return False
 
 
 @admin.register(Cell)
@@ -129,7 +135,7 @@ class CellMeasureAdmin(admin.ModelAdmin):
     list_filter = ('cell__rat', 'cell__operator__name')
     search_fields = ('device__mac_address', 'cell__cell_id')
     date_hierarchy = 'event_datetime'
-    list_per_page = CELL_MESSURE_PER_PAGE
+    list_per_page = CELL_MEASSURE_PER_PAGE
 
     autocomplete_fields = ('device', 'cell')
 

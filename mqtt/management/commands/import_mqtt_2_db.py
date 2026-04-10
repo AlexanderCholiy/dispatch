@@ -1,11 +1,14 @@
-from typing import Optional
+from datetime import datetime
+from typing import Optional, TypedDict
+
 from bson.objectid import ObjectId
-from django.db.models import Q
 from django.core.management.base import BaseCommand
+from django.db.models import Q
 from django.utils import timezone
 from pydantic import ValidationError
 from pymongo import MongoClient, errors
 from tqdm import tqdm
+
 from core.constants import DEBUG_MODE
 from core.loggers import mqtt_logger
 from core.wraps import timer
@@ -18,8 +21,15 @@ from mqtt.constants import (
     MQTT_MONGO_DB_NAME,
     MQTT_MONGO_DB_URL,
 )
-from mqtt.models import Device, Operator, Cell, CellMeasure
+from mqtt.models import Cell, CellMeasure, Device, Operator
+from mqtt.shemas.modem_data import CellMeasure as CellMeasurePD
 from mqtt.shemas.modem_data import ModemData
+
+
+class CellMeasureValue(TypedDict):
+    data: CellMeasurePD
+    device: Device
+    cell: Cell
 
 
 class Command(BaseCommand):
@@ -31,11 +41,6 @@ class Command(BaseCommand):
     _devices_to_create: dict[str, Device] = {}
     _devices_to_update: dict[str, Device] = {}
 
-    _operators_code_in_db: set[str] = set(
-        Operator.objects.values_list('code', flat=True)
-    )
-    _operators_to_create: dict[str, Operator] = {}
-
     # Ключ для сот: (operator_code, cell_id) -> объект Cell
     _cells_key_in_db: set[tuple[str, int]] = set(
         Cell.objects.values_list('operator__code', 'cell_id')
@@ -46,7 +51,8 @@ class Command(BaseCommand):
         op.code: op for op in Operator.objects.all()
     }
 
-    _measures_to_create = []
+    # Ключ: (mac_address, cell_key, measure_data_dict)
+    _raw_measures: list[tuple[str, tuple[str, int], CellMeasurePD]] = []
 
     _processed_count = 0
     _error_cnt = 0
@@ -90,7 +96,7 @@ class Command(BaseCommand):
                 with tqdm(
                     cursor,
                     total=total_docs,
-                    desc='Обработка и подготовка',
+                    desc='Добавление (обновление) Device, Operator, Cell',
                     colour='green',
                     position=0,
                     leave=True,
@@ -104,29 +110,28 @@ class Command(BaseCommand):
 
                         self._processed_count += 1
                         self._add_device_2_butch(validated_model)
-                        self._add_operator_2_butch(validated_model)
                         self._add_cell_2_butch(validated_model)
 
                 # Добавляем / обновляем хвосты:
                 self._devices_butch_create(create_anyway=True)
                 self._devices_butch_update(update_anyway=True)
 
-                self._operators_butch_create(create_anyway=True)
-
                 self._cells_butch_create(create_anyway=True)
                 self._cells_butch_update(update_anyway=True)
 
+                # Сохраняем измерения после того как Devices и Cells сохранены:
+                self._cells_measures_save()
+
                 mqtt_logger.info(
-                    'Импорт завершен. '
-                    f'Обработано: {self._processed_count}.\n'
+                    f'Обработано: {self._processed_count}. '
+                    f'Ошибок: {self._error_cnt}\n'
                     f'Создано: Devices={self._created_devices}, '
                     f'Operators={self._created_operators}, '
                     f'Cells={self._created_cells}, '
                     f'Measures={self._created_measures}.\n'
                     f'Обновлено: Devices={self._updated_devices}, '
                     f'Cells={self._updated_cells}, '
-                    f'Measures={self._updated_measures}.\n'
-                    f'Ошибок: {self._error_cnt}'
+                    f'Measures={self._updated_measures}.'
                 )
 
         except errors.ServerSelectionTimeoutError:
@@ -217,15 +222,23 @@ class Command(BaseCommand):
 
             batch = []
             for mac, temp_device in self._devices_to_update.items():
-                if mac in db_devices_map:
-                    device_obj = db_devices_map[mac]
+                device_obj = db_devices_map.get(mac)
+                has_changes = (
+                    device_obj.gps_lat != temp_device.gps_lat
+                    or device_obj.gps_lon != temp_device.gps_lon
+                    or device_obj.sys_version != temp_device.sys_version
+                    or device_obj.app_version != temp_device.app_version
+                    or device_obj.last_seen != temp_device.last_seen
+                ) if device_obj else True
+
+                if device_obj and has_changes:
                     device_obj.gps_lat = temp_device.gps_lat
                     device_obj.gps_lon = temp_device.gps_lon
                     device_obj.sys_version = temp_device.sys_version
                     device_obj.app_version = temp_device.app_version
                     device_obj.last_seen = temp_device.last_seen
                     batch.append(device_obj)
-                else:
+                elif not device_obj:
                     Device.objects.get_or_create(
                         mac_address=temp_device.mac_address,
                         defaults={
@@ -252,48 +265,6 @@ class Command(BaseCommand):
             self._updated_devices += len(batch)
             self._devices_to_update.clear()
 
-    def _add_operator_2_butch(self, validated_model: ModemData):
-        if not validated_model.aops:
-            return
-
-        for aop in validated_model.aops:
-            operator_name = (
-                aop.cell.operator.operator_name
-                or aop.cell.operator.operator_st_name
-            )
-            code = aop.cell.operator.operator_code
-
-            operator = Operator(
-                code=code,
-                name=operator_name,
-
-            )
-
-            is_in_db = code in self._operators_code_in_db
-
-            if not is_in_db:
-                self._operators_to_create[code] = operator
-                self._operators_butch_create()
-
-    def _operators_butch_create(self, create_anyway: bool = False):
-        if not self._operators_to_create:
-            return
-
-        if (
-            len(self._operators_to_create) >= MQTT_DB_BATCH_SIZE
-            or create_anyway
-        ):
-            batch = list(self._operators_to_create.values())
-            Operator.objects.bulk_create(
-                batch, ignore_conflicts=not DEBUG_MODE
-            )
-
-            new_codes = [d.code for d in batch]
-            self._operators_code_in_db.update(new_codes)
-
-            self._created_operators += len(batch)
-            self._operators_to_create.clear()
-
     def _add_cell_2_butch(self, validated_model: ModemData):
         if not validated_model.aops:
             return
@@ -306,22 +277,21 @@ class Command(BaseCommand):
             is_in_db = cell_key in self._cells_key_in_db
 
             operator_db = self._operators_in_db.get(operator.operator_code)
+            op_name = operator.operator_name or operator.operator_st_name
 
             if not operator_db:
-                try:
-                    operator_db = Operator.objects.get(
-                        code=operator.operator_code
-                    )
-                    self._operators_in_db[operator.operator_code] = operator_db
-                except Operator.DoesNotExist:
-                    name = operator.operator_name or operator.operator_st_name
-                    operator_db, _ = Operator.objects.get_or_create(
-                        code=operator.operator_code,
-                        defaults={'name': name}
-                    )
+                operator_db, op_creat = Operator.objects.get_or_create(
+                    code=operator.operator_code,
+                    defaults={'name': op_name}
+                )
+                self._operators_in_db[operator_db.code] = operator_db
+                if op_creat:
+                    self._created_operators += 1
+            else:
+                if not operator_db.name and op_name:
+                    operator_db.name = op_name
+                    operator_db.save(update_fields=['name'])
                     self._operators_in_db[operator_db.code] = operator_db
-                    self._operators_code_in_db.add(operator_db.code)
-                    self._operators_to_create.pop(operator_db.code, None)
 
             cell_db = Cell(
                 cell_id=cell.cellid,
@@ -341,6 +311,10 @@ class Command(BaseCommand):
             else:
                 self._cells_to_create[cell_key] = cell_db
                 self._cells_butch_create()
+
+            self._raw_measures.append(
+                (validated_model.macaddress, cell_key, aop)
+            )
 
     def _cells_butch_create(self, create_anyway: bool = False):
         if not self._cells_to_create:
@@ -383,9 +357,20 @@ class Command(BaseCommand):
 
             batch = []
             for cell_key, temp_cell in self._cells_to_update.items():
-                if cell_key in db_cells_map:
-                    cell_obj = db_cells_map[cell_key]
-                    cell_obj.operator = temp_cell.operator
+                cell_obj = db_cells_map.get(cell_key)
+                has_changes = (
+                    cell_obj.operator != temp_cell.operator
+                    or cell_obj.rat != temp_cell.rat
+                    or cell_obj.freq != temp_cell.freq
+                    or cell_obj.tac != temp_cell.tac
+                    or cell_obj.lac != temp_cell.lac
+                    or cell_obj.pci != temp_cell.pci
+                    or cell_obj.psc != temp_cell.psc
+                    or cell_obj.bsic != temp_cell.bsic
+                ) if cell_obj else True
+
+                if cell_obj and has_changes:
+                    cell_obj.operator = temp_cell.operator  # Оператор уже в БД
                     cell_obj.rat = temp_cell.rat
                     cell_obj.freq = temp_cell.freq
                     cell_obj.tac = temp_cell.tac
@@ -394,23 +379,22 @@ class Command(BaseCommand):
                     cell_obj.psc = temp_cell.psc
                     cell_obj.bsic = temp_cell.bsic
                     batch.append(cell_obj)
-                else:
+                elif not cell_obj:
                     op_code = temp_cell.operator.code
                     operator_db = self._operators_in_db.get(op_code)
+                    op_name = temp_cell.operator.name
                     if not operator_db:
-                        try:
-                            operator_db = Operator.objects.get(code=op_code)
+                        operator_db, op_creat = Operator.objects.get_or_create(
+                            code=op_code, defaults={'name': op_name}
+                        )
+                        self._operators_in_db[op_code] = operator_db
+                        if op_creat:
+                            self._created_operators += 1
+                    else:
+                        if not operator_db.name and op_name:
+                            operator_db.name = op_name
+                            operator_db.save(update_fields=['name'])
                             self._operators_in_db[op_code] = operator_db
-                        except Operator.DoesNotExist:
-                            name = temp_cell.operator.name
-                            operator_db, _ = Operator.objects.get_or_create(
-                                code=op_code, defaults={'name': name}
-                            )
-                            self._operators_in_db[op_code] = operator_db
-                            self._operators_code_in_db.add(op_code)
-                            self._operators_to_create.pop(
-                                operator_db.code, None
-                            )
 
                     Cell.objects.get_or_create(
                         cell_id=temp_cell.cell_id,
@@ -443,3 +427,244 @@ class Command(BaseCommand):
 
             self._updated_cells += len(batch)
             self._cells_to_update.clear()
+
+    def _cells_measures_save(self):
+        if not self._raw_measures:
+            return
+
+        needed_macs = set()
+        needed_cell_keys = set()
+        for mac, cell_key, _ in self._raw_measures:
+            needed_macs.add(mac)
+            needed_cell_keys.add(cell_key)
+
+        total_unique_macs = len(needed_macs)
+        total_unique_cells = len(needed_cell_keys)
+        total_raw_records = len(self._raw_measures)
+        total_search_keys = 0
+
+        devices_map: dict[str, Device] = {}
+        mac_list = list(needed_macs)
+
+        with tqdm(
+            total=total_unique_macs,
+            desc='Загрузка Device из БД',
+            colour='cyan',
+            position=0,
+            leave=True,
+            disable=not DEBUG_MODE,
+        ) as pbar:
+            for i in range(0, len(mac_list), MQTT_DB_BATCH_SIZE):
+                batch = mac_list[i:i + MQTT_DB_BATCH_SIZE]
+                chunk_qs = Device.objects.filter(mac_address__in=batch)
+                count_loaded = 0
+                for d in chunk_qs:
+                    devices_map[d.mac_address] = d
+                    count_loaded += 1
+
+                pbar.update(count_loaded)
+
+        cells_map: dict[tuple[str, int], Cell] = {}
+        cell_key_list = list(needed_cell_keys)
+
+        with tqdm(
+            total=total_unique_cells,
+            desc='Загрузка Cell из БД',
+            colour='cyan',
+            position=0,
+            leave=True,
+            disable=not DEBUG_MODE,
+        ) as pbar:
+            for i in range(0, len(cell_key_list), MQTT_DB_BATCH_SIZE):
+                chunk_keys = cell_key_list[i:i + MQTT_DB_BATCH_SIZE]
+                combined_q_chunk = Q()
+                for op_code, cell_id in chunk_keys:
+                    combined_q_chunk |= Q(
+                        operator__code=op_code, cell_id=cell_id
+                    )
+
+                chunk_qs = (
+                    Cell.objects.filter(combined_q_chunk)
+                    .select_related('operator')
+                )
+                count_loaded = 0
+                for c in chunk_qs:
+                    cells_map[(c.operator.code, c.cell_id)] = c
+                    count_loaded += 1
+
+                pbar.update(count_loaded)
+
+        temp_data_map: dict[tuple[int, int, datetime], CellMeasureValue] = {}
+
+        with tqdm(
+            total=total_raw_records,
+            desc='Формирование маппинга CellMeasure',
+            colour='blue',
+            position=0,
+            leave=True,
+            disable=not DEBUG_MODE,
+        ) as pbar:
+            for mac, cell_key, data in self._raw_measures:
+                device_obj = devices_map.get(mac)
+                cell_obj = cells_map.get(cell_key)
+
+                if not device_obj or not cell_obj:
+                    missing = []
+                    if not device_obj:
+                        missing.append(f'Device (mac={mac})')
+                    if not cell_obj:
+                        op_code, cell_id = cell_key
+                        missing.append(f'Cell (id={cell_id}, op={op_code})')
+                    mqtt_logger.warning(
+                        f'Данные по {", ".join(missing)} не найдены.'
+                    )
+                    pbar.update(1)
+                    continue
+
+                measure_key = (
+                    device_obj.pk, cell_obj.pk, device_obj.last_seen
+                )
+                temp_data_map[measure_key] = {
+                    'data': data,
+                    'device': device_obj,
+                    'cell': cell_obj,
+                }
+                pbar.update(1)
+
+        keys_to_process = list(temp_data_map.keys())
+        total_search_keys = len(keys_to_process)
+        found_measures: list[CellMeasure] = []
+
+        with tqdm(
+            total=total_search_keys,
+            desc='Поиск существующих CellMeasure в БД',
+            colour='blue',
+            position=0,
+            leave=True,
+            disable=not DEBUG_MODE,
+        ) as pbar:
+            for i in range(0, len(keys_to_process), MQTT_DB_BATCH_SIZE):
+                chunk_keys = keys_to_process[i:i + MQTT_DB_BATCH_SIZE]
+                q_list = [
+                    Q(device_id=k[0], cell_id=k[1], event_datetime=k[2])
+                    for k in chunk_keys
+                ]
+                combined_q_chunk = q_list[0]
+                for q in q_list[1:]:
+                    combined_q_chunk |= q
+
+                qs = CellMeasure.objects.filter(combined_q_chunk)
+                count_found = 0
+                for m in qs:
+                    found_measures.append(m)
+                    count_found += 1
+
+                pbar.update(count_found)
+
+        existing_measures_map: dict[
+            tuple[int, int, datetime], CellMeasure
+        ] = {}
+        with tqdm(
+            total=len(found_measures),
+            desc='Формирование кэша существующих CellMeasure',
+            colour='blue',
+            position=0,
+            leave=True,
+            disable=not DEBUG_MODE,
+        ) as pbar:
+            for m in found_measures:
+                key = (m.device_id, m.cell_id, m.event_datetime)
+                existing_measures_map[key] = m
+                pbar.update(1)
+
+        to_create: list[CellMeasure] = []
+        to_update: list[CellMeasure] = []
+
+        with tqdm(
+            total=len(temp_data_map),
+            desc='Распределение CellMeasure: CREATE vs UPDATE',
+            colour='red',
+            position=0,
+            leave=True,
+            disable=not DEBUG_MODE,
+        ) as pbar:
+            for key, item in temp_data_map.items():
+                data = item['data']
+                device_obj = item['device']
+                cell_obj = item['cell']
+                existing_obj = existing_measures_map.get(key)
+
+                has_changes = (
+                    existing_obj.device != device_obj
+                    or existing_obj.cell != cell_obj
+                    or existing_obj.index != data.index
+                    or existing_obj.cba != data.cba
+                    or existing_obj.event_datetime != device_obj.last_seen
+                    or existing_obj.rsrp != data.rsrp
+                    or existing_obj.rsrq != data.rsrq
+                    or existing_obj.rscp != data.rscp
+                    or existing_obj.ecno != data.ecno
+                    or existing_obj.rssi != data.rssi
+                    or existing_obj.rxlev != data.rxlev
+                    or existing_obj.c1 != data.c1
+                ) if existing_obj else True
+
+                if existing_obj and has_changes:
+                    to_update.append(existing_obj)
+                elif not existing_obj:
+                    new_measure = CellMeasure(
+                        device=device_obj,
+                        cell=cell_obj,
+                        index=data.index,
+                        cba=data.cba,
+                        event_datetime=device_obj.last_seen,
+                        rsrp=data.rsrp,
+                        rsrq=data.rsrq,
+                        rscp=data.rscp,
+                        ecno=data.ecno,
+                        rssi=data.rssi,
+                        rxlev=data.rxlev,
+                        c1=data.c1,
+                    )
+                    to_create.append(new_measure)
+
+                pbar.update(1)
+
+        with tqdm(
+            total=len(to_update),
+            desc='Сохранение обновлений (CellMeasure)',
+            colour='green',
+            position=0,
+            leave=True,
+            disable=not DEBUG_MODE,
+        ) as pbar:
+            for i in range(0, len(to_update), MQTT_DB_BATCH_SIZE):
+                batch = to_update[i:i + MQTT_DB_BATCH_SIZE]
+                if batch:
+                    CellMeasure.objects.bulk_update(
+                        batch,
+                        fields=[
+                            'index', 'cba', 'rsrp',
+                            'rsrq', 'rscp', 'ecno',
+                            'rssi', 'rxlev', 'c1',
+                        ]
+                    )
+                    self._updated_measures += len(batch)
+                pbar.update(len(batch))
+
+        with tqdm(
+            total=len(to_create),
+            desc='Сохранение новых записей (CellMeasure)',
+            colour='green',
+            position=0,
+            leave=True,
+            disable=not DEBUG_MODE,
+        ) as pbar:
+            for i in range(0, len(to_create), MQTT_DB_BATCH_SIZE):
+                batch = to_create[i:i + MQTT_DB_BATCH_SIZE]
+                if batch:
+                    CellMeasure.objects.bulk_create(
+                        batch, ignore_conflicts=not DEBUG_MODE
+                    )
+                    self._created_measures += len(batch)
+                pbar.update(len(batch))
