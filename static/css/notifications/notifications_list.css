@@ -63,7 +63,7 @@
   line-height: 1.55;
   color: var(--add-color);
 
-  white-space: normal;
+  white-space: pre-wrap;
   overflow-wrap: break-word;
   word-break: break-word;
 
@@ -80,7 +80,6 @@
 .card-grid .notification-message p {
   margin: 0;
   hyphens: auto;
-  text-indent: 1em;
   word-break: break-word;
   overflow-wrap: break-word;
 }
