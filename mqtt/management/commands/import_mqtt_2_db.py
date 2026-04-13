@@ -105,7 +105,9 @@ class Command(BaseCommand):
 
                     for doc in progress_cursor:
                         validated_model = self._process_document(doc)
-                        if not validated_model:
+
+                        # Устройства только с доп. данными по сотам:
+                        if not validated_model or not validated_model.aops:
                             continue
 
                         self._processed_count += 1

@@ -25,9 +25,10 @@ class DeviceAdmin(admin.ModelAdmin):
     list_filter = ('sys_version', 'app_version')
     search_fields = ('mac_address',)
     readonly_fields = (
-        'created_at', 'updated_at', 'last_seen', 'gps_lat', 'gps_lon'
+        'created_at', 'updated_at', 'last_seen', 'gps_lat', 'gps_lon', 'pole'
     )
     ordering = ('-created_at', 'id')
+    autocomplete_fields = ('pole',)
     list_per_page = DEVICE_PER_PAGE
 
     fieldsets = (
@@ -35,7 +36,7 @@ class DeviceAdmin(admin.ModelAdmin):
             'fields': ('mac_address', 'sys_version', 'app_version')
         }),
         ('Геолокация', {
-            'fields': ('gps_lat', 'gps_lon'),
+            'fields': ('pole', 'gps_lat', 'gps_lon'),
             'classes': ('collapse',)
         }),
         ('Мета', {

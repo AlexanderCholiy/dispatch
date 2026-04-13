@@ -8,6 +8,7 @@ from mqtt.constants import (
     MAX_OPERATOR_CODE_LEN,
     MAX_OPERATOR_NAME_LEN,
 )
+from ts.models import Pole
 
 
 class NetworkType(models.TextChoices):
@@ -56,6 +57,14 @@ class Device(models.Model):
     updated_at = models.DateTimeField(
         auto_now=True,
         verbose_name='Дата обновления',
+    )
+    pole = models.ForeignKey(
+        Pole,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Опора',
+        related_name='devices'
     )
 
     class Meta:

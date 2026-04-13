@@ -1,6 +1,7 @@
 from django.db import models
 
 from core.models_readonly import ReadOnlyModel
+from monitoring.constants import MAX_MODEM_IP_LEN
 
 
 class DeviceType(models.IntegerChoices):
@@ -118,7 +119,7 @@ class MSysModem(ReadOnlyModel):
         'IP адрес сим карты',
         primary_key=True,
         db_column='ModemID',
-        max_length=40,
+        max_length=MAX_MODEM_IP_LEN,
     )
     level = models.IntegerField(
         'Тип устройства',
