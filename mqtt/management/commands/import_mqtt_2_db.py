@@ -83,6 +83,7 @@ class Command(BaseCommand):
                 query = {
                     '_id': {'$gte': ObjectId('69c600000000000000000000')},
                     'data.modem.macaddress': {'$nin': [None, '', 'undefined']},
+                    # 'data.modem.macaddress': '00:85:01:01:3e:90',
                     'data.modem.date': {'$gte': date_filter_str}
                 }
 
