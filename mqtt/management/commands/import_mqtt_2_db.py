@@ -152,6 +152,9 @@ class Command(BaseCommand):
             if not isinstance(modem_raw, dict):
                 return None
             return ModemData.model_validate(modem_raw)
+        except KeyboardInterrupt:
+            mqtt_logger.warning('Процесс прерван.')
+            raise
         except ValidationError as e:
             self._log_error(e)
             return None

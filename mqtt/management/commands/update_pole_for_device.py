@@ -1,4 +1,5 @@
 from django.core.management.base import BaseCommand
+from django.db import DatabaseError
 from django.db.models import Max
 from tqdm import tqdm
 
@@ -21,6 +22,9 @@ class Command(BaseCommand):
     @timer(mqtt_logger)
     def handle(self, *args, **options):
         monitoring_data = self._get_monitoring_data()
+        if not monitoring_data:
+            return
+
         ts_data = self._get_ts_data()
 
         total_devices = Device.objects.all()
@@ -61,23 +65,37 @@ class Command(BaseCommand):
                 )
 
     def _get_monitoring_data(self) -> dict[str, str]:
-        qs = (
-            MSysModem.objects
-            .filter(
-                pole_1__isnull=False,
-                modem_mac__isnull=False,
+        try:
+            qs = (
+                MSysModem.objects
+                .filter(
+                    pole_1__isnull=False,
+                    modem_mac__isnull=False,
+                )
+                .exclude(
+                    pole_1__pole=UNDEFINED_CASE
+                )
+                .values('modem_mac')
+                .annotate(pole_number=Max('pole_1__pole'))
             )
-            .exclude(
-                pole_1__pole=UNDEFINED_CASE
-            )
-            .values('modem_mac')
-            .annotate(pole_number=Max('pole_1__pole'))
-        )
 
-        return {
-            item['modem_mac'].upper().strip(): item['pole_number'].strip()
-            for item in qs
-        }
+            return {
+                item['modem_mac'].upper().strip(): item['pole_number'].strip()
+                for item in qs
+            }
+        except KeyboardInterrupt:
+            mqtt_logger.warning('Процесс прерван.')
+            raise
+        except DatabaseError as e:
+            mqtt_logger.error(
+                f'Ошибка подключения к базе мониторинга (MSysModem): {e}'
+            )
+            return {}
+        except Exception as e:
+            mqtt_logger.exception(
+                f'Неожиданная ошибка при загрузке данных мониторинга: {e}'
+            )
+            raise
 
     def _get_ts_data(self) -> dict[str, Pole]:
         return {ob.pole: ob for ob in Pole.objects.all()}
