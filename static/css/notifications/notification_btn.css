@@ -13,9 +13,9 @@
 
   min-width: 16px;
   height: 16px;
-  padding: 0 var(--space-xxs);
+  padding: var(--space-xxs);
 
-  display: flex !important;
+  display: flex;
   align-items: center;
   justify-content: center;
 
@@ -28,7 +28,7 @@
   border-radius: var(--radius-xl);
 
   pointer-events: none;
-  line-height: 1.1;
+  line-height: 1.2;
 
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
