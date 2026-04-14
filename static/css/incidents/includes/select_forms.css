@@ -10,7 +10,7 @@
 }
 
 .select-wrapper.status-select::after {
-  margin-top: 0;
+  margin-top: 2px;
 }
 
 .select-wrapper.status-select.open::after {

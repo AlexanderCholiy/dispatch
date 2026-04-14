@@ -49,6 +49,9 @@ from emails.services.clean_email_subject import clean_email_subject
 from emails.services.generate_email_msg_id import generate_message_id
 from emails.services.get_previous_email_body import get_previous_email_body
 from emails.tasks import send_incident_email_task
+from incidents.services.notify_contractor_incident_closed import (
+    notify_contractor_incident_closed
+)
 from monitoring.models import DeviceStatus, DeviceType
 from monitoring.services.monitoring_equipment import (
     get_monitiring_cache_equipment,
@@ -1872,6 +1875,31 @@ def notify_incident_closed(
 
                 incident.save()
 
+                contractor_was_notified = notify_contractor_incident_closed(
+                    incident, subject
+                )
+
+            was_avr = contractor_was_notified['notify_avr']
+            was_rvr = contractor_was_notified['notify_rvr']
+            contractor_msg_id = contractor_was_notified['msg_id']
+
+            if was_avr or was_rvr:
+                contractors = []
+
+                if was_avr:
+                    contractors.append(AVR_CATEGORY)
+                if was_rvr:
+                    contractors.append(RVR_CATEGORY)
+
+                messages.success(
+                    request,
+                    (
+                        f'Письмо (ID: {contractor_msg_id}) готовится к '
+                        'отправке и скоро будет доставлено подрядчику по '
+                        f'{" и ".join(contractors)}.'
+                    )
+                )
+
             messages.success(
                 request,
                 (
@@ -1879,6 +1907,7 @@ def notify_incident_closed(
                     'скоро будет доставлено заявителю.'
                 )
             )
+
             return redirect(
                 'incidents:incident_detail', incident_id=incident.id
             )
@@ -1910,62 +1939,11 @@ def notify_incident_closed(
 
             initial_data['to'] = ', '.join(email_to)
 
-            category_names = {c.name for c in incident.categories.all()}
-
-            was_avr = True if AVR_CATEGORY in category_names else False
-            was_rvr = True if RVR_CATEGORY in category_names else False
-
-            if not was_avr:
-                was_avr = any(
-                    st.is_avr_category
-                    for st in incident.prefetched_status_history
-                )
-            if not was_rvr:
-                was_rvr = any(
-                    st.is_rvr_category
-                    for st in incident.prefetched_status_history
-                )
-
-            avr_emails = set([
-                obj.email.email
-                for obj in incident.pole.prefetched_pole_avr_emails
-            ]) if incident.pole else set()
-
-            rvr_emails = set([incident.pole.region.rvr_email.email]) if (
-                incident.pole
-                and incident.pole.region
-                and incident.pole.region.rvr_email
-            ) else set()
-
-            if not was_avr or not was_rvr:
-                all_msg_addrs = set()
-                for em in incident.all_incident_emails:
-                    to_list: list[EmailTo] = em.prefetched_to
-                    cc_list: list[EmailToCC] = em.prefetched_cc
-
-                    for addr in to_list:
-                        all_msg_addrs.add(addr.email_to)
-
-                    for addr in cc_list:
-                        all_msg_addrs.add(addr.email_to)
-
-                if avr_emails and avr_emails.intersection(all_msg_addrs):
-                    was_avr = True
-                if rvr_emails and rvr_emails.intersection(all_msg_addrs):
-                    was_rvr = True
-
             initial_data_cc = [
                 obj.email_to for obj in reply_to_email.prefetched_cc
                 if obj.email_to != email_parser.email_login
             ]
-            if was_avr:
-                for em in avr_emails:
-                    if em not in initial_data_cc:
-                        initial_data_cc.append(em)
-            if was_rvr:
-                for em in rvr_emails:
-                    if em not in initial_data_cc:
-                        initial_data_cc.append(em)
+
             initial_data['cc'] = ', '.join(initial_data_cc)
 
         incident_label = f'{incident.code} ' if incident.code else ''
