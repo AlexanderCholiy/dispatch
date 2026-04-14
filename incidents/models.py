@@ -19,6 +19,7 @@ from ts.models import AVRContractor, BaseStation, Pole
 
 from .constants import (
     AVR_CATEGORY,
+    DEFAULT_IS_YT_TRACKER_CONTROLLED,
     DGU_SLA_IN_PROGRESS_DEADLINE_IN_HOURS,
     DGU_SLA_WAITING_DEADLINE_IN_HOURS,
     INCIDENT_CODE_PREFIX,
@@ -190,7 +191,7 @@ class Incident(models.Model):
         help_text='Если True, инцидент исключается из авто-матчинга по thread'
     )
     is_yt_tracker_controlled = models.BooleanField(
-        default=False,
+        default=DEFAULT_IS_YT_TRACKER_CONTROLLED,
         verbose_name='Использовать web форму YandexTracker',
         help_text=(
             'Если True, управление этим инцидентом происходит из интерфейса '

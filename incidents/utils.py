@@ -31,6 +31,7 @@ from yandex_tracker.utils import YandexTrackerManager
 
 from .constants import (
     AVR_CATEGORY,
+    DEFAULT_IS_YT_TRACKER_CONTROLLED,
     DEFAULT_STATUS_DESC,
     DEFAULT_STATUS_NAME,
     DGU_CATEGORY,
@@ -747,7 +748,7 @@ class IncidentManager(IncidentValidator):
             if not actual_email_incident:
                 new_incident = True
 
-                is_yt_tracker_controlled = True
+                is_yt_tracker_controlled = DEFAULT_IS_YT_TRACKER_CONTROLLED
                 if (
                     email_msg.email_subject
                     and EMAIL_SUBJECT_NOT_FOR_YT_CONTROLLED in (
