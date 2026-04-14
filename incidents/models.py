@@ -190,7 +190,7 @@ class Incident(models.Model):
         help_text='Если True, инцидент исключается из авто-матчинга по thread'
     )
     is_yt_tracker_controlled = models.BooleanField(
-        default=True,
+        default=False,
         verbose_name='Использовать web форму YandexTracker',
         help_text=(
             'Если True, управление этим инцидентом происходит из интерфейса '
