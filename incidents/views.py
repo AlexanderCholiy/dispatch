@@ -1608,7 +1608,7 @@ def notify_rvr_contractor(
             and incident.pole.region
             and incident.pole.region.rvr_email
         ):
-            initial_data['to'] = incident.pole.region.rvr_email
+            initial_data['to'] = incident.pole.region.rvr_email.email
 
         text_parts = []
 
@@ -1909,12 +1909,64 @@ def notify_incident_closed(
                 email_to.append(reply_to_email.email_from)
 
             initial_data['to'] = ', '.join(email_to)
-            initial_data['cc'] = ', '.join(
-                [
-                    obj.email_to for obj in reply_to_email.prefetched_cc
-                    if obj.email_to != email_parser.email_login
-                ]
-            )
+
+            category_names = {c.name for c in incident.categories.all()}
+
+            was_avr = True if AVR_CATEGORY in category_names else False
+            was_rvr = True if RVR_CATEGORY in category_names else False
+
+            if not was_avr:
+                was_avr = any(
+                    st.is_avr_category
+                    for st in incident.prefetched_status_history
+                )
+            if not was_rvr:
+                was_rvr = any(
+                    st.is_rvr_category
+                    for st in incident.prefetched_status_history
+                )
+
+            avr_emails = set([
+                obj.email.email
+                for obj in incident.pole.prefetched_pole_avr_emails
+            ]) if incident.pole else set()
+
+            rvr_emails = set([incident.pole.region.rvr_email.email]) if (
+                incident.pole
+                and incident.pole.region
+                and incident.pole.region.rvr_email
+            ) else set()
+
+            if not was_avr or not was_rvr:
+                all_msg_addrs = set()
+                for em in incident.all_incident_emails:
+                    to_list: list[EmailTo] = em.prefetched_to
+                    cc_list: list[EmailToCC] = em.prefetched_cc
+
+                    for addr in to_list:
+                        all_msg_addrs.add(addr.email_to)
+
+                    for addr in cc_list:
+                        all_msg_addrs.add(addr.email_to)
+
+                if avr_emails and avr_emails.intersection(all_msg_addrs):
+                    was_avr = True
+                if rvr_emails and rvr_emails.intersection(all_msg_addrs):
+                    was_rvr = True
+
+            initial_data_cc = [
+                obj.email_to for obj in reply_to_email.prefetched_cc
+                if obj.email_to != email_parser.email_login
+            ]
+            if was_avr:
+                for em in avr_emails:
+                    if em not in initial_data_cc:
+                        initial_data_cc.append(em)
+            if was_rvr:
+                for em in rvr_emails:
+                    if em not in initial_data_cc:
+                        initial_data_cc.append(em)
+            initial_data['cc'] = ', '.join(initial_data_cc)
 
         incident_label = f'{incident.code} ' if incident.code else ''
 

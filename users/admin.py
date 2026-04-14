@@ -42,6 +42,7 @@ class BaseUserAdmin(UserAdmin):
         'role',
         'is_active',
         'is_staff',
+        'date_joined',
     )
     list_filter = ('role', 'is_staff', 'is_superuser', 'is_active')
     list_editable = ('role', 'is_active')
@@ -85,7 +86,7 @@ class BaseUserAdmin(UserAdmin):
     )
 
     search_fields = ('email', 'username', 'first_name', 'last_name')
-    ordering = ('email',)
+    ordering = ('-date_joined', 'email',)
     inlines = [WorkScheduleInline]
 
 
@@ -93,5 +94,5 @@ class BaseUserAdmin(UserAdmin):
 class PendingUserAdmin(admin.ModelAdmin):
     list_display = ('email', 'username', 'last_login')
     search_fields = ('email', 'username')
-    ordering = ('email',)
+    ordering = ('-last_login', 'email',)
     list_per_page = USERS_PER_PAGE
