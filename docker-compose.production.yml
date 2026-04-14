@@ -56,7 +56,9 @@ services:
       celery -A backend.celery worker --loglevel=error --logfile=/app/logs/celery/celery_worker.log -Q default,low,medium,high
     env_file: .env
     volumes:
-      - .:/app
+      - dispatch_media:/app/media
+      - ./logs:/app/logs        # bind mount для логов
+      - ./data:/app/data        # bind mount для data
     depends_on:
       - dispatch_db
       - dispatch_rabbitmq
@@ -73,7 +75,9 @@ services:
     command: celery -A backend.celery worker --loglevel=error --logfile=/app/logs/celery/celery_heavy_worker.log -Q heavy --concurrency=2
     env_file: .env
     volumes:
-      - .:/app
+      - dispatch_media:/app/media
+      - ./logs:/app/logs        # bind mount для логов
+      - ./data:/app/data        # bind mount для data
     depends_on:
       - dispatch_db
       - dispatch_rabbitmq
@@ -88,7 +92,9 @@ services:
     command: celery -A backend.celery beat --loglevel=error --logfile=/app/logs/celery/celery_beat.log
     env_file: .env
     volumes:
-      - .:/app
+      - dispatch_media:/app/media
+      - ./logs:/app/logs        # bind mount для логов
+      - ./data:/app/data        # bind mount для data
     depends_on:
       - dispatch_db
       - dispatch_rabbitmq
