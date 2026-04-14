@@ -426,8 +426,9 @@ sudo docker compose -f docker-compose.production.yml up -d
 ```
 server {
         listen 80;
-
         server_name _;
+
+        client_max_body_size 50M;
 
         location / {
             proxy_set_header Host $http_host;
@@ -437,6 +438,9 @@ server {
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection "upgrade";
+
+            proxy_read_timeout 3600s;
+            proxy_send_timeout 3600s;
         }
 
 }

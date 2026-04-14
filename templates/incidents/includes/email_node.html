@@ -50,7 +50,7 @@
       <div class="email-from">
         <strong>От:</strong> <span class="copy-text" data-text="{{ node.email.email_from }}">{{ node.email.email_from|truncatechars:32 }}</span>
       </div>
-      
+      {% if node.email.prefetched_email_to %}
       <div class="email-to">
         <strong>Кому:</strong>
         <span class="copy-text" data-text="{% for to in node.email.prefetched_email_to %}{{ to.email_to }}{% if not forloop.last %}, {% endif %}{% endfor %}">
@@ -59,12 +59,13 @@
           {% endfor %}
         </span>
       </div>
+      {% endif %}
       
-      {% if node.email.prefetched_email_to_cc %}
+      {% if node.email.prefetched_email_cc %}
         <div class="email-to-cc">
           <strong>Копия:</strong>
           <span class="copy-text" data-text="{% for cc in node.email.prefetched_email_to_cc %}{{ cc.email_to }}{% if not forloop.last %}, {% endif %}{% endfor %}">
-            {% for cc in node.email.prefetched_email_to_cc %}
+            {% for cc in node.email.prefetched_email_cc %}
               {{ cc.email_to|truncatechars:32 }}{% if not forloop.last %}, {% endif %}
             {% endfor %}
           </span>

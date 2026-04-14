@@ -3,8 +3,8 @@ import re
 MAX_EMAIL_SUBJECT_LEN = 1024
 MAX_EMAIL_LEN = 64
 
-MAX_ATTACHMENT_SIZE = 48 * 1024 * 1024  # (в YandexTracker max 50 MB)
-MAX_TOTAL_ATTACHMENTS_SIZE = 5 * MAX_ATTACHMENT_SIZE
+MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024  # (в YandexTracker max 50 MB)
+MAX_TOTAL_ATTACHMENTS_SIZE = MAX_ATTACHMENT_SIZE
 
 # Кол-во дней через которое для не актуальных инцидентов будут удалены
 # вложения:
