@@ -30,7 +30,7 @@ from .models import (
 
 @login_required
 @role_required([Roles.ENERGY])
-@ratelimit(key='user_or_ip', rate='20/m', block=True)
+@ratelimit(key='user_or_ip', rate='60/m', block=True)
 @func_timeout()
 def energy_companies(request: HttpRequest) -> HttpResponse:
     query = request.GET.get('q', '').strip()
@@ -236,7 +236,7 @@ def energy_companies(request: HttpRequest) -> HttpResponse:
 
 @login_required
 @role_required([Roles.ENERGY])
-@ratelimit(key='user_or_ip', rate='20/m', block=True)
+@ratelimit(key='user_or_ip', rate='60/m', block=True)
 @func_timeout()
 def claim_detail(request: HttpRequest, claim_id: int) -> HttpResponse:
     statuses_prefetch = Prefetch(
@@ -307,7 +307,7 @@ def claim_detail(request: HttpRequest, claim_id: int) -> HttpResponse:
 
 @login_required
 @role_required([Roles.ENERGY])
-@ratelimit(key='user_or_ip', rate='20/m', block=True)
+@ratelimit(key='user_or_ip', rate='60/m', block=True)
 @func_timeout()
 def appeal_detail(request: HttpRequest, appeal_id: int) -> HttpResponse:
     statuses_prefetch = Prefetch(

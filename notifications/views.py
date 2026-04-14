@@ -18,7 +18,7 @@ from .models import Notification, NotificationLevel
 
 
 @login_required
-@ratelimit(key='user_or_ip', rate='20/m', block=True)
+@ratelimit(key='user_or_ip', rate='200/m', block=True)
 def notification_list(request: HttpRequest) -> HttpResponse:
     query = request.GET.get('q', '').strip()
 
@@ -116,7 +116,7 @@ def notification_list(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
-@ratelimit(key='user_or_ip', rate='20/m', block=True)
+@ratelimit(key='user_or_ip', rate='200/m', block=True)
 def notification_detail(
     request: HttpRequest, notification_id: int
 ) -> HttpResponse:

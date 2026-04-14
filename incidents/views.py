@@ -103,7 +103,7 @@ from .validators import (
 
 @login_required
 @role_required()
-@ratelimit(key='user_or_ip', rate='20/m', block=True)
+@ratelimit(key='user_or_ip', rate='200/m', block=True)
 def index(request: HttpRequest) -> HttpResponse:
     query = request.GET.get('q', '').strip()
 
@@ -444,7 +444,7 @@ def index(request: HttpRequest) -> HttpResponse:
 
 @login_required
 @role_required()
-@ratelimit(key='user_or_ip', rate='20/m', block=True)
+@ratelimit(key='user_or_ip', rate='200/m', block=True)
 def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
     template_name = 'incidents/incident_detail.html'
     incident = IncidentManager().prepare_incident_info(incident_id)
@@ -653,7 +653,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
 
 @login_required
 @role_required(allowed_roles=[Roles.DISPATCH])
-@ratelimit(key='user_or_ip', rate='20/m', block=True)
+@ratelimit(key='user_or_ip', rate='60/m', block=True)
 @require_POST
 def confirm_move_emails(request: HttpRequest) -> HttpResponse:
     """Обработка подтверждения переноса писем."""
@@ -787,7 +787,7 @@ def confirm_move_emails(request: HttpRequest) -> HttpResponse:
 
 @login_required
 @role_required(allowed_roles=[Roles.DISPATCH])
-@ratelimit(key='user_or_ip', rate='20/m', block=True)
+@ratelimit(key='user_or_ip', rate='60/m', block=True)
 def create_incident(request: HttpRequest) -> HttpResponse:
     template_name = 'incidents/create_incident.html'
 
@@ -827,7 +827,7 @@ def create_incident(request: HttpRequest) -> HttpResponse:
 
 @login_required
 @role_required(allowed_roles=[Roles.DISPATCH])
-@ratelimit(key='user_or_ip', rate='20/m', block=True)
+@ratelimit(key='user_or_ip', rate='60/m', block=True)
 def new_email(
     request: HttpRequest,
     incident_id: int,
@@ -1003,7 +1003,7 @@ def new_email(
 
 @login_required
 @role_required(allowed_roles=[Roles.DISPATCH])
-@ratelimit(key='user_or_ip', rate='20/m', block=True)
+@ratelimit(key='user_or_ip', rate='60/m', block=True)
 def notify_operator(request: HttpRequest, incident_id: int) -> HttpResponse:
     template_name = 'emails/new_email.html'
     incident = IncidentSelector.incidents_with_email_history(incident_id)
@@ -1205,7 +1205,7 @@ def notify_operator(request: HttpRequest, incident_id: int) -> HttpResponse:
 
 @login_required
 @role_required(allowed_roles=[Roles.DISPATCH])
-@ratelimit(key='user_or_ip', rate='20/m', block=True)
+@ratelimit(key='user_or_ip', rate='60/m', block=True)
 def notify_avr_contractor(
     request: HttpRequest, incident_id: int
 ) -> HttpResponse:
@@ -1461,7 +1461,7 @@ def notify_avr_contractor(
 
 @login_required
 @role_required(allowed_roles=[Roles.DISPATCH])
-@ratelimit(key='user_or_ip', rate='20/m', block=True)
+@ratelimit(key='user_or_ip', rate='60/m', block=True)
 def notify_rvr_contractor(
     request: HttpRequest, incident_id: int
 ) -> HttpResponse:
@@ -1717,7 +1717,7 @@ def notify_rvr_contractor(
 
 @login_required
 @role_required(allowed_roles=[Roles.DISPATCH])
-@ratelimit(key='user_or_ip', rate='20/m', block=True)
+@ratelimit(key='user_or_ip', rate='60/m', block=True)
 def notify_incident_closed(
     request: HttpRequest, incident_id: int
 ) -> HttpResponse:

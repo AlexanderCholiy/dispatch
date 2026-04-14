@@ -35,7 +35,7 @@ from .models import (
 
 @login_required
 @role_required()
-@ratelimit(key='user_or_ip', rate='20/m', block=True)
+@ratelimit(key='user_or_ip', rate='200/m', block=True)
 def emails_list(request: HttpRequest) -> HttpResponse:
     query = request.GET.get('q', '').strip()
 
@@ -182,7 +182,7 @@ def emails_list(request: HttpRequest) -> HttpResponse:
 
 @login_required
 @role_required()
-@ratelimit(key='user_or_ip', rate='20/m', block=True)
+@ratelimit(key='user_or_ip', rate='60/m', block=True)
 def download_email_attachments(
     request: HttpRequest, email_id: int
 ) -> StreamingHttpResponse:

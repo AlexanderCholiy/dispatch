@@ -4,7 +4,7 @@ from django_ratelimit.decorators import ratelimit
 
 
 @method_decorator(
-    ratelimit(key='user_or_ip', rate='20/m', block=True), name='dispatch'
+    ratelimit(key='user_or_ip', rate='60/m', block=True), name='dispatch'
 )
 class AboutTemplateView(TemplateView):
     template_name = 'pages/about.html'

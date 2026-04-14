@@ -354,7 +354,7 @@ def confirm_email_change(
 
 
 @login_required
-@ratelimit(key='user_or_ip', rate='20/m', block=True, method='POST')
+@ratelimit(key='user_or_ip', rate='60/m', block=True, method='POST')
 def profile(request: HttpRequest) -> HttpResponse:
     if request.method == 'POST':
         form = UserForm(request.POST, request.FILES, instance=request.user)
