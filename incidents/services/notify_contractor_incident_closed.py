@@ -14,8 +14,6 @@ from emails.models import (
 from emails.services.generate_email_msg_id import generate_message_id
 from emails.tasks import send_incident_email_task
 from incidents.constants import (
-    AVR_CATEGORY,
-    RVR_CATEGORY,
     NOTIFIED_CONTRACTOR_STATUS_NAME,
     NOTIFY_CONTRACTOR_STATUS_NAME,
 )

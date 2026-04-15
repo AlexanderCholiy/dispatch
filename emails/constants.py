@@ -59,11 +59,14 @@ ALLOWED_MIME_PREFIXES = {
 
     # Архивы
     'application/zip',             # .zip
+    'application/x-zip-compressed',  # .zip (браузер)
     'application/x-7z-compressed',   # .7z
     'application/x-rar-compressed',  # .rar
     'application/x-tar',           # .tar
     'application/gzip',            # .gz
+    'application/x-gzip',
     'application/x-bzip2',         # .bz2
+    'application/x-xz',
 
     # Специфические офисные форматы
     'application/vnd.ms-project',  # .mpp

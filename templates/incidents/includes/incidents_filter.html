@@ -39,7 +39,7 @@
 
     <div class="select-wrapper">
       <select name="responsible_user" id="responsible-user-select" class="select tooltip" data-title="Диспетчер">
-        <option value="" {% if not selected.responsible_user %}selected{% endif %}>Ответсвенный: Все</option>
+        <option value="" {% if not selected.responsible_user %}selected{% endif %}>Ответственный: Все</option>
         <option value="none" {% if selected.responsible_user == "none" %}selected{% endif %}>Отсутствует</option>
         {% for user in responsible_users %}
           <option value="{{ user.id }}" {% if selected.responsible_user == user.id|stringformat:"s" %}selected{% endif %}>
