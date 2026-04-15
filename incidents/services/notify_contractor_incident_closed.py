@@ -56,15 +56,11 @@ def notify_contractor_incident_closed(
         for obj in incident.pole.prefetched_pole_avr_emails
     ]) if incident.pole else set()
 
-    avr_emails = set(['alexander.choliy@mail.ru'])
-
     rvr_emails = set([incident.pole.region.rvr_email.email]) if (
         incident.pole
         and incident.pole.region
         and incident.pole.region.rvr_email
     ) else set()
-
-    rvr_emails = set(['alexander.choliy@outlook.com'])
 
     if not was_avr or not was_rvr:
         all_msg_addrs = set()
