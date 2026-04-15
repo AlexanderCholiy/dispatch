@@ -105,6 +105,8 @@ def notify_contractor_incident_closed(
 
     email_body = (
         f'Инцидент {incident_label}устранён.'
+        '\n\nПри отсутствии ответа от оператора в течение 12 часов заявка '
+        'будет закрыта автоматически.'
         f'{signature}'
     )
 

@@ -1879,6 +1879,14 @@ def notify_incident_closed(
                     incident, subject
                 )
 
+            messages.success(
+                request,
+                (
+                    f'Письмо (ID: {email_msg.id}) готовится к отправке и '
+                    'скоро будет доставлено заявителю.'
+                )
+            )
+
             was_avr = contractor_was_notified['notify_avr']
             was_rvr = contractor_was_notified['notify_rvr']
             contractor_msg_id = contractor_was_notified['msg_id']
@@ -1899,14 +1907,6 @@ def notify_incident_closed(
                         f'{" и ".join(contractors)}.'
                     )
                 )
-
-            messages.success(
-                request,
-                (
-                    f'Письмо (ID: {email_msg.id}) готовится к отправке и '
-                    'скоро будет доставлено заявителю.'
-                )
-            )
 
             return redirect(
                 'incidents:incident_detail', incident_id=incident.id
