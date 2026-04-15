@@ -96,7 +96,7 @@ class Notification(models.Model):
         if not self.pk:
             self.created_at = timezone.now()
         if self.send_at is None or self.send_at < self.created_at:
-            self.send_at = self.created_at + timedelta(milliseconds=1)
+            self.send_at = self.created_at + timedelta(seconds=1)
         super().save(*args, **kwargs)
 
     def is_overdue(self):
