@@ -108,6 +108,7 @@ class Cell(models.Model):
     )
     operator = models.ForeignKey(
         Operator,
+        db_index=True,
         on_delete=models.CASCADE,
         related_name='cells',
         verbose_name='Оператор',
@@ -117,6 +118,13 @@ class Cell(models.Model):
         choices=NetworkType.choices,
         verbose_name='Тип сети',
     )
+    lac = models.PositiveIntegerField(
+        verbose_name='LAC (2G/3G) / TAC (4G)',
+        help_text=(
+            '- LAC (Location Area Code) /  TAC (Tracking Area Code) - '
+            'идентификаторы групп базовых станций'
+        ),
+    )
     freq = models.PositiveIntegerField(
         null=True,
         blank=True,
@@ -124,24 +132,6 @@ class Cell(models.Model):
         help_text=(
             'Arfcn or Uarfcn or Earfcn - Абсолютный номер частотного канала '
             'в зависимости от типа сети'
-        ),
-    )
-    tac = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        verbose_name='TAC (4G)',
-        help_text=(
-            'TAC (Tracking Area Code) - идентификаторы групп базовых станций '
-            'в сотовой связи 4G'
-        ),
-    )
-    lac = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        verbose_name='LAC (2G/3G)',
-        help_text=(
-            'LAC (Location Area Code) - идентификаторы групп базовых станций '
-            'в сотовой связи 2G и 3G'
         ),
     )
     pci = models.PositiveSmallIntegerField(
@@ -171,6 +161,11 @@ class Cell(models.Model):
             'в сетях 2G'
         ),
     )
+    last_seen = models.DateTimeField(
+        db_index=True,
+        default=timezone.now,
+        verbose_name='Дата и время последнего события',
+    )
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='Дата создания',
@@ -183,22 +178,27 @@ class Cell(models.Model):
     class Meta:
         verbose_name = 'сота'
         verbose_name_plural = 'Соты'
-        ordering = ['-cell_id', 'operator']
+        ordering = ['-last_seen', '-cell_id', 'operator']
         indexes = [
             models.Index(
-                fields=['cell_id', 'operator'],
-                name='idx_operator_cell_id',
+                fields=['operator', 'rat', 'lac', 'cell_id'],
+                name='idx_cell_full_lookup',
             ),
         ]
         constraints = [
             models.UniqueConstraint(
-                fields=['operator', 'cell_id'],
-                name='unique_cell'
+                fields=['operator', 'rat', 'lac', 'cell_id'],
+                name='unique_cell_per_operator_rat_lac',
             ),
         ]
 
     def __str__(self):
-        return f'Сота {self.cell_id} ({self.rat})'
+        return (
+            f'{self.operator.name or self.operator.code} | '
+            f'{self.rat} | '
+            f'LAC/TAC:{self.lac} | '
+            f'Cell:{self.cell_id}'
+        )
 
 
 class CellMeasure(models.Model):

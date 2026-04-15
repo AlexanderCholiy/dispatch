@@ -1,15 +1,17 @@
 import re
+from datetime import datetime
 from typing import Any, Optional
 
-from core.loggers import mqtt_logger
+from core.loggers import mqtt_parser_logger
 from mqtt.constants import ERR_PARSER_MSG_LIMIT
 from mqtt.shemas.aops import Cell, CellBar, CellMeasure, NetType, Operator
 
 
 class ParseAops:
 
-    def __init__(self, aops_raw: Optional[str]):
+    def __init__(self, aops_raw: Optional[str], event_datetime: datetime):
         self.aops_raw = aops_raw
+        self.event_datetime = event_datetime
 
     def parse_aops_string(self) -> Optional[list[CellMeasure]]:
         if not self.aops_raw:
@@ -33,13 +35,13 @@ class ParseAops:
                 raise
 
             except Exception as e:
-                mqtt_logger.warning(
+                mqtt_parser_logger.warning(
                     f'Ошибка при выполнении функции {strategy.__name__}: {e}'
                 )
                 continue
 
         if not found_anything and not self._is_service_message():
-            mqtt_logger.error(
+            mqtt_parser_logger.warning(
                 'Не удалось распарсить данные ни одной стратегией '
                 f'в {self.__class__.__name__}. '
                 f'Сырые данные (первые {ERR_PARSER_MSG_LIMIT} символов):\n'
@@ -136,17 +138,21 @@ class ParseAops:
 
                     measure_kwargs['cba'] = CellBar(cell_bar_int)
 
-                    cell_obj = Cell(**cell_kwargs)
+                    cell_obj = Cell(
+                        event_datetime=self.event_datetime,
+                        **cell_kwargs
+                    )
                     measure_obj = CellMeasure(
                         cell=cell_obj,
                         index=index,
+                        event_datetime=self.event_datetime,
                         **measure_kwargs
                     )
 
                     cells.append(measure_obj)
 
                 except (ValueError, KeyError) as e:
-                    mqtt_logger.warning(
+                    mqtt_parser_logger.warning(
                         f'Не удалось распарсить данные: {e}.\n'
                         'Сырые данные '
                         f'(первые {ERR_PARSER_MSG_LIMIT} символов):\n'

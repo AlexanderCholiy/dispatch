@@ -22,6 +22,7 @@ from mqtt.constants import (
     MQTT_MONGO_DB_URL,
 )
 from mqtt.models import Cell, CellMeasure, Device, Operator
+from mqtt.shemas.aops import NetType
 from mqtt.shemas.modem_data import CellMeasure as CellMeasurePD
 from mqtt.shemas.modem_data import ModemData
 
@@ -41,18 +42,20 @@ class Command(BaseCommand):
     _devices_to_create: dict[str, Device] = {}
     _devices_to_update: dict[str, Device] = {}
 
-    # Ключ для сот: (operator_code, cell_id) -> объект Cell
-    _cells_key_in_db: set[tuple[str, int]] = set(
-        Cell.objects.values_list('operator__code', 'cell_id')
+    # Ключ для сот: (operator_code, cell_id, rat, lac) -> объект Cell
+    _cells_key_in_db: set[tuple[str, int, str, int]] = set(
+        Cell.objects.values_list('operator__code', 'cell_id', 'rat', 'lac')
     )
-    _cells_to_create: dict[tuple[str, int], Cell] = {}
-    _cells_to_update: dict[tuple[str, int], Cell] = {}
+    _cells_to_create: dict[tuple[str, int, str, int], Cell] = {}
+    _cells_to_update: dict[tuple[str, int, str, int], Cell] = {}
     _operators_in_db: dict[str, Operator] = {
         op.code: op for op in Operator.objects.all()
     }
 
     # Ключ: (mac_address, cell_key, measure_data_dict)
-    _raw_measures: list[tuple[str, tuple[str, int], CellMeasurePD]] = []
+    _raw_measures: list[
+        tuple[str, tuple[str, int, str, int], CellMeasurePD]
+    ] = []
 
     _processed_count = 0
     _error_cnt = 0
@@ -127,11 +130,11 @@ class Command(BaseCommand):
 
                 mqtt_logger.info(
                     f'Обработано: {self._processed_count}. '
-                    f'Ошибок: {self._error_cnt}\n'
+                    f'Ошибок: {self._error_cnt} '
                     f'Создано: Devices={self._created_devices}, '
                     f'Operators={self._created_operators}, '
                     f'Cells={self._created_cells}, '
-                    f'Measures={self._created_measures}.\n'
+                    f'Measures={self._created_measures}. '
                     f'Обновлено: Devices={self._updated_devices}, '
                     f'Cells={self._updated_cells}, '
                     f'Measures={self._updated_measures}.'
@@ -187,7 +190,6 @@ class Command(BaseCommand):
             sys_version=validated_model.sysversion,
             app_version=validated_model.appversion,
             last_seen=validated_model.event_datetime,
-
         )
 
         is_in_db = mac in self._devices_mac_in_db
@@ -227,24 +229,12 @@ class Command(BaseCommand):
             db_devices_map = {d.mac_address: d for d in db_devices_qs}
 
             batch = []
+            safe_now = timezone.now() + timezone.timedelta(minutes=5)
+
             for mac, temp_device in self._devices_to_update.items():
                 device_obj = db_devices_map.get(mac)
-                has_changes = (
-                    device_obj.gps_lat != temp_device.gps_lat
-                    or device_obj.gps_lon != temp_device.gps_lon
-                    or device_obj.sys_version != temp_device.sys_version
-                    or device_obj.app_version != temp_device.app_version
-                    or device_obj.last_seen != temp_device.last_seen
-                ) if device_obj else True
 
-                if device_obj and has_changes:
-                    device_obj.gps_lat = temp_device.gps_lat
-                    device_obj.gps_lon = temp_device.gps_lon
-                    device_obj.sys_version = temp_device.sys_version
-                    device_obj.app_version = temp_device.app_version
-                    device_obj.last_seen = temp_device.last_seen
-                    batch.append(device_obj)
-                elif not device_obj:
+                if not device_obj:
                     Device.objects.get_or_create(
                         mac_address=temp_device.mac_address,
                         defaults={
@@ -255,6 +245,48 @@ class Command(BaseCommand):
                             'last_seen': temp_device.last_seen,
                         }
                     )
+                else:
+                    if (
+                        temp_device.last_seen > safe_now
+                        and device_obj.last_seen < safe_now
+                    ):
+                        is_time_newer = False
+                    elif (
+                        temp_device.last_seen < safe_now
+                        and device_obj.last_seen > safe_now
+                    ):
+                        is_time_newer = True
+                    else:
+                        is_time_newer = (
+                            temp_device.last_seen > device_obj.last_seen
+                        )
+
+                    gps_changed = (
+                        device_obj.gps_lat != temp_device.gps_lat
+                        or device_obj.gps_lon != temp_device.gps_lon
+                    )
+
+                    version_changed = (
+                        device_obj.sys_version != temp_device.sys_version
+                        or device_obj.app_version != temp_device.app_version
+                    )
+
+                    has_changes = False
+
+                    if is_time_newer:
+                        device_obj.last_seen = temp_device.last_seen
+                        has_changes = True
+                    if is_time_newer and gps_changed:
+                        device_obj.gps_lat = temp_device.gps_lat
+                        device_obj.gps_lon = temp_device.gps_lon
+                        has_changes = True
+                    if version_changed:
+                        device_obj.sys_version = temp_device.sys_version
+                        device_obj.app_version = temp_device.app_version
+                        has_changes = True
+
+                    if has_changes:
+                        batch.append(device_obj)
 
             if batch:
                 Device.objects.bulk_update(
@@ -279,7 +311,11 @@ class Command(BaseCommand):
             operator = aop.cell.operator
             cell = aop.cell
 
-            cell_key = (operator.operator_code, cell.cellid)
+            lac_tac = cell.tac if cell.rat == NetType.LTE else cell.lac
+
+            cell_key = (
+                operator.operator_code, cell.cellid, cell.rat, lac_tac
+            )
             is_in_db = cell_key in self._cells_key_in_db
 
             operator_db = self._operators_in_db.get(operator.operator_code)
@@ -303,12 +339,12 @@ class Command(BaseCommand):
                 cell_id=cell.cellid,
                 operator=operator_db,
                 rat=cell.rat,
+                lac=lac_tac,
                 freq=cell.freq,
-                tac=cell.tac,
-                lac=cell.lac,
                 pci=cell.pci,
                 psc=cell.psc,
                 bsic=cell.bsic,
+                last_seen=validated_model.event_datetime,
             )
 
             if is_in_db:
@@ -330,7 +366,9 @@ class Command(BaseCommand):
             batch = list(self._cells_to_create.values())
             Cell.objects.bulk_create(batch, ignore_conflicts=not DEBUG_MODE)
 
-            new_keys = [(c.operator.code, c.cell_id) for c in batch]
+            new_keys = [
+                (c.operator.code, c.cell_id, c.rat, c.lac) for c in batch
+            ]
             self._cells_key_in_db.update(new_keys)
 
             self._created_cells += len(batch)
@@ -344,9 +382,12 @@ class Command(BaseCommand):
             cells_to_update = list(self._cells_to_update.keys())
 
             conditions = []
-            for op_code, cell_id in cells_to_update:
+            for op_code, cell_id, rat, lac in cells_to_update:
                 conditions.append(
-                    Q(operator__code=op_code) & Q(cell_id=cell_id)
+                    Q(operator__code=op_code)
+                    & Q(cell_id=cell_id)
+                    & Q(rat=rat)
+                    & Q(lac=lac)
                 )
 
             combined_q = conditions[0]
@@ -358,34 +399,17 @@ class Command(BaseCommand):
             )
 
             db_cells_map = {
-                (c.operator.code, c.cell_id): c for c in db_cells_qs
+                (c.operator.code, c.cell_id, c.rat, c.lac): c
+                for c in db_cells_qs
             }
 
             batch = []
+            safe_now = timezone.now() + timezone.timedelta(minutes=5)
+
             for cell_key, temp_cell in self._cells_to_update.items():
                 cell_obj = db_cells_map.get(cell_key)
-                has_changes = (
-                    cell_obj.operator != temp_cell.operator
-                    or cell_obj.rat != temp_cell.rat
-                    or cell_obj.freq != temp_cell.freq
-                    or cell_obj.tac != temp_cell.tac
-                    or cell_obj.lac != temp_cell.lac
-                    or cell_obj.pci != temp_cell.pci
-                    or cell_obj.psc != temp_cell.psc
-                    or cell_obj.bsic != temp_cell.bsic
-                ) if cell_obj else True
 
-                if cell_obj and has_changes:
-                    cell_obj.operator = temp_cell.operator  # Оператор уже в БД
-                    cell_obj.rat = temp_cell.rat
-                    cell_obj.freq = temp_cell.freq
-                    cell_obj.tac = temp_cell.tac
-                    cell_obj.lac = temp_cell.lac
-                    cell_obj.pci = temp_cell.pci
-                    cell_obj.psc = temp_cell.psc
-                    cell_obj.bsic = temp_cell.bsic
-                    batch.append(cell_obj)
-                elif not cell_obj:
+                if not cell_obj:
                     op_code = temp_cell.operator.code
                     operator_db = self._operators_in_db.get(op_code)
                     op_name = temp_cell.operator.name
@@ -405,26 +429,80 @@ class Command(BaseCommand):
                     Cell.objects.get_or_create(
                         cell_id=temp_cell.cell_id,
                         operator=temp_cell.operator,
+                        rat=temp_cell.rat,
+                        lac=temp_cell.lac,
                         defaults={
-                            'rat': temp_cell.rat,
+                            'last_seen': temp_cell.last_seen,
                             'freq': temp_cell.freq,
-                            'tac': temp_cell.tac,
-                            'lac': temp_cell.lac,
                             'pci': temp_cell.pci,
                             'psc': temp_cell.psc,
                             'bsic': temp_cell.bsic,
                         }
                     )
 
+                else:
+                    if (
+                        temp_cell.last_seen > safe_now
+                        and cell_obj.last_seen < safe_now
+                    ):
+                        is_time_newer = False
+                    elif (
+                        temp_cell.last_seen < safe_now
+                        and cell_obj.last_seen > safe_now
+                    ):
+                        is_time_newer = True
+                    else:
+                        is_time_newer = (
+                            temp_cell.last_seen > cell_obj.last_seen
+                        )
+
+                    pci_changed = (
+                        temp_cell.pci is not None
+                        and cell_obj.pci != temp_cell.pci
+                    )
+
+                    psc_changed = (
+                        temp_cell.psc is not None
+                        and cell_obj.psc != temp_cell.psc
+                    )
+
+                    bsic_changed = (
+                        temp_cell.bsic is not None
+                        and cell_obj.bsic != temp_cell.bsic
+                    )
+
+                    freq_changed = (
+                        temp_cell.freq is not None
+                        and cell_obj.freq != temp_cell.freq
+                    )
+
+                    has_changes = False
+
+                    if is_time_newer:
+                        cell_obj.last_seen = temp_cell.last_seen
+                        has_changes = True
+                    if is_time_newer and pci_changed:
+                        cell_obj.pci = temp_cell.pci
+                        has_changes = True
+                    if is_time_newer and psc_changed:
+                        cell_obj.psc = temp_cell.psc
+                        has_changes = True
+                    if is_time_newer and bsic_changed:
+                        cell_obj.bsic = temp_cell.bsic
+                        has_changes = True
+                    if is_time_newer and freq_changed:
+                        cell_obj.freq = temp_cell.freq
+                        has_changes = True
+
+                    if has_changes:
+                        batch.append(cell_obj)
+
             if batch:
                 Cell.objects.bulk_update(
                     batch,
                     fields=[
-                        'operator',
-                        'rat',
+                        'last_seen',
                         'freq',
-                        'tac',
-                        'lac',
                         'pci',
                         'psc',
                         'bsic',
@@ -470,7 +548,7 @@ class Command(BaseCommand):
 
                 pbar.update(count_loaded)
 
-        cells_map: dict[tuple[str, int], Cell] = {}
+        cells_map: dict[tuple[str, int, str, int], Cell] = {}
         cell_key_list = list(needed_cell_keys)
 
         with tqdm(
@@ -484,9 +562,12 @@ class Command(BaseCommand):
             for i in range(0, len(cell_key_list), MQTT_DB_BATCH_SIZE):
                 chunk_keys = cell_key_list[i:i + MQTT_DB_BATCH_SIZE]
                 combined_q_chunk = Q()
-                for op_code, cell_id in chunk_keys:
+                for op_code, cell_id, rat, lac in chunk_keys:
                     combined_q_chunk |= Q(
-                        operator__code=op_code, cell_id=cell_id
+                        operator__code=op_code,
+                        cell_id=cell_id,
+                        rat=rat,
+                        lac=lac,
                     )
 
                 chunk_qs = (
@@ -495,7 +576,7 @@ class Command(BaseCommand):
                 )
                 count_loaded = 0
                 for c in chunk_qs:
-                    cells_map[(c.operator.code, c.cell_id)] = c
+                    cells_map[(c.operator.code, c.cell_id, c.rat, c.lac)] = c
                     count_loaded += 1
 
                 pbar.update(count_loaded)

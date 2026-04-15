@@ -1,6 +1,6 @@
 from typing import Optional
 
-from core.loggers import mqtt_logger
+from core.loggers import mqtt_parser_logger
 from mqtt.constants import ERR_PARSER_MSG_LIMIT
 
 
@@ -53,7 +53,7 @@ def parse_gps_coordinate(value: str, is_latitude: bool) -> Optional[float]:
         return result
 
     except ValueError as e:
-        mqtt_logger.warning(
+        mqtt_parser_logger.warning(
             f'Ошибка валидации gps: {e}. '
             f'Сырые данные (первые {ERR_PARSER_MSG_LIMIT} символов):\n'
             f'{value[:ERR_PARSER_MSG_LIMIT]}'

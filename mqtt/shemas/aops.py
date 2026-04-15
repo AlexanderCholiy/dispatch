@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import IntEnum, StrEnum
 from typing import Optional
 
@@ -55,6 +56,9 @@ class Cell(BaseModel):
     pci: Optional[int] = Field(
         None, ge=0, description='Physical Cell ID'
     )
+    event_datetime: datetime = Field(
+        ..., description='Дата и время регистрации'
+    )
 
     @model_validator(mode='after')
     def check_lac_or_tac(self) -> 'Cell':
@@ -98,4 +102,7 @@ class CellMeasure(BaseModel):
     )
     rsrq: Optional[int] = Field(
         None, description='Reference Signal Received Quality'
+    )
+    event_datetime: datetime = Field(
+        ..., description='Дата и время регистрации'
     )

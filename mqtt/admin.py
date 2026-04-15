@@ -66,7 +66,7 @@ class CellAdmin(admin.ModelAdmin):
         'operator_link',
         'rat',
         'freq',
-        'tac_lac',
+        'lac',
         'pci_psc_bsic',
     )
     list_filter = ('rat', 'operator__name',)
@@ -77,10 +77,10 @@ class CellAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Идентификаторы', {
-            'fields': ('cell_id', 'operator', 'rat', 'freq')
+            'fields': ('cell_id', 'operator', 'rat', 'lac',)
         }),
-        ('Параметры сети (LAC/TAC)', {
-            'fields': ('lac', 'tac'),
+        ('Параметры сети', {
+            'fields': ('freq',),
         }),
         ('Коды идентификации (PCI/PSC/BSIC)', {
             'fields': ('pci', 'psc', 'bsic'),
@@ -89,7 +89,7 @@ class CellAdmin(admin.ModelAdmin):
             )
         }),
         ('Мета', {
-            'fields': ('created_at', 'updated_at'),
+            'fields': ('last_seen', 'created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
@@ -103,10 +103,6 @@ class CellAdmin(admin.ModelAdmin):
         )
     operator_link.short_description = 'Оператор'
     operator_link.admin_order_field = 'operator'
-
-    def tac_lac(self, obj):
-        return obj.tac or obj.lac
-    tac_lac.short_description = 'TAC/LAC'
 
     def pci_psc_bsic(self, obj):
         parts = []

@@ -18,12 +18,12 @@ CRON_TZ=Europe/Moscow
 # Обновление данных:
 # Добавляем небольшую задержку (sleep), чтобы не стартовать ровно в 00 секунд вместе с другими системными задачами
 */30 * * * * sleep 15 && nice -n 15 /usr/local/bin/python /app/manage.py update_data_from_ts >> /app/logs/cron/cron.log 2>&1
-# 45 3 * * * sleep 10 && nice -n 15 ionice -c 2 -n 7 /usr/local/bin/python /app/manage.py import_mqtt_2_db >> /app/logs/cron/cron.log 2>&1
-# 15 4 * * * sleep 10 && nice -n 15 ionice -c 2 -n 7 /usr/local/bin/python /app/manage.py update_pole_for_device >> /app/logs/cron/cron.log 2>&1
-# 45 11 * * * sleep 10 && nice -n 15 ionice -c 2 -n 7 /usr/local/bin/python /app/manage.py import_mqtt_2_db >> /app/logs/cron/cron.log 2>&1
-# 15 12 * * * sleep 10 && nice -n 15 ionice -c 2 -n 7 /usr/local/bin/python /app/manage.py update_pole_for_device >> /app/logs/cron/cron.log 2>&1
-# 45 19 * * * sleep 10 && nice -n 15 ionice -c 2 -n 7 /usr/local/bin/python /app/manage.py import_mqtt_2_db >> /app/logs/cron/cron.log 2>&1
-# 15 20 * * * sleep 10 && nice -n 15 ionice -c 2 -n 7 /usr/local/bin/python /app/manage.py update_pole_for_device >> /app/logs/cron/cron.log 2>&1
+45 3 * * * sleep 10 && nice -n 15 ionice -c 2 -n 7 /usr/local/bin/python /app/manage.py import_mqtt_2_db >> /app/logs/cron/cron.log 2>&1
+15 4 * * * sleep 10 && nice -n 15 ionice -c 2 -n 7 /usr/local/bin/python /app/manage.py update_pole_for_device >> /app/logs/cron/cron.log 2>&1
+45 11 * * * sleep 10 && nice -n 15 ionice -c 2 -n 7 /usr/local/bin/python /app/manage.py import_mqtt_2_db >> /app/logs/cron/cron.log 2>&1
+15 12 * * * sleep 10 && nice -n 15 ionice -c 2 -n 7 /usr/local/bin/python /app/manage.py update_pole_for_device >> /app/logs/cron/cron.log 2>&1
+45 19 * * * sleep 10 && nice -n 15 ionice -c 2 -n 7 /usr/local/bin/python /app/manage.py import_mqtt_2_db >> /app/logs/cron/cron.log 2>&1
+15 20 * * * sleep 10 && nice -n 15 ionice -c 2 -n 7 /usr/local/bin/python /app/manage.py update_pole_for_device >> /app/logs/cron/cron.log 2>&1
 
 # Резервное копирование:
 # Сдвигаем на 45-ю минуту, чтобы не пересекаться с началом часа, когда срабатывают многие скрипты

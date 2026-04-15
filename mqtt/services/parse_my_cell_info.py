@@ -1,15 +1,17 @@
 import re
+from datetime import datetime
 from typing import Optional
 
-from core.loggers import mqtt_logger
+from core.loggers import mqtt_parser_logger
 from mqtt.constants import ERR_PARSER_MSG_LIMIT
 from mqtt.shemas.aops import Cell, CellMeasure, NetType, Operator
 
 
 class ParseMyCellInfo:
 
-    def __init__(self, my_cell_info_row: str):
+    def __init__(self, my_cell_info_row: str, event_datetime: datetime):
         self.my_cell_info_row = my_cell_info_row
+        self.event_datetime = event_datetime
 
     def parse_my_cell_info_string(self) -> Optional[list[CellMeasure]]:
         if not self.my_cell_info_row:
@@ -33,13 +35,13 @@ class ParseMyCellInfo:
                 raise
 
             except Exception as e:
-                mqtt_logger.warning(
+                mqtt_parser_logger.warning(
                     f'Ошибка при выполнении функции {strategy.__name__}: {e}'
                 )
                 continue
 
         if not found_anything and not self._is_service_message():
-            mqtt_logger.error(
+            mqtt_parser_logger.warning(
                 'Не удалось распарсить данные ни одной стратегией. '
                 f'в {self.__class__.__name__}. '
                 f'Сырые данные (первые {ERR_PARSER_MSG_LIMIT} символов):\n'
@@ -101,7 +103,8 @@ class ParseMyCellInfo:
                     freq=None,
                     bsic=None,
                     psc=None,
-                    pci=pci
+                    pci=pci,
+                    event_datetime=self.event_datetime,
                 )
 
                 measure = CellMeasure(
@@ -114,13 +117,14 @@ class ParseMyCellInfo:
                     rscp=None,
                     ecno=None,
                     rsrp=rsrp_val,
-                    rsrq=rsrq_val
+                    rsrq=rsrq_val,
+                    event_datetime=self.event_datetime,
                 )
 
                 cells.append(measure)
 
             except (ValueError, IndexError) as e:
-                mqtt_logger.warning(
+                mqtt_parser_logger.warning(
                     f'Не удалось распарсить данные: {e}.\n'
                     'Сырые данные '
                     f'(первые {ERR_PARSER_MSG_LIMIT} символов):\n'

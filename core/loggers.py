@@ -12,6 +12,7 @@ from .constants import (
     INCIDENTS_LOG_ROTATING_FILE,
     MONITORING_LOG_ROTATING_FILE,
     MQTT_LOG_ROTATING_FILE,
+    MQTT_PARSER_LOG_ROTATING_FILE,
     TG_NOTIFICATIONS_ROTATING_FILE,
     TS_LOG_ROTATING_FILE,
     YANDEX_TRACKER_AUTO_EMAILS_ROTATING_FILE,
@@ -154,4 +155,8 @@ monitoring_logger = LoggerFactory(
 
 mqtt_logger = LoggerFactory(
     'mqtt', MQTT_LOG_ROTATING_FILE
+).get_logger()
+
+mqtt_parser_logger = LoggerFactory(
+    'mqtt_parser', MQTT_PARSER_LOG_ROTATING_FILE
 ).get_logger()

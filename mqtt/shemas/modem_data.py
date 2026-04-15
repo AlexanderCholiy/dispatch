@@ -205,9 +205,13 @@ class ModemData(BaseModel):
             decoded_text = self._safe_base64_decode(raw_value)
             setattr(self, field_name, decoded_text)
 
-        self.aops = ParseAops(self.aops_raw).parse_aops_string()
+        self.aops = (
+            ParseAops(self.aops_raw, self.event_datetime)
+            .parse_aops_string()
+        )
         self.my_cell_info = (
-            ParseMyCellInfo(self.my_cell_info_row).parse_my_cell_info_string()
+            ParseMyCellInfo(self.my_cell_info_row, self.event_datetime)
+            .parse_my_cell_info_string()
         )
 
         return self
