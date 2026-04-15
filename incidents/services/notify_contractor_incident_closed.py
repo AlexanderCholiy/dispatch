@@ -16,6 +16,8 @@ from emails.tasks import send_incident_email_task
 from incidents.constants import (
     AVR_CATEGORY,
     RVR_CATEGORY,
+    NOTIFIED_CONTRACTOR_STATUS_NAME,
+    NOTIFY_CONTRACTOR_STATUS_NAME,
 )
 from incidents.models import Incident
 from incidents.services.incident_signature import get_incident_signature
@@ -31,32 +33,38 @@ def notify_contractor_incident_closed(
     incident: Incident,
     subject: str,
 ) -> NotifyContracrorResult:
-    category_names = {c.name for c in incident.categories.all()}
-
-    was_avr = True if AVR_CATEGORY in category_names else False
-    was_rvr = True if RVR_CATEGORY in category_names else False
-
-    if not was_avr:
-        was_avr = any(
-            st.is_avr_category
-            for st in incident.prefetched_status_history
+    was_avr = any(
+        st.is_avr_category
+        and st.status.name in (
+            NOTIFIED_CONTRACTOR_STATUS_NAME,
+            NOTIFY_CONTRACTOR_STATUS_NAME,
         )
-    if not was_rvr:
-        was_rvr = any(
-            st.is_rvr_category
-            for st in incident.prefetched_status_history
+        for st in incident.prefetched_status_history
+    )
+
+    was_rvr = any(
+        st.is_rvr_category
+        and st.status.name in (
+            NOTIFIED_CONTRACTOR_STATUS_NAME,
+            NOTIFY_CONTRACTOR_STATUS_NAME,
         )
+        for st in incident.prefetched_status_history
+    )
 
     avr_emails = set([
         obj.email.email
         for obj in incident.pole.prefetched_pole_avr_emails
     ]) if incident.pole else set()
 
+    avr_emails = set(['alexander.choliy@mail.ru'])
+
     rvr_emails = set([incident.pole.region.rvr_email.email]) if (
         incident.pole
         and incident.pole.region
         and incident.pole.region.rvr_email
     ) else set()
+
+    rvr_emails = set(['alexander.choliy@outlook.com'])
 
     if not was_avr or not was_rvr:
         all_msg_addrs = set()
