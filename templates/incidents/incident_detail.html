@@ -55,6 +55,7 @@
 <script src="{% static 'js/incidents/email_root.js' %}"></script>
 {% if not confirm_stage %}
   <script src="{% static 'js/incidents/sort_emails.js' %}"></script>
+  <script src="{% static 'js/incidents/email_view_toggle.js' %}"></script>
   <script>
     window.MOVE_EMAILS_CONFIG = {
       targetIncidentInputId: "{{ move_email_form.target_incident_code.id_for_label }}",

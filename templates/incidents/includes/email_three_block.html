@@ -41,20 +41,29 @@
           {% include "incidents/includes/emails_btn.html" %}
       </div>
       <div class="form-controls-right">
-          <input type="hidden" name="{{ move_email_form.email_ids.html_name }}"
-                  id="{{ move_email_form.email_ids.id_for_label }}"
-                  value='{{ move_email_form.email_ids.value|default:"[]" }}'>
-          <input type="text"
-                  name="{{ move_email_form.target_incident_code.html_name }}"
-                  id="{{ move_email_form.target_incident_code.id_for_label }}"
-                  placeholder="Код инцидента"
-                  class="code-input tooltip"
-                  maxlength="32"
-                  required
-                  pattern="[A-Za-z0-9-]+"
-                  data-title="Целевой код инцидента для переноса писем"
-                  value="{{ move_email_form.target_incident_code.value|default_if_none:'' }}">
-          <button id="move-emails-btn" name="move_emails_submit" class="btn btn-warning" type="submit" disabled>Переместить письма</button>
+          {% if emails_view_type == 'basic' %}
+            <input type="hidden" name="{{ move_email_form.email_ids.html_name }}"
+                    id="{{ move_email_form.email_ids.id_for_label }}"
+                    value='{{ move_email_form.email_ids.value|default:"[]" }}'>
+            <input type="text"
+                    name="{{ move_email_form.target_incident_code.html_name }}"
+                    id="{{ move_email_form.target_incident_code.id_for_label }}"
+                    placeholder="Код инцидента"
+                    class="code-input tooltip"
+                    maxlength="32"
+                    required
+                    pattern="[A-Za-z0-9-]+"
+                    data-title="Целевой код инцидента для переноса писем"
+                    value="{{ move_email_form.target_incident_code.value|default_if_none:'' }}">
+            <button id="move-emails-btn" name="move_emails_submit" class="btn btn-warning" type="submit" disabled>Переместить письма</button>
+            <button type="button" class="btn btn-primary email-three-btn tooltip" id="switch-to-simple" data-title="Переключить в список писем" data-view-type="simple">
+              <i class="bx bx-book-open"></i>
+            </button>
+          {% else %}
+            <button type="button" class="btn btn-primary email-three-btn tooltip" id="switch-to-basic" data-title="Переключить в дерево писем" data-view-type="basic">
+              <i class="bx bx-book"></i>
+            </button>
+          {% endif %}
       </div>
       </div>
   </form>
@@ -80,7 +89,7 @@
                   </span>
               {% endif %}
   
-              {% if not confirm_stage and can_manage %}
+              {% if not confirm_stage and can_manage and emails_view_type == 'basic' %}
                   <label class="custom-checkbox-wrapper email-tree-checkbox-label">
                   <input type="checkbox"
                           class="email-tree-checkbox"

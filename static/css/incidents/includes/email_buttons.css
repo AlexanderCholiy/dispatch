@@ -40,7 +40,8 @@ display: flex;
 .cancel-move-email,
 .submit-move-email,
 #move-emails-btn,
-.sort-emails-btn {
+.sort-emails-btn,
+.email-three-btn {
   padding: var(--space-xxs);
   font-size: var(--font-sm);
 }

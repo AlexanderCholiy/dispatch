@@ -1295,7 +1295,7 @@ class IncidentManager(IncidentValidator):
                             queryset=EmailToCC.objects.all(),
                             to_attr='prefetched_email_cc'
                         ),
-                    ).order_by('-email_date', 'is_first_email'),
+                    ).order_by('-email_date', 'is_first_email', '-id'),
                     to_attr='all_incident_emails'
                 ),
                 Prefetch(
@@ -1348,3 +1348,52 @@ class IncidentManager(IncidentValidator):
         )
 
         return incident
+
+    def build_simple_email_three(
+        self, emails: QuerySet[EmailMessage], sort_reverse: bool = False
+    ) -> list[EmailNode]:
+        result: list[EmailNode] = []
+
+        if not emails:
+            return result
+
+        children: list[EmailNode] = []
+        branch_ids: list[int] = []
+
+        if sort_reverse:
+            first_email = emails[0]
+            last_email = emails[-1]
+            branch_ids = [first_email.id]
+            emails_to_process = emails[1:]
+        else:
+            first_email = emails[-1]
+            last_email = emails[0]
+            emails_to_process = emails[:-1]
+
+        for email in emails_to_process:
+            root_node = EmailNode(
+                email=email,
+                branch_ids=[],
+                children=[],
+                min_date=None,
+                max_date=None,
+            )
+            branch_ids.append(email.id)
+            children.append(root_node)
+
+        if not sort_reverse:
+            branch_ids.append(first_email.id)
+            branch_ids.reverse()
+            children.reverse()
+
+        result.append(
+            EmailNode(
+                email=first_email,
+                branch_ids=branch_ids,
+                children=children,
+                min_date=min(first_email.email_date, last_email.email_date),
+                max_date=max(first_email.email_date, last_email.email_date),
+            )
+        )
+
+        return result

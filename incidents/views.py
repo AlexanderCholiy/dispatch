@@ -528,12 +528,22 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         or request.COOKIES.get('per_page')
         or 'asc'
     )
-    if sort_order not in ('asc', 'desc'):
+    emails_view_type = (
+        request.GET.get('emails_view_type')
+        or request.COOKIES.get('emails_view_type')
+        or 'basic'
+    )
+    if (
+        sort_order not in ('asc', 'desc')
+        or emails_view_type not in ('basic', 'simple')
+    ):
         params = request.GET.copy()
         params['email_sort'] = 'asc'
-        return redirect(f"{request.path}?{params.urlencode()}")
+        params['emails_view_type'] = 'basic'
+        return redirect(f'{request.path}?{params.urlencode()}')
 
     sort_reverse = sort_order == 'asc'
+    is_basic_emails_view_type = emails_view_type == 'basic'
 
     # Письма отсортированы в запросе к Incident
     emails: QuerySet[EmailMessage] = incident.all_incident_emails
@@ -546,14 +556,26 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         incident.first_email_subject = None
         incident.first_email_from = None
 
-    email_three = IncidentManager().build_email_tree(emails, sort_reverse)
-    move_email_form = MoveEmailsForm(
-        email_tree=email_three, current_incident=incident
-    )
+    if is_basic_emails_view_type:
+        email_three = IncidentManager().build_email_tree(emails, sort_reverse)
+
+        move_email_form = MoveEmailsForm(
+            email_tree=email_three, current_incident=incident
+        )
+    else:
+        email_three = IncidentManager().build_simple_email_three(
+            emails, sort_reverse
+        )
+        move_email_form = None
 
     confirm_stage = False
 
     if request.method == 'POST' and 'move_emails_submit' in request.POST:
+        if email_three is None:
+            email_three = (
+                IncidentManager().build_email_tree(emails, sort_reverse)
+            )
+
         move_email_form = MoveEmailsForm(
             data=request.POST,
             email_tree=email_three,
@@ -637,7 +659,10 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
 
             selected_email_ids = move_email_form.data.get('email_ids', [])
     else:
-        selected_email_ids = move_email_form.initial.get('email_ids', [])
+        selected_email_ids = (
+            move_email_form.initial.get('email_ids', [])
+            if is_basic_emails_view_type else []
+        )
 
     context = {
         'incident': incident,
@@ -649,6 +674,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         'incident_form': incident_form,
         'monitoring': sorted_monitoring,
         'active_tab': 'incident',
+        'emails_view_type': emails_view_type,
     }
 
     return render(request, template_name, context)
