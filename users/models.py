@@ -1,4 +1,5 @@
 import time
+import os
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
@@ -16,6 +17,8 @@ from .constants import (
     PASSWORD_HELP_TEXT,
     SUBFOLDER_AVATAR_DIR,
     USERNAME_HELP_TEXT,
+    MAX_DEFAULT_AVATAR_LEN,
+    DEFAULT_AVATARS_DIR,
 )
 from .validators import (
     username_format_validators,
@@ -71,6 +74,14 @@ class User(AbstractUser):
         blank=True,
         help_text='Формат: ГГГГ-ММ-ДД.'
     )
+    default_avatar = models.CharField(
+        'Иконка профиля',
+        max_length=MAX_DEFAULT_AVATAR_LEN,
+        blank=True,
+        null=True,
+        help_text='Выберите стандартную иконку вместо загрузки фото.',
+    )
+
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
 
@@ -81,6 +92,19 @@ class User(AbstractUser):
     def __str__(self):
         role: str = self.get_role_display()
         return self.get_full_name() or f'Новый {role.lower()}'
+
+    @property
+    def get_avatar_url(self):
+        """Возвращает URL для отображения аватара (фото или иконка)."""
+        if self.avatar:
+            return self.avatar.url
+        if self.default_avatar:
+            return (
+                f'{settings.MEDIA_URL}public/default_avatars/'
+                f'{self.default_avatar}'
+            )
+
+        return None
 
     @property
     def temporary_username(self):
@@ -99,6 +123,14 @@ class User(AbstractUser):
         super().clean()
         validate_user_username(self.username, self)
         validate_user_email(self.email, self)
+
+        if self.default_avatar:
+            static_path = os.path.join(
+                DEFAULT_AVATARS_DIR, self.default_avatar
+            )
+
+            if not os.path.exists(static_path):
+                self.default_avatar = None
 
     def save(self, *args, **kwargs) -> None:
         is_new = self.pk is None

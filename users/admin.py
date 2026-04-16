@@ -51,7 +51,13 @@ class BaseUserAdmin(UserAdmin):
         (None, {'fields': ('email', 'username', 'password')}),
         (
             'Личная информация',
-            {'fields': ('first_name', 'last_name', 'avatar', 'date_of_birth')}
+            {'fields': (
+                'first_name',
+                'last_name',
+                'avatar',
+                'default_avatar',
+                'date_of_birth',
+            )}
         ),
         (
             'Права',

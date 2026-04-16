@@ -1,44 +1,94 @@
 {% extends "base.html" %}
 {% load static %}
-
 {% block title %}Профиль{% endblock %}
 
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/users/profile_form.css' %}">
+  <link rel="stylesheet" href="{% static 'css/users/profile/avatar.css' %}">
+  <link rel="stylesheet" href="{% static 'css/users/profile/avatar_upload.css' %}">
+  <link rel="stylesheet" href="{% static 'css/users/profile/avatar_grid.css' %}">
 {% endblock %}
 
 {% block content %}
 <div class="container-sm">
   <div class="card">
     <div class="card-body">
-
-      <form method="post" enctype="multipart/form-data" class="user-form">
+      <!-- Форма -->
+      <form method="post" enctype="multipart/form-data" class="user-form" id="profileForm">
         {% csrf_token %}
-
-        <div class="form-group avatar-upload">
-          <label for="id_avatar" class="avatar-label" tabindex="0" aria-label="Загрузить или заменить аватар">
-            <div class="avatar-preview" id="avatarPreview">
-              {% if form.instance.avatar and form.instance.avatar.name %}
-                <img src="{{ form.instance.avatar.url }}" alt="{{ user.username }}" id="avatarImage">
-              {% else %}
-                <div class="profile-avatar">{{ user.username|first|upper }}</div>
-              {% endif %}
+  
+        <!-- Карточка выбора аватара -->
+        <div class="profile-avatar-card" id="avatarSelector">
+            
+            <!-- Блок предпросмотра -->
+            <div class="avatar-preview-wrapper">
+                <div class="avatar-circle-container" id="previewContainer">
+                    <!-- Логика отображения текущего состояния -->
+                    {% if user.avatar %}
+                        <img id="avatarPreview" src="{{ user.avatar.url }}" alt="Текущий аватар" class="avatar-preview-img">
+                    {% elif user.default_avatar %}
+                        <img id="avatarPreview" src="{{ media_url }}public/default_avatars/{{ user.default_avatar }}" alt="Иконка" class="avatar-preview-img">
+                    {% else %}
+                        <!-- Заглушка, если ничего нет -->
+                        <img id="avatarPreview" src="{{ media_url }}public/default_avatars/0__new_account.png" alt="Профиль" class="avatar-preview-img">
+                    {% endif %}
+                    
+                    <div class="avatar-overlay">
+                        <span class="icon-camera">📷</span>
+                        <span class="text-change">Изменить</span>
+                    </div>
+                </div>
+                
+                <div class="current-mode-indicator">
+                    <span id="modeLabel">Выберите вариант ниже</span>
+                </div>
             </div>
-            <span class="avatar-text">загрузить / заменить</span>
-          </label>
 
-          <input type="file" name="avatar" id="id_avatar" accept="image/*" class="avatar-input" onchange="previewAvatar(this)">
+            <!-- Табы переключения -->
+            <div class="avatar-tabs">
+                <button type="button" class="tab-btn active" data-tab="photo">
+                    <span class="tab-icon">📷</span> Фото
+                </button>
+                <button type="button" class="tab-btn" data-tab="icon">
+                    <span class="tab-icon">🎨</span> Иконка
+                </button>
+            </div>
 
-          {% if form.instance.avatar and form.instance.avatar.name %}
-            <label class="avatar-clear-label">
-              <input type="checkbox" name="avatar-clear" id="id_avatar-clear" class="avatar-clear-checkbox" onchange="toggleAvatarIcon()">
-              <span class="btn btn-danger avatar-clear-btn">Удалить аватар</span>
-            </label>
-          {% endif %}
+            <!-- Секция загрузки Фото -->
+            <div class="avatar-section" id="section-photo">
+                <div class="file-upload-area" id="dropZone">
+                  <div class="django-hidden-input-wrapper">
+                      {{ form.avatar }}
+                  </div>
+                  
+                  <div class="upload-content-wrapper">
+                      <!-- Этот лейбл будет скрыт через CSS, если есть класс .has-file -->
+                      <label for="{{ form.avatar.id_for_label }}" class="upload-label new-upload-label">
+                          <span class="upload-icon">+</span>
+                          <span class="upload-text">Нажмите или перетащите новое фото</span>
+                          <span class="upload-hint">JPG, PNG до 5MB</span>
+                      </label>
 
-          {% if  form.avatar.errors %}
-            <div class="error">{{ form.avatar.errors }}</div>
-          {% endif %}
+                      <!-- Эта кнопка будет скрыта через CSS класс .hidden по умолчанию -->
+                      <button type="button" class="btn-remove-avatar hidden" id="removePhotoBtn">
+                          <span class="icon-trash"></span> Удалить текущее фото
+                      </button>
+                  </div>
+                </div>
+                <button type="button" class="btn-remove-avatar hidden" id="removePhotoBtn">Удалить загруженное фото</button>
+            </div>
+
+            <!-- Секция выбора Иконок -->
+            <div class="avatar-section hidden" id="section-icons">
+                <p class="section-title">Выберите стандартную иконку:</p>
+                <div class="icons-grid" id="iconsGrid">
+                    <!-- Сюда JS загрузит иконки -->
+                </div>
+                <button type="button" class="btn-remove-avatar hidden" id="removeIconBtn">Сбросить иконку</button>
+            </div>
+
+            <!-- Скрытое поле формы уже существует благодаря {{ form.default_avatar }} внизу формы или в виде select.
+                 Мы НЕ добавляем дубль сюда. JS найдет его по ID. -->
         </div>
 
         <div class="form-group">
@@ -64,44 +114,25 @@
             <div class="error">{{ form.date_of_birth.errors }}</div>
           {% endif %}
         </div>
+
+        {% if form.non_field_errors %}
+          <div class="error">
+            {{ form.non_field_errors }}
+          </div>
+        {% endif %}
         
-        <button type="submit" class="btn btn-primary submit-button">Сохранить</button>
+        <button type="submit" class="btn btn-primary submit-button">Сохранить изменения</button>
+
       </form>
     </div>
   </div>
 </div>
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  const avatarPreview = document.getElementById('avatarPreview');
-  const originalAvatarUrl = "{% if form.instance.avatar and form.instance.avatar.name %}{{ form.instance.avatar.url }}{% else %}{% endif %}";
-
-  function previewAvatar(input) {
-    const file = input.files[0];
-    const clearCheckbox = document.getElementById('id_avatar-clear');
-
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = e => {
-        avatarPreview.innerHTML = `<img src="${e.target.result}" alt="avatar" id="avatarImage">`;
-        if (clearCheckbox) clearCheckbox.checked = false;
-      };
-      reader.readAsDataURL(file);
-    }
-  }
-
-  function toggleAvatarIcon() {
-    const checkbox = document.getElementById('id_avatar-clear');
-
-    if (checkbox.checked) {
-      avatarPreview.innerHTML = '<div class="profile-avatar">{{ user.username|first|upper }}</div>';
-    } else {
-      if (originalAvatarUrl) {
-        avatarPreview.innerHTML = `<img src="${originalAvatarUrl}" alt="avatar" id="avatarImage">`;
-      }
-    }
-  }
+    window.mediaUrl = "{{ media_url }}";
+    window.defaultIcons = {{ default_icons|safe }}; 
 </script>
+<script type="module" src="{% static 'js/users/profile/main.js' %}"></script>
 {% endblock %}

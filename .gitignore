@@ -212,6 +212,8 @@ __marimo__/
 *.bak
 data/ts/*
 media/*
+!media/public/
+media/public/users/
 data/backup_db/*
 data/lock/*
 *.sql

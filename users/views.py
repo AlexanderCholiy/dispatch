@@ -43,6 +43,7 @@ from .utils import (
     send_activation_email,
     send_confirm_email,
 )
+from users.services.get_default_avatars import get_default_avatars
 
 
 class SlaPercentStats(TypedDict):
@@ -365,7 +366,15 @@ def profile(request: HttpRequest) -> HttpResponse:
     else:
         form = UserForm(instance=request.user)
 
-    context = {'form': form}
+    default_icons = get_default_avatars()
+    default_icons_names = [item[0] for item in default_icons]
+
+    context = {
+        'form': form,
+        'media_url': settings.MEDIA_URL,
+        'default_icons': default_icons_names,
+    }
+
     return render(request, 'users/profile_form.html', context)
 
 

@@ -5,6 +5,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from users.services.get_default_avatars import get_default_avatars
 
 from .constants import (
     MAX_USER_AGE,
@@ -175,10 +176,23 @@ class ChangeEmailForm(forms.ModelForm):
 
 
 class UserForm(forms.ModelForm):
+    default_avatar = forms.ChoiceField(
+        required=False,
+        choices=get_default_avatars(),
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Выбрать иконку',
+        help_text='Если выбрано, загрузка фото будет отключена.'
+    )
 
     class Meta:
         model = User
-        fields = ('avatar', 'date_of_birth', 'first_name', 'last_name',)
+        fields = (
+            'avatar',
+            'default_avatar',
+            'date_of_birth',
+            'first_name',
+            'last_name',
+        )
         widgets = {
             'avatar': forms.ClearableFileInput(attrs={
                 'class': 'avatar-input',
@@ -193,6 +207,9 @@ class UserForm(forms.ModelForm):
                         year=date.today().year - MAX_USER_AGE))
                 },
                 format='%Y-%m-%d'
+            ),
+            'default_avatar': forms.Select(
+                attrs={'class': 'form-select', 'id': 'id_default_avatar'}
             )
         }
 
@@ -218,6 +235,18 @@ class UserForm(forms.ModelForm):
 
         return value
 
+    def clean(self):
+        cleaned_data = super().clean()
+        avatar = cleaned_data.get('avatar')
+        default_avatar = cleaned_data.get('default_avatar')
+
+        if avatar and default_avatar:
+            raise ValidationError(
+                'Нельзя одновременно загружать фото и выбирать иконку.'
+            )
+
+        return cleaned_data
+
     def save(self, commit=True):
         user = super().save(commit=False)
 
@@ -225,6 +254,13 @@ class UserForm(forms.ModelForm):
             if user.avatar:
                 user.avatar.delete(save=False)
             user.avatar = None
+
+        if user.default_avatar:
+            if user.avatar:
+                user.avatar.delete(save=False)
+            user.avatar = None
+        else:
+            user.default_avatar = None
 
         if commit:
             user.save()

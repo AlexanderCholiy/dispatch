@@ -1,0 +1,162 @@
+.django-hidden-input-wrapper {
+    display: none !important;
+}
+
+.file-upload-area > a,
+.file-upload-area > input[type="checkbox"],
+.file-upload-area > label:not(.upload-label):not(#removePhotoBtn),
+.file-upload-area br {
+    display: none !important;
+}
+
+/* --- 2. Зона загрузки (Drop Zone) --- */
+.file-upload-area {
+    border: 2px dashed var(--extra-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    text-align: center;
+    transition: all var(--transition-value);
+    cursor: pointer;
+    background: var(--add-background-color);
+    position: relative;
+    overflow: hidden;
+    min-height: 160px; /* Фиксируем высоту, чтобы не прыгало при смене контента */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Эффект при перетаскивании файла (Drag Over) */
+.file-upload-area.drag-over {
+    border-color: var(--priority-color);
+    background: rgba(90, 127, 255, 0.08); /* Легкий оттенок priority-color */
+    transform: scale(1.01);
+    box-shadow: 0 0 var(--space-md) var(--rgba-blue-color);
+}
+
+/* Анимация успешной загрузки (опционально) */
+.file-upload-area.success {
+    border-color: var(--green-color);
+    background: rgba(54, 179, 126, 0.05);
+    animation: pulse-green 1s;
+}
+
+@keyframes pulse-green {
+    0% { box-shadow: 0 0 0 0 rgba(54, 179, 126, 0.4); }
+    70% { box-shadow: 0 0 0 var(--space-md) rgba(54, 179, 126, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(54, 179, 126, 0); }
+}
+
+/* --- 3. Контент внутри зоны (Лейбл и Кнопка) --- */
+.upload-content-wrapper {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 2;
+    position: relative;
+}
+
+/* Лейбл для новой загрузки */
+.upload-label.new-upload-label {
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-sm);
+    transition: opacity var(--transition-value);
+}
+
+.upload-icon {
+    font-size: 3rem;
+    color: var(--blue-color); /* Используем синий как основной акцент */
+    transition: transform var(--transition-value);
+    line-height: 1;
+}
+
+.file-upload-area:hover .upload-icon {
+    transform: scale(1.1) rotate(-5deg);
+}
+
+.upload-text {
+    font-size: var(--font-md);
+    font-weight: 600;
+    color: var(--color); /* Основной текст из root.css */
+}
+
+.upload-hint {
+    font-size: var(--font-xs);
+    color: var(--gray-color); /* Нейтральный цвет */
+    margin-top: var(--space-xxs);
+}
+
+/* --- 4. Кнопка удаления --- */
+.btn-remove-avatar {
+    margin-top: var(--space-md);
+    background: none;
+    border: none;
+    color: var(--red-color); /* Красный для удаления */
+    font-size: var(--font-sm);
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    padding: 0;
+    transition: all var(--transition-value);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    opacity: 0;
+    transform: translateY(5px);
+}
+
+.btn-remove-avatar:hover {
+    color: var(--crimson-color); /* Более яркий красный при наведении */
+    text-decoration-thickness: 2px;
+    transform: translateY(-1px);
+}
+
+.btn-remove-avatar::before {
+    content: '🗑️';
+    font-size: 1.1em;
+    line-height: 1;
+}
+
+/* --- 5. Логика состояний (Скрыть лейбл / Показать кнопку) --- */
+
+/* Когда класс .has-file добавлен JS-ом: */
+.file-upload-area.has-file .new-upload-label {
+    display: none; /* Скрываем призыв к загрузке */
+}
+
+.file-upload-area.has-file .btn-remove-avatar {
+    display: inline-flex !important; /* Показываем кнопку */
+    opacity: 1;
+    transform: translateY(0);
+    
+    /* Стилизация кнопки в состоянии "есть файл" */
+    background: rgba(217, 64, 64, 0.1); /* Очень легкий красный фон */
+    border: 1px solid rgba(217, 64, 64, 0.2);
+    border-radius: var(--radius-md);
+    padding: var(--space-xs) var(--space-sm);
+    margin-top: 0;
+}
+
+.file-upload-area.has-file .btn-remove-avatar:hover {
+    background: rgba(217, 64, 64, 0.2);
+    border-color: var(--red-color);
+}
+
+/* Анимация появления кнопки (если она еще не имеет класса has-file, но стала видимой) */
+.btn-remove-avatar:not(.hidden) {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Утилитарный класс скрытия (используется JS) */
+.hidden {
+    display: none !important;
+}
