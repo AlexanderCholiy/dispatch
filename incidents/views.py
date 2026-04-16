@@ -525,7 +525,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
 
     sort_order = (
         request.GET.get('email_sort')
-        or request.COOKIES.get('per_page')
+        or request.COOKIES.get('email_sort')
         or 'asc'
     )
     emails_view_type = (
@@ -533,6 +533,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         or request.COOKIES.get('emails_view_type')
         or 'basic'
     )
+
     if (
         sort_order not in ('asc', 'desc')
         or emails_view_type not in ('basic', 'simple')

@@ -56,11 +56,11 @@
                     data-title="Целевой код инцидента для переноса писем"
                     value="{{ move_email_form.target_incident_code.value|default_if_none:'' }}">
             <button id="move-emails-btn" name="move_emails_submit" class="btn btn-warning" type="submit" disabled>Переместить письма</button>
-            <button type="button" class="btn btn-primary email-three-btn tooltip" id="switch-to-simple" data-title="Переключить в список писем" data-view-type="simple">
+            <button type="button" class="btn btn-primary email-three-btn tooltip" id="email-three-type" data-title="Переключить в список писем" data-view-type="simple">
               <i class="bx bx-book-open"></i>
             </button>
           {% else %}
-            <button type="button" class="btn btn-primary email-three-btn tooltip" id="switch-to-basic" data-title="Переключить в дерево писем" data-view-type="basic">
+            <button type="button" class="btn btn-primary email-three-btn tooltip" id="email-three-type" data-title="Переключить в дерево писем" data-view-type="basic">
               <i class="bx bx-book"></i>
             </button>
           {% endif %}
