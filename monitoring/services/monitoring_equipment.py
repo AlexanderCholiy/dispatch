@@ -65,55 +65,55 @@ def get_monitiring_cache_equipment(
 
     try:
         qs = monitoring_qs()
-    except Exception as e:
+        now = timezone.now()
+
+        for row in qs.iterator(chunk_size=CHUNKED_MONITORING_QS):
+            updated_at = row['updated_at']
+
+            if updated_at:
+                moscow_tz = timezone.get_current_timezone()
+                updated_at = updated_at.replace(tzinfo=moscow_tz)
+
+                if timezone.is_naive(updated_at):
+                    updated_at = timezone.make_aware(updated_at, moscow_tz)
+
+                future_limit = now + timedelta(minutes=15)
+                past_limit = now - timedelta(days=365 * 10)
+
+                if updated_at > future_limit or updated_at < past_limit:
+                    updated_at = None
+            else:
+                updated_at = None
+
+            row_result: MonitoringEquipment = {
+                'modem_ip': (row['modem_ip'] or '').strip() or None,
+                'modem_serial': (row['modem_serial'] or '').strip() or None,
+                'pole_1': (row['pole_1'] or '').strip() or None,
+                'pole_2': (row['pole_2'] or '').strip() or None,
+                'pole_3': (row['pole_3'] or '').strip() or None,
+                'level': row['level'],
+                'cabinet': (row['cabinet'] or '').strip() or None,
+                'status': row['status'],
+                'updated_at': updated_at,
+            }
+
+            for pole_field in ('pole_1', 'pole_2', 'pole_3'):
+                pole_name = row_result[pole_field]
+                if (
+                    pole_name
+                    and pole_name != UNDEFINED_POLE_CASE
+                    and pole_name in poles
+                ):
+                    equipment.setdefault(pole_name, []).append(row_result)
+
+    except Exception:
         cache.set(
             MONITORING_EQUIPMENT_CACHE_KEY,
             {},
             timeout=MONITORING_EQUIPMENT_CACHE_TTL
         )
-        monitoring_logger.exception(e)
+        monitoring_logger.warning('База данных "monitoring" не доступна')
         return None
-
-    now = timezone.now()
-
-    for row in qs.iterator(chunk_size=CHUNKED_MONITORING_QS):
-        updated_at = row['updated_at']
-
-        if updated_at:
-            moscow_tz = timezone.get_current_timezone()
-            updated_at = updated_at.replace(tzinfo=moscow_tz)
-
-            if timezone.is_naive(updated_at):
-                updated_at = timezone.make_aware(updated_at, moscow_tz)
-
-            future_limit = now + timedelta(minutes=15)
-            past_limit = now - timedelta(days=365 * 10)
-
-            if updated_at > future_limit or updated_at < past_limit:
-                updated_at = None
-        else:
-            updated_at = None
-
-        row_result: MonitoringEquipment = {
-            'modem_ip': (row['modem_ip'] or '').strip() or None,
-            'modem_serial': (row['modem_serial'] or '').strip() or None,
-            'pole_1': (row['pole_1'] or '').strip() or None,
-            'pole_2': (row['pole_2'] or '').strip() or None,
-            'pole_3': (row['pole_3'] or '').strip() or None,
-            'level': row['level'],
-            'cabinet': (row['cabinet'] or '').strip() or None,
-            'status': row['status'],
-            'updated_at': updated_at,
-        }
-
-        for pole_field in ('pole_1', 'pole_2', 'pole_3'):
-            pole_name = row_result[pole_field]
-            if (
-                pole_name
-                and pole_name != UNDEFINED_POLE_CASE
-                and pole_name in poles
-            ):
-                equipment.setdefault(pole_name, []).append(row_result)
 
     cache.set(
         MONITORING_EQUIPMENT_CACHE_KEY,
