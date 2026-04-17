@@ -12,7 +12,7 @@ class PhotoManager {
         // Проверяем, есть ли src у картинки превью (кроме заглушки)
         // Или проверяем, есть ли ссылка на файл в зоне загрузки (если она была сгенерирована Django)
         
-        const hasExistingAvatar = this.checkExistingAvatar();
+        const hasExistingAvatar = AVATAR_CONFIG.hasUserPhoto;
         
         if (hasExistingAvatar) {
             this.setHasFileState(true);
@@ -22,20 +22,6 @@ class PhotoManager {
         }
 
         this.init();
-    }
-
-    // Новая функция проверки наличия старого фото
-    checkExistingAvatar() {
-        if (!this.previewElement) return false;
-        
-        const currentSrc = this.previewElement.src;
-        const fallbackSrc = '/static/css/img/default_avatars/fox.png'; // Ваша заглушка
-        
-        // Если src отличается от заглушки и содержит 'media' (значит это реальное фото)
-        // Либо проверяем наличие ссылки в dropZone (на случай если JS еще не успел подхватить)
-        const hasLinkInZone = this.dropZone && this.dropZone.querySelector('a[href*="/media/"]');
-        
-        return currentSrc !== fallbackSrc || hasLinkInZone;
     }
 
     init() {
@@ -102,13 +88,33 @@ class PhotoManager {
 
     setupRemoveButton() {
         if (!this.removeBtn) return;
-        this.removeBtn.addEventListener('click', () => {
-            // Очищаем инпут
-            if (this.fileInput) this.fileInput.value = '';
+        
+        this.removeBtn.addEventListener('click', (e) => {
+            e.preventDefault(); 
             
-            // Возвращаем заглушку
+            // 1. Сначала очищаем инпут файла
+            if (this.fileInput) {
+                this.fileInput.value = '';
+            }
+            
+            // 2. Потом ставим галочку очистки
+            const clearCheckboxName = `${this.fileInput.name}-clear`;
+            let clearCheckbox = document.querySelector(`input[name="${clearCheckboxName}"]`);
+            
+            if (!clearCheckbox) {
+                // ... создание чекбокса ...
+                clearCheckbox = document.createElement('input');
+                clearCheckbox.type = 'checkbox';
+                clearCheckbox.name = clearCheckboxName;
+                clearCheckbox.id = clearCheckboxName + '_id';
+                const wrapper = this.dropZone.querySelector('.django-hidden-input-wrapper');
+                if (wrapper) wrapper.prepend(clearCheckbox);
+            }
+            
+            clearCheckbox.checked = true;
+            
+            // 3. Визуальный сброс
             this.previewElement.src = '/media/public/default_avatars/0__new_account.png';
-            
             this.updateModeLabel('Фото удалено');
             this.setHasFileState(false);
         });
@@ -130,6 +136,26 @@ class PhotoManager {
     updateModeLabel(text) {
         const label = document.querySelector(AVATAR_CONFIG.selectors.modeLabel);
         if (label) label.textContent = text;
+    }
+
+    resetPhotoState() {
+        if (this.fileInput) this.fileInput.value = '';
+        this.previewElement.src = '/media/public/default_avatars/0__new_account.png';
+        this.updateModeLabel('Фото удалено');
+        this.setHasFileState(false);
+        
+        // Создаем чекбокс очистки, чтобы форма знала о желании удалить
+        const clearCheckboxName = `${this.fileInput.name}-clear`;
+        let clearCheckbox = document.querySelector(`input[name="${clearCheckboxName}"]`);
+        if (!clearCheckbox) {
+            clearCheckbox = document.createElement('input');
+            clearCheckbox.type = 'checkbox';
+            clearCheckbox.name = clearCheckboxName;
+            clearCheckbox.id = clearCheckboxName + '_id';
+            const wrapper = this.dropZone.querySelector('.django-hidden-input-wrapper');
+            if (wrapper) wrapper.prepend(clearCheckbox);
+        }
+        clearCheckbox.checked = true;
     }
 }
 

@@ -13,6 +13,8 @@ export default {
     
     maxFileSize: 5 * 1024 * 1024,
     allowedExtensions: ['jpg', 'jpeg', 'png'],
+
+    hasUserPhoto: window.hasUserPhoto === true, 
     
     selectors: {
         container: '#avatarSelector',

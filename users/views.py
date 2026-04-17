@@ -363,16 +363,28 @@ def profile(request: HttpRequest) -> HttpResponse:
             form.save()
             messages.success(request, 'Профиль успешно обновлён')
             return redirect('users:profile')
+
+        for error in form.non_field_errors():
+            messages.error(request, error)
+
+        for field, errors in form.errors.items():
+            print(field)
+            for error in errors:
+                if field != '__all__':
+                    messages.error(request, f'{error}')
+
     else:
         form = UserForm(instance=request.user)
 
     default_icons = get_default_avatars()
     default_icons_names = [item[0] for item in default_icons]
+    has_user_photo = bool(request.user.avatar and request.user.avatar.url)
 
     context = {
         'form': form,
         'media_url': settings.MEDIA_URL,
         'default_icons': default_icons_names,
+        'has_user_photo': has_user_photo,
     }
 
     return render(request, 'users/profile_form.html', context)

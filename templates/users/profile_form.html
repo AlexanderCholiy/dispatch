@@ -58,29 +58,32 @@
             <div class="avatar-section" id="section-photo">
                 <div class="file-upload-area" id="dropZone">
                   <div class="django-hidden-input-wrapper">
+                      <!-- Сюда Django рендерит ссылку, чекбокс и инпут -->
                       {{ form.avatar }}
                   </div>
                   
                   <div class="upload-content-wrapper">
-                      <!-- Этот лейбл будет скрыт через CSS, если есть класс .has-file -->
                       <label for="{{ form.avatar.id_for_label }}" class="upload-label new-upload-label">
                           <span class="upload-icon">+</span>
                           <span class="upload-text">Нажмите или перетащите новое фото</span>
                           <span class="upload-hint">JPG, PNG до 5MB</span>
                       </label>
-
-                      <!-- Эта кнопка будет скрыта через CSS класс .hidden по умолчанию -->
-                      <button type="button" class="btn-remove-avatar hidden" id="removePhotoBtn">
+                      <!-- Кнопка удаления здесь одна -->
+                      <button type="button" class="btn-remove-avatar" id="removePhotoBtn">
                           <span class="icon-trash"></span> Удалить текущее фото
                       </button>
                   </div>
                 </div>
-                <button type="button" class="btn-remove-avatar hidden" id="removePhotoBtn">Удалить загруженное фото</button>
             </div>
 
             <!-- Секция выбора Иконок -->
             <div class="avatar-section hidden" id="section-icons">
                 <p class="section-title">Выберите стандартную иконку:</p>
+
+                <div style="display:none;"> 
+                    {{ form.default_avatar }}
+                </div>
+
                 <div class="icons-grid" id="iconsGrid">
                     <!-- Сюда JS загрузит иконки -->
                 </div>
@@ -114,12 +117,6 @@
             <div class="error">{{ form.date_of_birth.errors }}</div>
           {% endif %}
         </div>
-
-        {% if form.non_field_errors %}
-          <div class="error">
-            {{ form.non_field_errors }}
-          </div>
-        {% endif %}
         
         <button type="submit" class="btn btn-primary submit-button">Сохранить изменения</button>
 
@@ -131,8 +128,9 @@
 
 {% block extra_js %}
 <script>
-    window.mediaUrl = "{{ media_url }}";
-    window.defaultIcons = {{ default_icons|safe }}; 
+  window.mediaUrl = "{{ media_url }}";
+  window.defaultIcons = {{ default_icons|safe }};
+  window.hasUserPhoto = {{ has_user_photo|lower }};
 </script>
 <script type="module" src="{% static 'js/users/profile/main.js' %}"></script>
 {% endblock %}

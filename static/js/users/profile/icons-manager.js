@@ -48,9 +48,20 @@ class IconsManager {
     }
 
     checkCurrentSelection() {
-        // Если в форме уже что-то выбрано (при редактировании), подсвечиваем
+        // Проверяем, есть ли реально выбранная иконка в форме
+        // Если value пустой или None, значит иконка не выбрана
         if (this.formSelect && this.formSelect.value) {
+            console.log(`[IconsManager] Initial value detected: ${this.formSelect.value}`);
             this.selectIcon(this.formSelect.value);
+        } else {
+            // Если иконки нет, убедимся, что ничего не выбрано визуально
+            document.querySelectorAll('.icon-item').forEach(el => el.classList.remove('selected'));
+            // Убедимся, что превью показывает заглушку (если там еще не фото)
+            // Это зависит от того, что отрисовал Django в шаблоне, но на всякий случай:
+            const currentSrc = this.previewElement.src;
+            if (currentSrc.includes('0__new_account.png')) {
+                 this.updateModeLabel('Нет иконки');
+            }
         }
     }
 
@@ -59,15 +70,42 @@ class IconsManager {
         document.querySelectorAll('.icon-item').forEach(el => el.classList.remove('selected'));
         const selectedItem = this.gridElement.querySelector(`[data-value="${filename}"]`);
         if (selectedItem) selectedItem.classList.add('selected');
-
+        
         // Обновление превью
         this.updatePreview(`${AVATAR_CONFIG.iconsPath}${filename}`);
         
         // Синхронизация с формой Django
         if (this.formSelect) {
-            this.formSelect.value = filename;
+            this.formSelect.value = filename; 
         }
+        
+        // ВАЖНО: Если выбрали иконку, автоматически помечаем фото на удаление
+        const dropZone = document.querySelector('#dropZone');
+        if (dropZone && dropZone.classList.contains('has-file')) {
+            const fileInput = document.querySelector('#id_avatar');
+            
+            // 1. СБРОСАЕМ ФАЙЛ ИЗ ИНПУТА (КРИТИЧНО!)
+            // Если этого не сделать, Django увидит и файл, и галочку удаления -> Ошибка
+            if (fileInput) {
+                fileInput.value = ''; 
+            }
 
+            const clearCheckboxName = `${fileInput.name}-clear`;
+            let clearCheckbox = document.querySelector(`input[name="${clearCheckboxName}"]`);
+            
+            if (!clearCheckbox) {
+                clearCheckbox = document.createElement('input');
+                clearCheckbox.type = 'checkbox';
+                clearCheckbox.name = clearCheckboxName;
+                clearCheckbox.id = clearCheckboxName + '_id';
+                const wrapper = dropZone.querySelector('.django-hidden-input-wrapper');
+                if (wrapper) wrapper.prepend(clearCheckbox);
+            }
+            clearCheckbox.checked = true;
+            
+            console.log('[IconsManager] Photo marked for deletion and input cleared.');
+        }
+        
         this.updateModeLabel('Иконка выбрана');
         this.toggleRemoveButton(true);
     }
@@ -78,10 +116,22 @@ class IconsManager {
         if (this.formSelect) {
             this.formSelect.value = '';
         }
-
-        // Возвращаем заглушку
-        this.updatePreview('/static/css/img/default_avatars/fox.png'); // Или любой другой путь
-        this.updateModeLabel('Нет иконки');
+        
+        // Важно: при очистке иконки, если фото нет, показываем заглушку
+        // Но если фото ЕСТЬ, то мы не должны менять превью на заглушку!
+        // Поэтому здесь мы НЕ меняем src, если там уже есть фото.
+        // Однако, если мы очищаем иконку, а фото нет -> ставим заглушку.
+        // Как узнать, есть ли фото? Проверим класс .has-file у dropZone
+        const dropZone = document.querySelector('#dropZone');
+        const hasPhoto = dropZone && dropZone.classList.contains('has-file');
+        
+        if (!hasPhoto) {
+            this.updatePreview('/media/public/default_avatars/0__new_account.png');
+            this.updateModeLabel('Нет иконки');
+        } else {
+            this.updateModeLabel('Фото загружено');
+        }
+        
         this.toggleRemoveButton(false);
     }
 

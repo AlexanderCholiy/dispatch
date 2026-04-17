@@ -111,7 +111,10 @@ class Command(BaseCommand):
                         validated_model = self._process_document(doc)
 
                         # Устройства только с доп. данными по сотам:
-                        if not validated_model or not validated_model.aops:
+                        if not validated_model or (
+                            not validated_model.aops
+                            and not validated_model.my_cell_info
+                        ):
                             continue
 
                         self._processed_count += 1
@@ -304,10 +307,9 @@ class Command(BaseCommand):
             self._devices_to_update.clear()
 
     def _add_cell_2_butch(self, validated_model: ModemData):
-        if not validated_model.aops:
-            return
+        aops = validated_model.aops or validated_model.my_cell_info
 
-        for aop in validated_model.aops:
+        for aop in aops:
             operator = aop.cell.operator
             cell = aop.cell
 

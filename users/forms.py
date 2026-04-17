@@ -1,3 +1,4 @@
+import os
 from datetime import date
 
 from django import forms
@@ -13,6 +14,8 @@ from .constants import (
     MIN_USER_AGE,
     MIN_USER_PASSWORD_LEN,
     PASSWORD_HELP_TEXT,
+    MAX_AVATAR_SIZE,
+    ALLOWED_IMAGE_EXTENSIONS,
 )
 from .models import PendingUser, User, WorkSchedule
 from .validators import validate_user_email
@@ -178,7 +181,7 @@ class ChangeEmailForm(forms.ModelForm):
 class UserForm(forms.ModelForm):
     default_avatar = forms.ChoiceField(
         required=False,
-        choices=get_default_avatars(),
+        choices=[('', 'Выберите иконку')] + list(get_default_avatars()),
         widget=forms.Select(attrs={'class': 'form-control'}),
         label='Выбрать иконку',
         help_text='Если выбрано, загрузка фото будет отключена.'
@@ -196,7 +199,7 @@ class UserForm(forms.ModelForm):
         widgets = {
             'avatar': forms.ClearableFileInput(attrs={
                 'class': 'avatar-input',
-                'accept': 'image/*',
+                'accept': 'image/png, image/jpeg',
             }),
             'date_of_birth': forms.DateInput(
                 attrs={
@@ -235,6 +238,21 @@ class UserForm(forms.ModelForm):
 
         return value
 
+    def clean_avatar(self):
+        avatar = self.cleaned_data.get('avatar')
+
+        if avatar:
+            if avatar.size > MAX_AVATAR_SIZE:
+                raise ValidationError(
+                    'Размер изображения не должен превышать 5 МБ.'
+                )
+
+            ext = os.path.splitext(avatar.name)[1].lower().replace('.', '')
+            if ext not in ALLOWED_IMAGE_EXTENSIONS:
+                raise ValidationError('Разрешены только форматы JPG и PNG.')
+
+        return avatar
+
     def clean(self):
         cleaned_data = super().clean()
         avatar = cleaned_data.get('avatar')
@@ -248,7 +266,8 @@ class UserForm(forms.ModelForm):
         return cleaned_data
 
     def save(self, commit=True):
-        user = super().save(commit=False)
+        user: User = super().save(commit=False)
+        print(self.cleaned_data)
 
         if self.cleaned_data.get('avatar-clear'):
             if user.avatar:
@@ -258,7 +277,7 @@ class UserForm(forms.ModelForm):
         if user.default_avatar:
             if user.avatar:
                 user.avatar.delete(save=False)
-            user.avatar = None
+                user.avatar = None
         else:
             user.default_avatar = None
 

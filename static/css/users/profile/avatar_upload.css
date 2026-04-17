@@ -20,7 +20,6 @@
     background: var(--add-background-color);
     position: relative;
     overflow: hidden;
-    min-height: 160px; /* Фиксируем высоту, чтобы не прыгало при смене контента */
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -30,22 +29,9 @@
 /* Эффект при перетаскивании файла (Drag Over) */
 .file-upload-area.drag-over {
     border-color: var(--priority-color);
-    background: rgba(90, 127, 255, 0.08); /* Легкий оттенок priority-color */
+    background: var(--extra-color);
     transform: scale(1.01);
-    box-shadow: 0 0 var(--space-md) var(--rgba-blue-color);
-}
-
-/* Анимация успешной загрузки (опционально) */
-.file-upload-area.success {
-    border-color: var(--green-color);
-    background: rgba(54, 179, 126, 0.05);
-    animation: pulse-green 1s;
-}
-
-@keyframes pulse-green {
-    0% { box-shadow: 0 0 0 0 rgba(54, 179, 126, 0.4); }
-    70% { box-shadow: 0 0 0 var(--space-md) rgba(54, 179, 126, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(54, 179, 126, 0); }
+    box-shadow: 0 0 var(--space-md) var(--extra-color);
 }
 
 /* --- 3. Контент внутри зоны (Лейбл и Кнопка) --- */
@@ -102,21 +88,24 @@
     font-size: var(--font-sm);
     font-weight: 600;
     cursor: pointer;
-    text-decoration: underline;
     text-underline-offset: 4px;
-    padding: 0;
     transition: all var(--transition-value);
     display: inline-flex;
     align-items: center;
     gap: var(--space-xs);
     opacity: 0;
     transform: translateY(5px);
+    background: var(--add-background-color);
+    border: 1px solid var(--red-color);
+    border-radius: var(--radius-md);
+    padding: var(--space-sm) !important;
 }
 
 .btn-remove-avatar:hover {
-    color: var(--crimson-color); /* Более яркий красный при наведении */
+    color: var(--crimson-color);
     text-decoration-thickness: 2px;
     transform: translateY(-1px);
+    background: var(--extra-color);
 }
 
 .btn-remove-avatar::before {
@@ -138,16 +127,15 @@
     transform: translateY(0);
     
     /* Стилизация кнопки в состоянии "есть файл" */
-    background: rgba(217, 64, 64, 0.1); /* Очень легкий красный фон */
-    border: 1px solid rgba(217, 64, 64, 0.2);
+    background: var(--add-background-color); /* Очень легкий красный фон */
+    border: 1px solid var(--red-color);
     border-radius: var(--radius-md);
     padding: var(--space-xs) var(--space-sm);
     margin-top: 0;
 }
 
 .file-upload-area.has-file .btn-remove-avatar:hover {
-    background: rgba(217, 64, 64, 0.2);
-    border-color: var(--red-color);
+    background: var(--extra-color);
 }
 
 /* Анимация появления кнопки (если она еще не имеет класса has-file, но стала видимой) */
