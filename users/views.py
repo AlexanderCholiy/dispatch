@@ -368,7 +368,6 @@ def profile(request: HttpRequest) -> HttpResponse:
             messages.error(request, error)
 
         for field, errors in form.errors.items():
-            print(field)
             for error in errors:
                 if field != '__all__':
                     messages.error(request, f'{error}')

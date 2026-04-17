@@ -48,8 +48,8 @@
 
         <div class="user-right">
           <div class="user-avatar">
-            {% if user_info.avatar %}
-                <img src="{{ user_info.avatar.url }}" alt="Аватар">
+            {% if user_info.get_avatar_url %}
+                <img src="{{ user_info.get_avatar_url }}" alt="Аватар">
             {% else %}
                 <div class="avatar-placeholder">{{ user_info.username|first|upper }}</div>
             {% endif %}

@@ -267,7 +267,6 @@ class UserForm(forms.ModelForm):
 
     def save(self, commit=True):
         user: User = super().save(commit=False)
-        print(self.cleaned_data)
 
         if self.cleaned_data.get('avatar-clear'):
             if user.avatar:

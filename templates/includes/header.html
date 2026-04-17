@@ -50,8 +50,8 @@
         class="tooltip"
         data-title="{% if user.is_authenticated %}{{ user.username }}{% else %}Профиль{% endif %}">
         {% if user.is_authenticated %}
-          {% if user.avatar and user.avatar.url %}
-            <img src="{{ user.avatar.url }}" class="user-icon" alt="{{ user.username }}">
+          {% if user.get_avatar_url %}
+            <img src="{{ user.get_avatar_url }}" class="user-icon" alt="{{ user.username }}">
           {% else %}
             <div class="user-icon tooltip" data-title="{{ user.username }}">{{ user.username|first|upper }}</div>
           {% endif %}

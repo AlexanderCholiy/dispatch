@@ -114,7 +114,7 @@ class PhotoManager {
             clearCheckbox.checked = true;
             
             // 3. Визуальный сброс
-            this.previewElement.src = '/media/public/default_avatars/0__new_account.png';
+            this.previewElement.src = '/static/img/default_avatars/0__new_account.png';
             this.updateModeLabel('Фото удалено');
             this.setHasFileState(false);
         });
@@ -140,7 +140,7 @@ class PhotoManager {
 
     resetPhotoState() {
         if (this.fileInput) this.fileInput.value = '';
-        this.previewElement.src = '/media/public/default_avatars/0__new_account.png';
+        this.previewElement.src = '/static/img/default_avatars/0__new_account.png';
         this.updateModeLabel('Фото удалено');
         this.setHasFileState(false);
         

@@ -126,7 +126,7 @@ class IconsManager {
         const hasPhoto = dropZone && dropZone.classList.contains('has-file');
         
         if (!hasPhoto) {
-            this.updatePreview('/media/public/default_avatars/0__new_account.png');
+            this.updatePreview('/static/img/default_avatars/0__new_account.png');
             this.updateModeLabel('Нет иконки');
         } else {
             this.updateModeLabel('Фото загружено');

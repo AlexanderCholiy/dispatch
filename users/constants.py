@@ -19,7 +19,7 @@ MIN_USER_AGE = 18
 MAX_USER_AGE = 120
 SUBFOLDER_AVATAR_DIR = os.path.join(PUBLIC_SUBFOLDER_NAME, 'users')
 DEFAULT_AVATARS_DIR = os.path.join(
-    settings.MEDIA_ROOT, 'public', 'default_avatars'
+    settings.STATIC_ROOT, 'img', 'default_avatars'
 )
 
 USERNAME_HELP_TEXT = (

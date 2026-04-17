@@ -7,6 +7,7 @@ from django.core.files.storage import default_storage
 from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils import timezone
+from django.core.exceptions import ValidationError
 
 from .constants import (
     ALLOWED_IMAGE_EXTENSIONS,
@@ -35,6 +36,18 @@ class Roles(models.TextChoices):
     USER = ('user', 'Пользователь')
     DISPATCH = ('dispatch', 'Диспетчер')
     ENERGY = ('energy', 'Энергетик')
+
+
+class DefaultAvatars(models.TextChoices):
+    ROBOT = '1__robot.png', 'Робот-помощник'
+    ASTRONAUT = '2__astronaut.png', 'Исследователь космоса'
+    PILOT = '3__pilot.png', 'Верный штурман'
+    FOX = '4__fox.png', 'Мудрый лис'
+    KOALA = '5__koala.png', 'Спокойная коала'
+    SNOWY = '6__snowy.png', 'Ночной дозор'
+    CALL_CENTER = '7__call_center.png', 'Мастер поддержки'
+    NINJA = '8__ninja.png', 'Профи-ниндзя'
+    WIZARD = '9__wizard.png', 'Маг решений'
 
 
 class User(AbstractUser):
@@ -77,6 +90,7 @@ class User(AbstractUser):
     default_avatar = models.CharField(
         'Иконка профиля',
         max_length=MAX_DEFAULT_AVATAR_LEN,
+        choices=DefaultAvatars.choices,
         blank=True,
         null=True,
         help_text='Выберите стандартную иконку вместо загрузки фото.',
@@ -100,7 +114,7 @@ class User(AbstractUser):
             return self.avatar.url
         if self.default_avatar:
             return (
-                f'{settings.MEDIA_URL}public/default_avatars/'
+                f'{settings.STATIC_URL}img/default_avatars/'
                 f'{self.default_avatar}'
             )
 
@@ -131,6 +145,11 @@ class User(AbstractUser):
 
             if not os.path.exists(static_path):
                 self.default_avatar = None
+
+        if self.avatar and self.default_avatar:
+            raise ValidationError(
+                'Нельзя одновременно загружать фото и выбирать иконку.'
+            )
 
     def save(self, *args, **kwargs) -> None:
         is_new = self.pk is None

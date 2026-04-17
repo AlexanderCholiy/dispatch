@@ -62,9 +62,10 @@ class CommentConsumer(AsyncWebsocketConsumer):
 
             for item in serializer_data:
                 author_obj = author_map.get(item['author_id'])
+
                 if author_obj:
-                    if author_obj.avatar:
-                        item['avatar_url'] = author_obj.avatar.url
+                    if author_obj.get_avatar_url:
+                        item['avatar_url'] = author_obj.get_avatar_url
                     else:
                         item['avatar_url'] = None
                 else:
@@ -125,9 +126,9 @@ class CommentConsumer(AsyncWebsocketConsumer):
         data['can_edit'] = is_admin or (data['author_id'] == user.id)
 
         if hasattr(comment_instance, 'author'):
-            author = comment_instance.author
-            if hasattr(author, 'avatar') and author.avatar:
-                data['avatar_url'] = author.avatar.url
+            author: User = comment_instance.author
+            if author.get_avatar_url:
+                data['avatar_url'] = author.get_avatar_url
             else:
                 data['avatar_url'] = None
             data['username'] = author.username

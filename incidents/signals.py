@@ -6,6 +6,7 @@ from django.dispatch import receiver
 from api.serializers.comment import CommentSerializer
 
 from .models import Comment
+from users.models import User
 
 
 @receiver(post_save, sender=Comment)
@@ -17,9 +18,9 @@ def comment_saved_signal(sender, instance: Comment, created: bool, **kwargs):
     data = serializer.data
 
     if hasattr(instance, 'author'):
-        author = instance.author
-        if hasattr(author, 'avatar') and author.avatar:
-            data['avatar_url'] = author.avatar.url
+        author: User = instance.author
+        if author.get_avatar_url:
+            data['avatar_url'] = author.get_avatar_url
         else:
             data['avatar_url'] = None
         data['username'] = author.username

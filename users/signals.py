@@ -58,7 +58,7 @@ def notify_role_or_staff_change(sender, instance: User, **kwargs):
             full_url = f'{base_url}{admin_path}'
 
             changes.append(
-                f'Статус доступа к панели управления предоставлен.\n'
+                f'Статус доступа к панели управления предоставлен.\n\n'
                 f'Войти можно по ссылке: {full_url}'
             )
         else:

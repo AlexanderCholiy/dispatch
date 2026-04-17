@@ -6,7 +6,7 @@ const RAW_ICONS = window.defaultIcons || [];
 export default {
     mediaUrl: MEDIA_URL,
     // Формируем путь к папке с иконками
-    iconsPath: `${MEDIA_URL}public/default_avatars/`,
+    iconsPath: `/static/img/default_avatars/`,
     
     // rawData - это просто массив строк ['astronaut.png', ...], поэтому используем его напрямую
     availableIcons: Array.isArray(RAW_ICONS) ? RAW_ICONS : [], 
