@@ -45,3 +45,7 @@ display: flex;
   padding: var(--space-xxs);
   font-size: var(--font-sm);
 }
+
+.email-three-btn {
+  padding: var(--space-xxs) var(--space-md);
+}
