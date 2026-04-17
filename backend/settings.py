@@ -150,6 +150,7 @@ DATABASES = {
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': int(os.getenv('DB_PORT', 5432)),
         'CONN_MAX_AGE': 60,
+        'CONN_HEALTH_CHECKS': True,
         'OPTIONS': {
             'connect_timeout': 3,
             'options': '-c statement_timeout=10000'
@@ -163,6 +164,7 @@ DATABASES = {
         'HOST': os.getenv('MONITORING_DB_HOST', 'localhost'),
         'PORT': int(os.getenv('MONITORING_DB_PORT', 1433)),
         'CONN_MAX_AGE': 60,
+        'CONN_HEALTH_CHECKS': True,
         'OPTIONS': {
             'driver': 'ODBC Driver 17 for SQL Server',
             'Encrypt': 'no',
@@ -178,6 +180,8 @@ DATABASES = {
         'PASSWORD': os.environ.get('TS_DB_PASSWORD'),
         'HOST': os.environ.get('TS_DB_HOST'),
         'PORT': int(os.environ.get('TS_DB_PORT', 5432)),
+        'CONN_MAX_AGE': 60,
+        'CONN_HEALTH_CHECKS': True,
     },
     'energy': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -187,14 +191,13 @@ DATABASES = {
         'HOST': os.environ.get('ENERGY_DB_HOST'),
         'PORT': int(os.environ.get('ENERGY_DB_PORT', 5432)),
         'CONN_MAX_AGE': 60,
+        'CONN_HEALTH_CHECKS': True,
         'OPTIONS': {
             'connect_timeout': 5,
             'options': '-c statement_timeout=15000'
         },
     }
 }
-
-CONN_HEALTH_CHECKS = False
 
 DATABASE_ROUTERS = [
     'monitoring.routers.ReadOnlyRouter',

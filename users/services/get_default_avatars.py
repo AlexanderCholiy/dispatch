@@ -1,4 +1,5 @@
 import os
+
 from users.constants import DEFAULT_AVATARS_DIR
 
 

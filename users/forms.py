@@ -6,16 +6,17 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+
 from users.services.get_default_avatars import get_default_avatars
 
 from .constants import (
+    ALLOWED_IMAGE_EXTENSIONS,
+    MAX_AVATAR_SIZE,
     MAX_USER_AGE,
     MAX_USER_USERNAME_DISPLAY_LEN,
     MIN_USER_AGE,
     MIN_USER_PASSWORD_LEN,
     PASSWORD_HELP_TEXT,
-    MAX_AVATAR_SIZE,
-    ALLOWED_IMAGE_EXTENSIONS,
 )
 from .models import PendingUser, User, WorkSchedule
 from .validators import validate_user_email

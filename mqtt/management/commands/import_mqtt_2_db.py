@@ -155,9 +155,17 @@ class Command(BaseCommand):
             data = doc.get('data', {})
             if not isinstance(data, dict):
                 return None
+
+            mongo_id = doc.get('_id')
+            if not mongo_id:
+                return None
+
             modem_raw = data.get('modem', {})
             if not isinstance(modem_raw, dict):
                 return None
+
+            modem_raw['mongo_id'] = str(mongo_id)
+
             return ModemData.model_validate(modem_raw)
         except KeyboardInterrupt:
             mqtt_logger.warning('Процесс прерван.')
@@ -696,9 +704,21 @@ class Command(BaseCommand):
                     or existing_obj.rssi != data.rssi
                     or existing_obj.rxlev != data.rxlev
                     or existing_obj.c1 != data.c1
+                    or existing_obj.mongo_id != data.mongo_id
                 ) if existing_obj else True
 
                 if existing_obj and has_changes:
+                    existing_obj.index = data.index
+                    existing_obj.cba = data.cba
+                    existing_obj.rsrp = data.rsrp
+                    existing_obj.rsrq = data.rsrq
+                    existing_obj.rscp = data.rscp
+                    existing_obj.ecno = data.ecno
+                    existing_obj.rssi = data.rssi
+                    existing_obj.rxlev = data.rxlev
+                    existing_obj.c1 = data.c1
+                    existing_obj.mongo_id = data.mongo_id
+
                     to_update.append(existing_obj)
                 elif not existing_obj:
                     new_measure = CellMeasure(
@@ -714,6 +734,7 @@ class Command(BaseCommand):
                         rssi=data.rssi,
                         rxlev=data.rxlev,
                         c1=data.c1,
+                        mongo_id=data.mongo_id,
                     )
                     to_create.append(new_measure)
 
@@ -736,6 +757,7 @@ class Command(BaseCommand):
                             'index', 'cba', 'rsrp',
                             'rsrq', 'rscp', 'ecno',
                             'rssi', 'rxlev', 'c1',
+                            'mongo_id',
                         ]
                     )
                     self._updated_measures += len(batch)

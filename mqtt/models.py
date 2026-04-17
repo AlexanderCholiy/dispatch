@@ -4,6 +4,7 @@ from django.utils import timezone
 from mqtt.constants import (
     MAX_DEVICE_VERSION_LEN,
     MAX_MAC_LEN,
+    MAX_MONGO_ID_LEN,
     MAX_NETWORK_TYPE_LEN,
     MAX_OPERATOR_CODE_LEN,
     MAX_OPERATOR_NAME_LEN,
@@ -292,6 +293,14 @@ class CellMeasure(models.Model):
             'C1 (Cell selection criterion) - критерий «пригодности» сигнала '
             'для работы в сетях 2G'
         ),
+    )
+    mongo_id = models.CharField(
+        max_length=MAX_MONGO_ID_LEN,
+        db_index=True,
+        null=True,
+        blank=True,
+        verbose_name='ID из MongoDB',
+        help_text='Идентификатор документа из коллекции MongoDB'
     )
 
     class Meta:

@@ -28,6 +28,7 @@ from django_ratelimit.decorators import ratelimit
 
 from core.loggers import django_logger
 from core.utils import timedelta_to_human_time
+from users.services.get_default_avatars import get_default_avatars
 
 from .constants import PAGE_SIZE_USERS_CHOICES, USERS_PER_PAGE
 from .forms import (
@@ -43,7 +44,6 @@ from .utils import (
     send_activation_email,
     send_confirm_email,
 )
-from users.services.get_default_avatars import get_default_avatars
 
 
 class SlaPercentStats(TypedDict):

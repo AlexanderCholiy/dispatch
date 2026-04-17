@@ -9,9 +9,15 @@ from mqtt.shemas.aops import Cell, CellMeasure, NetType, Operator
 
 class ParseMyCellInfo:
 
-    def __init__(self, my_cell_info_row: str, event_datetime: datetime):
+    def __init__(
+        self,
+        my_cell_info_row: str,
+        event_datetime: datetime,
+        mongo_id: str,
+    ):
         self.my_cell_info_row = my_cell_info_row
         self.event_datetime = event_datetime
+        self.mongo_id = mongo_id
 
     def parse_my_cell_info_string(self) -> Optional[list[CellMeasure]]:
         if not self.my_cell_info_row:
@@ -119,6 +125,7 @@ class ParseMyCellInfo:
                     rsrp=rsrp_val,
                     rsrq=rsrq_val,
                     event_datetime=self.event_datetime,
+                    mongo_id=self.mongo_id,
                 )
 
                 cells.append(measure)

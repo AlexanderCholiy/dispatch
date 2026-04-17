@@ -10,6 +10,7 @@ from pydantic import (
     model_validator,
 )
 
+from mqtt.constants import MAX_MONGO_ID_LEN
 from mqtt.services.parse_aops import ParseAops
 from mqtt.services.parse_gps_coordinate import parse_gps_coordinate
 from mqtt.services.parse_my_cell_info import ParseMyCellInfo
@@ -36,6 +37,14 @@ class ModemData(BaseModel):
     model_config = ConfigDict(extra='ignore', populate_by_name=True)
     _skip_manual_validation_fields: tuple[str] = (
         'gps', 'aops', 'my_cell_info'
+    )
+
+    mongo_id: str = Field(
+        ...,
+        alias='mongo_id',
+        min_length=MAX_MONGO_ID_LEN,
+        max_length=MAX_MONGO_ID_LEN,
+        description='Уникальный идентификатор документа из MongoDB (ObjectId)'
     )
 
     # Основная информация об устройстве:
@@ -206,11 +215,15 @@ class ModemData(BaseModel):
             setattr(self, field_name, decoded_text)
 
         self.aops = (
-            ParseAops(self.aops_raw, self.event_datetime)
+            ParseAops(
+                self.aops_raw, self.event_datetime, self.mongo_id
+            )
             .parse_aops_string()
         )
         self.my_cell_info = (
-            ParseMyCellInfo(self.my_cell_info_row, self.event_datetime)
+            ParseMyCellInfo(
+                self.my_cell_info_row, self.event_datetime, self.mongo_id
+            )
             .parse_my_cell_info_string()
         )
 

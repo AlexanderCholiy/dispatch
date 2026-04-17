@@ -4,9 +4,9 @@ from django.db.models.signals import post_save, pre_delete
 from django.dispatch import receiver
 
 from api.serializers.comment import CommentSerializer
+from users.models import User
 
 from .models import Comment
-from users.models import User
 
 
 @receiver(post_save, sender=Comment)

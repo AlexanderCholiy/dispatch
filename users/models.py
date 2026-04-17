@@ -1,16 +1,18 @@
-import time
 import os
+import time
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 from django.core.files.storage import default_storage
 from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils import timezone
-from django.core.exceptions import ValidationError
 
 from .constants import (
     ALLOWED_IMAGE_EXTENSIONS,
+    DEFAULT_AVATARS_DIR,
+    MAX_DEFAULT_AVATAR_LEN,
     MAX_USER_EMAIL_LEN,
     MAX_USER_PASSWORD_LEN,
     MAX_USER_ROLE_LEN,
@@ -18,8 +20,6 @@ from .constants import (
     PASSWORD_HELP_TEXT,
     SUBFOLDER_AVATAR_DIR,
     USERNAME_HELP_TEXT,
-    MAX_DEFAULT_AVATAR_LEN,
-    DEFAULT_AVATARS_DIR,
 )
 from .validators import (
     username_format_validators,

@@ -4,6 +4,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, model_validator
 
+from mqtt.constants import MAX_MONGO_ID_LEN
+
 
 class NetType(StrEnum):
     GSM = '2G'
@@ -70,6 +72,13 @@ class Cell(BaseModel):
 
 
 class CellMeasure(BaseModel):
+    mongo_id: str = Field(
+        ...,
+        alias='mongo_id',
+        min_length=MAX_MONGO_ID_LEN,
+        max_length=MAX_MONGO_ID_LEN,
+        description='Уникальный идентификатор документа из MongoDB (ObjectId)'
+    )
     cell: Cell = Field(
         ..., description='Cell'
     )

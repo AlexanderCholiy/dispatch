@@ -133,12 +133,13 @@ class CellMeasureAdmin(admin.ModelAdmin):
     search_fields = ('device__mac_address', 'cell__cell_id')
     date_hierarchy = 'event_datetime'
     list_per_page = CELL_MEASSURE_PER_PAGE
+    readonly_fields = ('event_datetime', 'mongo_id',)
 
     autocomplete_fields = ('device', 'cell')
 
     fieldsets = (
         ('Контекст измерения', {
-            'fields': ('device', 'cell', 'event_datetime', 'cba', 'index')
+            'fields': ('device', 'cell', 'cba', 'index')
         }),
         ('Показатели сигнала', {
             'fields': (
@@ -146,6 +147,10 @@ class CellMeasureAdmin(admin.ModelAdmin):
                 ('rscp', 'ecno'),
                 ('rssi', 'rxlev', 'c1')
             ),
+            'classes': ('collapse',)
+        }),
+        ('Мета', {
+            'fields': ('event_datetime', 'mongo_id',),
             'classes': ('collapse',)
         }),
     )

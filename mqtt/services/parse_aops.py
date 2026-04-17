@@ -9,9 +9,15 @@ from mqtt.shemas.aops import Cell, CellBar, CellMeasure, NetType, Operator
 
 class ParseAops:
 
-    def __init__(self, aops_raw: Optional[str], event_datetime: datetime):
+    def __init__(
+        self,
+        aops_raw: Optional[str],
+        event_datetime: datetime,
+        mongo_id: str,
+    ):
         self.aops_raw = aops_raw
         self.event_datetime = event_datetime
+        self.mongo_id = mongo_id
 
     def parse_aops_string(self) -> Optional[list[CellMeasure]]:
         if not self.aops_raw:
@@ -146,6 +152,7 @@ class ParseAops:
                         cell=cell_obj,
                         index=index,
                         event_datetime=self.event_datetime,
+                        mongo_id=self.mongo_id,
                         **measure_kwargs
                     )
 
