@@ -27,7 +27,7 @@
                     {% if user.avatar %}
                         <img id="avatarPreview" src="{{ user.avatar.url }}" alt="Текущий аватар" class="avatar-preview-img">
                     {% elif user.default_avatar %}
-                        <img id="avatarPreview" src="{{ media_url }}public/default_avatars/{{ user.default_avatar }}" alt="Иконка" class="avatar-preview-img">
+                        <img id="avatarPreview" src="/static/img/default_avatars/{{ user.default_avatar }}" alt="Иконка" class="avatar-preview-img">
                     {% else %}
                         <!-- Заглушка, если ничего нет -->
                         <img id="avatarPreview" src="/static/img/default_avatars/0__new_account.png" alt="Профиль" class="avatar-preview-img">
