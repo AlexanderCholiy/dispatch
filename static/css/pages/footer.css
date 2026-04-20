@@ -1,0 +1,41 @@
+.about-footer {
+  margin-top: var(--space-xl);
+  padding-top: var(--space-md);
+  border-top: 2px solid var(--extra-color);
+}
+
+.footer-content p {
+  font-size: var(--font-sm);
+  color: var(--extra-color);
+  line-height: 1.5;
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  overflow-wrap: break-word; 
+  hyphens: auto;
+}
+
+@media (max-width: 768px) {
+  .card-body {
+    padding: var(--space-md);
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .contacts-header {
+    flex-direction: column;
+  }
+
+  .contact-row {
+    width: 100%;
+  }
+  
+  .staff-table th, 
+  .staff-table td {
+    padding: var(--space-sm);
+    font-size: var(--font-xs);
+  }
+}

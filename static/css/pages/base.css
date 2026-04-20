@@ -1,0 +1,62 @@
+.card-body {
+  padding: var(--space-xl);
+}
+
+.about-title {
+  font-size: var(--font-xl);
+  font-weight: 600;
+  color: var(--color);
+  margin: 0;
+  margin-bottom: var(--space-lg);
+  line-height: 1.2;
+  text-align: center;
+}
+
+.about-section {
+  margin-bottom: var(--space-xl);
+}
+
+.section-title {
+  font-size: var(--font-lg);
+  font-weight: 500;
+  color: var(--add-color);
+  margin-bottom: var(--space-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.intro-text {
+  font-size: var(--font-md);
+  line-height: 1.6;
+  color: var(--add-color);
+  margin-bottom: var(--space-md);
+  overflow-wrap: break-word; 
+  hyphens: auto;
+}
+
+.company-link {
+  color: var(--red-color);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color var(--transition-value);
+}
+
+.company-link:hover {
+  text-decoration: underline;
+}
+
+.goal-block {
+  background-color: var(--add-background-color);
+  border-left: 4px solid var(--priority-color);
+  padding: var(--space-md);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: var(--font-sm);
+  color: var(--color);
+  line-height: 1.6;
+}
+
+.about-section strong {
+  margin-right: var(--space-sm);
+  display: inline-block;
+}

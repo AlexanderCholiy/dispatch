@@ -2,63 +2,145 @@
 {% load static %}
 
 {% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/pages/about.css' %}">
+  <link rel="stylesheet" href="{% static 'css/includes/tables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/pages/base.css' %}">
+  <link rel="stylesheet" href="{% static 'css/pages/features.css' %}">
+  <link rel="stylesheet" href="{% static 'css/pages/contacts.css' %}">
+  <link rel="stylesheet" href="{% static 'css/pages/footer.css' %}">
 {% endblock %}
 
 {% block content %}
 <div class="container-sm">
-  <div class="card">
+  <div class="card about-card">
     <div class="card-body">
-      <h1 class="about-title">О проекте</h1>
-
+      <h1 class="about-title">Диспетчерская</h1>
+      
       <section class="about-section">
-        <p class="card-text">
-          Данный веб-сервис разработан для компании <a href="https://www.newtowers.ru/" target="_blank" class="ts-company">ООО «Новые Башни»</a> и предназначен
-          для автоматизации процессов диспетчерской службы.  
-          Он интегрирован с корпоративной электронной почтой и системой <a href="https://tracker.yandex.ru/" target="_blank" class="yt-company">Yandex Tracker</a>,
-          что позволяет обрабатывать входящие письма, создавать инциденты и контролировать выполнение задач.
+        <p class="intro-text">
+          Данный веб-сервис — полностью автономная платформа для управления инцидентами компании 
+          <a href="https://www.newtowers.ru/" target="_blank" class="company-link">ООО «Новые Башни»</a>. 
+          Система обеспечивает бесперебойную работу диспетчерской службы в режиме 24/7, минимизируя влияние человеческого фактора.
         </p>
+        
+        <div class="goal-block">
+          <strong>Основная задача:</strong> Автоматическая обработка входящих писем, распределение заявок между диспетчерами и контроль сроков выполнения работ (SLA).
+        </div>
       </section>
 
       <section class="about-section">
-        <div class="contacts">
-          <table>
-            <colgroup>
-              <col style="width: 60%;">
-              <col style="width: 40%;">
-              <col style="width: 60%;">
-              <col style="width: 40%;">
-            </colgroup>
-            <tr>
-              <th colspan="2">Техническая поддержка</th>
-              <th colspan="2">Диспетчерская служба</th>
-            </tr>
-            <tr>
-              <td class="contact-cell">
-                <span class="email-link copy-text" data-text="a.choliy@newtowers.ru">a.choliy@newtowers.ru</span>
-              </td>
-              <td class="contact-name">Александр Чолий</td>
-              <td class="contact-cell">
-                <span class="email-link copy-text" data-text="v.stupakov@newtowers.ru">v.stupakov@newtowers.ru</span>
-              </td>
-              <td class="contact-name">Василий Ступаков</td>
-            </tr>
-            <tr>
-              <td class="contact-cell">
-                <span class="email-link copy-text" data-text="a.zhelezin@newtowers.ru">a.zhelezin@newtowers.ru</span>
-              </td>
-              <td class="contact-name">Андрей Железин</td>
-              <td class="contact-cell">
-                <span class="email-link copy-text" data-text="s.ermakov@newtowers.ru">s.ermakov@newtowers.ru</span>
-              </td>
-              <td class="contact-name">Ермаков Сергей</td>
-            </tr>
+        <h3 class="section-title">Ключевые возможности</h3>
+        <div class="features-grid">
+          <div class="feature-item">
+            <i class='bx bx-cog icon'></i>
+            <span><strong>Автоматизация:</strong>От момента получения письма до автоответа клиенту при закрытии инцидента.</span>
+          </div>
+          <div class="feature-item">
+            <i class='bx bx-dialpad icon'></i>
+            <span><strong>Маршрутизация:</strong>Равномерное распределение задач между активными диспетчерами. Обработка сотен обращений за смену.</span>
+          </div>
+          <div class="feature-item">
+            <i class='bx bx-wrench icon'></i>
+            <span><strong>Выбор подрядчика:</strong>Автоматическое определение ответственного подрядчика для АВР/РВР на основе шифра опоры.</span>
+          </div>
+          <div class="feature-item">
+            <i class='bx bx-data icon'></i>
+            <span><strong>Интеграция с Tower Store:</strong>Синхронизация с основной базой данных компании. Актуальная информация об объектах всегда под рукой.</span>
+          </div>
+          <div class="feature-item">
+            <i class='bx bx-chart icon'></i>
+            <span><strong>Мониторинг в реальном времени:</strong>Интеграция с системой «Миниторинг». Отображение статуса устройств прямо в карточке инцидента.</span>
+          </div>
+          <div class="feature-item">
+            <i class='bx bx-bell icon'></i>
+            <span><strong>Система эскалации:</strong>Мгновенные уведомления диспетчерам и / или руководству о новых письмах или эскалации.</span>
+          </div>
+        </div>
+        
+        <div class="resource-control-list">
+          <div class="resource-control">
+            <span><strong>Контроль ресурсов:</strong>Точный учет времени работы дизель-генераторных установок (ДГУ).</span>
+          </div>
+  
+          <div class="resource-control">
+            <span><strong>Прозрачная статистика:</strong>Отображение SLA, динамики инцидентов, нагрузки на диспетчеров и сроков дизелирования ДГУ в реальном времени.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="about-section">
+        <h3 class="section-title">Команда поддержки и контакты</h3>
+        <p class="contact-intro">
+          Любое обращение через почту мгновенно попадает в систему и распределяется по ответственному сотруднику.
+        </p>
+        
+        <div class="contacts-header">
+          <div class="contact-row">
+            <i class='bx bx-envelope'></i>
+            <span><strong>E-mail:</strong>operation@newtowers.ru</span>
+          </div>
+          <div class="contact-row">
+            <i class='bx bx-phone'></i>
+            <span><strong>Телефон:</strong>+7 (911) 371-61-48</span>
+          </div>
+        </div>
+
+        <div class="staff-table-wrapper table-wrapper">
+          <table class="staff-table custom-table">
+            <thead>
+              <colgroup>
+                <col style="width: 20%;">
+                <col style="width: 30%;">
+                <col style="width: 20%;">
+                <col style="width: 30%;">
+              </colgroup>
+              <tr>
+                <th colspan="2">Техническая поддержка</th>
+                <th colspan="2">Диспетчерская служба</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="email-cell">
+                  <span class="copy-text" data-text="a.choliy@newtowers.ru" title="Нажмите, чтобы скопировать">
+                    a.choliy@newtowers.ru
+                  </span>
+                </td>
+                <td class="name-cell">Александр Чолий</td>
+                <td class="email-cell">
+                  <span class="copy-text" data-text="v.stupakov@newtowers.ru" title="Нажмите, чтобы скопировать">
+                    v.stupakov@newtowers.ru
+                  </span>
+                </td>
+                <td class="name-cell">Василий Ступаков</td>
+              </tr>
+              <tr>
+                <td class="email-cell">
+                  <span class="copy-text" data-text="a.zhelezin@newtowers.ru" title="Нажмите, чтобы скопировать">
+                    a.zhelezin@newtowers.ru
+                  </span>
+                </td>
+                <td class="name-cell">Андрей Железин</td>
+                <td class="email-cell">
+                  <span class="copy-text" data-text="s.ermakov@newtowers.ru" title="Нажмите, чтобы скопировать">
+                    s.ermakov@newtowers.ru
+                  </span>
+                </td>
+                <td class="name-cell">Сергей Ермаков</td>
+              </tr>
+            </tbody>
           </table>
         </div>
       </section>
 
+      <section class="about-footer">
+        <div class="footer-content">
+          <p>
+            Мы постоянно совершенствуем платформу. Если у вас есть предложения по улучшению функционала или вы обнаружили ошибку, 
+            пожалуйста, сообщите администратору системы. Ваша обратная связь помогает нам работать эффективнее.
+          </p>
+        </div>
+      </section>
     </div>
   </div>
 </div>
-
 {% endblock %}

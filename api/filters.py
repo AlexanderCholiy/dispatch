@@ -79,11 +79,19 @@ class IncidentReportFilter(FilterSet):
     def filter_last_month(
         self, queryset: QuerySet[Incident], name: str, value: bool
     ):
-        """В Заявки с первого числа предыдущего месяца по сегодня"""
-        if value:
-            first_day_prev_month = get_first_day_prev_month()
-            return queryset.filter(incident_date__gte=first_day_prev_month)
-        return queryset
+        """
+        Возвращает инциденты с первого числа предыдущего месяца по сегодня
+        ИЛИ все открытые инциденты (если выбран флаг).
+        """
+        if not value:
+            return queryset
+
+        first_day_prev_month = get_first_day_prev_month()
+
+        return queryset.filter(
+            Q(incident_date__gte=first_day_prev_month)
+            | Q(is_incident_finish=False)
+        )
 
 
 def get_incident_date_filter(start: Optional[date], end: Optional[date]) -> Q:
