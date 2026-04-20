@@ -83,6 +83,11 @@ NOTIFIED_CONTRACTOR_STATUS_DESC = (
     'Отправили письмо с инцидентом подрядчику.'
 )
 
+REQUEST_FOR_ADD_DATA_STATUS_NAME = 'Запрос доп. данных'
+REQUEST_FOR_ADD_DATA_STATUS_DESC = (
+    'Запрос дополнительной информации от заявителя, по инциденту'
+)
+
 FINISHED_STATUS_NAMES = [END_STATUS_NAME, GENERATION_STATUS_NAME]
 
 # В Трекере должно быть также, также есть связь в истории статусов:
@@ -125,9 +130,18 @@ STATUS_TRANSITIONS = {
         IN_WORK_STATUS_NAME,
         END_STATUS_NAME,
         WAIT_ACCEPTANCE_STATUS_NAME,
+        REQUEST_FOR_ADD_DATA_STATUS_NAME,
     ],
     IN_WORK_STATUS_NAME: [
         NOTIFIED_OP_IN_WORK_STATUS_NAME,
+        END_STATUS_NAME,
+        GENERATION_STATUS_NAME,
+        WAIT_ACCEPTANCE_STATUS_NAME,
+        NOTIFIED_OP_END_STATUS_NAME,
+        REQUEST_FOR_ADD_DATA_STATUS_NAME,
+    ],
+    REQUEST_FOR_ADD_DATA_STATUS_NAME: [
+        IN_WORK_STATUS_NAME,
         END_STATUS_NAME,
         GENERATION_STATUS_NAME,
         WAIT_ACCEPTANCE_STATUS_NAME,

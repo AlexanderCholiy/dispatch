@@ -64,7 +64,7 @@ class Incident(models.Model):
     insert_date = models.DateTimeField(
         auto_now_add=True,
         verbose_name='Дата и время добавления',
-        db_index=True
+        db_index=True,
     )
     update_date = models.DateTimeField(
         auto_now=True,

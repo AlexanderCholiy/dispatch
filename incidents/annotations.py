@@ -39,6 +39,7 @@ from .constants import (
     INCIDENT_VOLS_TYPE,
     NOTIFIED_CONTRACTOR_STATUS_NAME,
     POWER_ISSUE_TYPES,
+    REQUEST_FOR_ADD_DATA_STATUS_NAME,
     RUSSIA_EMPTY_MACRO_ID,
     RVR_CATEGORY,
     RVR_SLA_DEADLINE_IN_HOURS,
@@ -587,6 +588,15 @@ def aggregate_sla_percentages(
 
 
 def annotate_sla_dispatch(queryset: QuerySet[Incident]):
+    add_data_subquery = (
+        IncidentStatusHistory.objects
+        .filter(
+            incident=OuterRef('pk'),
+            status__name=REQUEST_FOR_ADD_DATA_STATUS_NAME,
+        )
+        .order_by('insert_date')
+    )
+
     contractor_subquery = (
         IncidentStatusHistory.objects
         .filter(
@@ -597,6 +607,10 @@ def annotate_sla_dispatch(queryset: QuerySet[Incident]):
     )
 
     queryset = queryset.annotate(
+        request_add_data_date=Subquery(
+            add_data_subquery.values('insert_date')[:1],
+            output_field=DateTimeField(),
+        ),
         transfer_to_contractor_date=Subquery(
             contractor_subquery.values('insert_date')[:1],
             output_field=DateTimeField(),
@@ -605,32 +619,24 @@ def annotate_sla_dispatch(queryset: QuerySet[Incident]):
 
     queryset = queryset.annotate(
         dispatch_end_date=Case(
-            # 1. Передано подрядчику
+            # Приоритет 1: Если есть статус REQUEST_FOR_ADD_DATA_STATUS_NAME
+            When(
+                request_add_data_date__isnull=False,
+                then=F('request_add_data_date'),
+            ),
+            # Приоритет 2: Если нет запроса на данные,
+            # но есть передача подрядчику, берем её
             When(
                 transfer_to_contractor_date__isnull=False,
                 then=F('transfer_to_contractor_date'),
             ),
-            # 2. Закрыт инцидент
+            # Приоритет 3: Если инцидент закрыт
+            # (на всякий случай, если оба выше не сработали)
             When(
                 incident_finish_date__isnull=False,
                 then=F('incident_finish_date'),
             ),
-            # 3. До текущего времени
-            default=Value(timezone.now()),
-            output_field=DateTimeField(),
-        )
-    )
-
-    queryset = queryset.annotate(
-        dispatch_end_date=Case(
-            When(
-                transfer_to_contractor_date__isnull=False,
-                then=F('transfer_to_contractor_date'),
-            ),
-            When(
-                incident_finish_date__isnull=False,
-                then=F('incident_finish_date'),
-            ),
+            # Приоритет 4: Иначе считаем до текущего момента
             default=Value(timezone.now()),
             output_field=DateTimeField(),
         )
