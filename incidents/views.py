@@ -782,9 +782,10 @@ def confirm_move_emails(request: HttpRequest) -> HttpResponse:
                         )
                         break
 
-            tasks_in_threads(
-                tasks, yt_logger, cpu_bound=False, raise_exs=True
-            )
+            if tasks:
+                tasks_in_threads(
+                    tasks, yt_logger, cpu_bound=False, raise_exs=True
+                )
 
         except (ApiNotFound, ApiBadRequest):
             transaction.set_rollback(True)

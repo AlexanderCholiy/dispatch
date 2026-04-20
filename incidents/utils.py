@@ -189,6 +189,7 @@ class IncidentManager(IncidentValidator):
         if match:
             return match.group(0) if match else None
 
+        # Префикс для старых инцидентов из YandexTracker:
         match = re.search(rf'{INCIDENT_YT_CODE_PREFIX}-\d+', text)
         return match.group(0) if match else None
 
@@ -298,7 +299,8 @@ class IncidentManager(IncidentValidator):
 
         if max_incident_num_per_user is not None:
             active_users_with_incidents = active_users_with_incidents.filter(
-                incident_count__lt=max_incident_num_per_user)
+                incident_count__lt=max_incident_num_per_user
+            )
 
         if yt_manager:
             active_users_with_incidents = active_users_with_incidents.filter(

@@ -61,7 +61,8 @@ class Command(BaseCommand):
             if self._updated_devices:
                 mqtt_logger.info(
                     f'Обработано: {total_devices_cnt}. '
-                    f'Обновлено: Devices={self._updated_devices}.'
+                    'Обновлено связей Devices к Pole: '
+                    f'{self._updated_devices}.'
                 )
 
     def _get_monitoring_data(self) -> dict[str, str]:
