@@ -506,6 +506,8 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
             )
 
     if request.method == 'POST' and 'incident_submit' in request.POST:
+        had_auto_close_before = incident.auto_close_date is not None
+
         incident_form = IncidentForm(
             data=request.POST,
             instance=incident,
@@ -515,6 +517,18 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         if incident_form.is_valid():
             incident_form.save()
             messages.success(request, 'Данные обновлены')
+
+            has_auto_close_now = incident.auto_close_date is not None
+
+            if has_auto_close_now and not had_auto_close_before:
+                close_time = timezone.localtime(incident.auto_close_date)
+                formatted_time = close_time.strftime('%d.%m.%Y в %H:%M')
+                messages.info(
+                    request,
+                    'Установлено автоматическое закрытие инцидента: '
+                    f'{formatted_time}.'
+                )
+
             return redirect(
                 'incidents:incident_detail', incident_id=incident.id
             )

@@ -168,6 +168,7 @@ class IncidentAdmin(admin.ModelAdmin):
             'fields': (
                 'is_incident_finish',
                 'incident_finish_date',
+                'auto_close_date',
                 'is_auto_incident',
                 'is_yt_tracker_controlled',
                 'was_read',

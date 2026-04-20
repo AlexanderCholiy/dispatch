@@ -1,0 +1,56 @@
+.toggle-v2-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: var(--space-xs);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--extra-color);
+}
+
+.toggle-v2-wrapper input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  z-index: 10;
+  cursor: pointer;
+  transform: none !important; 
+}
+
+.toggle-v2-track {
+  position: relative;
+  overflow: hidden; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toggle-v2-icon {
+  font-size: var(--font-lg);
+  color: var(--green-color);
+  font-weight: 500;
+  
+  opacity: 0;
+  
+  transition: opacity var(--transition-value);
+  
+  z-index: 5;
+  pointer-events: none;
+
+  white-space: nowrap;
+}
+
+.toggle-v2-wrapper.active .toggle-v2-icon {
+  opacity: 1;
+}
+
+.toggle-v2-wrapper.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}

@@ -30,6 +30,7 @@ from .constants import (
     NOTIFIED_CONTRACTOR_STATUS_NAME,
     NOTIFIED_OP_END_STATUS_NAME,
     RVR_CATEGORY,
+    AUTO_CLOSE_TTL,
 )
 from .models import (
     Incident,
@@ -252,6 +253,14 @@ class ConfirmMoveEmailsForm(forms.Form):
 
 
 class IncidentForm(forms.ModelForm):
+    auto_close = forms.BooleanField(
+        required=False,
+        label='Автоматически закрыть инцидент через 12 ч.',
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input-v2',
+            'id': 'id_auto_close'
+        })
+    )
     new_status = forms.ModelChoiceField(
         queryset=IncidentStatus.objects.none(),
         required=False,
@@ -281,6 +290,7 @@ class IncidentForm(forms.ModelForm):
             'rvr_end_date',
             'dgu_start_date',
             'dgu_end_date',
+            'auto_close',
         )
         labels = {
             'pole': 'Опора',
@@ -296,6 +306,7 @@ class IncidentForm(forms.ModelForm):
             'rvr_end_date': 'Закрытие РВР',
             'dgu_start_date': 'Передача на ДГУ',
             'dgu_end_date': 'Закрытие ДГУ',
+            'auto_close': 'Автоматическое закрытие',
         }
         help_texts = {
             'avr_start_date': (
@@ -372,6 +383,12 @@ class IncidentForm(forms.ModelForm):
         self.can_edit = can_edit
         self.author = author
         super().__init__(*args, **kwargs)
+
+        # if self.instance.is_incident_finish:
+        #     self.fields['auto_close'].disabled = True
+
+        if self.instance.auto_close_date:
+            self.fields['auto_close'].initial = True
 
         # Значение по умолчанию для категории и статуса:
         if not self.instance.pk and not self.data:
@@ -499,6 +516,7 @@ class IncidentForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+
         pole = cleaned_data.get('pole')
         bs = cleaned_data.get('base_station')
 
@@ -535,6 +553,22 @@ class IncidentForm(forms.ModelForm):
                         'дате завершения'
                     )
                 )
+
+        new_status: IncidentStatus = cleaned_data['new_status']
+        auto_close: bool = cleaned_data['auto_close']
+
+        if new_status.name in FINISHED_STATUS_NAMES and auto_close:
+            raise forms.ValidationError(
+                'Нельзя установить дату автоматического закрытия '
+                'для инцидента, который уже закрыт или переходит '
+                'в закрытый статус.'
+            )
+
+        if auto_close and new_status.name != NOTIFIED_OP_END_STATUS_NAME:
+            raise forms.ValidationError(
+                f'Нельзя включить автозакрытие в текущем статусе. '
+                f'Сначала выберите статус "{NOTIFIED_OP_END_STATUS_NAME}".'
+            )
 
         return cleaned_data
 
@@ -609,6 +643,15 @@ class IncidentForm(forms.ModelForm):
 
     def save(self, commit=True):
         instance: Incident = super().save(commit=False)
+
+        auto_closed = self.cleaned_data['auto_close']
+
+        was_auto_close_set = instance.auto_close_date is not None
+
+        if auto_closed and not was_auto_close_set:
+            instance.auto_close_date = timezone.now() + AUTO_CLOSE_TTL
+        elif not auto_closed:
+            instance.auto_close_date = None
 
         old_user = None
         if instance.pk:

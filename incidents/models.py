@@ -202,6 +202,11 @@ class Incident(models.Model):
         default=True,
         verbose_name='Был ли просмотрен диспетчером',
     )
+    auto_close_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Дата и время автоматического закрытия',
+    )
 
     class Meta:
         verbose_name = 'инцидент'

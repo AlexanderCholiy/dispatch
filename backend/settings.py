@@ -260,6 +260,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'notifications.tasks.schedule_birthday_notifications',
         'schedule': crontab(hour=9, minute=0),
     },
+    'check-stale-auto-closes': {
+        'task': 'incidents.tasks.check_stale_auto_closes',
+        'schedule': 900,  # каждые 15 минут
+    },
 }
 
 CACHES = {

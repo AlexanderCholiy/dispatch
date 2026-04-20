@@ -60,13 +60,30 @@
           {{ incident_form.was_read }}
         </div>
 
+        <label class="toggle-v2-wrapper tooltip {% if incident_form.auto_close.field.disabled %}disabled{% endif %}"
+            for="{{ incident_form.auto_close.id_for_label }}"
+            data-title="Автоматически закрыть инцидент через 12 ч.">
+
+            {{ incident_form.auto_close }}
+
+            <div class="toggle-v2-track">
+              <i class="bx bx-flag toggle-v2-icon"></i>
+            </div>
+
+        </label>
+
       </div>
       <p class="incident-date">
         {% if incident.incident_finish_date %}
           зарегистрировано {{ incident.incident_date|date:"d.m.Y H:i" }},
           закрыто {{ incident.incident_finish_date|date:"d.m.Y H:i" }}
         {% else %}
-          зарегистрировано {{ incident.incident_date|date:"d.m.Y H:i" }}
+          {% if incident.auto_close_date %}
+            зарегистрировано {{ incident.incident_date|date:"d.m.Y H:i" }},
+            будет закрыто {{ incident.auto_close_date|date:"d.m.Y H:i" }}
+          {% else %}
+            зарегистрировано {{ incident.incident_date|date:"d.m.Y H:i" }}
+          {% endif %}
         {% endif %}
       </p>
     </div>
