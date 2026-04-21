@@ -554,8 +554,18 @@ class IncidentForm(forms.ModelForm):
                     )
                 )
 
-        new_status: IncidentStatus = cleaned_data['new_status']
-        auto_close: bool = cleaned_data['auto_close']
+        new_status: Optional[IncidentStatus] = cleaned_data.get('new_status')
+        if not new_status:
+            last_status_history = self.instance.prefetched_status_history
+
+            if last_status_history:
+                new_status = last_status_history[0].status
+            else:
+                new_status, _ = IncidentStatus.objects.get_or_create(
+                    name=DEFAULT_STATUS_NAME
+                )
+
+        auto_close: bool = cleaned_data.get('auto_close')
 
         if new_status.name in FINISHED_STATUS_NAMES and auto_close:
             raise forms.ValidationError(
