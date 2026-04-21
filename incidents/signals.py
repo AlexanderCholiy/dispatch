@@ -1,19 +1,20 @@
+from datetime import datetime
+from typing import Optional
+
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from django.core.cache import cache
 from django.db.models.signals import post_save, pre_delete, pre_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 from api.serializers.comment import CommentSerializer
+from core.loggers import celery_logger
+from incidents.constants import AUTO_CLOSE_CACHE_KEY_PREFIX, AUTO_CLOSE_TTL
+from incidents.tasks import close_incident_auto
 from users.models import User
 
 from .models import Comment, Incident
-from django.utils import timezone
-from datetime import datetime
-from incidents.tasks import close_incident_auto
-from core.loggers import celery_logger
-from typing import Optional
-from django.core.cache import cache
-from incidents.constants import AUTO_CLOSE_TTL, AUTO_CLOSE_CACHE_KEY_PREFIX
 
 
 @receiver(post_save, sender=Comment)

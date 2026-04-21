@@ -23,6 +23,9 @@ from core.pretty_print import PrettyPrint
 from core.utils import Config
 from core.wraps import min_wait_timer, timer
 from emails.models import EmailErr, EmailFolder, EmailMessage, EmailMime
+from emails.services.turn_off_incident_auto_close import (
+    turn_off_incident_auto_close,
+)
 from incidents.utils import IncidentManager
 from yandex_tracker.exceptions import YandexTrackerAuthErr
 from yandex_tracker.utils import YandexTrackerManager, yt_manager
@@ -763,6 +766,7 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                             AutoReply().open_incident_or_reply(
                                 email_msg, self.email_login
                             )
+                            turn_off_incident_auto_close(email_msg)
 
                         email_err_msg_ids_to_del.append(email_msg_id)
                     except KeyboardInterrupt:

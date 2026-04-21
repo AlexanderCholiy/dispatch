@@ -21,6 +21,7 @@ from emails.models import EmailMessage, EmailReference
 from users.models import Roles, User
 
 from .constants import (
+    AUTO_CLOSE_TTL,
     AVR_CATEGORY,
     DEFAULT_STATUS_NAME,
     DGU_CATEGORY,
@@ -30,7 +31,6 @@ from .constants import (
     NOTIFIED_CONTRACTOR_STATUS_NAME,
     NOTIFIED_OP_END_STATUS_NAME,
     RVR_CATEGORY,
-    AUTO_CLOSE_TTL,
 )
 from .models import (
     Incident,

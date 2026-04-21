@@ -1,15 +1,21 @@
+from typing import Optional
+
 from celery import shared_task
+from django.db.models import Prefetch
 from django.utils import timezone
-from .models import Incident, IncidentStatus, IncidentStatusHistory
-from .constants import (
-    END_STATUS_NAME,
-    AVR_CATEGORY,
-    RVR_CATEGORY,
-    DGU_CATEGORY,
-)
+
+from core.constants import DATETIME_FORMAT
 from core.loggers import celery_logger
 from notifications.models import Notification, NotificationLevel
-from core.constants import DATETIME_FORMAT
+
+from .constants import (
+    AVR_CATEGORY,
+    DGU_CATEGORY,
+    END_STATUS_NAME,
+    NOTIFIED_OP_END_STATUS_NAME,
+    RVR_CATEGORY,
+)
+from .models import Incident, IncidentStatus, IncidentStatusHistory
 
 
 @shared_task(
@@ -24,11 +30,41 @@ from core.constants import DATETIME_FORMAT
 def close_incident_auto(self, incident_id: int):
     """Задача для автоматического закрытия инцидента."""
     try:
-        incident = Incident.objects.get(pk=incident_id)
+        status_history_qs = (
+            IncidentStatusHistory.objects
+            .select_related('status', 'status__status_type')
+            .order_by('-insert_date', '-id')
+        )
+
+        incident = (
+            Incident.objects
+            .select_related('responsible_user')
+            .prefetch_related(
+                'categories',
+                Prefetch(
+                    'status_history',
+                    queryset=status_history_qs,
+                    to_attr='prefetched_status_history'
+                ),
+            )
+            .get(pk=incident_id)
+        )
+
+        last_status: Optional[IncidentStatus] = (
+            incident.prefetched_status_history[0].status
+            if incident.prefetched_status_history
+            else None
+        )
 
         if not incident.auto_close_date:
             celery_logger.debug(
                 f'Инцидент {incident} не имеет даты автозакрытия. Пропуск.'
+            )
+            return
+
+        if not last_status or last_status.name != NOTIFIED_OP_END_STATUS_NAME:
+            celery_logger.debug(
+                f'Статус инцидента {incident}: {last_status}. Пропуск.'
             )
             return
 
@@ -41,9 +77,11 @@ def close_incident_auto(self, incident_id: int):
             name=END_STATUS_NAME
         )
 
+        close_time = timezone.localtime(incident.auto_close_date)
+        formatted_time = close_time.strftime(DATETIME_FORMAT)
+
         comments = (
-            'Автоматическое закрытие по таймеру '
-            f'({incident.auto_close_date.strftime(DATETIME_FORMAT)})'
+            f'Автоматическое закрытие по таймеру ({formatted_time})'
         )
 
         incident.is_incident_finish = True
@@ -73,6 +111,8 @@ def close_incident_auto(self, incident_id: int):
                 level=NotificationLevel.MEDIUM,
                 data={'incident_id': incident.id},
             )
+
+        celery_logger.debug(f'Инцидент {incident}: {comments}')
 
     except Incident.DoesNotExist:
         celery_logger.error(f'Инцидент ID: {incident_id} не найден.')
