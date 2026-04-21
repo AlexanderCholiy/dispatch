@@ -153,3 +153,22 @@ def check_stale_auto_closes():
         )
     else:
         celery_logger.debug('Зависших инцидентов с автозакрытием не найдено.')
+
+    stale_closed_qs = Incident.objects.filter(
+        auto_close_date__isnull=False,
+        is_incident_finish=True,
+    )
+
+    count = stale_closed_qs.count()
+
+    if count:
+        updated_count = stale_closed_qs.update(auto_close_date=None)
+
+        celery_logger.info(
+            f'Успешно очищено auto_close_date у {updated_count} закрытых '
+            'инцидентов.'
+        )
+    else:
+        celery_logger.debug(
+            'Нет закрытых инцидентов с выставленной датой автозакрытия.'
+        )
