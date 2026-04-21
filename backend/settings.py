@@ -246,11 +246,11 @@ CELERY_BEAT_SCHEDULE = {
     },
     'rebuild_incidents_reports': {
         'task': 'api.tasks.rebuild_incidents_reports',
-        'schedule': 180,  # каждые 3 мин (cache 5 мин)
+        'schedule': 300,  # каждые 5 мин (cache 5 мин)
     },
     'rebuild_energy_reports': {
         'task': 'api.tasks.rebuild_energy_reports',
-        'schedule': 180,  # каждые 3 мин (cache 5 мин)
+        'schedule': 300,  # каждые 5 мин (cache 5 мин)
     },
     'check_overdue_notifications': {
         'task': 'notifications.tasks.check_overdue_notifications',
