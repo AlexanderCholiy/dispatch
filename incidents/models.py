@@ -120,6 +120,7 @@ class Incident(models.Model):
         blank=True,
         related_name='incidents',
         verbose_name='Тип инцидента',
+        db_index=True,
     )
     incident_subtype = models.ForeignKey(
         'IncidentSubType',
@@ -128,6 +129,7 @@ class Incident(models.Model):
         blank=True,
         related_name='incidents',
         verbose_name='Подтип инцидента',
+        db_index=True
     )
     statuses = models.ManyToManyField(
         'IncidentStatus',
@@ -618,7 +620,8 @@ class IncidentHistory(models.Model):
         'Incident',
         on_delete=models.CASCADE,
         related_name='history',
-        verbose_name='Инцидент'
+        verbose_name='Инцидент',
+        db_index=True
     )
     action = models.CharField(
         verbose_name='Действие',
@@ -675,13 +678,15 @@ class IncidentCategoryRelation(models.Model):
         Incident,
         on_delete=models.CASCADE,
         related_name='incident_category_links',
-        verbose_name='Инцидент'
+        verbose_name='Инцидент',
+        db_index=True
     )
     category = models.ForeignKey(
         IncidentCategory,
         on_delete=models.CASCADE,
         related_name='incident_category_links',
-        verbose_name='Категория'
+        verbose_name='Категория',
+        db_index=True
     )
 
     class Meta:
@@ -789,10 +794,16 @@ class IncidentStatus(Detail):
 class IncidentStatusHistory(models.Model):
     """Таблица статусов инцидентов"""
     incident = models.ForeignKey(
-        Incident, related_name='status_history', on_delete=models.CASCADE)
-    status = models.ForeignKey(
-        IncidentStatus, related_name='status_history',
+        Incident,
+        db_index=True,
+        related_name='status_history',
         on_delete=models.CASCADE
+    )
+    status = models.ForeignKey(
+        IncidentStatus,
+        related_name='status_history',
+        on_delete=models.CASCADE,
+        db_index=True
     )
     insert_date = models.DateTimeField(
         auto_now_add=True,
@@ -833,7 +844,8 @@ class Comment(models.Model):
         Incident,
         on_delete=models.CASCADE,
         related_name='comments',
-        verbose_name='Инцидент'
+        verbose_name='Инцидент',
+        db_index=True
     )
     author = models.ForeignKey(
         User,

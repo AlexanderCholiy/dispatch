@@ -28,11 +28,13 @@ class Device(models.Model):
         null=True,
         blank=True,
         verbose_name='Широта',
+        db_index=True
     )
     gps_lon = models.FloatField(
         null=True,
         blank=True,
         verbose_name='Долгота',
+        db_index=True
     )
     sys_version = models.CharField(
         max_length=MAX_DEVICE_VERSION_LEN,
@@ -65,7 +67,8 @@ class Device(models.Model):
         null=True,
         blank=True,
         verbose_name='Опора',
-        related_name='devices'
+        related_name='devices',
+        db_index=True
     )
 
     class Meta:
@@ -118,6 +121,7 @@ class Cell(models.Model):
         max_length=MAX_NETWORK_TYPE_LEN,
         choices=NetworkType.choices,
         verbose_name='Тип сети',
+        db_index=True
     )
     lac = models.PositiveIntegerField(
         verbose_name='LAC (2G/3G) / TAC (4G)',
@@ -125,6 +129,7 @@ class Cell(models.Model):
             '- LAC (Location Area Code) /  TAC (Tracking Area Code) - '
             'идентификаторы групп базовых станций'
         ),
+        db_index=True
     )
     freq = models.PositiveIntegerField(
         null=True,
@@ -208,12 +213,14 @@ class CellMeasure(models.Model):
         on_delete=models.CASCADE,
         related_name='measurements',
         verbose_name='Сота',
+        db_index=True
     )
     device = models.ForeignKey(
         Device,
         on_delete=models.CASCADE,
         related_name='measurements',
         verbose_name='Устройство',
+        db_index=True
     )
     index = models.PositiveSmallIntegerField(
         verbose_name='Индекс соты в списке',

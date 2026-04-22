@@ -79,6 +79,7 @@ class User(AbstractUser):
         max_length=MAX_USER_ROLE_LEN,
         choices=Roles.choices,
         default=Roles.GUEST,
+        db_index=True,
         help_text='Выберите роль пользователя.',
     )
     date_of_birth = models.DateField(

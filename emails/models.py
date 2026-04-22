@@ -135,6 +135,7 @@ class EmailMessage(models.Model):
         default=EmailFolder.get_inbox_id,
         related_name='email_messages',
         verbose_name='Папка письма',
+        db_index=True
     )
 
     class Meta:
@@ -150,7 +151,8 @@ class EmailReference(models.Model):
     email_msg_references = models.CharField(
         max_length=MAX_EMAIL_ID_LEN,
         null=False,
-        verbose_name='Ссылка на другие сообщения'
+        verbose_name='Ссылка на другие сообщения',
+        db_index=True
     )
     email_msg = models.ForeignKey(
         EmailMessage,

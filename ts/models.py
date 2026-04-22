@@ -28,14 +28,18 @@ class PoleContractorEmail(models.Model):
     pole = models.ForeignKey(
         'Pole',
         on_delete=models.CASCADE,
-        related_name='pole_emails'
+        related_name='pole_emails',
+        db_index=True
     )
     contractor = models.ForeignKey(
         'AVRContractor',
         on_delete=models.CASCADE,
         related_name='contractor_emails'
     )
-    email = models.ForeignKey('ContractorEmail', on_delete=models.CASCADE)
+    email = models.ForeignKey(
+        'ContractorEmail',
+        on_delete=models.CASCADE,
+    )
 
     class Meta:
         unique_together = ('pole', 'contractor', 'email')
@@ -48,6 +52,7 @@ class PoleContractorPhone(models.Model):
         'Pole',
         on_delete=models.CASCADE,
         related_name='pole_phones',
+        db_index=True
     )
     contractor = models.ForeignKey(
         'AVRContractor',
@@ -132,6 +137,7 @@ class Region(models.Model):
         blank=True,
         related_name='regions',
         verbose_name='Email подрядчика по РВР',
+        db_index=True
     )
     macroregion = models.ForeignKey(
         'MacroRegion',
@@ -140,6 +146,7 @@ class Region(models.Model):
         blank=True,
         related_name='regions',
         verbose_name='Макрорегион',
+        db_index=True
     )
 
     class Meta:
@@ -211,6 +218,7 @@ class Pole(models.Model):
         related_name='poles',
         verbose_name='Регион',
         default=get_default_region,
+        db_index=True
     )
     address = models.CharField(
         max_length=MAX_LG_DESCRIPTION,
@@ -236,6 +244,7 @@ class Pole(models.Model):
         default=get_default_contractor,
         related_name='poles',
         verbose_name='Подрядчик по АВР',
+        db_index=True
     )
     avr_emails = models.ManyToManyField(
         'ContractorEmail',
