@@ -814,7 +814,7 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                         }
                         email_err_msg_ids.append(email_msg_id)
                         email_parser_logger.exception(
-                            f'Не валидные данные: {invalid_data}')
+                            f'Данные письма: {invalid_data}')
 
             if email_msg_counter:
                 email_parser_logger.debug(
