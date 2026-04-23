@@ -45,9 +45,12 @@ class DefaultAvatars(models.TextChoices):
     FOX = '4__fox.png', 'Мудрый лис'
     KOALA = '5__koala.png', 'Спокойная коала'
     SNOWY = '6__snowy.png', 'Ночной дозор'
-    CALL_CENTER = '7__call_center.png', 'Мастер поддержки'
+    KNIGHT = '7__knight.png', 'Страж порядка'
     NINJA = '8__ninja.png', 'Профи-ниндзя'
     WIZARD = '9__wizard.png', 'Маг решений'
+    ENGINEER = '10__engineer.png', 'Гений инженерии'
+    OPERATOR_WOMEN = '11__operator_women.png', 'Сердце смены'
+    OPERATOR_MEN = '12__operator_men.png', 'Капитан связи'
 
 
 class User(AbstractUser):

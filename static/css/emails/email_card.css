@@ -14,11 +14,11 @@
 }
 
 .inbox-email {
-  border-left: var(--space-xs) solid var(--priority-color);
+  border-left: var(--space-xs) solid var(--red-color);
 }
 
 .sent-email {
-  border-left: var(--space-xs) solid var(--red-color);
+  border-left: var(--space-xs) solid var(--priority-color);
 }
 
 .email-card:hover {

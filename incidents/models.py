@@ -203,11 +203,13 @@ class Incident(models.Model):
     was_read = models.BooleanField(
         default=True,
         verbose_name='Был ли просмотрен диспетчером',
+        db_index=True,
     )
     auto_close_date = models.DateTimeField(
         null=True,
         blank=True,
         verbose_name='Дата и время автоматического закрытия',
+        db_index=True,
     )
 
     class Meta:

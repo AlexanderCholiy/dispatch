@@ -64,6 +64,7 @@ from .annotations import annotate_sla_avr, annotate_sla_dgu, annotate_sla_rvr
 from .constants import (
     AVR_CATEGORY,
     DGU_CATEGORY,
+    FINISHED_STATUS_NAMES,
     INCIDENTS_PER_PAGE,
     MAX_INCIDENTS_INFO_CACHE_SEC,
     NOTIFIED_CONTRACTOR_STATUS_NAME,
@@ -310,7 +311,16 @@ def index(request: HttpRequest) -> HttpResponse:
         base_qs = base_qs.filter(incident_date__lte=date_to)
 
     if status_name:
-        base_qs = base_qs.filter(latest_status_name=status_name)
+        if status_name in FINISHED_STATUS_NAMES:
+            base_qs = base_qs.filter(
+                latest_status_name=status_name,
+                is_incident_finish=True
+            )
+        else:
+            base_qs = base_qs.filter(
+                latest_status_name=status_name,
+                is_incident_finish=False
+            )
 
     if category_id:
         base_qs = base_qs.filter(categories__id=category_id)

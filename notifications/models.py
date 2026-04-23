@@ -65,6 +65,7 @@ class Notification(models.Model):
         null=True,
         blank=True,
         verbose_name='Дата отправки',
+        db_index=True,
     )
     scheduled = models.BooleanField(
         default=False, verbose_name='Добавлено уведомление в Cellery'

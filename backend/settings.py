@@ -246,15 +246,15 @@ CELERY_BEAT_SCHEDULE = {
     },
     'rebuild_incidents_reports': {
         'task': 'api.tasks.rebuild_incidents_reports',
-        'schedule': 300,  # каждые 5 мин (cache 5 мин)
+        'schedule': 600,  # каждые 10 мин (cache 5 мин)
     },
     'rebuild_energy_reports': {
         'task': 'api.tasks.rebuild_energy_reports',
-        'schedule': 300,  # каждые 5 мин (cache 5 мин)
+        'schedule': 600,  # каждые 10 мин (cache 5 мин)
     },
     'check_overdue_notifications': {
         'task': 'notifications.tasks.check_overdue_notifications',
-        'schedule': 300,  # каждые 5 минут
+        'schedule': 600,  # каждые 10 минут
     },
     'schedule_birthday_notifications': {
         'task': 'notifications.tasks.schedule_birthday_notifications',
