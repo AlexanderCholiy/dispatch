@@ -149,7 +149,7 @@ DATABASES = {
         'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': int(os.getenv('DB_PORT', 5432)),
-        'CONN_MAX_AGE': 60,
+        'CONN_MAX_AGE': 180,
         'CONN_HEALTH_CHECKS': True,
         'OPTIONS': {
             'connect_timeout': 3,
@@ -163,7 +163,7 @@ DATABASES = {
         'PASSWORD': os.getenv('MONITORING_DB_PASSWORD', ''),
         'HOST': os.getenv('MONITORING_DB_HOST', 'localhost'),
         'PORT': int(os.getenv('MONITORING_DB_PORT', 1433)),
-        'CONN_MAX_AGE': 0,
+        'CONN_MAX_AGE': 30,
         'CONN_HEALTH_CHECKS': True,
         'OPTIONS': {
             'driver': 'ODBC Driver 17 for SQL Server',
@@ -180,7 +180,7 @@ DATABASES = {
         'PASSWORD': os.environ.get('TS_DB_PASSWORD'),
         'HOST': os.environ.get('TS_DB_HOST'),
         'PORT': int(os.environ.get('TS_DB_PORT', 5432)),
-        'CONN_MAX_AGE': 0,
+        'CONN_MAX_AGE': 30,
         'CONN_HEALTH_CHECKS': True,
     },
     'energy': {
@@ -190,7 +190,7 @@ DATABASES = {
         'PASSWORD': os.environ.get('ENERGY_DB_PASSWORD'),
         'HOST': os.environ.get('ENERGY_DB_HOST'),
         'PORT': int(os.environ.get('ENERGY_DB_PORT', 5432)),
-        'CONN_MAX_AGE': 0,
+        'CONN_MAX_AGE': 30,
         'CONN_HEALTH_CHECKS': True,
         'OPTIONS': {
             'connect_timeout': 5,

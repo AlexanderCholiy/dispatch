@@ -31,7 +31,12 @@ services:
     environment:
       POSTGRES_HOST_AUTH_METHOD: "md5"
     command: >
-      postgres -c listen_addresses='*'
+      postgres
+      -c listen_addresses='*'
+      -c max_connections=300
+      -c shared_buffers=512MB
+      -c work_mem=16MB
+      -c maintenance_work_mem=64MB
 
   # Redis (для кэша)
   dispatch_redis:
@@ -69,7 +74,7 @@ services:
       context: .
     working_dir: /app
     command: >
-      celery -A backend.celery worker --loglevel=error --logfile=/app/logs/celery/celery_worker.log -Q default,low,medium,high
+      celery -A backend.celery worker --loglevel=error --logfile=/app/logs/celery/celery_worker.log -Q default,low,medium,high  --concurrency=4
     env_file: .env
     volumes:
       - dispatch_media:/app/media
