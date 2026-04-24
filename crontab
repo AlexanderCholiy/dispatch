@@ -14,6 +14,7 @@ CRON_TZ=Europe/Moscow
 # Удаление не актуальных данных:
 15 3 * * * nice -n 19 ionice -c 3 /usr/local/bin/python /app/manage.py cleanup_notifications >> /app/logs/cron/cron.log 2>&1
 30 4 * * * nice -n 15 ionice -c 2 /usr/local/bin/python /app/manage.py cleanup_irrelevant_cell_measure >> /app/logs/cron/cron.log 2>&1
+0 5 * * 0 nice -n 15 ionice -c 2 -n 7 /usr/local/bin/python /app/manage.py delete_emails_without_incidents >> /app/logs/cron/cron.log 2>&1
 
 # Обновление данных:
 # Добавляем небольшую задержку (sleep), чтобы не стартовать ровно в 00 секунд вместе с другими системными задачами

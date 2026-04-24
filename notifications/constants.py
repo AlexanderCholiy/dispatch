@@ -10,12 +10,12 @@ NOTIFICATIONS_PER_PAGE = 30
 
 PAGE_SIZE_NOTIFICATIONS_CHOICES = [9, 15, NOTIFICATIONS_PER_PAGE]
 
-OLD_NOTIFICATIONS_TTL = timedelta(days=30)
+OLD_NOTIFICATIONS_TTL = timedelta(weeks=1)
 
 UNREAD_NOTIFICATION_TTL = {
     'low': OLD_NOTIFICATIONS_TTL,
-    'medium': timedelta(days=60),
-    'high': timedelta(days=90),
+    'medium': timedelta(weeks=2),
+    'high': timedelta(weeks=3),
 }
 
 MAX_NOTIFICATION_PREWIE_LEN = 128
