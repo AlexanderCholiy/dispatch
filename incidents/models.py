@@ -295,6 +295,7 @@ class Incident(models.Model):
         insert_date = self.insert_date or now
         incident_date = self.incident_date or insert_date
         min_date = timezone.localtime(min(insert_date, incident_date))
+
         max_future_date = now + MAX_FUTURE_END_DELTA
 
         if self.incident_subtype and not self.incident_type:

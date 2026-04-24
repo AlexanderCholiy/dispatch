@@ -1376,8 +1376,10 @@ def notify_avr_contractor(
                     )
                 )
 
-                now = timezone.now()
-                incident.avr_start_date = incident.avr_start_date or now
+                incident.avr_start_date = (
+                    incident.avr_start_date
+                    or incident.incident_date
+                )
                 incident.save()
 
             messages.success(
@@ -1475,8 +1477,10 @@ def notify_avr_contractor(
                     f'  • Описание: {incident.incident_type.description}'
                 )
 
-        now = timezone.now()
-        incident.avr_start_date = incident.avr_start_date or now
+        incident.avr_start_date = (
+            incident.avr_start_date
+            or incident.incident_date
+        )
 
         if incident.sla_avr_deadline:
             sla_deadline = (

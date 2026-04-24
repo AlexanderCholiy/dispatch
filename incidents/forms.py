@@ -18,6 +18,7 @@ from emails.constants import (
     MAX_TOTAL_ATTACHMENTS_SIZE,
 )
 from emails.models import EmailMessage, EmailReference
+from incidents.services.normalize_datetime_to_minute import is_data_changed
 from users.models import Roles, User
 
 from .constants import (
@@ -542,10 +543,13 @@ class IncidentForm(forms.ModelForm):
         ]
 
         for start_field, end_field in date_pairs:
-            start = cleaned_data.get(start_field)
-            end = cleaned_data.get(end_field)
+            new_start = cleaned_data.get(start_field)
+            new_end = cleaned_data.get(end_field)
 
-            if end and not start:
+            old_start = getattr(self.instance, start_field)
+            old_end = getattr(self.instance, end_field)
+
+            if new_end and not new_start:
                 self.add_error(
                     start_field,
                     (
@@ -553,6 +557,13 @@ class IncidentForm(forms.ModelForm):
                         'дате завершения'
                     )
                 )
+
+            # Фронтенд передает даты с точностью до минуты:
+            if not is_data_changed(old_start, new_start):
+                cleaned_data[start_field] = old_start
+
+            if not is_data_changed(old_start, new_end):
+                cleaned_data[end_field] = old_end
 
         new_status: Optional[IncidentStatus] = cleaned_data.get('new_status')
         if not new_status:
@@ -756,7 +767,10 @@ class IncidentForm(forms.ModelForm):
                 AVR_CATEGORY in category_names
                 and new_status.name == NOTIFIED_CONTRACTOR_STATUS_NAME
             ):
-                instance.avr_start_date = instance.avr_start_date or now
+                instance.avr_start_date = (
+                    instance.avr_start_date
+                    or instance.incident_date
+                )
             if (
                 RVR_CATEGORY in category_names
                 and new_status.name == NOTIFIED_CONTRACTOR_STATUS_NAME
