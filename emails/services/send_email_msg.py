@@ -119,12 +119,18 @@ def send_via_django_email(
             message.attach_file(attachment.file_url.path)
 
     message.attach_alternative(html_body_content, 'text/html')
+    message.encoding = 'utf-8'
 
     # Бросает исключение, если отправка не удалась:
     message.send(fail_silently=False)
     parsed_date = timezone.now()
 
     mime_message: SafeMIMEText = message.message()
+
+    for part in mime_message.walk():
+        if part.get_content_type().startswith('text/'):
+            part.set_charset('utf-8')
+
     raw_mime_bytes = mime_message.as_bytes()
 
     mime_instance, _ = EmailMime.objects.get_or_create(
