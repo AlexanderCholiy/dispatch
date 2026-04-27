@@ -27,3 +27,29 @@ CELL_MEASSURE_TTL = timedelta(days=3)
 ERR_PARSER_MSG_LIMIT = 300  # символов
 
 MAX_MONGO_ID_LEN = 24
+
+
+class CellMeasurConstraints:
+    MIN_RSRP_VAL = -140
+    MAX_RSRP_VAL = -44
+
+    MIN_RSRQ_VAL = -43
+    MAX_RSRQ_VAL = 0
+
+    MIN_ECNO_VAL = -24
+    MAX_ECNO_VAL = 10
+
+    MIN_RSCP_VAL = -125
+    MAX_RSCP_VAL = 0
+
+    MIN_C1_VAL = -100
+    MAX_C1_VAL = 200
+
+    MIN_RXLEV_VAL = 0
+    MAX_RXLEV_VAL = 63
+
+    MIN_RSSI_VAL = -120
+    MAX_RSSI_VAL = 0
+
+    MIN_INDEX_VAL = 0
+    MAX_INDEX_VAL = 100

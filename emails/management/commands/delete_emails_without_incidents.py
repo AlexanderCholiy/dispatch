@@ -1,13 +1,14 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from emails.models import EmailMessage
 from tqdm import tqdm
+
 from core.constants import DEBUG_MODE
 from core.loggers import default_logger
 from emails.constants import (
-    EMAILS_BATCH_SIZE,
     CLEANUP_EMAILS_WITHOUT_INCIDENT_TTL,
+    EMAILS_BATCH_SIZE,
 )
+from emails.models import EmailMessage
 
 
 class Command(BaseCommand):

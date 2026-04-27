@@ -93,8 +93,8 @@ class ParseMyCellInfo:
                 tac = int(t[3])
                 cell_id = int(t[4])
                 pci = int(t[5])
-                rsrp_val = int(t[6])
-                rsrq_val = int(t[7])
+                rsrp_val = int(t[6]) / 10  # Для LTE
+                rsrq_val = int(t[7]) / 10  # Для LTE
                 rssi_val = int(t[8])
 
                 op_code = f'{mcc}{mnc}'

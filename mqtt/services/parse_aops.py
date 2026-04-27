@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Any, Optional
 
 from core.loggers import mqtt_parser_logger
-from mqtt.constants import ERR_PARSER_MSG_LIMIT
+from mqtt.constants import ERR_PARSER_MSG_LIMIT, CellMeasurConstraints
 from mqtt.shemas.aops import Cell, CellBar, CellMeasure, NetType, Operator
 
 
@@ -126,21 +126,84 @@ class ParseAops:
                     cell_kwargs['lac'] = all_kvs.get('LAC')
                     cell_kwargs['bsic'] = all_kvs.get('bsic')
 
-                    measure_kwargs['rssi'] = all_kvs.get('RSSI')
-                    measure_kwargs['rxlev'] = all_kvs.get('rxLev')
-                    measure_kwargs['c1'] = all_kvs.get('c1')
+                    rssi: Optional[str] = all_kvs.get('RSSI')
+                    rssi = (
+                        rssi
+                        if rssi is not None
+                        and int(rssi) >= CellMeasurConstraints.MIN_RSSI_VAL
+                        and int(rssi) <= CellMeasurConstraints.MAX_RSSI_VAL
+                        else None
+                    )
+                    measure_kwargs['rssi'] = rssi
+
+                    rxlev: Optional[str] = all_kvs.get('rxLev')
+                    rxlev = (
+                        rxlev
+                        if rxlev is not None
+                        and int(rxlev) >= CellMeasurConstraints.MIN_RXLEV_VAL
+                        and int(rxlev) <= CellMeasurConstraints.MAX_RXLEV_VAL
+                        else None
+                    )
+                    measure_kwargs['rxlev'] = rxlev
+
+                    c1: Optional[str] = all_kvs.get('c1')
+                    c1 = (
+                        c1
+                        if c1 is not None
+                        and int(c1) >= CellMeasurConstraints.MIN_C1_VAL
+                        and int(c1) <= CellMeasurConstraints.MAX_C1_VAL
+                        else None
+                    )
+                    measure_kwargs['c1'] = c1
 
                     cell_kwargs['lac'] = all_kvs.get('LAC')
                     cell_kwargs['psc'] = all_kvs.get('PSC')
 
-                    measure_kwargs['rscp'] = all_kvs.get('RSCP')
-                    measure_kwargs['ecno'] = all_kvs.get('ecno')
+                    rscp: Optional[str] = all_kvs.get('RSCP')
+                    rscp = (
+                        rscp
+                        if rscp is not None
+                        and int(rscp) >= CellMeasurConstraints.MIN_RSCP_VAL
+                        and int(rscp) <= CellMeasurConstraints.MAX_RSCP_VAL
+                        else None
+                    )
+                    measure_kwargs['rscp'] = rscp
+
+                    # Контроллер вместо того чтобы отдать "Нет данных" отдает
+                    # минимально возможное значение целочисленного типа.
+
+                    ecno: Optional[str] = all_kvs.get('ecno')
+                    ecno = (
+                        ecno
+                        if ecno is not None
+                        and int(ecno) >= CellMeasurConstraints.MIN_ECNO_VAL
+                        and int(ecno) <= CellMeasurConstraints.MAX_ECNO_VAL
+                        else None
+                    )
+                    measure_kwargs['ecno'] = ecno
 
                     cell_kwargs['tac'] = all_kvs.get('TAC')
                     cell_kwargs['pci'] = all_kvs.get('PCI')
 
-                    measure_kwargs['rsrp'] = all_kvs.get('RSRP')
-                    measure_kwargs['rsrq'] = all_kvs.get('RSRQ')
+                    rsrp: Optional[str] = all_kvs.get('RSRP')
+                    rsrp = (
+                        rsrp
+                        if rsrp is not None
+                        and int(rsrp) >= CellMeasurConstraints.MIN_RSRP_VAL
+                        and int(rsrp) <= CellMeasurConstraints.MAX_RSRP_VAL
+                        else None
+                    )
+                    measure_kwargs['rsrp'] = rsrp
+
+                    rsrq: Optional[str] = all_kvs.get('RSRQ')
+                    rsrq = (
+                        rsrq
+                        if rsrq is not None
+                        and int(rsrq) >= CellMeasurConstraints.MIN_RSRQ_VAL
+                        and int(rsrq) <= CellMeasurConstraints.MAX_RSRQ_VAL
+                        else None
+                    )
+                    measure_kwargs['rsrq'] = rsrq
 
                     measure_kwargs['cba'] = CellBar(cell_bar_int)
 

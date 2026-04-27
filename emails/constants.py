@@ -1,5 +1,4 @@
 import re
-
 from datetime import timedelta
 
 MAX_EMAIL_SUBJECT_LEN = 1024
