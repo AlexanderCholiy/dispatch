@@ -461,7 +461,7 @@ sudo service nginx reload
 ## ⚙️ Запуск в режиме разработки
 1. Запустите необходимые контейнеры через Docker Compose: базу данных PostgreSQL, Redis, брокер сообщений RabbitMQ и воркеры Celery для фоновой обработки задач:
 ```bash
-sudo docker compose up -d --build --force-recreate dispatch_db dispatch_redis dispatch_rabbitmq dispatch_celery_heavy_worker dispatch_celery_worker dispatch_celery_beat
+sudo docker compose up -d --build --force-recreate dispatch_db dispatch_redis dispatch_rabbitmq dispatch_grafana dispatch_celery_heavy_worker dispatch_celery_worker dispatch_celery_beat
 ```
 ```bash
 sudo docker compose restart dispatch_celery_heavy_worker dispatch_celery_worker dispatch_celery_beat

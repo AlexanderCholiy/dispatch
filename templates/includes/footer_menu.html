@@ -34,6 +34,12 @@
           <span>Статистика</span>
         </a>
       </li>
+      <li>
+        <a href="{% url 'metrics:dispatch_general_stats' %}" 
+          class="{% if view_name == 'metrics:dispatch_general_stats' %}active{% endif %}">
+          <span>Статистика 2.0</span>
+        </a>
+      </li>
       {% endif %}
       <li>
         <a href="{% url 'pages:about' %}" 

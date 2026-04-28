@@ -8,6 +8,7 @@ from incidents.services.get_incident_responsible_users import (
 )
 from ts.services.get_operators_group import get_operators_group
 from users.utils import role_required
+from ts.services.get_operators_group import get_operators_group
 
 
 @login_required

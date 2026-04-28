@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     'monitoring.apps.MonitoringConfig',
     'energy.apps.EnergyConfig',
     'stats.apps.StatsConfig',
+    'metrics.apps.MetricsConfig',
     'notifications.apps.NotificationsConfig',
     'mqtt.apps.MqttConfig',
     'rest_framework',
