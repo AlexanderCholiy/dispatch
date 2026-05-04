@@ -142,6 +142,8 @@ services:
     networks:
       - dispatch_network
     restart: unless-stopped
+    ports:
+      - "8000:8000"
 
   dispatch_grafana:
     image: grafana/grafana:latest
@@ -150,7 +152,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - GF_SERVER_ROOT_URL=http://10.10.10.157/grafana/
+      - GF_SERVER_ROOT_URL=${GRAFANA_PUBLIC_URL}
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
       - GF_SERVER_PROTOCOL=http
       - GF_SERVER_FORCE_HTTPS=false
@@ -160,21 +162,24 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_SECURITY_COOKIE_SECURE=false
-      
+
+      # Включает гостевой доступ
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+
       # Auth Proxy (для Django)
-      - GF_AUTH_PROXY_ENABLED=false 
-      # - GF_AUTH_PROXY_ENABLED=true
-      # - GF_AUTH_PROXY_HEADER_NAME=X-WEBAUTH-USER
-      # - GF_AUTH_PROXY_HEADER_PROPERTY=username
-      # - GF_AUTH_PROXY_AUTO_SIGN_UP=true
-      # - GF_AUTH_PROXY_SYNC_TTL=60
-      # - GF_AUTH_PROXY_WHITELIST=127.0.0.1,::1,dispatch_backend
+      - GF_AUTH_PROXY_ENABLED=true
+      - GF_AUTH_PROXY_HEADER_NAME=X-WEBAUTH-USER
+      - GF_AUTH_PROXY_HEADER_PROPERTY=username
+      - GF_AUTH_PROXY_AUTO_SIGN_UP=true
+      - GF_AUTH_PROXY_SYNC_TTL=60
+      - GF_AUTH_PROXY_WHITELIST=127.0.0.1,::1
       
       # Кэш и логи
       - GF_DATASOURCE_QUERY_CACHE_ENABLED=true
       - GF_DATASOURCE_QUERY_CACHE_MAX_ENTRIES=1000
       - GF_DATASOURCE_QUERY_CACHE_TTL=60s
-      - GF_LOG_LEVEL=info
+      - GF_LOG_LEVEL=error
       - GF_LOG_MODE=file
       - GF_LOG_FILE=/var/log/grafana/grafana.log
 
@@ -211,4 +216,3 @@ services:
     networks:
       - dispatch_network
     restart: unless-stopped
-

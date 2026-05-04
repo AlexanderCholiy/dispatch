@@ -21,6 +21,9 @@ from users.views import (
     CustomPasswordResetView,
 )
 
+# from django_prometheus.exports import ExportToDjangoView
+
+
 handler400 = 'core.views.bad_request'
 handler403 = 'core.views.permission_denied'
 handler404 = 'core.views.page_not_found'
@@ -130,4 +133,9 @@ urlpatterns += (
         protected_media,
         name='protected_media'
     ),
+    # path(
+    #     'system-metrics/',
+    #     ExportToDjangoView,
+    #     name='prometheus-django-metrics'
+    # ),
 )

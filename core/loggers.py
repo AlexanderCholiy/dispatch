@@ -8,6 +8,7 @@ from .constants import (
     DEFAULT_LOG_MODE,
     DEFAULT_ROTATING_LOG_FILE,
     DJANGO_LOG_ROTATING_FILE,
+    EMAIL_LOG_ROTATING_FILE,
     EMAIL_PARSER_LOG_ROTATING_FILE,
     INCIDENTS_LOG_ROTATING_FILE,
     MONITORING_LOG_ROTATING_FILE,
@@ -114,7 +115,11 @@ class LoggerFactory:
 
 
 email_parser_logger = LoggerFactory(
-    'email_logger', EMAIL_PARSER_LOG_ROTATING_FILE
+    'email_parser_logger', EMAIL_PARSER_LOG_ROTATING_FILE
+).get_logger()
+
+email_logger = LoggerFactory(
+    'email_logger', EMAIL_LOG_ROTATING_FILE
 ).get_logger()
 
 celery_logger = LoggerFactory(

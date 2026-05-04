@@ -74,6 +74,54 @@ class EmailManager:
 
         EmailErr.objects.filter(email_msg_id__in=error_ids).delete()
 
+    @staticmethod
+    def sanitize_email_reference(value: str) -> str | None:
+        """
+        Очищает и валидирует ссылку на сообщение.
+        Возвращает нормализованный ID в формате <...> или None, если данные
+        битые.
+        """
+        if not value:
+            return None
+
+        val = str(value)
+
+        # 1. Удаляем \r, \n, \t
+        cleaned = re.sub(r'[\r\n\t]+', '', val)
+
+        # 2. Разбиваем и склеиваем (убираем пробелы внутри ID)
+        parts = re.split(r'[\s,]+', cleaned)
+        valid_parts = [p for p in parts if p]
+        normalized = ''.join(valid_parts)
+
+        if not normalized:
+            return None
+
+        # 3. Восстановление скобок
+        start_idx = normalized.find('<')
+        end_idx = normalized.rfind('>')
+
+        content = ""
+        if start_idx != -1 and end_idx != -1 and start_idx < end_idx:
+            content = normalized[start_idx:end_idx + 1]
+        else:
+            match = re.search(
+                r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})', normalized
+            )
+            if match:
+                content = f'<{match.group(1)}>'
+            else:
+                temp = normalized.replace('<', '').replace('>', '')
+                if temp:
+                    content = f'<{temp}>'
+                else:
+                    return None
+
+        if len(content) <= 2:
+            return None
+
+        return content
+
     @transaction.atomic
     def add_email_message(
         self,
@@ -113,9 +161,17 @@ class EmailManager:
             },
         )
 
+        clean_references: list[str] = []
+        for ref in email_msg_references:
+            sanitized = self.sanitize_email_reference(ref)
+            if sanitized:
+                clean_references.append(sanitized)
+            else:
+                email_parser_logger.debug(f'Отброшен битый Reference: {ref}')
+
         self._update_related_records(
             EmailReference, 'email_msg_references',
-            email_message, email_msg_references
+            email_message, clean_references
         )
         self._update_related_records(
             EmailAttachment, 'file_url',

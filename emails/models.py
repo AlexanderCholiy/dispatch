@@ -1,4 +1,7 @@
+import re
+
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from core.constants import MAX_EMAIL_ID_LEN
@@ -174,6 +177,84 @@ class EmailReference(models.Model):
 
     def __str__(self):
         return self.email_msg_references
+
+    def clean(self):
+        """
+        Полная нормализация и валидация поля email_msg_references.
+
+        Логика:
+        1. Удаляет \r, \n, \t.
+        2. Удаляет лишние пробелы и запятые.
+        3. Гарантирует наличие угловых скобок < > вокруг ID.
+        4. Выбрасывает ValidationError, если после очистки данных не осталось.
+        """
+        if not self.email_msg_references:
+            raise ValidationError(
+                'Поле email_msg_references не может быть пустым.'
+            )
+
+        val = str(self.email_msg_references)
+
+        # 1. Удаление переносов строк и табуляции:
+        cleaned = re.sub(r'[\r\n\t]+', '', val)
+
+        # 2. Разделение по пробелам и запятым, фильтрация пустых:
+        parts = re.split(r'[\s,]+', cleaned)
+        valid_parts = [p for p in parts if p]
+
+        # Склеиваем без разделителей (убираем пробелы внутри ID):
+        normalized = ''.join(valid_parts)
+
+        # ВАЛИДАЦИЯ 1: Если после очистки ничего не осталось
+        if not normalized:
+            raise ValidationError(
+                'Не удалось извлечь корректный Message-ID из значения: '
+                f'"{val}". '
+                'Данные содержат только мусор или символы разделения.'
+            )
+
+        start_idx = normalized.find('<')
+        end_idx = normalized.rfind('>')
+
+        content = ''
+
+        if start_idx != -1 and end_idx != -1 and start_idx < end_idx:
+            # Скобки есть и в правильном порядке:
+            content = normalized[start_idx:end_idx + 1]
+        else:
+            # Скобок нет или порядок нарушен -> пытаемся найти email:
+            match = re.search(
+                r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})',
+                normalized
+            )
+
+            if match:
+                content = f'<{match.group(1)}>'
+            else:
+                # Если email не найден, используем остаток строки как ID:
+                temp = normalized.replace('<', '').replace('>', '')
+                if temp:
+                    content = f'<{temp}>'
+                else:
+                    raise ValidationError(
+                        'Не удалось восстановить корректный Message-ID '
+                        f'из значения: "{val}"". '
+                        'Строка не содержит ни email-адреса, ни валидного '
+                        'текста.'
+                    )
+
+        # ВАЛИДАЦИЯ 2: Проверка длины и структуры
+        # Content должен быть хотя бы "<x>" (минимум 3 символа)
+        if len(content) <= 2:
+            raise ValidationError(
+                f'Сформированный Message-ID слишком короткий: "{content}". '
+                'Ожидался формат <id@domain>.'
+            )
+        self.email_msg_references = content
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
 
 class EmailAttachment(Attachment):

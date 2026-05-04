@@ -32,6 +32,9 @@ DEFAULT_LOG_LEVEL = DEBUG if DEBUG_MODE else INFO
 EMAIL_PARSER_LOG_ROTATING_FILE = os.path.join(
     LOG_DIR, 'emails', 'email_parser.log'
 )
+EMAIL_LOG_ROTATING_FILE = os.path.join(
+    LOG_DIR, 'emails', 'email.log'
+)
 TS_LOG_ROTATING_FILE = os.path.join(LOG_DIR, 'ts', 'ts.log')
 MONITORING_LOG_ROTATING_FILE = os.path.join(
     LOG_DIR, 'monitoring', 'monitoring.log'
@@ -60,6 +63,7 @@ MQTT_PARSER_LOG_ROTATING_FILE = os.path.join(
 
 os.makedirs(os.path.dirname(DEFAULT_ROTATING_LOG_FILE), exist_ok=True)
 os.makedirs(os.path.dirname(EMAIL_PARSER_LOG_ROTATING_FILE), exist_ok=True)
+os.makedirs(os.path.dirname(EMAIL_LOG_ROTATING_FILE), exist_ok=True)
 os.makedirs(os.path.dirname(TS_LOG_ROTATING_FILE), exist_ok=True)
 os.makedirs(os.path.dirname(MONITORING_LOG_ROTATING_FILE), exist_ok=True)
 os.makedirs(os.path.dirname(YANDEX_TRACKER_ROTATING_FILE), exist_ok=True)

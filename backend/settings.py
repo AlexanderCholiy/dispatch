@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'debug_toolbar',
+    # 'django_prometheus',
     'core.apps.CoreConfig',
     'users.apps.UsersConfig',
     'pages.apps.PagesConfig',
@@ -83,6 +84,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    # 'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'users.middleware.SafeSessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -93,6 +95,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django_ratelimit.middleware.RatelimitMiddleware',
+    # 'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 
 AUTHENTICATION_BACKENDS = [
