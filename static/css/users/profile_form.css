@@ -190,7 +190,8 @@ html.dark .form-group input[type="date"]::-webkit-calendar-picker-indicator {
   color: var(--color);
 }
 
-.password-reset {
+.password-reset,
+.register-link {
   display: block;
   margin: var(--space-md) auto 0 auto;
   text-align: center;
@@ -202,8 +203,16 @@ html.dark .form-group input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
 }
 
+.register-link {
+  text-align: right;
+  text-decoration: underline;
+  color: var(--red-color)
+}
+
 .password-reset:hover,
-.password-reset:focus {
+.password-reset:focus,
+.register-link:hover,
+.register-link:focus {
   color: var(--color);
   text-decoration: underline;
   outline: none;

@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 from core.loggers import mqtt_parser_logger
-from mqtt.constants import ERR_PARSER_MSG_LIMIT
+from mqtt.constants import ERR_PARSER_MSG_LIMIT, CellMeasurConstraints
 from mqtt.shemas.aops import Cell, CellMeasure, NetType, Operator
 
 
@@ -99,6 +99,25 @@ class ParseMyCellInfo:
 
                 op_code = f'{mcc}{mnc}'
                 operator = Operator(operator_code=op_code)
+
+                rsrp_val = (
+                    rsrp_val
+                    if rsrp_val >= CellMeasurConstraints.MIN_RSRP_VAL
+                    and rsrp_val <= CellMeasurConstraints.MAX_RSRP_VAL
+                    else None
+                )
+                rsrq_val = (
+                    rsrq_val
+                    if rsrq_val >= CellMeasurConstraints.MIN_RSRQ_VAL
+                    and rsrq_val <= CellMeasurConstraints.MAX_RSRQ_VAL
+                    else None
+                )
+                rssi_val = (
+                    rssi_val
+                    if rssi_val >= CellMeasurConstraints.MIN_RSSI_VAL
+                    and rssi_val <= CellMeasurConstraints.MAX_RSSI_VAL
+                    else None
+                )
 
                 cell = Cell(
                     cellid=cell_id,
