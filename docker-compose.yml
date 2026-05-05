@@ -142,8 +142,6 @@ services:
     networks:
       - dispatch_network
     restart: unless-stopped
-    ports:
-      - "8000:8000"
 
   dispatch_grafana:
     image: grafana/grafana:latest
