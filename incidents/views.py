@@ -91,7 +91,14 @@ from .models import (
     TimeStatus,
 )
 from .selectors.incidents import IncidentSelector
+from .services.get_avr_contractor_map import get_avr_contractor_map
 from .services.get_incident_responsible_users import get_responsible_users
+from .services.get_incident_type import get_incident_type_map
+from .services.get_macroregions import get_macro_region_map
+from .services.get_operator_group_map import get_operator_group_map
+from .services.get_region_responsible_manager import (
+    get_region_responsible_managers,
+)
 from .services.incident_signature import get_incident_signature
 from .services.normalize_incident_subject import normalize_incident_subject
 from .utils import IncidentManager
@@ -109,6 +116,13 @@ from .validators import (
 @ratelimit(key='user_or_ip', rate='200/m', block=True)
 def index(request: HttpRequest) -> HttpResponse:
     query = request.GET.get('q', '').strip()
+
+    responsible_users = get_responsible_users()
+    region_responsible_managers = get_region_responsible_managers()
+    incident_types = get_incident_type_map()
+    macroregions = get_macro_region_map()
+    avr_contractors = get_avr_contractor_map()
+    operator_groups = get_operator_group_map()
 
     code_pattern = r"^(NT|AVRSERVICE)-\d+$"
     search_only_by_code = (
@@ -129,6 +143,53 @@ def index(request: HttpRequest) -> HttpResponse:
         request.GET.get('status', '').strip()
         or request.COOKIES.get('status', '').strip()
     ) if not search_only_by_code else None
+
+    region_responsible_manager = (
+        request.GET.get('region_responsible_manager', '').strip()
+        or request.COOKIES.get('region_responsible_manager', '').strip()
+    ) if not search_only_by_code else None
+
+    if region_responsible_manager not in region_responsible_managers:
+        region_responsible_manager = None
+
+    operator_group = (
+        request.GET.get('operator_group', '').strip()
+        or request.COOKIES.get('operator_group', '').strip()
+    ) if not search_only_by_code else None
+
+    if operator_group not in operator_groups:
+        operator_group = None
+
+    incident_type = (
+        request.GET.get('incident_type', '').strip()
+        or request.COOKIES.get('incident_type', '').strip()
+    ) if not search_only_by_code else None
+
+    if incident_type and incident_type.isdigit():
+        incident_type = int(incident_type)
+
+    if incident_type not in incident_types:
+        incident_type = None
+
+    macroregion = (
+        request.GET.get('macroregion', '').strip()
+        or request.COOKIES.get('macroregion', '').strip()
+    ) if not search_only_by_code else None
+    if macroregion and macroregion.isdigit():
+        macroregion = int(macroregion)
+
+    if macroregion not in macroregions:
+        macroregion = None
+
+    avr_contractor = (
+        request.GET.get('avr_contractor', '').strip()
+        or request.COOKIES.get('avr_contractor', '').strip()
+    ) if not search_only_by_code else None
+    if avr_contractor and avr_contractor.isdigit():
+        avr_contractor = int(avr_contractor)
+
+    if avr_contractor not in avr_contractors:
+        avr_contractor = None
 
     category_id = (
         request.GET.get('category') or request.COOKIES.get('category')
@@ -328,6 +389,24 @@ def index(request: HttpRequest) -> HttpResponse:
     elif responsible_user_id:
         base_qs = base_qs.filter(responsible_user__id=responsible_user_id)
 
+    if region_responsible_manager:
+        regions_id = region_responsible_managers[region_responsible_manager]
+        base_qs = base_qs.filter(pole__region_id__in=regions_id)
+
+    if operator_group:
+        base_qs = base_qs.filter(
+            base_station__operator__operator_group=operator_group
+        )
+
+    if macroregion:
+        base_qs = base_qs.filter(pole__region__macroregion_id=macroregion)
+
+    if incident_type:
+        base_qs = base_qs.filter(incident_type_id=incident_type)
+
+    if avr_contractor:
+        base_qs = base_qs.filter(pole__avr_contractor_id=avr_contractor)
+
     if sort == 'asc':
         base_qs = base_qs.order_by('incident_date', 'update_date', 'id')
     else:
@@ -404,8 +483,6 @@ def index(request: HttpRequest) -> HttpResponse:
         MAX_INCIDENTS_INFO_CACHE_SEC,
     )
 
-    responsible_users = get_responsible_users()
-
     query_params = request.GET.copy()
     query_params.pop('page', None)
     page_url_base = f'?{query_params.urlencode()}&' if query_params else '?'
@@ -423,14 +500,24 @@ def index(request: HttpRequest) -> HttpResponse:
         'statuses': statuses,
         'categories': categories,
         'responsible_users': responsible_users,
+        'avr_contractors': avr_contractors,
+        'operator_groups': operator_groups,
         'sla_statuses': SLAStatus,
         'time_statuses': TimeStatus,
+        'region_responsible_managers': region_responsible_managers,
+        'incident_types': incident_types,
+        'macroregions': macroregions,
         'selected': {
             'is_incident_finish': is_incident_finish,
             'was_read': was_read,
             'status': status_name,
             'category': category_id,
             'responsible_user': responsible_user_id,
+            'region_responsible_manager': region_responsible_manager,
+            'macroregion': macroregion,
+            'avr_contractor': avr_contractor,
+            'incident_type': incident_type,
+            'operator_group': operator_group,
             'pole': pole,
             'base_station': base_station,
             'per_page': per_page,

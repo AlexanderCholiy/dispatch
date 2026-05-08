@@ -1,4 +1,5 @@
-.column-select-wrapper {
+.column-select-wrapper,
+.filter-select-wrapper {
   position: relative;
   max-width: 200px;
 }
@@ -41,17 +42,20 @@
 
 
 /* Поворот стрелки при открытом списке */
-.column-select-wrapper.open::after {
+.column-select-wrapper.open::after,
+.filter-select-wrapper.open::after {
   transform: translateY(-40%) rotate(180deg);
 }
 
 /* Hover для триггера */
-.column-select-trigger:hover {
+.column-select-trigger:hover,
+.filter-select-trigger:hover {
   box-shadow: 0 0 var(--space-xs) var(--extra-color);
 }
 
 /* Dropdown */
-.column-select-dropdown {
+.column-select-dropdown,
+.filter-select-dropdown {
   position: absolute;
   top: 100%;
   left: 0;
@@ -65,7 +69,8 @@
 }
 
 /* Показываем dropdown, когда есть класс open */
-.column-select-wrapper.open .column-select-dropdown {
+.column-select-wrapper.open .column-select-dropdown,
+.filter-select-wrapper.open .filter-select-dropdown {
   display: block;
 }
 
@@ -96,10 +101,12 @@
   display: none;
 }
 
-.column-select-wrapper .bx-x {
+.column-select-wrapper .bx-x,
+.filter-select-wrapper .bx-x {
   color: var(--gray-color);
 }
 
-.column-select-wrapper .bx-check {
+.column-select-wrapper .bx-check,
+.filter-select-wrapper .bx-check  {
   color: var(--green-color);
 }

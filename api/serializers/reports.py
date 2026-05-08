@@ -25,6 +25,12 @@ class IncidentReportSerializer(serializers.ModelSerializer):
     region_ru = serializers.CharField(
         source='pole.region.region_ru', read_only=True
     )
+    responsible_manager = serializers.CharField(
+        source='pole.region.responsible_manager', read_only=True
+    )
+    infrastructure_company = serializers.CharField(
+        source='pole.infrastructure_company', read_only=True
+    )
     avr_names = serializers.CharField(
         source='pole.avr_contractor.contractor_name', read_only=True
     )
@@ -96,7 +102,9 @@ class IncidentReportSerializer(serializers.ModelSerializer):
             'dgu_duration',
 
             'pole',
+            'infrastructure_company',
             'region_ru',
+            'responsible_manager',
             'macroregion',
             'base_station',
             'operator_group',

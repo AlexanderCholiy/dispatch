@@ -86,7 +86,7 @@ class User(AbstractUser):
         help_text='Выберите роль пользователя.',
     )
     date_of_birth = models.DateField(
-        'Дата рождения',
+        'День рождения',
         null=True,
         blank=True,
         help_text='Формат: ГГГГ-ММ-ДД.'

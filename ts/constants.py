@@ -84,3 +84,4 @@ RAISE_TS_BASE_STATION_DEL_LIMIT = 8_000
 POLE_CACHE_TTL = 1500  # Чаще чем синхронизация с TS
 BASE_STATION_CACHE_TTL = 1500  # Чаще чем синхронизация с TS
 OPERATORS_CACHE_TTL = 1500  # Чаще чем синхронизация с TS
+REGION_RESPONSIBLE_MANAGER_CACHE_TTL = 1500  # Чаще чем синхронизация с TS

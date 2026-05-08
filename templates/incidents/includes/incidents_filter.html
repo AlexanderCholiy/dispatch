@@ -7,6 +7,8 @@
 
 <form method="get" class="table-filter-form" id="filter-form">
   <div class="left-part">
+    {% include "incidents/includes/filter_select.html" %}
+
     <div class="select-wrapper">
       <select name="finish"
               id="finish-select"
@@ -82,6 +84,17 @@
     </div>
 
     <div class="select-wrapper">
+      <select name="incident_type" id="incident-type-select" class="select tooltip" data-title="Тип инцидента">
+        <option value="" {% if not selected.incident_type %}selected{% endif %}>Тип: Все</option>
+        {% for type_id, type_name in incident_types.items %}
+          <option value="{{ type_id }}" {% if selected.incident_type == type_id %}selected{% endif %}>
+            {{ type_name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="select-wrapper">
       <select name="sla_avr" id="sla-avr" class="select tooltip" data-title="Статус SLA АВР">
         <option value="" {% if not selected.sla_avr_status %}selected{% endif %}>
           SLA АВР: Все
@@ -123,32 +136,75 @@
       </select>
     </div>
 
-    <input
-      type="text"
-      name="pole"
-      value="{{ selected.pole|default:'' }}"
-      placeholder="Шифр опоры"
-      aria-label="Фильтр опоры"
-      id="pole-input"
-      maxlength="32"
-      pattern="[a-zA-Z0-9\-]*"
-      class="tooltip"
-      data-title="Только латинские буквы, цифры и дефис"
-    />
+    <div class="select-wrapper">
+      <select name="operator_group" id="operator-group-select" class="select tooltip" data-title="Группа операторов">
+        <option value="" {% if not selected.operator_group %}selected{% endif %}>Оператор: Все</option>
+        {% for g in operator_groups %}
+        <option value="{{ g }}" {% if selected.operator_group == g %}selected{% endif %}>{{ g }}</option>
+        {% endfor %}
+      </select>
+    </div>
 
-    <input
-      type="text"
-      name="base_station"
-      value="{{ selected.base_station|default:'' }}"
-      placeholder="Номер БС"
-      aria-label="Фильтр по номеру базовой станции"
-      id="base-station-input"
-      maxlength="32"
-      pattern="[a-zA-Z0-9\-]*"
-      class="tooltip"
-      data-title="Только латинские буквы, цифры и дефис"
-    >
-    <div>
+    <div class="select-wrapper">
+      <select name="macroregion" id="macroregion-select" class="select tooltip" data-title="Макрорегион">
+        <option value="" {% if not selected.macroregion %}selected{% endif %}>МР: Все</option>
+        {% for macroregion_id, macroregion_name in macroregions.items %}
+          <option value="{{ macroregion_id }}" {% if selected.macroregion == macroregion_id %}selected{% endif %}>
+            {{ macroregion_name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    
+    <div class="select-wrapper">
+      <select name="region_responsible_manager" id="region-responsible-manager-select" class="select tooltip" data-title="Ответственный инженер-энергетик по региону">
+        <option value="" {% if not selected.region_responsible_manager %}selected{% endif %}>Энергетик: Все</option>
+        {% for u in region_responsible_managers %}
+        <option value="{{ u }}" {% if selected.region_responsible_manager == u %}selected{% endif %}>{{ u }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="select-wrapper">
+      <select name="avr_contractor" id="avr-contractor-select" class="select tooltip" data-title="Подрядчик по АВР">
+        <option value="" {% if not selected.avr_contractors %}selected{% endif %}>Подрядчик: Все</option>
+        {% for avr_contractor_id, avr_contractor_name in avr_contractors.items %}
+        <option value="{{ avr_contractor_id }}" {% if selected.avr_contractor == avr_contractor_id %}selected{% endif %}>{{ avr_contractor_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="filter-item-wrapper">
+      <input
+        type="text"
+        name="pole"
+        value="{{ selected.pole|default:'' }}"
+        placeholder="Шифр опоры"
+        aria-label="Фильтр опоры"
+        id="pole-input"
+        maxlength="32"
+        pattern="[a-zA-Z0-9\-]*"
+        class="tooltip"
+        data-title="Только латинские буквы, цифры и дефис"
+      />
+    </div>
+
+    <div class="filter-item-wrapper">
+      <input
+        type="text"
+        name="base_station"
+        value="{{ selected.base_station|default:'' }}"
+        placeholder="Номер БС"
+        aria-label="Фильтр по номеру базовой станции"
+        id="base-station-input"
+        maxlength="32"
+        pattern="[a-zA-Z0-9\-]*"
+        class="tooltip"
+        data-title="Только латинские буквы, цифры и дефис"
+      >
+    </div>
+
+    <div class="filter-item-wrapper">
       <input 
         type="datetime-local"
         name="incident_date_from" 
@@ -157,6 +213,9 @@
         value="{{ selected.date_from|default:'' }}" 
         class="tooltip" 
         data-title="Дата регистрации ОТ">
+    </div>
+  
+    <div class="filter-item-wrapper">
       <input 
         type="datetime-local"
         name="incident_date_to" 
@@ -249,7 +308,7 @@
 
     {% if can_manage %}
       <a href="{% url 'incidents:create' %}" 
-        class="btn btn-success tooltip" 
+        class="btn btn-warning tooltip" 
         data-title="Добавить инцидент">
         <i class="bx bx-plus"></i>
       </a>
@@ -283,4 +342,5 @@
 <script src="{% static 'js/reset_tables_filter.js' %}"></script>
 <script src="{% static 'js/sort_table.js' %}"></script>
 <script src="{% static 'js/select_table_column.js' %}"></script>
+<script src="{% static 'js/manage_filters_visibility.js' %}"></script>
 {% endblock %}

@@ -20,7 +20,7 @@
       <div class="user-detail-card">   
         <div class="user-info">
           <p><strong>Email: </strong><span class="user-email copy-text" data-text={{ user_info.email }}>{{ user_info.email }}</span></p>
-          <p><strong>Дата рождения:</strong> {{ user_info.date_of_birth|default:"Не указана" }}</p>
+          <p><strong>День рождения:</strong> {{ user_info.date_of_birth|date:"j E"|default:"Не указана" }}</p>
     
           <p><strong>График работы:</strong>
           {% if user_info.work_schedule.is_working %}
