@@ -8,7 +8,9 @@ import requests
 from django.db import connections, transaction
 from django.db.models import Q
 from numpy import nan
+from tqdm import tqdm
 
+from core.constants import DEBUG_MODE
 from core.loggers import ts_logger
 from core.pretty_print import PrettyPrint
 from core.wraps import timer
@@ -26,10 +28,12 @@ from .constants import (
     RAISE_TS_BASE_STATION_TABLE_LIMIT,
     RAISE_TS_POLE_DEL_LIMIT,
     RAISE_TS_POLE_TABLE_LIMIT,
+    RAISE_TS_REGION_RESPONSIBLE_MANAGER_TABLE_LIMIT,
     RVR_FILE,
     TS_AVR_TABLE,
     TS_BASE_STATION_TABLE,
     TS_POLE_TABLE,
+    TS_REGION_RESPONSIBLE_MANAGER_TABLE,
     UNDEFINED_CASE,
     UNDEFINED_EMAILS,
     UNDEFINED_ID,
@@ -51,7 +55,7 @@ from .models import (
 from .validators import SocialValidators
 
 
-class Api(SocialValidators):
+class TSManager(SocialValidators):
     """Загрузка данных из TS и добавление их в БД"""
 
     @timer(ts_logger)
@@ -999,3 +1003,106 @@ class Api(SocialValidators):
             ts_logger.debug(
                 f'Успешно обновлено {len(changed_regions)} РВР email'
             )
+
+    def get_ts_region_responsible_manager(self) -> pd.DataFrame:
+        query = (
+            f'''
+            SELECT
+                COUNT(*) AS cnt,
+                MIN("SiteId") AS "SiteId",
+                "RegionId",
+                "Ответственный"
+            FROM "{TS_REGION_RESPONSIBLE_MANAGER_TABLE}"
+            WHERE
+                "RegionId" IS NOT NULL
+                OR "Ответственный" IS NOT NULL
+            GROUP BY "RegionId", "Ответственный"
+            ORDER BY "RegionId", cnt DESC, "Ответственный";
+            '''
+        )
+
+        with connections['ts'].cursor() as cursor:
+            cursor.execute(query)
+            columns = [col[0] for col in cursor.description]
+            data = cursor.fetchall()
+
+        if len(data) < RAISE_TS_REGION_RESPONSIBLE_MANAGER_TABLE_LIMIT:
+            raise EmptyTableError(
+                TS_REGION_RESPONSIBLE_MANAGER_TABLE, len(data)
+            )
+
+        df = pd.DataFrame.from_records(data, columns=columns)
+
+        # Сортируем: сначала по RegionId (для группировки),
+        # затем по cnt (по убыванию), затем по Ответственному (по алфавиту):
+        df_sorted = df.sort_values(
+            by=['RegionId', 'cnt', 'Ответственный'],
+            ascending=[True, False, True]
+        )
+
+        # Оставляем только первую строку для каждого RegionId:
+        result_df = df_sorted.drop_duplicates(
+            subset=['RegionId'], keep='first'
+        )
+
+        return result_df
+
+    @transaction.atomic
+    def update_region_responsible_manager(self):
+        """
+        Обновляет ответственного менеджера для каждого региона.
+        Выбирает того, у кого больше всего опор (cnt).
+        При равенстве - алфавитный порядок.
+        """
+        ts_responsible_manager = self.get_ts_region_responsible_manager()
+        total = len(ts_responsible_manager)
+
+        site_ids = ts_responsible_manager['SiteId'].tolist()
+
+        poles = Pole.objects.filter(
+            site_id__in=site_ids,
+            region__isnull=False,
+        ).select_related('region')
+
+        regions_map = {pole.site_id: pole.region for pole in poles}
+
+        regions_to_update = []
+
+        with tqdm(
+            total=total,
+            desc='Обновление ответственного по региону:',
+            colour='blue',
+            position=0,
+            leave=True,
+            disable=not DEBUG_MODE,
+        ) as pbar:
+            for _, row in ts_responsible_manager.iterrows():
+                site_id = int(row['SiteId'])
+                responsible_manager = str(row['Ответственный'])
+
+                region = regions_map.get(site_id)
+
+                if region is None:
+                    ts_logger.warning(
+                        f'Для SiteId: {site_id} из TS регион отсутствует'
+                    )
+                    pbar.update(1)
+                    continue
+
+                if region.responsible_manager == responsible_manager:
+                    pbar.update(1)
+                    continue
+
+                region.responsible_manager = responsible_manager
+                regions_to_update.append(region)
+                pbar.update(1)
+
+            if regions_to_update:
+                Region.objects.bulk_update(
+                    regions_to_update, ['responsible_manager'],
+                )
+                ts_logger.debug(
+                    f'Успешно обновлено {len(regions_to_update)} регионов.'
+                )
+            else:
+                ts_logger.debug('Изменений нет.')

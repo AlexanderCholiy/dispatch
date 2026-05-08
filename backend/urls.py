@@ -112,7 +112,6 @@ app_urls = [
     path('emails/', include('emails.urls')),
     path('energy/', include('energy.urls')),
     path('pages/', include('pages.urls')),
-    path('stats/', include('stats.urls')),
     path('metrics/', include('metrics.urls')),
     path('ts/', include('ts.urls')),
     path('notifications/', include('notifications.urls')),

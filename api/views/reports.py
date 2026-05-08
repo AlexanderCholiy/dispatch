@@ -27,20 +27,16 @@ from rest_framework.throttling import ScopedRateThrottle
 
 from api.constants import (
     ALL_CLOSED_INCIDENT_AGE_LIMIT,
-    BASE_INCIDENT_VALID_FILTER,
     CACHE_INCIDENTS_FILE,
     CACHE_INCIDENTS_LAST_MONTH_FILE,
     CACHE_INCIDENTS_TTL,
-    CLOSED_INCIDENTS_VALID_FILTER,
     INCIDENT_DB_CHUNK_SIZE,
     JSON_EXPORT_CHUNK_SIZE,
     LOCK_INCIDENTS_BLOCKING_TIMEOUT_SEC,
     LOCK_INCIDENTS_TIMEOUT_SEC,
     LOCK_KEY_CACHE_INCIDENTS_FILE,
     LOCK_KEY_CACHE_INCIDENTS_LAST_MONTH_FILE,
-    OPEN_INCIDENTS_VALID_FILTER,
     STATISTIC_CACHE_TIMEOUT,
-    TOTAL_VALID_INCIDENTS_FILTER,
 )
 from api.filters import (
     IncidentReportFilter,
@@ -158,7 +154,7 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
     4) Полная выгрузка за последний месяц:
        GET /api/v1/report/incidents/json_export/?last_month=true
     """
-    closed_last_year_filter = BASE_INCIDENT_VALID_FILTER & Q(
+    closed_last_year_filter = Q(
         is_incident_finish=True,
         incident_finish_date__isnull=False,
         incident_finish_date__gte=(
@@ -167,7 +163,7 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
     )
 
     queryset = Incident.objects.filter(
-        OPEN_INCIDENTS_VALID_FILTER | closed_last_year_filter
+        closed_last_year_filter
     ).select_related(
         'incident_type',
         'incident_subtype',
@@ -481,7 +477,6 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
 
         incidents = (
             Incident.objects
-            .filter(TOTAL_VALID_INCIDENTS_FILTER)
             .filter(incident_date_filter)
             .exclude(
                 pole__pole=UNDEFINED_CASE
@@ -539,18 +534,13 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
             .values('macroregion_id')
             .annotate(
                 # Общее количество:
-                total_closed_incidents=Count(
-                    'id', distinct=True, filter=CLOSED_INCIDENTS_VALID_FILTER
-                ),
-                total_open_incidents=Count(
-                    'id', distinct=True, filter=OPEN_INCIDENTS_VALID_FILTER
-                ),
+                total_closed_incidents=Count('id', distinct=True),
+                total_open_incidents=Count('id', distinct=True,),
                 active_contractor_incidents=Count(
                     'id',
                     distinct=True,
                     filter=(
-                        OPEN_INCIDENTS_VALID_FILTER
-                        & (
+                        (
                             Q(has_notified_contractor=True)
                             | Q(avr_start_date__isnull=False)
                             | Q(rvr_start_date__isnull=False)
@@ -644,7 +634,6 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
             row['macroregion_id']: row['c']
             for row in (
                 power_qs
-                .filter(OPEN_INCIDENTS_VALID_FILTER)
                 .values('macroregion_id')
                 .annotate(c=Count('id', distinct=True))
             )
@@ -654,7 +643,6 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
             row['macroregion_id']: row['c']
             for row in (
                 power_qs
-                .filter(CLOSED_INCIDENTS_VALID_FILTER)
                 .values('macroregion_id')
                 .annotate(c=Count('id', distinct=True))
             )
@@ -918,7 +906,6 @@ class AVRContractorViewSet(viewsets.ReadOnlyModelViewSet):
 
         incidents = (
             Incident.objects
-            .filter(TOTAL_VALID_INCIDENTS_FILTER)
             .filter(incident_date_filter)
             .filter(
                 pole__isnull=False,
@@ -1133,7 +1120,6 @@ class DispatchViewSet(viewsets.ReadOnlyModelViewSet):
 
         incidents = (
             Incident.objects
-            .filter(TOTAL_VALID_INCIDENTS_FILTER)
             .filter(incident_date_filter)
             .exclude(pole__pole=UNDEFINED_CASE)
             .select_related('responsible_user',)
@@ -1157,14 +1143,8 @@ class DispatchViewSet(viewsets.ReadOnlyModelViewSet):
             )
             .annotate(
                 total=Count('id'),
-                open_incidents=Count(
-                    'id',
-                    filter=OPEN_INCIDENTS_VALID_FILTER
-                ),
-                closed_incidents=Count(
-                    'id',
-                    filter=CLOSED_INCIDENTS_VALID_FILTER
-                ),
+                open_incidents=Count('id',),
+                closed_incidents=Count('id',),
                 sla_ok=Count(
                     'id',
                     filter=Q(dispatch_sla_ok=True)
@@ -1175,33 +1155,21 @@ class DispatchViewSet(viewsets.ReadOnlyModelViewSet):
                 ),
                 open_sla_ok=Count(
                     'id',
-                    filter=(
-                        OPEN_INCIDENTS_VALID_FILTER
-                        & Q(dispatch_sla_ok=True)
-                    )
+                    filter=(Q(dispatch_sla_ok=True))
                 ),
                 open_sla_failed=Count(
                     'id',
-                    filter=(
-                        OPEN_INCIDENTS_VALID_FILTER
-                        & Q(dispatch_sla_ok=False)
-                    )
+                    filter=(Q(dispatch_sla_ok=False))
                 ),
 
                 # --- SLA ЗАКРЫТЫЕ ---
                 closed_sla_ok=Count(
                     'id',
-                    filter=(
-                        CLOSED_INCIDENTS_VALID_FILTER
-                        & Q(dispatch_sla_ok=True)
-                    )
+                    filter=(Q(dispatch_sla_ok=True))
                 ),
                 closed_sla_failed=Count(
                     'id',
-                    filter=(
-                        CLOSED_INCIDENTS_VALID_FILTER
-                        & Q(dispatch_sla_ok=False)
-                    )
+                    filter=(Q(dispatch_sla_ok=False))
                 ),
             )
         )

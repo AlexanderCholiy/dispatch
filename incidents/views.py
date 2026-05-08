@@ -22,7 +22,6 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 
-from api.constants import TOTAL_VALID_INCIDENTS_FILTER
 from core.constants import CURRENT_TZ, DATETIME_LOCAL_FORMAT
 from core.exceptions import (
     ApiBadRequest,
@@ -233,7 +232,6 @@ def index(request: HttpRequest) -> HttpResponse:
 
     base_qs = (
         Incident.objects
-        .filter(TOTAL_VALID_INCIDENTS_FILTER)
         .select_related(
             'incident_type',
             'incident_subtype',

@@ -148,6 +148,13 @@ class Region(models.Model):
         verbose_name='Макрорегион',
         db_index=True
     )
+    responsible_manager = models.CharField(
+        max_length=MAX_ST_DESCRIPTION,
+        verbose_name='Ответстенный',
+        null=True,
+        blank=True,
+        db_index=True
+    )
 
     class Meta:
         verbose_name = 'регион'

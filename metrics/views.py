@@ -1,10 +1,8 @@
 from urllib.parse import urlencode
 
-from dateutil.relativedelta import relativedelta
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
-from django.utils import timezone
 
 from users.utils import role_required
 
@@ -18,23 +16,11 @@ from .constants import (
 @login_required
 @role_required()
 def grafana_general_dashboard(request: HttpRequest) -> HttpResponse:
-    user_theme = request.COOKIES.get('site_theme', 'auto')
-
-    now = timezone.now()
-
-    first_day_current = now.replace(day=1)
-    first_day_prev_month = first_day_current - relativedelta(months=1)
-
-    utc_date = first_day_prev_month.astimezone(timezone.utc)
-
-    from_date_str = utc_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+    theme = request.COOKIES.get('site_theme', 'auto')
 
     query_params = {
-        'from': from_date_str,
-        'to': 'now',
         'timezone': 'Europe%2FMoscow',
-        'var-dispatch': '$__all',
-        'theme': user_theme,
+        'theme': theme,
     }
 
     base_url = (

@@ -4,26 +4,10 @@ from pathlib import Path
 
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
-from django.db.models import Q
 
 STATISTIC_CACHE_TIMEOUT = 20  # сек
 
-BASE_INCIDENT_VALID_FILTER = Q(code__isnull=False)
-
-CLOSED_INCIDENTS_VALID_FILTER = BASE_INCIDENT_VALID_FILTER & Q(
-    is_incident_finish=True,
-    incident_finish_date__isnull=False,
-)
-
 ALL_CLOSED_INCIDENT_AGE_LIMIT = relativedelta(year=1)
-
-OPEN_INCIDENTS_VALID_FILTER = BASE_INCIDENT_VALID_FILTER & Q(
-    is_incident_finish=False
-)
-
-TOTAL_VALID_INCIDENTS_FILTER = (
-    CLOSED_INCIDENTS_VALID_FILTER | OPEN_INCIDENTS_VALID_FILTER
-)
 
 API_DATE_FORMAT = '%Y-%m-%d'
 API_DATETIME_FORMAT = '%Y-%m-%d %H:%M'

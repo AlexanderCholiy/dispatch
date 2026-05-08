@@ -6,8 +6,8 @@ from django.core.management.base import BaseCommand
 from core.constants import UPDATE_DATA_FROM_TS_LOCK_FILE
 from core.loggers import ts_logger
 from core.wraps import timer
-from ts.api import Api
 from ts.constants import TS_DATA_DIR
+from ts.utils import TSManager
 
 
 class Command(BaseCommand):
@@ -52,11 +52,12 @@ class Command(BaseCommand):
             lock_acquired = True
 
             os.makedirs(TS_DATA_DIR, exist_ok=True)
-            ts_api = Api()
+            ts_api = TSManager()
             ts_api.update_poles()
             ts_api.update_rvr()
             ts_api.update_avr()
             ts_api.update_base_stations()
+            ts_api.update_region_responsible_manager()
 
         except Exception as e:
             ts_logger.exception(e)

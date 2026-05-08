@@ -35,17 +35,10 @@
             </a>
           </li>
           <li>
-            <a href="{% url 'stats:incidents_stats' %}" 
-              class="nav-link {% if view_name == 'stats:incidents_stats' %}active{% endif %}">
-              <i class='bx bx-bar-chart'></i> 
-              <span class="link-text">Статистика</span>
-            </a>
-          </li>
-          <li>
             <a href="{% url 'metrics:dispatch_general_stats' %}" 
               class="nav-link {% if view_name == 'metrics:dispatch_general_stats' %}active{% endif %}">
               <i class='bx bx-bar-chart'></i> 
-              <span class="link-text">Статистика 2.0</span>
+              <span class="link-text">Статистика</span>
             </a>
           </li>
         {% endif %}
