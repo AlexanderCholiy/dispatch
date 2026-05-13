@@ -4,6 +4,7 @@ from typing import Optional, TypedDict
 from bson.objectid import ObjectId
 from django.core.management.base import BaseCommand
 from django.db.models import Q
+from django.db.utils import OperationalError
 from django.utils import timezone
 from pydantic import ValidationError
 from pymongo import MongoClient, errors
@@ -13,6 +14,7 @@ from core.constants import DEBUG_MODE
 from core.loggers import mqtt_logger
 from core.wraps import timer
 from mqtt.constants import (
+    MAX_DB_ERR_CNT,
     MONGO_RETENTION_TTL,
     MQTT_BATCH_SIZE,
     MQTT_CONN_TIMEOUT,
@@ -59,6 +61,7 @@ class Command(BaseCommand):
 
     _processed_count = 0
     _error_cnt = 0
+    _db_err_cnt = 0
 
     _created_devices = 0
     _updated_devices = 0
@@ -81,7 +84,7 @@ class Command(BaseCommand):
                 collection = db[MQTT_MONGO_DB_COLLECTION]
 
                 cutoff_date = timezone.now() - MONGO_RETENTION_TTL
-                date_filter_str = cutoff_date.strftime('%d.%m.%Y')
+                date_filter_str = cutoff_date.strftime('%d.%m.%Y %H:%M:%S')
 
                 query = {
                     '_id': {'$gte': ObjectId('69c600000000000000000000')},
@@ -109,25 +112,41 @@ class Command(BaseCommand):
                 ) as progress_cursor:
 
                     for doc in progress_cursor:
-                        validated_model = self._process_document(doc)
+                        try:
+                            validated_model = self._process_document(doc)
 
-                        # Устройства только с доп. данными по сотам:
-                        if not validated_model or (
-                            not validated_model.aops
-                            and not validated_model.my_cell_info
-                        ):
-                            continue
+                            # Устройства только с доп. данными по сотам:
+                            if not validated_model or (
+                                not validated_model.aops
+                                and not validated_model.my_cell_info
+                            ):
+                                continue
 
-                        self._processed_count += 1
-                        self._add_device_2_butch(validated_model)
-                        self._add_cell_2_butch(validated_model)
+                            self._processed_count += 1
+                            self._add_device_2_butch(validated_model)
+                            self._add_cell_2_butch(validated_model)
+                        except OperationalError as e:
+                            self._db_err_cnt += 1
+                            mqtt_logger.error(f'Таймаут запроса к БД: {e}')
+                            if self._db_err_cnt > MAX_DB_ERR_CNT:
+                                mqtt_logger.critical(
+                                    'Критическая ошибка: '
+                                    'Достигнут лимит таймаутов '
+                                    f'({MAX_DB_ERR_CNT}). '
+                                    'Остановка импорта для предотвращения '
+                                    'перезагрузки БД.'
+                                )
+                                break
 
                 # Добавляем / обновляем хвосты:
-                self._devices_butch_create(create_anyway=True)
-                self._devices_butch_update(update_anyway=True)
+                try:
+                    self._devices_butch_create(create_anyway=True)
+                    self._devices_butch_update(update_anyway=True)
 
-                self._cells_butch_create(create_anyway=True)
-                self._cells_butch_update(update_anyway=True)
+                    self._cells_butch_create(create_anyway=True)
+                    self._cells_butch_update(update_anyway=True)
+                except OperationalError as e:
+                    mqtt_logger.error(f'Таймаут запроса к БД: {e}')
 
                 # Сохраняем измерения после того как Devices и Cells сохранены:
                 self._cells_measures_save()
