@@ -42,17 +42,18 @@ class ParseMyCellInfo:
 
             except Exception as e:
                 mqtt_parser_logger.warning(
-                    f'Ошибка при выполнении функции {strategy.__name__}: {e}'
+                    f'Ошибка при выполнении функции {strategy.__name__}, '
+                    f'MongoID: {self.mongo_id}: {e}'
                 )
                 continue
 
         if not found_anything and not self._is_service_message():
-            mqtt_parser_logger.debug(
-                'Не удалось распарсить данные ни одной стратегией. '
-                f'в {self.__class__.__name__}. '
-                f'Сырые данные (первые {ERR_PARSER_MSG_LIMIT} символов):\n'
-                f'{self.my_cell_info_row[:ERR_PARSER_MSG_LIMIT]}'
-            )
+            # mqtt_parser_logger.debug(
+            #     'Не удалось распарсить данные ни одной стратегией. '
+            #     f'в {self.__class__.__name__}, MongoID: {self.mongo_id}. '
+            #     f'Сырые данные (первые {ERR_PARSER_MSG_LIMIT} символов):\n'
+            #     f'{self.my_cell_info_row[:ERR_PARSER_MSG_LIMIT]}'
+            # )
             return None
 
         return result
@@ -151,7 +152,8 @@ class ParseMyCellInfo:
 
             except (ValueError, IndexError) as e:
                 mqtt_parser_logger.warning(
-                    f'Не удалось распарсить данные: {e}.\n'
+                    f'Не удалось распарсить данные, MongoID: {self.mongo_id}: '
+                    f'{e}.\n'
                     'Сырые данные '
                     f'(первые {ERR_PARSER_MSG_LIMIT} символов):\n'
                     f'{self.my_cell_info_row[:ERR_PARSER_MSG_LIMIT]}'
