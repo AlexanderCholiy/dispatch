@@ -7,9 +7,9 @@ MQTT_MONGO_DB_COLLECTION = 'data'
 
 MQTT_CONN_TIMEOUT = 5000  # мс
 MQTT_BATCH_SIZE = 10_000
-MONGO_RETENTION_TTL = timedelta(hours=15)  # Парсинг 2 раза в день, через 12 ч.
+MONGO_RETENTION_TTL = timedelta(days=1)  # Парсинг каждые 12 ч.
 
-MQTT_DB_BATCH_SIZE = 100
+MQTT_DB_BATCH_SIZE = 1000
 MQTT_DEVICE_BATCH_SIZE = 100  # Очень тяжелые запросы
 
 MAX_DB_ERR_CNT = 10

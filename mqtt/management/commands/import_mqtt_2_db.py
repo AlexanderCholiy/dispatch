@@ -84,7 +84,8 @@ class Command(BaseCommand):
                 collection = db[MQTT_MONGO_DB_COLLECTION]
 
                 cutoff_date = timezone.now() - MONGO_RETENTION_TTL
-                date_filter_str = cutoff_date.strftime('%d.%m.%Y %H:%M:%S')
+                # Mongo всё равно фильтрует только по дате:
+                date_filter_str = cutoff_date.strftime('%d.%m.%Y %H:%M')
 
                 query = {
                     '_id': {'$gte': ObjectId('69c600000000000000000000')},
@@ -116,9 +117,13 @@ class Command(BaseCommand):
                             validated_model = self._process_document(doc)
 
                             # Устройства только с доп. данными по сотам:
-                            if not validated_model or (
-                                not validated_model.aops
-                                and not validated_model.my_cell_info
+                            if (
+                                not validated_model
+                                or validated_model.event_datetime < cutoff_date
+                                or (
+                                    not validated_model.aops
+                                    and not validated_model.my_cell_info
+                                )
                             ):
                                 continue
 
