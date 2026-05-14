@@ -18,7 +18,7 @@ def serialize_value(val: Any) -> Optional[str]:
         return None
 
     if hasattr(val, 'pk'):
-        return str(val)
+        return f'{val} [ID: {val.pk}]'
 
     if isinstance(val, bool):
         return 'Да' if val else 'Нет'
