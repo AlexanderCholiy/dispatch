@@ -31,6 +31,7 @@ from core.exceptions import (
 )
 from core.loggers import yt_logger
 from core.services.get_max_today_datetime import get_max_today_datetime
+from core.services.get_raw_cookie import get_raw_cookie
 from core.threads import tasks_in_threads
 from core.utils import humanize_datetime
 from core.validators import get_aware_datetime
@@ -131,22 +132,24 @@ def index(request: HttpRequest) -> HttpResponse:
 
     pole = (
         request.GET.get('pole', '').strip()
-        or request.COOKIES.get('pole', '').strip()
+        or (get_raw_cookie(request, 'pole') or '').strip()
     ) if not search_only_by_code else None
 
     base_station = (
         request.GET.get('base_station', '').strip()
-        or request.COOKIES.get('base_station', '').strip()
+        or (get_raw_cookie(request, 'base_station') or '').strip()
     ) if not search_only_by_code else None
 
     status_name = (
         request.GET.get('status', '').strip()
-        or request.COOKIES.get('status', '').strip()
+        or (get_raw_cookie(request, 'status') or '').strip()
     ) if not search_only_by_code else None
 
     region_responsible_manager = (
         request.GET.get('region_responsible_manager', '').strip()
-        or request.COOKIES.get('region_responsible_manager', '').strip()
+        or (
+            get_raw_cookie(request, 'region_responsible_manager') or ''
+        ).strip()
     ) if not search_only_by_code else None
 
     if region_responsible_manager not in region_responsible_managers:
@@ -154,7 +157,7 @@ def index(request: HttpRequest) -> HttpResponse:
 
     operator_group = (
         request.GET.get('operator_group', '').strip()
-        or request.COOKIES.get('operator_group', '').strip()
+        or (get_raw_cookie(request, 'operator_group') or '').strip()
     ) if not search_only_by_code else None
 
     if operator_group not in operator_groups:
@@ -162,7 +165,7 @@ def index(request: HttpRequest) -> HttpResponse:
 
     incident_type = (
         request.GET.get('incident_type', '').strip()
-        or request.COOKIES.get('incident_type', '').strip()
+        or (get_raw_cookie(request, 'incident_type') or '').strip()
     ) if not search_only_by_code else None
 
     if incident_type and incident_type.isdigit():
@@ -173,7 +176,7 @@ def index(request: HttpRequest) -> HttpResponse:
 
     macroregion = (
         request.GET.get('macroregion', '').strip()
-        or request.COOKIES.get('macroregion', '').strip()
+        or (get_raw_cookie(request, 'macroregion') or '').strip()
     ) if not search_only_by_code else None
     if macroregion and macroregion.isdigit():
         macroregion = int(macroregion)
@@ -183,7 +186,7 @@ def index(request: HttpRequest) -> HttpResponse:
 
     avr_contractor = (
         request.GET.get('avr_contractor', '').strip()
-        or request.COOKIES.get('avr_contractor', '').strip()
+        or (get_raw_cookie(request, 'avr_contractor') or '').strip()
     ) if not search_only_by_code else None
     if avr_contractor and avr_contractor.isdigit():
         avr_contractor = int(avr_contractor)
@@ -192,7 +195,8 @@ def index(request: HttpRequest) -> HttpResponse:
         avr_contractor = None
 
     category_id = (
-        request.GET.get('category') or request.COOKIES.get('category')
+        request.GET.get('category')
+        or (get_raw_cookie(request, 'category') or '').strip()
     ) if not search_only_by_code else None
     if category_id and category_id.isdigit():
         category_id = int(category_id)
@@ -201,7 +205,7 @@ def index(request: HttpRequest) -> HttpResponse:
 
     responsible_user_id = (
         request.GET.get('responsible_user')
-        or request.COOKIES.get('responsible_user')
+        or (get_raw_cookie(request, 'responsible_user') or '').strip()
     ) if not search_only_by_code else None
 
     if responsible_user_id and responsible_user_id.isdigit():
@@ -213,7 +217,7 @@ def index(request: HttpRequest) -> HttpResponse:
 
     is_incident_finish = (
         request.GET.get('finish', '').strip()
-        or request.COOKIES.get('finish', '').strip()
+        or (get_raw_cookie(request, 'finish') or '').strip()
     ) if not search_only_by_code else None
 
     if is_incident_finish == 'true':
@@ -225,7 +229,7 @@ def index(request: HttpRequest) -> HttpResponse:
 
     was_read = (
         request.GET.get('was_read', '').strip()
-        or request.COOKIES.get('was_read', '').strip()
+        or (get_raw_cookie(request, 'was_read') or '').strip()
     ) if not search_only_by_code else None
 
     if was_read == 'true':
@@ -237,32 +241,32 @@ def index(request: HttpRequest) -> HttpResponse:
 
     sla_avr_status = (
         request.GET.get('sla_avr', '').strip()
-        or request.COOKIES.get('sla_avr', '').strip()
+        or (get_raw_cookie(request, 'sla_avr') or '').strip()
         or None
     ) if not search_only_by_code else None
 
     sla_rvr_status = (
         request.GET.get('sla_rvr', '').strip()
-        or request.COOKIES.get('sla_rvr', '').strip()
+        or (get_raw_cookie(request, 'sla_rvr') or '').strip()
         or None
     ) if not search_only_by_code else None
 
     sla_dgu_status = (
         request.GET.get('sla_dgu', '').strip()
-        or request.COOKIES.get('sla_dgu', '').strip()
+        or (get_raw_cookie(request, 'sla_dgu') or '').strip()
         or None
     ) if not search_only_by_code else None
 
     date_from = (
         request.GET.get('incident_date_from', '').strip()
-        or request.COOKIES.get('incident_date_from', '').strip()
+        or (get_raw_cookie(request, 'incident_date_from') or '').strip()
         or None
     ) if not search_only_by_code else None
     date_from = get_aware_datetime(date_from)
 
     date_to = (
         request.GET.get('incident_date_to', '').strip()
-        or request.COOKIES.get('incident_date_to', '').strip()
+        or (get_raw_cookie(request, 'incident_date_to') or '').strip()
         or None
     ) if not search_only_by_code else None
     date_to = get_aware_datetime(date_to)
@@ -272,13 +276,13 @@ def index(request: HttpRequest) -> HttpResponse:
 
     sort = (
         request.GET.get('sort_incidents')
-        or request.COOKIES.get('sort_incidents')
+        or (get_raw_cookie(request, 'sort_incidents') or '').strip()
         or 'desc'
     )
 
     per_page = int(
         request.GET.get('per_page')
-        or request.COOKIES.get('per_page_root')
+        or (get_raw_cookie(request, 'per_page_root') or '').strip()
         or INCIDENTS_PER_PAGE
     )
 

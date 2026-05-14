@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function setCookie(name, value, days = 30) {
     const d = new Date();
     d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
-    document.cookie = `${name}=${value};path=/;expires=${d.toUTCString()}`;
+    document.cookie = `${name}=${encodeURIComponent(value)};path=/;expires=${d.toUTCString()};SameSite=Lax`;
   }
 
   function deleteCookie(name) {
@@ -55,8 +55,17 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function getCookie(name) {
-    const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
-    return match ? decodeURIComponent(match[1]) : null;
+      const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+      if (match) {
+          try {
+              // decodeURIComponent расшифровывает %D0%B0 обратно в 'А'
+              return decodeURIComponent(match[1]);
+          } catch (e) {
+              console.error("Ошибка декодирования куки:", e);
+              return null;
+          }
+      }
+      return null;
   }
 
   // ---- 1. ВОССТАНОВЛЕНИЕ ЗНАЧЕНИЙ ИЗ COOKIE (НО НЕ В РЕЖИМЕ ПОИСКА ПО КОДУ) ----
