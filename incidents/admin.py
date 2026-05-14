@@ -8,6 +8,7 @@ from emails.models import EmailMessage
 
 from .constants import (
     INCIDENT_CATEGORIES_PER_PAGE,
+    INCIDENT_CHANGE_LOG_PER_PAGE,
     INCIDENT_COMMENT_MAX_PREVIEW_LEN,
     INCIDENT_STATUSES_PER_PAGE,
     INCIDENT_SUBTYPES_PER_PAGE,
@@ -19,6 +20,7 @@ from .models import (
     Incident,
     IncidentCategory,
     IncidentCategoryRelation,
+    IncidentChangeLog,
     IncidentHistory,
     IncidentStatus,
     IncidentStatusHistory,
@@ -257,6 +259,7 @@ class IncidentCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
+    list_per_page = INCIDENTS_PER_PAGE
     list_display = (
         'author', 'content_excerpt', 'link_to_incident', 'created_at'
     )
@@ -289,3 +292,34 @@ class CommentAdmin(admin.ModelAdmin):
             args=[obj.incident.id]
         )
         return format_html('<a href="{}">Инцидент {}</a>', url, obj.incident)
+
+
+@admin.register(IncidentChangeLog)
+class IncidentChangeLogAdmin(admin.ModelAdmin):
+    list_per_page = INCIDENT_CHANGE_LOG_PER_PAGE
+    list_display = (
+        'created_at',
+        'incident_link',
+        'changed_by',
+        'field_name',
+    )
+    list_filter = (
+        'field_name',
+        'created_at',
+        'changed_by',
+    )
+    search_fields = ('incident__code',)
+    readonly_fields = ('created_at',)
+    autocomplete_fields = ('incident', 'changed_by')
+
+    def incident_link(self, obj):
+        if not obj.incident:
+            return '-'
+
+        url = f'/admin/incidents/incident/{obj.incident.pk}/change/'
+        display_text = str(obj.incident)
+        return format_html(
+            '<a href="{}" target="_blank">{}</a>', url, display_text
+        )
+
+    incident_link.short_description = ('Инцидент')

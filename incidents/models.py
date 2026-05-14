@@ -887,3 +887,78 @@ class Comment(models.Model):
             if len(self.content) > INCIDENT_COMMENT_MAX_PREVIEW_LEN
             else self.content
         )
+
+
+class IncidentChangeLog(models.Model):
+    """Детальный журнал изменений полей инцидента."""
+    incident = models.ForeignKey(
+        Incident,
+        on_delete=models.CASCADE,
+        related_name='change_logs',
+        verbose_name='Инцидент',
+        db_index=True
+    )
+    changed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Изменил пользователь',
+        db_index=True
+    )
+    field_name = models.CharField(
+        max_length=MAX_ST_DESCRIPTION,
+        verbose_name='Поле',
+        help_text='Название поля модели'
+    )
+    old_value = models.CharField(
+        max_length=MAX_LG_DESCRIPTION,
+        null=True,
+        blank=True,
+        verbose_name='Старое значение',
+        help_text='JSON строка или текст старого значения'
+    )
+    new_value = models.CharField(
+        max_length=MAX_LG_DESCRIPTION,
+        null=True,
+        blank=True,
+        verbose_name='Новое значение',
+        help_text='JSON строка или текст нового значения'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата изменения',
+        db_index=True
+    )
+
+    class Meta:
+        verbose_name = 'журнал'
+        verbose_name_plural = 'Журналы изменений'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['incident', '-created_at']),
+        ]
+        unique_together = ('incident', 'field_name', 'created_at')
+
+    def clean(self):
+        """Запрещает записи, если старое и новое значение идентичны."""
+        super().clean()
+
+        if not self.pk and self.old_value == self.new_value:
+            raise ValidationError({
+                'old_value': (
+                    'Невозможно записать лог, '
+                    'так как старое и новое значение идентичны.'
+                ),
+                'new_value': ('Значение не изменилось.')
+            })
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return (
+            f'{self.incident} | {self.field_name}: '
+            f'{self.old_value} -> {self.new_value}'
+        )
