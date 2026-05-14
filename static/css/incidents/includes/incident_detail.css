@@ -30,7 +30,8 @@
 
 .monitoring-toggle-btn,
 .toggle-status-history,
-.toggle-incident-history {
+.toggle-incident-history,
+.toggle-incident-journal {
   margin-top: var(--space-sm);
   margin-bottom: var(--space-xs);
   padding: var(--space-xs) var(--space-sm);
@@ -46,7 +47,8 @@
 
 .monitoring-toggle-btn:hover,
 .toggle-incident-history:hover,
-.toggle-email-three:hover {
+.toggle-email-three:hover,
+.toggle-incident-journal:hover {
   background-color: var(--extra-color);
 }
 

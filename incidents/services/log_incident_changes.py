@@ -1,6 +1,10 @@
+from datetime import datetime
 from typing import Any, Optional
 
+import pytz
+from django.conf import settings
 from django.db.models import Model
+from django.utils import timezone
 
 from core.constants import DEBUG_MODE
 from core.loggers import django_logger
@@ -15,6 +19,18 @@ def serialize_value(val: Any) -> Optional[str]:
 
     if hasattr(val, 'pk'):
         return str(val)
+
+    if isinstance(val, bool):
+        return 'Да' if val else 'Нет'
+
+    if isinstance(val, datetime):
+        if timezone.is_aware(val):
+            target_tz = pytz.timezone(settings.TIME_ZONE)
+            dt_converted = val.astimezone(target_tz)
+            formatted_time = dt_converted.strftime("%d.%m.%Y %H:%M")
+            return f'{formatted_time} (МСК)'
+
+        return val.strftime('%d.%m.%Y %H:%M')
 
     if isinstance(val, (list, tuple)):
         try:

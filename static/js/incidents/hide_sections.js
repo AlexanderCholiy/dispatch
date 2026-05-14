@@ -20,6 +20,13 @@ document.addEventListener("DOMContentLoaded", function() {
       cookieName: "incidentHistoryVisible",
       showText: "Показать историю событий",
       hideText: "Скрыть историю событий"
+    },
+    {
+      btnSelector: ".toggle-incident-journal",
+      blockSelector: ".journal-content",
+      cookieName: "incidentJournalVisible",
+      showText: "Показать журнал событий",
+      hideText: "Скрыть журнал событий"
     }
   ];
 

@@ -202,8 +202,9 @@ class Incident(models.Model):
     )
     was_read = models.BooleanField(
         default=True,
-        verbose_name='Был ли просмотрен диспетчером',
+        verbose_name='Прочитано',
         db_index=True,
+        help_text='Был ли просмотрен диспетчером',
     )
     auto_close_date = models.DateTimeField(
         null=True,

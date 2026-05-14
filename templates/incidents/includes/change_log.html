@@ -1,0 +1,41 @@
+<button type="button" class="toggle-incident-journal">Показать журнал событий</button>
+
+<ul class="journal-content">
+  {% for log in incident.prefetched_change_logs %}
+  <li class="change-item">
+    <div class="change-header">
+      <div class="user-info">
+        {% if log.changed_by %}
+          {% if log.changed_by.get_avatar_url %}
+            <img src="{{ log.changed_by.get_avatar_url }}" class="user-journal-icon" alt="{{ log.changed_by.get_full_name }}">
+          {% else %}
+            <div class="user-journal-icon">{{ user.username|first|upper }}</div>
+          {% endif %}
+            <span class="user-name">{{ log.changed_by }}</span>
+          {% else %}
+            <img src="/static/img/default_avatars/1__robot.png" class="user-journal-icon" alt="Система">
+            <span class="system-user">Система</span>
+        {% endif %}
+      </div>
+      <div class="change-meta">
+        <span class="change-time">{{ log.created_at|date:"d.m.Y H:i" }}</span>
+        <span class="change-field">{{ log.field_name }}</span>
+      </div>
+    </div>
+    
+    <div class="change-body">
+      <div class="change-row">
+        <span class="change-label">Было:</span>
+        <span class="change-value old">{{ log.old_value|default:"пусто" }}</span>
+      </div>
+      <div class="change-row">
+        <span class="change-label">Стало:</span>
+        <span class="change-value new">{{ log.new_value|default:"пусто" }}</span>
+      </div>
+    </div>
+
+  </li>
+  {% empty %}
+    <p class="empty">Журнал пуст</p>
+  {% endfor %}
+</ul>

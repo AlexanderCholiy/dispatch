@@ -64,6 +64,7 @@ from .constants import (
 from .models import (
     Incident,
     IncidentCategory,
+    IncidentChangeLog,
     IncidentStatus,
     IncidentStatusHistory,
 )
@@ -1265,6 +1266,13 @@ class IncidentManager(IncidentValidator):
             .prefetch_related(
                 'history',
                 'categories',
+                Prefetch(
+                    'change_logs',
+                    queryset=IncidentChangeLog.objects.select_related(
+                        'changed_by'
+                    ).order_by('-created_at', 'field_name'),
+                    to_attr='prefetched_change_logs'
+                ),
                 Prefetch(
                     'status_history',
                     queryset=IncidentStatusHistory.objects.select_related(
