@@ -18,6 +18,7 @@ from emails.constants import (
     MAX_TOTAL_ATTACHMENTS_SIZE,
 )
 from emails.models import EmailMessage, EmailReference
+from incidents.services.log_incident_changes import log_incident_changes
 from incidents.services.normalize_datetime_to_minute import is_data_changed
 from users.models import Roles, User
 
@@ -385,6 +386,20 @@ class IncidentForm(forms.ModelForm):
         self.author = author
         super().__init__(*args, **kwargs)
 
+        if self.instance.pk:
+            old_obj = (
+                Incident.objects
+                .prefetch_related('categories')
+                .get(pk=self.instance.pk)
+            )
+            self._old_instance = old_obj
+            self._old_categories_names = set(
+                old_obj.categories.values_list('name', flat=True)
+            )
+        else:
+            self._old_instance = None
+            self._old_categories_names = set()
+
         # if self.instance.is_incident_finish:
         #     self.fields['auto_close'].disabled = True
 
@@ -675,8 +690,8 @@ class IncidentForm(forms.ModelForm):
             instance.auto_close_date = None
 
         old_user = None
-        if instance.pk:
-            old_user = Incident.objects.get(pk=instance.pk).responsible_user
+        if self._old_instance:
+            old_user = self._old_instance.responsible_user
 
         new_status: Optional[IncidentStatus] = self.cleaned_data.get(
             'new_status'
@@ -691,6 +706,14 @@ class IncidentForm(forms.ModelForm):
             instance.save()
             if cat_objs:
                 instance.categories.set(cat_objs)
+
+            if self._old_instance:
+                log_incident_changes(
+                    self._old_instance,
+                    instance,
+                    changed_by=self.author,
+                    old_categories_names=self._old_categories_names
+                )
 
         category_names = {c.name for c in cat_objs} if cat_objs else set()
 
@@ -781,12 +804,6 @@ class IncidentForm(forms.ModelForm):
         instance.is_incident_finish = (
             new_status.name in FINISHED_STATUS_NAMES if new_status else False
         )
-
-        # Сохраняем instance и категории
-        if commit:
-            instance.save()
-            if cat_objs:
-                instance.categories.set(cat_objs)
 
         notify_responsible_user_on_reassign(
             incident=instance,

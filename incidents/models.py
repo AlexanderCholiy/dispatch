@@ -934,7 +934,7 @@ class IncidentChangeLog(models.Model):
     class Meta:
         verbose_name = 'журнал'
         verbose_name_plural = 'Журналы изменений'
-        ordering = ['-created_at']
+        ordering = ['-created_at', 'field_name', 'id']
         indexes = [
             models.Index(fields=['incident', '-created_at']),
         ]
