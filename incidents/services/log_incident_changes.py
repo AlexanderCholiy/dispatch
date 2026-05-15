@@ -18,7 +18,7 @@ def serialize_value(val: Any) -> Optional[str]:
         return None
 
     if hasattr(val, 'pk'):
-        return f'{val} [ID: {val.pk}]'
+        return f'{val} [ID: {val.pk}]' if isinstance(val, User) else str(val)
 
     if isinstance(val, bool):
         return 'Да' if val else 'Нет'
@@ -81,6 +81,8 @@ def log_incident_changes(
 
     changes_to_create = []
 
+    now = timezone.now()
+
     for field_name in fields_to_track:
         old_val = getattr(old_instance, field_name)
         new_val = getattr(new_instance, field_name)
@@ -95,6 +97,7 @@ def log_incident_changes(
                     field_name=pretty_name,
                     old_value=serialize_value(old_val),
                     new_value=serialize_value(new_val),
+                    created_at=now,
                 )
             )
 
@@ -123,6 +126,7 @@ def log_incident_changes(
             field_name=pretty_name,
             old_value=old_str,
             new_value=new_str,
+            created_at=now,
         ))
 
     if changes_to_create:

@@ -927,7 +927,7 @@ class IncidentChangeLog(models.Model):
         help_text='JSON строка или текст нового значения'
     )
     created_at = models.DateTimeField(
-        auto_now_add=True,
+        default=timezone.now,
         verbose_name='Дата изменения',
         db_index=True
     )
