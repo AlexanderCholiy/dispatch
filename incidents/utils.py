@@ -43,6 +43,7 @@ from .constants import (
     GENERATION_STATUS_NAME,
     IN_WORK_STATUS_DESC,
     IN_WORK_STATUS_NAME,
+    INCIDENT_CHANGE_LOG_PER_PAGE,
     INCIDENT_CODE_PREFIX,
     INCIDENT_YT_CODE_PREFIX,
     NOTIFIED_CONTRACTOR_STATUS_DESC,
@@ -1270,7 +1271,8 @@ class IncidentManager(IncidentValidator):
                     'change_logs',
                     queryset=IncidentChangeLog.objects.select_related(
                         'changed_by'
-                    ).order_by('-created_at', 'field_name'),
+                    ).order_by('-created_at', 'field_name')
+                    [:INCIDENT_CHANGE_LOG_PER_PAGE],
                     to_attr='prefetched_change_logs'
                 ),
                 Prefetch(

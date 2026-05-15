@@ -171,6 +171,13 @@ class AutoReply:
 
     def open_incident_or_reply(self, email: EmailMessage, email_login: str):
         incident = email.email_incident
+        is_incoming_email = email.folder == EmailFolder.get_inbox()
+
+        if incident:
+            # Письма отправляются системой и попадают в папку отличную от
+            # ИСХОДЯЩИЕ, поэтому исходящие письма после парсинга тоже помечаем:
+            incident.was_read = incident.is_yt_tracker_controlled
+            incident.save()
 
         if (
             not incident
@@ -181,7 +188,7 @@ class AutoReply:
                 incident
                 and not incident.is_yt_tracker_controlled
                 and not incident.is_incident_finish
-                and email.folder == EmailFolder.get_inbox()
+                and is_incoming_email
             ):
                 notif_title = self.truncate_text(
                     f'Новое письмо по инциденту {incident}',
@@ -221,8 +228,6 @@ class AutoReply:
                             level=NotificationLevel.LOW,
                             data=notif_data,
                         )
-            incident.was_read = incident.is_yt_tracker_controlled
-            incident.save()
 
             return
 
@@ -255,8 +260,6 @@ class AutoReply:
                     is_dgu_category=DGU_CATEGORY in category_names,
                 )
                 incident.statuses.add(new_status)
-                incident.was_read = incident.is_yt_tracker_controlled
-
                 incident.save()
 
                 notif_title = self.truncate_text(
