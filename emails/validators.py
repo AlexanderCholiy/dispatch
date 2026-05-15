@@ -75,14 +75,28 @@ class EmailValidator:
             return ''
 
         decoded_parts = decode_header(value)
+        result_parts = []
 
-        decoded = ''.join(
-            part.decode(encoding or 'utf-8') if isinstance(
-                part, bytes
-            ) else part
-            for part, encoding in decoded_parts
-        )
+        for part, encoding in decoded_parts:
+            if isinstance(part, bytes):
+                safe_encoding = encoding
 
+                if safe_encoding is None or safe_encoding == 'unknown-8bit':
+                    safe_encoding = 'utf-8'
+
+                try:
+                    decoded_str = part.decode(safe_encoding)
+                except LookupError:
+                    # Если вдруг utf-8 тоже не подошел,
+                    # пробуем cp1251 (стандарт для русских почтовиков):
+                    decoded_str = part.decode('cp1251')
+
+                result_parts.append(decoded_str)
+            else:
+                # Если часть уже строка
+                result_parts.append(str(part))
+
+        decoded = ''.join(result_parts)
         return ' '.join(decoded.replace('\r', '').split('\n'))
 
     def prepare_email_to(
