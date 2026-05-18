@@ -29,9 +29,9 @@ TRETHHOLD_RATIO_BETWEEN_MODEM_AND_POLE = 1.5  # 50% от дистанции до
 
 MONITORING_CHUNK_SIZE = 1000
 
-NOTIFY_NEW_POLE_EMAIL = [
+NOTIFY_NEW_POLE_EMAILS = [
     email.strip()
-    for email in os.getenv('NOTIFY_NEW_POLE_EMAIL').split(',')
+    for email in os.getenv('NOTIFY_NEW_POLE_EMAILS').split(',')
     if email.strip()
 ]
 

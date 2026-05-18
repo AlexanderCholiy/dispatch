@@ -20,7 +20,7 @@ from monitoring.constants import (
     MAX_MIN_LEN_BETWEEN_MODEM_AND_POLE,
     MAX_NEW_RHU_NOTIFICATION,
     MONITORING_CHUNK_SIZE,
-    NOTIFY_NEW_POLE_EMAIL,
+    NOTIFY_NEW_POLE_EMAILS,
     NOTIFY_NEW_POLE_LOCK_KEY,
     NOTIFY_NEW_POLE_LOCK_TIMEOUT,
     TOP_N_NEAREST_POLES,
@@ -309,7 +309,7 @@ class Command(BaseCommand):
                         subject=subject,
                         message=full_message,
                         from_email=settings.DEFAULT_FROM_EMAIL,
-                        recipient_list=NOTIFY_NEW_POLE_EMAIL,
+                        recipient_list=NOTIFY_NEW_POLE_EMAILS,
                         fail_silently=False,
                     )
 
