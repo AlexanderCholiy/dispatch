@@ -702,19 +702,6 @@ class IncidentForm(forms.ModelForm):
         # Получаем категории из формы
         cat_objs = self.cleaned_data.get('categories', [])
 
-        if commit:
-            instance.save()
-            if cat_objs:
-                instance.categories.set(cat_objs)
-
-            if self._old_instance:
-                log_incident_changes(
-                    self._old_instance,
-                    instance,
-                    changed_by=self.author,
-                    old_categories_names=self._old_categories_names
-                )
-
         category_names = {c.name for c in cat_objs} if cat_objs else set()
 
         # Определяем текущий статус
@@ -804,6 +791,19 @@ class IncidentForm(forms.ModelForm):
         instance.is_incident_finish = (
             new_status.name in FINISHED_STATUS_NAMES if new_status else False
         )
+
+        if commit:
+            instance.save()
+            if cat_objs:
+                instance.categories.set(cat_objs)
+
+            if self._old_instance:
+                log_incident_changes(
+                    self._old_instance,
+                    instance,
+                    changed_by=self.author,
+                    old_categories_names=self._old_categories_names
+                )
 
         notify_responsible_user_on_reassign(
             incident=instance,
