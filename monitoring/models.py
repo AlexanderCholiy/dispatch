@@ -195,7 +195,7 @@ class MSysModem(ReadOnlyModel):
         null=True,
         blank=True,
     )
-    modem_latitude = models.FloatField(
+    modem_latitude = models.CharField(
         'Широта устройства',
         db_column='ModemLatitude',
         max_length=12,
@@ -208,6 +208,12 @@ class MSysModem(ReadOnlyModel):
         max_length=15,
         null=True,
         blank=True,
+    )  # такой тип данных в БД мониторинга...
+    is_notification_sent = models.BooleanField(
+        null=True,
+        default=False,
+        verbose_name='Уведомление о включении опор отправлено',
+        db_column='is_notification_sent'
     )
 
     class Meta:
