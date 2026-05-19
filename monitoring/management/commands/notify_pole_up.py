@@ -39,7 +39,7 @@ class NearestDevice(TypedDict):
 class Command(BaseCommand):
     help = 'Уведомление о включении РЩУ рядом с ближайшей опорой'
 
-    @timer(monitoring_logger, False)
+    @timer(monitoring_logger)
     def handle(self, *args, **kwargs):
         acquired = cache.add(
             NOTIFY_NEW_POLE_LOCK_KEY, str(os.getpid()),
@@ -78,6 +78,7 @@ class Command(BaseCommand):
 
         total = devices.count()
         skipped_count = 0
+        new_poles: list[str] = []
 
         if not total:
             monitoring_logger.debug(
@@ -179,6 +180,7 @@ class Command(BaseCommand):
 
                 if is_excluded:
                     pbar_outer.update(1)
+                    skipped_count += 1
                     continue
 
                 distances: list[NearestDevice] = []
@@ -294,6 +296,22 @@ class Command(BaseCommand):
 
                 full_message = '\n'.join(msg_lines)
 
+                # Если ближайшая опора слишком далеко, нет смысла присылать
+                # уведомления, ждём дальше:
+                if dist_main > (
+                    MAX_MIN_LEN_BETWEEN_MODEM_AND_POLE
+                    * TRETHHOLD_RATIO_BETWEEN_MODEM_AND_POLE
+                ):
+                    monitoring_logger.debug(
+                        'Расстояние между контроллером '
+                        f'{device.modem_ip} и ближайшей опорой '
+                        f'{nearest_pole["pole"]} '
+                        f'слишком велико ({dist_main} м). Пропуск.'
+                    )
+                    skipped_count += 1
+                    pbar_outer.update(1)
+                    continue
+
                 # Стоит запрет на редактирование данных мониторинга, поэтому
                 # используем сырые SQL запросы:
                 try:
@@ -313,6 +331,8 @@ class Command(BaseCommand):
                         fail_silently=False,
                     )
 
+                    new_poles.append(nearest_pole['pole'])
+
                 except Exception as e:
                     skipped_count += 1
                     monitoring_logger.exception(
@@ -329,9 +349,10 @@ class Command(BaseCommand):
                 pbar_outer.update(1)
 
         success_count = total - skipped_count
-        if total:
+        if success_count:
             monitoring_logger.info(
-                f'Отправлено: {success_count} уведомлений о включении опор, '
+                f'Отправлено: {success_count} уведомлений о включении опор: '
+                f'{", ".join(new_poles)}. '
                 f'Всего обработано: {total}, Пропущено: {skipped_count}'
             )
 
