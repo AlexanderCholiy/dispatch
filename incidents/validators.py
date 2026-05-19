@@ -333,6 +333,12 @@ def validate_notify_avr(
             'отправить заявку на АВР.'
         )
 
+    if not incident.incident_type.sla_deadline:
+        return (
+            'Необходимо выбрать тип инцидента с установленным дедлайном SLA '
+            'перед отправкой заявки на АВР.'
+        )
+
     transition_error = validate_status_transition(
         last_status,
         NOTIFIED_CONTRACTOR_STATUS_NAME,

@@ -660,6 +660,7 @@ class IncidentCategory(Detail):
     class Meta:
         verbose_name = 'категория инцидента'
         verbose_name_plural = 'Категории инцидентов'
+        ordering = ['name']
 
     def __str__(self):
         return self.name
@@ -671,6 +672,7 @@ class IncidentSubType(Detail):
     class Meta:
         verbose_name = 'подтип инцидента'
         verbose_name_plural = 'Подтипы инцидентов'
+        ordering = ['name']
 
     def __str__(self):
         return self.name
@@ -748,6 +750,7 @@ class IncidentType(Detail):
     class Meta:
         verbose_name = 'тип инцидента'
         verbose_name_plural = 'Типы инцидентов'
+        ordering = ['name']
 
     def clean(self):
         super().clean()
@@ -785,6 +788,7 @@ class IncidentStatus(Detail):
     class Meta:
         verbose_name = 'статус инцидента'
         verbose_name_plural = 'Статусы инцидентов'
+        ordering = ['name']
 
     status_type = models.ForeignKey(
         StatusType,
