@@ -712,6 +712,9 @@ class IncidentForm(forms.ModelForm):
         )
         current_status = last_status.status if last_status else None
 
+        if commit:
+            instance.save()
+
         # Если статус меняется
         if (
             (
