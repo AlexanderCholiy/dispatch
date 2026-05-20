@@ -13,7 +13,7 @@ from ts.utils import TSManager
 class Command(BaseCommand):
     help = 'Обновление таблиц опор, БС, операторов и подрядчиков по АВР'
 
-    @timer(ts_logger, False)
+    @timer(ts_logger)
     def handle(self, *args, **kwargs):
         lock_acquired = False
         now = datetime.now()

@@ -212,6 +212,14 @@ class Incident(models.Model):
         verbose_name='Дата и время автоматического закрытия',
         db_index=True,
     )
+    related_incidents = models.ManyToManyField(
+        'self',              # Ссылка на ту же модель Incident
+        # Если А связан с Б, то Б автоматически связан с А:
+        symmetrical=True,
+        blank=True,
+        verbose_name='Связанные инциденты',
+        help_text='Инциденты, входящие в одну группу с данным',
+    )
 
     class Meta:
         verbose_name = 'инцидент'

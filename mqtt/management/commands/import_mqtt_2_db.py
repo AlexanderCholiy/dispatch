@@ -74,7 +74,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.import_mqtt_2_db()
 
-    @timer(mqtt_logger, False)
+    @timer(mqtt_logger)
     def import_mqtt_2_db(self):
         try:
             with MongoClient(

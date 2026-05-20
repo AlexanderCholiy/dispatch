@@ -115,7 +115,7 @@ class IncidentAdmin(admin.ModelAdmin):
         'is_incident_finish',
         IncidentCategoryFilter,
     )
-    autocomplete_fields = ('pole', 'base_station')
+    autocomplete_fields = ('pole', 'base_station', 'related_incidents')
     list_editable = ('incident_type', 'responsible_user')
 
     inlines = [
@@ -163,6 +163,7 @@ class IncidentAdmin(admin.ModelAdmin):
                 'sla_rvr_deadline',
                 'is_sla_rvr_expired',
                 'dgu_duration',
+                'related_incidents',
             ),
         }),
         ('Мета', {
