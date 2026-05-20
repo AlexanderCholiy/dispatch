@@ -30,6 +30,7 @@ from core.exceptions import (
     ApiServerError,
     ApiTooManyRequests
 )
+from ts.constants import UNDEFINED_CASE
 from core.loggers import yt_logger
 from core.services.get_max_today_datetime import get_max_today_datetime
 from core.services.get_raw_cookie import get_raw_cookie
@@ -1803,6 +1804,11 @@ def notify_rvr_contractor(
                 f'  • Координаты: {pole.pole_latitude}, {pole.pole_longtitude}'
             )
 
+        if pole and pole.avr_contractor.contractor_name != UNDEFINED_CASE:
+            text_parts.append(
+                f'  • Подрядчик по АВР: {pole.avr_contractor.contractor_name}'
+            )
+
         if incident.base_station:
             bs = incident.base_station
 
@@ -2137,9 +2143,12 @@ def notify_incident_closed(
 
 class IncidentAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        user = self.request.user
-
-        if not user.is_authenticated:
+        user: User = self.request.user
+        if (
+            not user.is_authenticated
+            or (user.role in [Roles.GUEST] and not user.is_superuser)
+            or not user.is_active
+        ):
             return Incident.objects.none()
 
         q = self.q

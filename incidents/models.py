@@ -1015,6 +1015,15 @@ class IncidentLink(models.Model):
         auto_now_add=True,
         verbose_name='Дата создания связи'
     )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_links',
+        verbose_name='Автор связи',
+        db_index=True,
+    )
 
     class Meta:
         verbose_name = 'cвязь инцидентов'
@@ -1062,7 +1071,10 @@ class IncidentLink(models.Model):
         }
         return mapping.get(link_type, IncidentLinkType.RELATED)
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, author=None, **kwargs):
+        if author:
+            self.created_by = author
+
         self.full_clean()
         super().save(*args, **kwargs)
 
@@ -1073,12 +1085,22 @@ class IncidentLink(models.Model):
         mirror_link, created = IncidentLink.objects.get_or_create(
             source_incident=self.target_incident,
             target_incident=self.source_incident,
-            defaults={'link_type': inverse_type}
+            defaults={'link_type': inverse_type, 'created_by': author}
         )
 
-        if not created and mirror_link.link_type != inverse_type:
-            mirror_link.link_type = inverse_type
-            mirror_link.save(update_fields=['link_type'])
+        if not created:
+            update_fields = []
+
+            if mirror_link.link_type != inverse_type:
+                mirror_link.link_type = inverse_type
+                update_fields.append('link_type')
+
+            if author and mirror_link.created_by != author:
+                mirror_link.created_by = author
+                update_fields.append('created_by')
+
+            if update_fields:
+                mirror_link.save(update_fields=update_fields)
 
     def delete(self, *args, **kwargs):
         """

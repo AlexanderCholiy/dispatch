@@ -104,25 +104,10 @@ class IncidentLinkInline(admin.TabularInline):
 
     fk_name = 'source_incident'
 
-    fields = ('link_type', 'target_incident', 'created_at')
+    autocomplete_fields = ('created_by', 'target_incident')
+
+    fields = ('link_type', 'target_incident', 'created_by', 'created_at')
     readonly_fields = ('created_at',)
-
-    # Улучшаем виджет выбора инцидента до автодополнения:
-    def get_formset(self, request, obj=None, **kwargs):
-        formset = super().get_formset(request, obj, **kwargs)
-
-        if 'target_incident' in formset.form.base_fields:
-            field = formset.form.base_fields['target_incident']
-
-            field.widget = ModelSelect2(
-                url='incidents:incidents_autocomplete',
-                attrs={
-                    'data-placeholder': 'Поиск по коду инцидента',
-                    'data-minimum-input-length': 4,
-                }
-            )
-
-        return formset
 
 
 @admin.register(Incident)
