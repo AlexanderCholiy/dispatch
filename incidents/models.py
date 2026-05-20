@@ -59,6 +59,17 @@ class TimeStatus(models.TextChoices):
     CLOSED_ON_TIME = ('closed', 'Закрыт за 15 дн')
 
 
+class IncidentLinkType(models.TextChoices):
+    # Односторонняя связь (зеркало такое же):
+    RELATED = ('related', 'Связана с')
+    DUPLICATE = ('duplicate', 'Дублирует')
+    # Двусторонняя связь (зеркало инвертируется):
+    PARENT = ('parent', 'Родительская')
+    SUBTASK = ('subtask', 'Подзадача')
+    BLOCKS = ('blocks', 'Блокирует')
+    DEPENDS_ON = ('depends_on', 'Зависит от')
+
+
 class Incident(models.Model):
     """Таблица инцидентов"""
     insert_date = models.DateTimeField(
@@ -213,12 +224,14 @@ class Incident(models.Model):
         db_index=True,
     )
     related_incidents = models.ManyToManyField(
-        'self',              # Ссылка на ту же модель Incident
-        # Если А связан с Б, то Б автоматически связан с А:
-        symmetrical=True,
+        'self',
+        through='IncidentLink',
+        symmetrical=False,
         blank=True,
         verbose_name='Связанные инциденты',
-        help_text='Инциденты, входящие в одну группу с данным',
+        help_text=(
+            'Инциденты, входящие в группу (управляется через типы связей)'
+        )
     )
 
     class Meta:
@@ -975,3 +988,113 @@ class IncidentChangeLog(models.Model):
             f'{self.incident} | {self.field_name}: '
             f'{self.old_value} -> {self.new_value}'
         )
+
+
+class IncidentLink(models.Model):
+    """Промежуточная таблица для связей между инцидентами"""
+    source_incident = models.ForeignKey(
+        Incident,
+        on_delete=models.CASCADE,
+        related_name='source_links',
+        verbose_name='Инициатор связи',
+        db_index=True
+    )
+    target_incident = models.ForeignKey(
+        Incident,
+        on_delete=models.CASCADE,
+        related_name='target_links',
+        verbose_name='Целевой инцидент',
+        db_index=True
+    )
+    link_type = models.CharField(
+        max_length=MAX_ST_DESCRIPTION,
+        choices=IncidentLinkType.choices,
+        verbose_name='Тип связи'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата создания связи'
+    )
+
+    class Meta:
+        verbose_name = 'cвязь инцидентов'
+        verbose_name_plural = 'Связи инцидентов'
+        unique_together = ('source_incident', 'target_incident')
+        indexes = [
+            models.Index(fields=['source_incident', 'target_incident']),
+            models.Index(fields=['target_incident', 'source_incident']),
+        ]
+
+        constraints = [
+            models.CheckConstraint(
+                check=~models.Q(
+                    source_incident_id=models.F('target_incident_id')
+                ),
+                name='no_self_link'
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f'{self.source_incident} ({self.get_link_type_display()}): '
+            f'{self.target_incident}'
+        )
+
+    def clean(self):
+        super().clean()
+        if self.source_incident_id == self.target_incident_id:
+            raise ValidationError(
+                'Нельзя установить связь инцидента с самим собой.'
+            )
+
+    @staticmethod
+    def get_inverse_type(link_type: str) -> str:
+        """Возвращает обратный тип связи"""
+        mapping = {
+            # Односторонняя связь (зеркало такое же):
+            IncidentLinkType.RELATED: IncidentLinkType.RELATED,
+            IncidentLinkType.DUPLICATE: IncidentLinkType.DUPLICATE,
+            # Двусторонняя связь (зеркало инвертируется):
+            IncidentLinkType.SUBTASK: IncidentLinkType.PARENT,
+            IncidentLinkType.PARENT: IncidentLinkType.SUBTASK,
+            IncidentLinkType.DEPENDS_ON: IncidentLinkType.BLOCKS,
+            IncidentLinkType.BLOCKS: IncidentLinkType.DEPENDS_ON,
+        }
+        return mapping.get(link_type, IncidentLinkType.RELATED)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+        # Создаем обратную связь (зеркало):
+        inverse_type = self.get_inverse_type(self.link_type)
+
+        # Ищем существующую зеркальную связь
+        mirror_link, created = IncidentLink.objects.get_or_create(
+            source_incident=self.target_incident,
+            target_incident=self.source_incident,
+            defaults={'link_type': inverse_type}
+        )
+
+        if not created and mirror_link.link_type != inverse_type:
+            mirror_link.link_type = inverse_type
+            mirror_link.save(update_fields=['link_type'])
+
+    def delete(self, *args, **kwargs):
+        """
+        Переопределяем удаление, чтобы гарантированно удалить
+        и зеркальную связь (обратное направление).
+        """
+        # Находим ID зеркальной связи (где source и target поменяны местами):
+        mirror_id = IncidentLink.objects.filter(
+            source_incident=self.target_incident,
+            target_incident=self.source_incident
+        ).values_list('id', flat=True).first()
+
+        # Если зеркало существует, удаляем его напрямую через QuerySet
+        # Это обходит метод self.delete(), предотвращая бесконечный цикл:
+        if mirror_id:
+            IncidentLink.objects.filter(id=mirror_id).delete()
+
+        # Удаляем текущую связь стандартным способом:
+        super().delete(*args, **kwargs)

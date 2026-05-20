@@ -6,6 +6,11 @@ from . import views
 app_name = 'incidents'
 
 urlpatterns = [
+    path(
+        'incidents/autocomplete/',
+        views.IncidentAutocomplete.as_view(),
+        name='incidents_autocomplete'
+    ),
     path('incidents/', RedirectView.as_view(url='/', permanent=False)),
     path('', views.index, name='index'),
     path(

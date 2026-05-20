@@ -2,6 +2,7 @@ import re
 from functools import partial
 from typing import Optional
 
+from dal import autocomplete
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
@@ -366,7 +367,7 @@ def index(request: HttpRequest) -> HttpResponse:
                     related_incidents__id=target_id
                 ).values_list('id', flat=True)
 
-                all_ids = set(list(related_ids_qs))
+                all_ids = set(related_ids_qs)
                 all_ids.add(target_id)
 
                 base_qs = base_qs.filter(id__in=all_ids)
@@ -2132,3 +2133,19 @@ def notify_incident_closed(
     }
 
     return render(request, template_name, context)
+
+
+class IncidentAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        user = self.request.user
+
+        if not user.is_authenticated:
+            return Incident.objects.none()
+
+        q = self.q
+        qs = Incident.objects.all()
+
+        if q:
+            qs = qs.filter(code__icontains=q).order_by('code')
+
+        return qs[:INCIDENTS_PER_PAGE]

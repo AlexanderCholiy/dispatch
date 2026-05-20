@@ -1,3 +1,4 @@
+from dal.autocomplete import ModelSelect2
 from django.contrib import admin
 from django.http import HttpRequest
 from django.urls import reverse
@@ -22,6 +23,7 @@ from .models import (
     IncidentCategoryRelation,
     IncidentChangeLog,
     IncidentHistory,
+    IncidentLink,
     IncidentStatus,
     IncidentStatusHistory,
     IncidentSubType,
@@ -96,6 +98,33 @@ class IncidentHistoryInline(admin.TabularInline):
     ordering = ('-insert_date',)
 
 
+class IncidentLinkInline(admin.TabularInline):
+    model = IncidentLink
+    extra = 0
+
+    fk_name = 'source_incident'
+
+    fields = ('link_type', 'target_incident', 'created_at')
+    readonly_fields = ('created_at',)
+
+    # Улучшаем виджет выбора инцидента до автодополнения:
+    def get_formset(self, request, obj=None, **kwargs):
+        formset = super().get_formset(request, obj, **kwargs)
+
+        if 'target_incident' in formset.form.base_fields:
+            field = formset.form.base_fields['target_incident']
+
+            field.widget = ModelSelect2(
+                url='incidents:incidents_autocomplete',
+                attrs={
+                    'data-placeholder': 'Поиск по коду инцидента',
+                    'data-minimum-input-length': 4,
+                }
+            )
+
+        return formset
+
+
 @admin.register(Incident)
 class IncidentAdmin(admin.ModelAdmin):
     list_per_page = INCIDENTS_PER_PAGE
@@ -115,7 +144,7 @@ class IncidentAdmin(admin.ModelAdmin):
         'is_incident_finish',
         IncidentCategoryFilter,
     )
-    autocomplete_fields = ('pole', 'base_station', 'related_incidents')
+    autocomplete_fields = ('pole', 'base_station')
     list_editable = ('incident_type', 'responsible_user')
 
     inlines = [
@@ -123,6 +152,7 @@ class IncidentAdmin(admin.ModelAdmin):
         IncidentStatusHistoryInline,
         EmailMessageInline,
         IncidentHistoryInline,
+        IncidentLinkInline,
     ]
 
     def get_last_status(self, obj):
@@ -163,7 +193,6 @@ class IncidentAdmin(admin.ModelAdmin):
                 'sla_rvr_deadline',
                 'is_sla_rvr_expired',
                 'dgu_duration',
-                'related_incidents',
             ),
         }),
         ('Мета', {
