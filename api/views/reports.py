@@ -154,16 +154,9 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
     4) Полная выгрузка за последний месяц:
        GET /api/v1/report/incidents/json_export/?last_month=true
     """
-    closed_last_year_filter = Q(
-        is_incident_finish=True,
-        incident_finish_date__isnull=False,
-        incident_finish_date__gte=(
-            timezone.now() - ALL_CLOSED_INCIDENT_AGE_LIMIT
-        )
-    )
-
     queryset = Incident.objects.filter(
-        closed_last_year_filter
+        Q(incident_date__gte=timezone.now() - ALL_CLOSED_INCIDENT_AGE_LIMIT)
+        | Q(is_incident_finish=False)
     ).select_related(
         'incident_type',
         'incident_subtype',
