@@ -155,8 +155,12 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
        GET /api/v1/report/incidents/json_export/?last_month=true
     """
     queryset = Incident.objects.filter(
-        Q(incident_date__gte=timezone.now() - ALL_CLOSED_INCIDENT_AGE_LIMIT)
+        Q(
+            incident_finish_date__gte=timezone.now()
+            - ALL_CLOSED_INCIDENT_AGE_LIMIT
+        )
         | Q(is_incident_finish=False)
+        | Q(incident_finish_date__isnull=True)
     ).select_related(
         'incident_type',
         'incident_subtype',

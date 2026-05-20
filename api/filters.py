@@ -89,8 +89,9 @@ class IncidentReportFilter(FilterSet):
         first_day_prev_month = get_first_day_prev_month()
 
         return queryset.filter(
-            Q(incident_date__gte=first_day_prev_month)
+            Q(incident_finish_date__gte=first_day_prev_month)
             | Q(is_incident_finish=False)
+            | Q(incident_finish_date__isnull=True)
         )
 
 
