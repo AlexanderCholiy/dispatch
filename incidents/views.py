@@ -305,7 +305,7 @@ def index(request: HttpRequest) -> HttpResponse:
             'pole__region',
             'base_station',
         )
-        .prefetch_related('categories')
+        .prefetch_related('categories', 'related_incidents')
         .annotate(
             latest_status_name=Subquery(
                 latest_status_subquery.values('status__name')[:1]
@@ -354,10 +354,26 @@ def index(request: HttpRequest) -> HttpResponse:
         base_qs = base_qs.filter(was_read=was_read)
 
     if query:
-        base_qs = base_qs.filter(
-            Q(code__icontains=query)
-            | Q(email_messages__email_subject__icontains=query)
-        ).distinct()
+        if search_only_by_code:
+            try:
+                target_id = Incident.objects.values_list('id', flat=True).get(
+                    code=query
+                )
+            except Incident.DoesNotExist:
+                base_qs = base_qs.none()
+            else:
+                related_ids_qs = Incident.objects.filter(
+                    related_incidents__id=target_id
+                ).values_list('id', flat=True)
+
+                all_ids = set(list(related_ids_qs))
+                all_ids.add(target_id)
+
+                base_qs = base_qs.filter(id__in=all_ids)
+        else:
+            base_qs = base_qs.filter(
+                email_messages__email_subject__icontains=query
+            ).distinct()
 
     if pole:
         base_qs = base_qs.filter(pole__pole__startswith=pole)
