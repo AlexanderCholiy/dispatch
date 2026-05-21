@@ -1,3 +1,4 @@
+import math
 import os
 from typing import TypedDict
 
@@ -97,7 +98,7 @@ class Command(BaseCommand):
                 pole_latitude__isnull=False,
                 pole_longtitude__isnull=False,
             ).values(
-                'id', 'pole', 'address', 'pole_latitude', 'pole_longtitude'
+                'pole', 'address', 'pole_latitude', 'pole_longtitude'
             )
         )
 
@@ -106,8 +107,6 @@ class Command(BaseCommand):
                 'Опоры для поиска отсутствуют. Пропуск задачи.'
             )
             return
-
-        distances: list[NearestDevice] = []
 
         with tqdm(
             total=total,
@@ -128,7 +127,7 @@ class Command(BaseCommand):
                     ):
                         monitoring_logger.warning(
                             'Некорректный формат координат у '
-                            f'{device.modem_ip}: '
+                            f'{device.modem_ip.strip()}: '
                             f'lat="{dev_lat_str}", '
                             f'lon="{dev_lon_str}". Пропуск.'
                         )
@@ -141,8 +140,8 @@ class Command(BaseCommand):
 
                 except ValueError:
                     monitoring_logger.error(
-                        f'Ошибка парсинга координат у {device.modem_ip}. '
-                        'Пропуск.'
+                        'Ошибка парсинга координат у '
+                        f'{device.modem_ip.strip()}. Пропуск.'
                     )
                     skipped_count += 1
                     pbar_outer.update(1)
@@ -174,7 +173,11 @@ class Command(BaseCommand):
                         dev_lat, dev_lon, factory_lat, factory_lon
                     )
 
-                    if dist_to_center < FACTORY_EXCLUSION_RADIUS:
+                    if (
+                        dist_to_center < FACTORY_EXCLUSION_RADIUS
+                        or math.isnan(dist_to_center)
+                        or math.isinf(dist_to_center)
+                    ):
                         is_excluded = True
                         break
 
@@ -196,6 +199,14 @@ class Command(BaseCommand):
                         pole['pole_longtitude'],
                     )
 
+                    if (
+                        not isinstance(dist, (int, float))
+                        or math.isnan(dist)
+                        or math.isinf(dist)
+                        or dist > MAX_MIN_LEN_BETWEEN_MODEM_AND_POLE
+                    ):
+                        continue
+
                     gps = (
                         'широта: '
                         f'{round(pole_latitude, GPS_NUMBER_DECIMAL_PLACES)}, '
@@ -210,12 +221,21 @@ class Command(BaseCommand):
                     })
 
                 distances.sort(key=lambda x: x['distance'])
+
                 top_nearest_poles: list[NearestDevice] = (
                     distances[:TOP_N_NEAREST_POLES]
                 )
 
-                while len(top_nearest_poles) < TOP_N_NEAREST_POLES:
-                    top_nearest_poles.append(None)
+                if not top_nearest_poles:
+                    monitoring_logger.debug(
+                        'Расстояние между контроллером '
+                        f'{device.modem_ip.strip()} и ближайшей опорой '
+                        'превышает максимальный лимит '
+                        f'{MAX_MIN_LEN_BETWEEN_MODEM_AND_POLE} м. Пропуск.'
+                    )
+                    skipped_count += 1
+                    pbar_outer.update(1)
+                    continue
 
                 nearest_pole = top_nearest_poles[0]
 
@@ -296,22 +316,6 @@ class Command(BaseCommand):
 
                 full_message = '\n'.join(msg_lines)
 
-                # Если ближайшая опора слишком далеко, нет смысла присылать
-                # уведомления, ждём дальше:
-                if dist_main > (
-                    MAX_MIN_LEN_BETWEEN_MODEM_AND_POLE
-                    * TRETHHOLD_RATIO_BETWEEN_MODEM_AND_POLE
-                ):
-                    monitoring_logger.debug(
-                        'Расстояние между контроллером '
-                        f'{device.modem_ip} и ближайшей опорой '
-                        f'{nearest_pole["pole"]} '
-                        f'слишком велико ({dist_main} м). Пропуск.'
-                    )
-                    skipped_count += 1
-                    pbar_outer.update(1)
-                    continue
-
                 # Стоит запрет на редактирование данных мониторинга, поэтому
                 # используем сырые SQL запросы:
                 try:
@@ -336,7 +340,8 @@ class Command(BaseCommand):
                 except Exception as e:
                     skipped_count += 1
                     monitoring_logger.exception(
-                        f'Ошибка отправки письма для {device.modem_ip}: {e}'
+                        'Ошибка отправки письма для '
+                        f'{device.modem_ip.strip()}: {e}'
                     )
                     with connections['monitoring'].cursor() as cursor:
                         sql_update = """

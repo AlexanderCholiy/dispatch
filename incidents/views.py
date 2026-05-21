@@ -30,7 +30,6 @@ from core.exceptions import (
     ApiServerError,
     ApiTooManyRequests
 )
-from ts.constants import UNDEFINED_CASE
 from core.loggers import yt_logger
 from core.services.get_max_today_datetime import get_max_today_datetime
 from core.services.get_raw_cookie import get_raw_cookie
@@ -58,6 +57,7 @@ from monitoring.models import DeviceStatus, DeviceType
 from monitoring.services.monitoring_equipment import (
     get_monitiring_cache_equipment,
 )
+from ts.constants import UNDEFINED_CASE
 from users.models import Roles, User
 from users.utils import role_required
 from yandex_tracker.utils import yt_manager
