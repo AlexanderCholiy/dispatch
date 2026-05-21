@@ -1,0 +1,105 @@
+{% load static %}
+
+{% block extra_css %}
+{% endblock %}
+
+<form method="post">
+  {% csrf_token %}
+  <div class="card-header">
+    <button type="submit" 
+            name="incident_links_submit" 
+            class="btn btn-success" 
+            {% if not can_manage %}disabled{% endif %}>
+      Сохранить
+    </button>
+
+    <button type="button" id="toggle-all-delete" class="btn btn-warning">
+        Выбрать все
+    </button>
+  </div>
+
+  <div class="card-body">      
+        {{ incident_links_formset.management_form }}
+
+        <div class="table-wrapper">
+          <table class="custom-table">
+              <thead>
+                  <tr>
+                    <th>Тип связи</th>
+                    <th>Целевой инцидент</th>
+                    <th>Ссылка</th>
+                    <th>Удалить</th>
+                  </tr>
+              </thead>
+              <tbody>
+                  {% for form in incident_links_formset %}
+                  <tr>
+                    <td>
+                        {{ form.id }}
+                        <div class="select-wrapper status-select">
+                            {{ form.link_type }}
+                            {% for error in form.link_type.errors %}
+                                <div class="form-error">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                      </td>
+  
+                      <td>
+                          {{ form.target_incident }}
+                          {% for error in form.target_incident.errors %}
+                              <div class="form-error">{{ error }}</div>
+                          {% endfor %}
+                      </td>
+                      
+                      <td>
+                        {% if form.instance.pk and form.instance.target_incident_id %}
+                          <a href="{% url 'incidents:incident_detail' incident_id=form.instance.target_incident_id %}">
+                            {{ form.instance.target_incident }}
+                          </a>
+                        {% else %}
+                          —
+                        {% endif %}
+                      </td>
+  
+                      <td>
+                          <label class="custom-checkbox-wrapper" title="Отметьте, чтобы удалить эту связь">
+                            {{ form.DELETE }}
+                            <i class="bx bx-check check-icon"></i>
+                          </label>
+                      </td>
+  
+                  </tr>
+                  {% empty %}
+                  <tr><td colspan="4" class="empty">Нет связанных инцидентов...</td></tr>
+                  {% endfor %}
+              </tbody>
+          </table>
+        </div>
+  </div>
+</form>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleBtn = document.getElementById('toggle-all-delete');
+    // Находим все чекбоксы удаления внутри формы (исключая скрытые поля управления)
+    const deleteCheckboxes = document.querySelectorAll('input[name$="-DELETE"]');
+    
+    let isAllChecked = false;
+
+    toggleBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        const anyUnchecked = Array.from(deleteCheckboxes).some(cb => !cb.checked);
+        
+        isAllChecked = anyUnchecked;
+        
+        deleteCheckboxes.forEach(cb => {
+            cb.checked = isAllChecked;
+        });
+
+        toggleBtn.innerHTML = isAllChecked ? 'Снять все' : 'Выбрать все';
+    });
+});
+</script>
+{% endblock %}

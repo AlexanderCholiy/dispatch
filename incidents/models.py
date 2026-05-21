@@ -3,7 +3,7 @@ from typing import Optional
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
 from django.db.models import CheckConstraint, F, Q
 from django.db.models.functions import Least
 from django.utils import timezone
@@ -1072,35 +1072,103 @@ class IncidentLink(models.Model):
         return mapping.get(link_type, IncidentLinkType.RELATED)
 
     def save(self, *args, author=None, **kwargs):
-        if author:
-            self.created_by = author
+        """
+        1. Если меняются source/target: удаляем старую пару, создаем новую.
+        2. Если меняется только link_type: обновляем основную и зеркальную
+        связи.
+        """
+        is_new = self.pk is None
+        type_changed = False
 
-        self.full_clean()
-        super().save(*args, **kwargs)
+        with transaction.atomic():
+            if not is_new:
+                try:
+                    old_instance = IncidentLink.objects.select_related(
+                        'source_incident', 'target_incident'
+                    ).get(pk=self.pk)
 
-        # Создаем обратную связь (зеркало):
-        inverse_type = self.get_inverse_type(self.link_type)
+                    old_source_id = old_instance.source_incident_id
+                    old_target_id = old_instance.target_incident_id
+                    old_link_type = old_instance.link_type
 
-        # Ищем существующую зеркальную связь
-        mirror_link, created = IncidentLink.objects.get_or_create(
-            source_incident=self.target_incident,
-            target_incident=self.source_incident,
-            defaults={'link_type': inverse_type, 'created_by': author}
-        )
+                    new_source_id = self.source_incident_id
+                    new_target_id = self.target_incident_id
+                    new_link_type = self.link_type
 
-        if not created:
-            update_fields = []
+                    if (
+                        old_source_id != new_source_id
+                        or old_target_id != new_target_id
+                    ):
 
-            if mirror_link.link_type != inverse_type:
-                mirror_link.link_type = inverse_type
-                update_fields.append('link_type')
+                        IncidentLink.objects.filter(
+                            source_incident_id=old_target_id,
+                            target_incident_id=old_source_id
+                        ).delete()
 
-            if author and mirror_link.created_by != author:
-                mirror_link.created_by = author
-                update_fields.append('created_by')
+                        IncidentLink.objects.filter(
+                            pk=old_instance.pk
+                        ).delete()
 
-            if update_fields:
-                mirror_link.save(update_fields=update_fields)
+                        self.pk = None
+                        is_new = True
+
+                    elif old_link_type != new_link_type:
+                        type_changed = True
+
+                except IncidentLink.DoesNotExist:
+                    self.pk = None
+                    is_new = True
+
+            if author:
+                self.created_by = author
+
+            self.full_clean()
+            super().save(*args, **kwargs)
+
+            if is_new:
+                inverse_type = self.get_inverse_type(self.link_type)
+                mirror_link, created = IncidentLink.objects.get_or_create(
+                    source_incident=self.target_incident,
+                    target_incident=self.source_incident,
+                    defaults={
+                        'link_type': inverse_type,
+                        'created_by': self.created_by,
+                    }
+                )
+
+                if not created:
+                    self._update_mirror_if_needed(mirror_link, inverse_type)
+
+            elif type_changed:
+                inverse_type = self.get_inverse_type(self.link_type)
+
+                try:
+                    mirror_link = IncidentLink.objects.get(
+                        source_incident_id=self.target_incident_id,
+                        target_incident_id=self.source_incident_id
+                    )
+                    self._update_mirror_if_needed(mirror_link, inverse_type)
+                except IncidentLink.DoesNotExist:
+                    IncidentLink.objects.create(
+                        source_incident_id=self.target_incident_id,
+                        target_incident_id=self.source_incident_id,
+                        link_type=inverse_type,
+                        created_by=self.created_by,
+                    )
+
+    def _update_mirror_if_needed(self, mirror_link, expected_type):
+        update_fields = []
+
+        if mirror_link.link_type != expected_type:
+            mirror_link.link_type = expected_type
+            update_fields.append('link_type')
+
+        if self.created_by and mirror_link.created_by != self.created_by:
+            mirror_link.created_by = self.created_by
+            update_fields.append('created_by')
+
+        if update_fields:
+            mirror_link.save(update_fields=update_fields)
 
     def delete(self, *args, **kwargs):
         """

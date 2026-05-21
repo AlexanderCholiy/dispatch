@@ -174,9 +174,10 @@ class Command(BaseCommand):
                     )
 
                     if (
-                        dist_to_center < FACTORY_EXCLUSION_RADIUS
+                        not isinstance(dist_to_center, (int, float))
                         or math.isnan(dist_to_center)
                         or math.isinf(dist_to_center)
+                        or dist_to_center < FACTORY_EXCLUSION_RADIUS
                     ):
                         is_excluded = True
                         break

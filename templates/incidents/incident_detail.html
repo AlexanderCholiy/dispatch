@@ -25,6 +25,7 @@
           <button class="tab-btn" data-tab="incident">Инцидент</button>
           <button class="tab-btn" data-tab="email">Почта</button>
           <button class="tab-btn" data-tab="comments">Комментарии</button>
+          <button class="tab-btn" data-tab="incident-links">Связанные инциденты</button>
         </div>
         <div class="right-tabs-part">
           <strong class="incident-code copy-text" data-text="{{ incident.code|default:incident.id }}">{{ incident }}</strong>
@@ -42,6 +43,10 @@
   
         <div class="tab-panel" data-tab-content="comments">
           {% include "incidents/includes/comments.html" with incident=incident %}
+        </div>
+
+        <div class="tab-panel" data-tab-content="incident-links">
+          {% include "incidents/includes/incident_links.html" with incident=incident %}
         </div>
       </div>
 

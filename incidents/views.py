@@ -8,6 +8,8 @@ from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db import transaction
+from django.forms import modelformset_factory
+from django.core.exceptions import ValidationError
 from django.db.models import (
     CharField,
     OuterRef,
@@ -77,12 +79,14 @@ from .constants import (
     NOTIFY_OP_IN_WORK_STATUS_NAME,
     PAGE_SIZE_INCIDENTS_CHOICES,
     RVR_CATEGORY,
+    MAX_INCIDENT_LINKS,
 )
 from .forms import (
     ConfirmMoveEmailsForm,
     IncidentForm,
     MoveEmailsForm,
     NewEmailForm,
+    IncidentLinkInlineForm,
 )
 from .models import (
     Incident,
@@ -92,6 +96,7 @@ from .models import (
     IncidentStatusHistory,
     SLAStatus,
     TimeStatus,
+    IncidentLink,
 )
 from .selectors.incidents import IncidentSelector
 from .services.get_avr_contractor_map import get_avr_contractor_map
@@ -796,6 +801,70 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
             if is_basic_emails_view_type else []
         )
 
+    IncidentLinkFormSet = modelformset_factory(
+        IncidentLink,
+        form=IncidentLinkInlineForm,
+        extra=1 if can_manage else 0,
+        can_delete=True if can_manage else False,
+        max_num=MAX_INCIDENT_LINKS,
+        validate_max=True
+    )
+
+    incident_links_queryset = IncidentLink.objects.filter(
+        source_incident=incident
+    ).select_related('target_incident',)
+
+    if request.method == 'POST' and 'incident_links_submit' in request.POST:
+        incident_links_formset = IncidentLinkFormSet(
+            request.POST,
+            prefix='incident_links',
+            queryset=incident_links_queryset
+        )
+
+        if incident_links_formset.is_valid():
+            instances = incident_links_formset.save(commit=False)
+
+            for obj in incident_links_formset.deleted_objects:
+                obj.delete()
+
+            try:
+                for obj in instances:
+                    if not obj.pk:
+                        obj.source_incident = incident
+                    obj.save(author=request.user)
+
+                messages.success(request, 'Связи успешно обновлены.')
+                return redirect(
+                    'incidents:incident_detail', incident_id=incident.id
+                )
+            except ValidationError as e:
+                if hasattr(e, 'message_dict'):
+                    for field, errors in e.message_dict.items():
+                        for error in errors:
+                            messages.error(request, f"{error}")
+                else:
+                    for error in e.messages:
+                        messages.error(request, f'Ошибка сохранения: {error}')
+
+        for form in incident_links_formset:
+            if form.errors:
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        if field == '__all__':
+                            messages.error(request, f'{error}')
+                        else:
+                            field_label = form.fields[field].label or field
+                            messages.error(
+                                request,
+                                f'Ошибка в поле "{field_label}": {error}'
+                            )
+
+    else:
+        incident_links_formset = IncidentLinkFormSet(
+            prefix='incident_links',
+            queryset=incident_links_queryset
+        )
+
     context = {
         'incident': incident,
         'email_three': email_three,
@@ -807,6 +876,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         'monitoring': sorted_monitoring,
         'active_tab': 'incident',
         'emails_view_type': emails_view_type,
+        'incident_links_formset': incident_links_formset,
     }
 
     return render(request, template_name, context)

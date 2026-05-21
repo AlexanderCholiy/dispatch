@@ -4,6 +4,7 @@ from typing import Optional
 
 from dal import autocomplete
 from django import forms
+from django.forms import formset_factory
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db.models import F, Prefetch, Q
@@ -33,12 +34,15 @@ from .constants import (
     NOTIFIED_CONTRACTOR_STATUS_NAME,
     NOTIFIED_OP_END_STATUS_NAME,
     RVR_CATEGORY,
+    MAX_INCIDENT_LINKS,
 )
 from .models import (
     Incident,
     IncidentCategory,
     IncidentStatus,
     IncidentStatusHistory,
+    IncidentLink,
+    IncidentLinkType,
 )
 from .services.notify_responsible_user_on_reassign import (
     notify_responsible_user_on_reassign
@@ -875,3 +879,27 @@ class NewEmailForm(forms.Form):
 
     def clean_cc(self):
         return self._clean_email_list(self.cleaned_data.get('cc', ''))
+
+
+class IncidentLinkInlineForm(forms.ModelForm):
+
+    class Meta:
+        model = IncidentLink
+        fields = ('id', 'target_incident', 'link_type')
+        widgets = {
+            'target_incident': autocomplete.ModelSelect2(
+                url='incidents:incidents_autocomplete',
+                attrs={'data-placeholder': 'Не выбрано'}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields['link_type'].required = True
+        self.fields['link_type'].choices = [
+            x for x in self.fields['link_type'].choices if x[0]
+        ]
+
+        if not self.instance or not self.instance.pk:
+            self.fields['link_type'].initial = IncidentLinkType.RELATED
