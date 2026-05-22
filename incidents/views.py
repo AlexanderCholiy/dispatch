@@ -94,6 +94,7 @@ from .forms import (
 from .models import (
     Incident,
     IncidentCategory,
+    IncidentChangeLog,
     IncidentHistory,
     IncidentLink,
     IncidentLinkType,
@@ -875,28 +876,57 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
 
         if incident_links_formset.is_valid():
             instances = incident_links_formset.save(commit=False)
+            logs_to_create = []
 
-            for obj in incident_links_formset.deleted_objects:
-                obj.delete()
+            with transaction.atomic():
+                for obj in incident_links_formset.deleted_objects:
+                    inverse_type = obj.get_inverse_type(obj.link_type)
 
-            try:
-                for obj in instances:
-                    if not obj.pk:
-                        obj.source_incident = incident
-                    obj.save()
+                    logs_to_create.append(IncidentChangeLog(
+                        incident=incident,
+                        changed_by=user,
+                        field_name=f'Связь с {obj.target_incident}',
+                        old_value=(
+                            f'{obj.get_link_type_display()}'
+                        ),
+                        new_value=None
+                    ))
 
-                messages.success(request, 'Связи успешно обновлены.')
-                return redirect(
-                    'incidents:incident_detail', incident_id=incident.id
-                )
-            except ValidationError as e:
-                if hasattr(e, 'message_dict'):
-                    for field, errors in e.message_dict.items():
-                        for error in errors:
-                            messages.error(request, f'{error}')
-                else:
-                    for error in e.messages:
-                        messages.error(request, f'Ошибка сохранения: {error}')
+                    logs_to_create.append(IncidentChangeLog(
+                        incident=obj.target_incident,
+                        changed_by=user,
+                        field_name=f'Связь от {obj.source_incident}',
+                        old_value=(
+                            f'{IncidentLinkType(inverse_type).label}'
+                        ),
+                        new_value=None
+                    ))
+
+                    obj.delete()
+
+                try:
+                    for obj in instances:
+                        if not obj.pk:
+                            obj.source_incident = incident
+                        obj.save(changed_by=user)
+
+                    if logs_to_create:
+                        IncidentChangeLog.objects.bulk_create(logs_to_create)
+
+                    messages.success(request, 'Связи успешно обновлены.')
+                    return redirect(
+                        'incidents:incident_detail', incident_id=incident.id
+                    )
+                except ValidationError as e:
+                    if hasattr(e, 'message_dict'):
+                        for field, errors in e.message_dict.items():
+                            for error in errors:
+                                messages.error(request, f'{error}')
+                    else:
+                        for error in e.messages:
+                            messages.error(
+                                request, f'Ошибка сохранения: {error}'
+                            )
 
         for form in incident_links_formset:
             if form.errors:

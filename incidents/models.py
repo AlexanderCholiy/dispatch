@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Optional
 
-from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models import CheckConstraint, F, Q
@@ -16,6 +15,7 @@ from core.constants import (
 from core.models import Detail
 from core.utils import timedelta_to_human_time
 from ts.models import AVRContractor, BaseStation, Pole
+from users.models import User
 
 from .constants import (
     AVR_CATEGORY,
@@ -30,8 +30,6 @@ from .constants import (
     MAX_STATUS_COMMENT_LEN,
     RVR_SLA_DEADLINE_IN_HOURS,
 )
-
-User = get_user_model()
 
 
 def get_default_status_type():
@@ -986,7 +984,7 @@ class IncidentChangeLog(models.Model):
     def __str__(self):
         return (
             f'{self.incident} | {self.field_name}: '
-            f'{self.old_value} -> {self.new_value}'
+            f'{self.old_value} → {self.new_value}'
         )
 
 
@@ -1036,7 +1034,7 @@ class IncidentLink(models.Model):
 
     def __str__(self):
         return (
-            f'{self.source_incident} ({self.get_link_type_display()}): '
+            f'{self.source_incident} ({self.get_link_type_display()}) → '
             f'{self.target_incident}'
         )
 
@@ -1062,14 +1060,17 @@ class IncidentLink(models.Model):
         }
         return mapping.get(link_type, IncidentLinkType.RELATED)
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, changed_by: Optional[User] = None, **kwargs):
         """
         1. Если меняются source/target: удаляем старую пару, создаем новую.
         2. Если меняется только link_type: обновляем основную и зеркальную
         связи.
         """
+        logs_to_create = []
+
         is_new = self.pk is None
         type_changed = False
+        old_instance = None
 
         with transaction.atomic():
             if not is_new:
@@ -1090,6 +1091,35 @@ class IncidentLink(models.Model):
                         old_source_id != new_source_id
                         or old_target_id != new_target_id
                     ):
+
+                        if changed_by:
+                            logs_to_create.append(IncidentChangeLog(
+                                incident=old_instance.source_incident,
+                                changed_by=changed_by,
+                                field_name=(
+                                    f'Связь с {old_instance.target_incident}'
+                                ),
+                                old_value=(
+                                    f'{old_instance.get_link_type_display()}'
+                                ),
+                                new_value=None,
+                            ))
+
+                            old_inverse_type = old_instance.get_inverse_type(
+                                old_link_type
+                            )
+                            old_inverse_type_val = (
+                                IncidentLinkType(old_inverse_type).label
+                            )
+                            logs_to_create.append(IncidentChangeLog(
+                                incident=old_instance.target_incident,
+                                changed_by=changed_by,
+                                field_name=(
+                                    f'Связь от {old_instance.source_incident}'
+                                ),
+                                old_value=old_inverse_type_val,
+                                new_value=None,
+                            ))
 
                         IncidentLink.objects.filter(
                             source_incident_id=old_target_id,
@@ -1124,6 +1154,27 @@ class IncidentLink(models.Model):
                 if not created:
                     self._update_mirror_if_needed(mirror_link, inverse_type)
 
+                if changed_by:
+                    logs_to_create.append(IncidentChangeLog(
+                        incident=self.source_incident,
+                        changed_by=changed_by,
+                        field_name=f'Связь с {self.target_incident}',
+                        old_value=None,
+                        new_value=(
+                            f'{self.get_link_type_display()}'
+                        )
+                    ))
+
+                    logs_to_create.append(IncidentChangeLog(
+                        incident=self.target_incident,
+                        changed_by=changed_by,
+                        field_name=f'Связь от {self.source_incident}',
+                        old_value=None,
+                        new_value=(
+                            f'{IncidentLinkType(inverse_type).label}'
+                        )
+                    ))
+
             elif type_changed:
                 inverse_type = self.get_inverse_type(self.link_type)
 
@@ -1139,6 +1190,29 @@ class IncidentLink(models.Model):
                         target_incident_id=self.source_incident_id,
                         link_type=inverse_type,
                     )
+
+                if old_instance and changed_by:
+                    logs_to_create.append(IncidentChangeLog(
+                        incident=self.source_incident,
+                        changed_by=changed_by,
+                        field_name=f'Тип связи с {self.target_incident}',
+                        old_value=old_instance.get_link_type_display(),
+                        new_value=self.get_link_type_display(),
+                    ))
+
+                    old_inv = self.get_inverse_type(old_instance.link_type)
+                    new_inv = self.get_inverse_type(self.link_type)
+
+                    logs_to_create.append(IncidentChangeLog(
+                        incident=self.target_incident,
+                        changed_by=changed_by,
+                        field_name=f'Тип cвязи от {self.source_incident}',
+                        old_value=IncidentLinkType(old_inv).label,
+                        new_value=IncidentLinkType(new_inv).label,
+                    ))
+
+            if logs_to_create:
+                IncidentChangeLog.objects.bulk_create(logs_to_create)
 
     def _update_mirror_if_needed(self, mirror_link, expected_type):
         update_fields = []
