@@ -4,7 +4,6 @@ from typing import Optional
 
 from dal import autocomplete
 from django import forms
-from django.forms import formset_factory
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db.models import F, Prefetch, Q
@@ -34,15 +33,14 @@ from .constants import (
     NOTIFIED_CONTRACTOR_STATUS_NAME,
     NOTIFIED_OP_END_STATUS_NAME,
     RVR_CATEGORY,
-    MAX_INCIDENT_LINKS,
 )
 from .models import (
     Incident,
     IncidentCategory,
-    IncidentStatus,
-    IncidentStatusHistory,
     IncidentLink,
     IncidentLinkType,
+    IncidentStatus,
+    IncidentStatusHistory,
 )
 from .services.notify_responsible_user_on_reassign import (
     notify_responsible_user_on_reassign

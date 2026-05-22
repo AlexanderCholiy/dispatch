@@ -1015,15 +1015,6 @@ class IncidentLink(models.Model):
         auto_now_add=True,
         verbose_name='Дата создания связи'
     )
-    created_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='created_links',
-        verbose_name='Автор связи',
-        db_index=True,
-    )
 
     class Meta:
         verbose_name = 'cвязь инцидентов'
@@ -1071,7 +1062,7 @@ class IncidentLink(models.Model):
         }
         return mapping.get(link_type, IncidentLinkType.RELATED)
 
-    def save(self, *args, author=None, **kwargs):
+    def save(self, *args, **kwargs):
         """
         1. Если меняются source/target: удаляем старую пару, создаем новую.
         2. Если меняется только link_type: обновляем основную и зеркальную
@@ -1119,9 +1110,6 @@ class IncidentLink(models.Model):
                     self.pk = None
                     is_new = True
 
-            if author:
-                self.created_by = author
-
             self.full_clean()
             super().save(*args, **kwargs)
 
@@ -1130,10 +1118,7 @@ class IncidentLink(models.Model):
                 mirror_link, created = IncidentLink.objects.get_or_create(
                     source_incident=self.target_incident,
                     target_incident=self.source_incident,
-                    defaults={
-                        'link_type': inverse_type,
-                        'created_by': self.created_by,
-                    }
+                    defaults={'link_type': inverse_type}
                 )
 
                 if not created:
@@ -1153,7 +1138,6 @@ class IncidentLink(models.Model):
                         source_incident_id=self.target_incident_id,
                         target_incident_id=self.source_incident_id,
                         link_type=inverse_type,
-                        created_by=self.created_by,
                     )
 
     def _update_mirror_if_needed(self, mirror_link, expected_type):
@@ -1162,10 +1146,6 @@ class IncidentLink(models.Model):
         if mirror_link.link_type != expected_type:
             mirror_link.link_type = expected_type
             update_fields.append('link_type')
-
-        if self.created_by and mirror_link.created_by != self.created_by:
-            mirror_link.created_by = self.created_by
-            update_fields.append('created_by')
 
         if update_fields:
             mirror_link.save(update_fields=update_fields)

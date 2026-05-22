@@ -1,0 +1,40 @@
+.link-type select{
+  color: var(--add-color) !important;
+  font-weight: 100 !important;
+  font-size: var(--font-sm) !important;
+}
+
+.link-table .status-badge {
+  display: inline-block;
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-sm);
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  color: var(--background-color);
+  text-align: center;
+  align-items: center;
+  min-width: 180px;
+  max-width: 180px;
+  transition: background-color var(--transition-value), color var(--transition-value);
+  cursor: pointer;
+}
+
+.delete-icon {
+  color: var(--red-color) !important;
+}
+
+.link-table .category span {
+  font-weight: 450;
+}
+
+.link-table .avr-category, .default-category {
+  color: var(--color);
+}
+
+.link-table .rvr-category {
+  color: var(--green-color);
+}
+
+.link-table .dgu-category {
+  color: var(--red-color);
+}

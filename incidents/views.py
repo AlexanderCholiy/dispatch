@@ -6,19 +6,22 @@ from dal import autocomplete
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.forms import modelformset_factory
-from django.core.exceptions import ValidationError
 from django.db.models import (
+    Case,
     CharField,
+    IntegerField,
     OuterRef,
     Prefetch,
     Q,
     QuerySet,
     Subquery,
     Value,
+    When,
 )
+from django.forms import modelformset_factory
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -70,6 +73,7 @@ from .constants import (
     DGU_CATEGORY,
     FINISHED_STATUS_NAMES,
     INCIDENTS_PER_PAGE,
+    MAX_INCIDENT_LINKS,
     MAX_INCIDENTS_INFO_CACHE_SEC,
     NOTIFIED_CONTRACTOR_STATUS_NAME,
     NOTIFIED_OP_END_STATUS_NAME,
@@ -79,24 +83,24 @@ from .constants import (
     NOTIFY_OP_IN_WORK_STATUS_NAME,
     PAGE_SIZE_INCIDENTS_CHOICES,
     RVR_CATEGORY,
-    MAX_INCIDENT_LINKS,
 )
 from .forms import (
     ConfirmMoveEmailsForm,
     IncidentForm,
+    IncidentLinkInlineForm,
     MoveEmailsForm,
     NewEmailForm,
-    IncidentLinkInlineForm,
 )
 from .models import (
     Incident,
     IncidentCategory,
     IncidentHistory,
+    IncidentLink,
+    IncidentLinkType,
     IncidentStatus,
     IncidentStatusHistory,
     SLAStatus,
     TimeStatus,
-    IncidentLink,
 )
 from .selectors.incidents import IncidentSelector
 from .services.get_avr_contractor_map import get_avr_contractor_map
@@ -810,9 +814,57 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         validate_max=True
     )
 
-    incident_links_queryset = IncidentLink.objects.filter(
-        source_incident=incident
-    ).select_related('target_incident',)
+    link_type_order = [
+        (IncidentLinkType.PARENT, 1),
+        (IncidentLinkType.SUBTASK, 2),
+        (IncidentLinkType.BLOCKS, 3),
+        (IncidentLinkType.DEPENDS_ON, 4),
+        (IncidentLinkType.DUPLICATE, 5),
+        (IncidentLinkType.RELATED, 6),
+    ]
+
+    type_sort_expression = Case(
+        *[
+            When(link_type=typ, then=Value(order))
+            for typ, order in link_type_order
+        ],
+        default=Value(999),
+        output_field=IntegerField()
+    )
+
+    latest_status_subquery = IncidentStatusHistory.objects.filter(
+        incident=OuterRef('target_incident_id')
+    ).order_by('-insert_date', '-id')
+
+    incident_links_queryset = (
+        IncidentLink.objects
+        .filter(
+            source_incident=incident
+        )
+        .select_related(
+            'target_incident',
+        )
+        .prefetch_related(
+            'target_incident__categories'
+        )
+        .annotate(
+            latest_status_name=Subquery(
+                latest_status_subquery.values('status__name')[:1]
+            ),
+            latest_status_date=Subquery(
+                latest_status_subquery.values('insert_date')[:1]
+            ),
+            latest_status_class=Subquery(
+                latest_status_subquery.values(
+                    'status__status_type__css_class'
+                )[:1]
+            ),
+        )
+        .order_by(
+            type_sort_expression,
+            'target_incident_id'
+        )
+    )
 
     if request.method == 'POST' and 'incident_links_submit' in request.POST:
         incident_links_formset = IncidentLinkFormSet(
@@ -831,7 +883,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
                 for obj in instances:
                     if not obj.pk:
                         obj.source_incident = incident
-                    obj.save(author=request.user)
+                    obj.save()
 
                 messages.success(request, 'Связи успешно обновлены.')
                 return redirect(
@@ -841,7 +893,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
                 if hasattr(e, 'message_dict'):
                     for field, errors in e.message_dict.items():
                         for error in errors:
-                            messages.error(request, f"{error}")
+                            messages.error(request, f'{error}')
                 else:
                     for error in e.messages:
                         messages.error(request, f'Ошибка сохранения: {error}')

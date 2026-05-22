@@ -1,42 +1,49 @@
 {% load static %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/incidents/links/header.css' %}">
+<link rel="stylesheet" href="{% static 'css/incidents/links/table.css' %}">
 {% endblock %}
 
 <form method="post">
   {% csrf_token %}
   <div class="card-header">
-    <button type="submit" 
-            name="incident_links_submit" 
-            class="btn btn-success" 
-            {% if not can_manage %}disabled{% endif %}>
-      Сохранить
-    </button>
-
-    <button type="button" id="toggle-all-delete" class="btn btn-warning">
+    <div class="incident-link-buttons">
+      <button type="submit" 
+              name="incident_links_submit" 
+              class="btn btn-primary" 
+              {% if not can_manage %}disabled{% endif %}>
+        Сохранить
+      </button>
+  
+      <button type="button" id="toggle-all-delete" class="btn btn-secondary" {% if not can_manage %}disabled{% endif %}>
         Выбрать все
-    </button>
+      </button>
+    </div>
   </div>
 
   <div class="card-body">      
         {{ incident_links_formset.management_form }}
 
         <div class="table-wrapper">
-          <table class="custom-table">
+          <table class="custom-table link-table">
               <thead>
                   <tr>
                     <th>Тип связи</th>
                     <th>Целевой инцидент</th>
+                    <th>Статус</th>
+                    <th>Категория</th>
                     <th>Ссылка</th>
                     <th>Удалить</th>
                   </tr>
               </thead>
               <tbody>
                   {% for form in incident_links_formset %}
+                  {% with target=form.instance.target_incident %}
                   <tr>
-                    <td>
+                    <td class="tooltip" data-title="Как ТЕКУЩИЙ инцидент относится к ЦЕЛЕВОМУ?">
                         {{ form.id }}
-                        <div class="select-wrapper status-select">
+                        <div class="select-wrapper status-select link-type">
                             {{ form.link_type }}
                             {% for error in form.link_type.errors %}
                                 <div class="form-error">{{ error }}</div>
@@ -50,10 +57,43 @@
                               <div class="form-error">{{ error }}</div>
                           {% endfor %}
                       </td>
-                      
+
+                      <td class="{% if form.instance.latest_status_date %}tooltip{% endif %}"
+                          data-title="{% if form.instance.latest_status_date %}{{ form.instance.latest_status_date|date:'d.m.Y H:i' }}{% endif %}">
+                          {% if target %}
+                            {% if form.instance.latest_status_name %}
+                              <span class="status-badge {{ form.instance.latest_status_class|default:'status-unknown' }}">
+                                {{ form.instance.latest_status_name }}
+                              </span>
+                            {% else %}
+                              —
+                            {% endif %}
+                          {% else %}
+                            —
+                          {% endif %}
+                      </td>
+
+                      <td class="category">
+                          {% if target %}
+                            {% for cat in target.categories.all %}
+                              <span class="{% if cat.name == 'АВР' %}avr-category
+                                          {% elif cat.name == 'РВР' %}rvr-category
+                                          {% elif cat.name == 'ДГУ' %}dgu-category
+                                          {% else %}default-category
+                                          {% endif %}">
+                                  {{ cat.name }}
+                              </span>{% if not forloop.last %}, {% endif %}
+                            {% empty %}
+                            —
+                            {% endfor %}
+                          {% else %}
+                            —
+                          {% endif %}
+                      </td>
+
                       <td>
                         {% if form.instance.pk and form.instance.target_incident_id %}
-                          <a href="{% url 'incidents:incident_detail' incident_id=form.instance.target_incident_id %}">
+                          <a class="link" href="{% url 'incidents:incident_detail' incident_id=form.instance.target_incident_id %}">
                             {{ form.instance.target_incident }}
                           </a>
                         {% else %}
@@ -61,16 +101,17 @@
                         {% endif %}
                       </td>
   
-                      <td>
+                      <td class="delete-checkbox-td">
                           <label class="custom-checkbox-wrapper" title="Отметьте, чтобы удалить эту связь">
                             {{ form.DELETE }}
-                            <i class="bx bx-check check-icon"></i>
+                            <i class="bx bx-x check-icon delete-icon"></i>
                           </label>
                       </td>
   
                   </tr>
+                  {% endwith %}
                   {% empty %}
-                  <tr><td colspan="4" class="empty">Нет связанных инцидентов...</td></tr>
+                  <tr><td colspan="6" class="empty">Нет связанных инцидентов</td></tr>
                   {% endfor %}
               </tbody>
           </table>

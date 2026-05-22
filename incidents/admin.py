@@ -1,4 +1,3 @@
-from dal.autocomplete import ModelSelect2
 from django.contrib import admin
 from django.http import HttpRequest
 from django.urls import reverse
@@ -104,9 +103,9 @@ class IncidentLinkInline(admin.TabularInline):
 
     fk_name = 'source_incident'
 
-    autocomplete_fields = ('created_by', 'target_incident')
+    autocomplete_fields = ('target_incident',)
 
-    fields = ('link_type', 'target_incident', 'created_by', 'created_at')
+    fields = ('link_type', 'target_incident', 'created_at')
     readonly_fields = ('created_at',)
 
 

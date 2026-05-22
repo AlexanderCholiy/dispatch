@@ -1,0 +1,18 @@
+.incident-link-buttons {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  padding: var(--space-sm) 0;
+}
+
+.incident-link-buttons button {
+  font-size: var(--font-sm);
+  padding: var(--space-xxs) var(--space-md);
+  text-align: center;
+}
+
+#toggle-all-delete {
+  min-width: 130px;
+}
