@@ -12,6 +12,7 @@ from .constants import (
     EMAIL_PARSER_LOG_ROTATING_FILE,
     INCIDENTS_LOG_ROTATING_FILE,
     MONITORING_LOG_ROTATING_FILE,
+    MONITORING_PAAS_LOG_ROTATING_FILE,
     MQTT_LOG_ROTATING_FILE,
     MQTT_PARSER_LOG_ROTATING_FILE,
     TG_NOTIFICATIONS_ROTATING_FILE,
@@ -156,6 +157,10 @@ default_logger = LoggerFactory(
 
 monitoring_logger = LoggerFactory(
     'monitoring', MONITORING_LOG_ROTATING_FILE
+).get_logger()
+
+monitoring_paas_logger = LoggerFactory(
+    'monitoring_paas', MONITORING_PAAS_LOG_ROTATING_FILE
 ).get_logger()
 
 mqtt_logger = LoggerFactory(
