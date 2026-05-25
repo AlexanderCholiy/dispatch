@@ -3,6 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.forms import UserChangeForm, UserCreationForm
 
 from core.constants import EMPTY_VALUE
+from ts.constants import UNDEFINED_CASE
 
 from .constants import USERS_PER_PAGE
 from .models import PendingUser, User, WorkSchedule
@@ -67,6 +68,7 @@ class BaseUserAdmin(UserAdmin):
                     'is_staff',
                     'is_superuser',
                     'role',
+                    'avr_contractor',
                     'groups',
                     'user_permissions',
                 )
@@ -94,6 +96,29 @@ class BaseUserAdmin(UserAdmin):
     search_fields = ('email', 'username', 'first_name', 'last_name')
     ordering = ('-date_joined', 'email',)
     inlines = [WorkScheduleInline]
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return (
+            qs
+            .select_related('avr_contractor',)
+        )
+
+    def get_form(self, request, obj=None, **kwargs):
+        form_class = super().get_form(request, obj, **kwargs)
+
+        field_name = 'avr_contractor'
+
+        if field_name in form_class.base_fields:
+            field = form_class.base_fields[field_name]
+
+            if hasattr(field, 'queryset'):
+
+                field.queryset = field.queryset.exclude(
+                    contractor_name=UNDEFINED_CASE
+                )
+
+        return form_class
 
 
 @admin.register(PendingUser)

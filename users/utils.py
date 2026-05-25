@@ -15,7 +15,9 @@ from .tasks import send_activation_email_task, send_confirm_email_task
 
 
 def role_required(
-    allowed_roles: list[Roles] = [Roles.DISPATCH, Roles.USER, Roles.ENERGY]
+    allowed_roles: list[Roles] = [
+        Roles.DISPATCH, Roles.USER, Roles.ENERGY, Roles.AVR_CONTRACTOR
+    ]
 ):
     """
     Декоратор который предоставляет доступ админу или у кого есть определенная

@@ -3,6 +3,7 @@ from functools import partial
 from typing import Optional
 
 from dal import autocomplete
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
@@ -24,6 +25,7 @@ from django.db.models import (
 from django.forms import modelformset_factory
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
@@ -58,6 +60,7 @@ from emails.tasks import send_incident_email_task
 from incidents.services.notify_contractor_incident_closed import (
     notify_contractor_incident_closed
 )
+from incidents.services.valid_contractor_match import is_valid_contractor_match
 from monitoring.models import DeviceStatus, DeviceType
 from monitoring.services.monitoring_equipment import (
     get_monitiring_cache_equipment,
@@ -325,6 +328,12 @@ def index(request: HttpRequest) -> HttpResponse:
         )
     )
 
+    user: User = request.user
+    if user.role == Roles.AVR_CONTRACTOR:
+        base_qs = base_qs.filter(
+            pole__avr_contractor=user.avr_contractor
+        )
+
     base_qs = annotate_sla_avr(base_qs)
     base_qs = annotate_sla_rvr(base_qs)
     base_qs = annotate_sla_dgu(base_qs)
@@ -581,6 +590,19 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
 
     if not incident:
         raise Http404(f'Инцидент с ID: {incident_id} не найден')
+
+    user: User = request.user
+    if (
+        user.role == Roles.AVR_CONTRACTOR
+        and not is_valid_contractor_match(user, incident)
+    ):
+        messages.error(
+            request,
+            (
+                f'Инцидент {incident} не доступен вашей подрядной организации'
+            )
+        )
+        return redirect(reverse(settings.LOGIN_URL))
 
     monitiring_equipment = (
         get_monitiring_cache_equipment(incident.pole.pole)

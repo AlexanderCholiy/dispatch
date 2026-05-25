@@ -1,7 +1,7 @@
 [tool.isort]
 profile = "black"
 line_length = 88
-known_first_party = ["backend", "core", "pages", "users", "api", "emails", "incidents", "monitoring"]
+known_first_party = ["backend", "core", "pages", "users", "api", "emails", "incidents", "monitoring", "mqtt", "notifications", "yandex_tracker", "ts", "stats", "metrics", "energy"]
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
 multi_line_output = 3
 include_trailing_comma = false

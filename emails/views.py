@@ -1,6 +1,8 @@
 import os
 from datetime import datetime
 
+from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.core.paginator import Paginator
@@ -12,12 +14,15 @@ from django.http import (
     StreamingHttpResponse,
 )
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django_ratelimit.decorators import ratelimit
 from stream_zip import ZIP_32, ZIP_64, stream_zip
 
 from core.constants import DATETIME_LOCAL_FORMAT, ZIP64_THRESHOLD
 from core.services.get_max_today_datetime import get_max_today_datetime
 from core.validators import get_aware_datetime
+from incidents.services.valid_contractor_match import is_valid_contractor_match
+from users.models import Roles, User
 from users.utils import role_required
 
 from .constants import (
@@ -87,6 +92,12 @@ def emails_list(request: HttpRequest) -> HttpResponse:
         EmailMessage.objects
         .exclude(email_incident__isnull=True)
     )
+
+    user: User = request.user
+    if user.role == Roles.AVR_CONTRACTOR:
+        base_qs = base_qs.filter(
+            email_incident__pole__avr_contractor=user.avr_contractor
+        )
 
     if query:
         filters = (
@@ -191,12 +202,30 @@ def download_email_attachments(
     Не сохраняет архив на диск.
     """
     try:
-        email_msg = EmailMessage.objects.prefetch_related(
+        email_msg = EmailMessage.objects.select_related(
+            'email_incident',
+            'email_incident__pole',
+            'email_incident__pole__avr_contractor',
+        ).prefetch_related(
             'email_attachments',
             'email_intext_attachments',
         ).get(id=email_id)
     except EmailMessage.DoesNotExist:
         raise Http404('Email не найден')
+
+    user: User = request.user
+    if (
+        user.role == Roles.AVR_CONTRACTOR
+        and not is_valid_contractor_match(user, email_msg.email_incident)
+    ):
+        messages.error(
+            request,
+            (
+                f'Письмо с ID: {email_id} не доступно вашей подрядной '
+                'организации'
+            )
+        )
+        return redirect(reverse(settings.LOGIN_URL))
 
     files_data = []
     total_uncompressed_size = 0

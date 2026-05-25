@@ -9,6 +9,8 @@ from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils import timezone
 
+from ts.models import AVRContractor
+
 from .constants import (
     ALLOWED_IMAGE_EXTENSIONS,
     DEFAULT_AVATARS_DIR,
@@ -36,6 +38,7 @@ class Roles(models.TextChoices):
     USER = ('user', 'Пользователь')
     DISPATCH = ('dispatch', 'Диспетчер')
     ENERGY = ('energy', 'Энергетик')
+    AVR_CONTRACTOR = ('avr_contractor', 'Подрядчик по АВР')
 
 
 class DefaultAvatars(models.TextChoices):
@@ -99,6 +102,15 @@ class User(AbstractUser):
         null=True,
         help_text='Выберите стандартную иконку вместо загрузки фото.',
     )
+    avr_contractor = models.ForeignKey(
+        AVRContractor,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='users',
+        verbose_name='Подрядчик по АВР',
+        db_index=True
+    )
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
@@ -155,8 +167,24 @@ class User(AbstractUser):
                 'Нельзя одновременно загружать фото и выбирать иконку.'
             )
 
+        if self.role == Roles.AVR_CONTRACTOR:
+            if not self.avr_contractor:
+                raise ValidationError({
+                    'avr_contractor':
+                    f'Для роли "{Roles.AVR_CONTRACTOR.label}" '
+                    'необходимо выбрать подрядную организацию.'
+                })
+
     def save(self, *args, **kwargs) -> None:
         is_new = self.pk is None
+
+        if (
+            not is_new
+            and self.role != Roles.AVR_CONTRACTOR
+            and self.avr_contractor
+        ):
+            self.avr_contractor = None
+
         self.full_clean()
 
         try:
