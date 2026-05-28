@@ -394,10 +394,14 @@ def profile(request: HttpRequest) -> HttpResponse:
 def users_list(request: HttpRequest) -> HttpResponse:
     query = request.GET.get('q', '').strip()
 
-    role_filter = (
-        request.GET.get('role', '').strip().lower()
-        or request.COOKIES.get('role', '').strip().lower()
-    )
+    roles = [role for role in Roles if role != Roles.GUEST]
+
+    role_filter: list[str] = (
+        request.GET.get('role', '').lower().strip()
+        or request.COOKIES.get('role', '').lower().strip()
+    ).split(',')
+
+    role_filter = [v for v in role_filter if v in roles] or roles[:]
 
     per_page = int(
         request.GET.get('per_page')
@@ -416,19 +420,14 @@ def users_list(request: HttpRequest) -> HttpResponse:
         params['per_page'] = USERS_PER_PAGE
         return redirect(f"{request.path}?{params.urlencode()}")
 
-    roles = [role for role in Roles if role != Roles.GUEST]
-    role_filter = role_filter if (
-        role_filter and role_filter in [r.value for r in roles]
-    ) else ''
-
     base_qs = User.objects.exclude(role=Roles.GUEST).exclude(is_active=False)
     if sort == 'asc':
         base_qs = base_qs.order_by('last_name', 'first_name', 'email', 'id')
     else:
         base_qs = base_qs.order_by('-last_name', '-first_name', '-email', 'id')
 
-    if role_filter:
-        base_qs = base_qs.filter(role=role_filter)
+    if role_filter and role_filter != roles:
+        base_qs = base_qs.filter(role__in=role_filter)
 
     if query:
         words = {w.strip().lower() for w in query.split(' ') if w.strip()}

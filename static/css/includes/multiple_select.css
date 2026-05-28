@@ -1,0 +1,119 @@
+/* --- Контейнер обертки --- */
+.multiple-select-wrapper {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  max-width: 200px;
+}
+
+/* --- Триггер (внешний вид кнопки) --- */
+.dropdown-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm);
+  background-color: var(--add-background-color);
+  border: 1px solid var(--extra-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color var(--transition-value), box-shadow var(--transition-value);
+  user-select: none;
+  font-size: var(--font-sm);
+  color: var(--add-color) !important;
+  font-weight: 500;
+}
+
+.dropdown-trigger.hover,
+.dropdown-trigger.active {
+  box-shadow: 0 0 var(--space-sm) var(--extra-color);
+}
+
+/* Текст выбранного значения */
+.selected-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: calc(100% - 40px); /* Оставляем место для стрелки */
+  display: block;
+}
+
+/* Стрелка вниз */
+.arrow-icon {
+  font-size: var(--font-sm);
+  color: var(--gray-color);
+  margin-left: var(--space-xs);
+}
+
+.dropdown-trigger.active .arrow-icon {
+  transform: rotate(180deg);
+  color: var(--add-color);
+}
+
+/* --- Выпадающее меню --- */
+.dropdown-menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background-color: var(--add-background-color);
+  border: 1px solid var(--extra-color);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 var(--space-sm) var(--extra-color);
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all var(--transition-value);
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.dropdown-menu.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  padding: var(--space-sm) var(--space-md);
+  cursor: pointer;
+  transition: background-color var(--transition-value), color var(--transition-value);
+  font-size: var(--font-sm);
+  color: var(--add-color);
+  position: relative;
+}
+
+.option-item:hover {
+  background-color: var(--blue-color) !important;
+  color: var(--background-color) !important;
+}
+
+/* Стиль для выбранной опции */
+.option-item.is-selected {
+  color: var(--color);
+}
+
+.option-item:hover.is-selected::before {
+  color: var(--background-color) !important;
+}
+
+/* Визуальная галочка для выбранной опции */
+.option-item.is-selected::before {
+  content: "✓";
+  position: absolute;
+  color: var(--add-color);
+  font-weight: bold;
+  transition: background-color var(--transition-value), color var(--transition-value);
+}
+
+/* Смещение текста, чтобы он не накладывался на галочку */
+.option-item span {
+  margin-left: var(--space-lg); /* Отступ для галочки */
+  width: 100%;
+}
+
+/* Убираем стандартные стили браузера для скрытого select */
+select[multiple] {
+  display: none !important;
+}

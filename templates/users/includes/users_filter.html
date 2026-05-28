@@ -2,15 +2,31 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/includes/table_filter.css' %}">
+<link rel="stylesheet" href="{% static 'css/includes/multiple_select.css' %}">
 {% endblock %}
 
 <form method="get" class="table-filter-form" id="filter-form">
   <div class="left-part">
-    <div class="select-wrapper">
-      <select name="role" id="role-select" class="select tooltip" data-title="Роль пользователя">
-        <option value="" {% if not selected.role %}selected{% endif %}>Роль: Все</option>
+    <div class="multiple-select-wrapper" id="role-select">
+      <div class="dropdown-trigger" data-filter-name="Роль">
+        <span class="selected-label">Роль</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="role-dropdown-menu">
+        <div class="dropdown-options">
+          {% for r in roles %}
+            <label class="option-item {% if r in selected.role %}is-selected{% endif %}" 
+                   data-value="{{ r }}">
+              <span>{{ r.label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <select name="role" id="role-select-hidden" style="display: none;" multiple>
         {% for r in roles %}
-          <option value="{{ r }}" {% if selected.role == r %}selected{% endif %}>{{ r.label }}</option>
+          <option value="{{ r }}" {% if r in selected.role %}selected{% endif %}></option>
         {% endfor %}
       </select>
     </div>
@@ -50,4 +66,5 @@
 <script src="{% static 'js/save_elements_per_page.js' %}"></script>
 <script src="{% static 'js/reset_tables_filter.js' %}"></script>
 <script src="{% static 'js/sort_table.js' %}"></script>
+<script src="{% static 'js/multiple_select.js' %}"></script>
 {% endblock %}
