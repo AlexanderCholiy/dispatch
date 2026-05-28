@@ -77,6 +77,9 @@ def send_via_django_email(
         connection=connection,
     )
 
+    # КРИТИЧНО: Устанавливаем кодировку СРАЗУ после создания:
+    message.encoding = 'utf-8'
+
     message.extra_headers['Message-ID'] = email_msg.email_msg_id
 
     if email_msg.email_msg_reply_id:
@@ -119,7 +122,6 @@ def send_via_django_email(
             message.attach_file(attachment.file_url.path)
 
     message.attach_alternative(html_body_content, 'text/html')
-    message.encoding = 'utf-8'
 
     # Бросает исключение, если отправка не удалась:
     message.send(fail_silently=False)

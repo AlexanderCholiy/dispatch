@@ -38,7 +38,7 @@ class Roles(models.TextChoices):
     USER = ('user', 'Пользователь')
     DISPATCH = ('dispatch', 'Диспетчер')
     ENERGY = ('energy', 'Энергетик')
-    AVR_CONTRACTOR = ('avr_contractor', 'Подрядчик по АВР')
+    AVR_CONTRACTOR = ('avr_contractor', 'Подрядчик')
 
 
 class DefaultAvatars(models.TextChoices):
