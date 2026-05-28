@@ -76,12 +76,13 @@
 .option-item {
   display: flex;
   align-items: center;
-  padding: var(--space-sm) var(--space-md);
+  gap: var(--space-sm);
   cursor: pointer;
-  transition: background-color var(--transition-value), color var(--transition-value);
-  font-size: var(--font-sm);
   color: var(--add-color);
-  position: relative;
+  font-size: var(--font-sm);
+  padding: var(--space-xs) var(--space-sm);
+  transition: background-color var(--transition-value), color var(--transition-value);
+  font-weight: 450;
 }
 
 .option-item:hover {
@@ -94,22 +95,18 @@
   color: var(--color);
 }
 
-.option-item:hover.is-selected::before {
-  color: var(--background-color) !important;
+.option-item i.bx {
+  opacity: 0;
+  font-size: var(--font-sm);
+  color: var(--green-color);
 }
 
-/* Визуальная галочка для выбранной опции */
-.option-item.is-selected::before {
-  content: "✓";
-  position: absolute;
-  color: var(--add-color);
-  font-weight: bold;
-  transition: background-color var(--transition-value), color var(--transition-value);
+.option-item.is-selected i.bx {
+  opacity: 1;
 }
 
 /* Смещение текста, чтобы он не накладывался на галочку */
 .option-item span {
-  margin-left: var(--space-lg); /* Отступ для галочки */
   width: 100%;
 }
 

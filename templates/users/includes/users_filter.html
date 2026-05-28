@@ -18,6 +18,7 @@
           {% for r in roles %}
             <label class="option-item {% if r in selected.role %}is-selected{% endif %}" 
                    data-value="{{ r }}">
+              <i class="bx bx-check"></i>
               <span>{{ r.label }}</span>
             </label>
           {% endfor %}

@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // --- КОНФИГУРАЦИЯ ФИЛЬТРОВ ---
     const filtersConfig = [
         { id: 'role-select-hidden', cookieName: 'role', searchFieldName: 'role' },
         { id: 'per-page', cookieName: 'per_page_users', searchFieldName: 'per_page' },
@@ -11,7 +10,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!name) return;
         const d = new Date();
         d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
-        // Записываем значение как есть (без encodeURIComponent для запятых), чтобы Python мог легко сплитить
         document.cookie = `${name}=${value};path=/;expires=${d.toUTCString()}`;
     }
 
@@ -25,13 +23,12 @@ document.addEventListener('DOMContentLoaded', function() {
     function getAllFiltersData() {
         const data = {};
         
-        // Роль (всегда возвращает строку, даже если пусто)
+        // Роль
         const roleSelect = document.getElementById('role-select-hidden');
         if (roleSelect) {
             const roles = Array.from(roleSelect.selectedOptions)
                                .map(opt => opt.value.trim())
                                .filter(v => v !== '');
-            // join([]) вернет "" (пустую строку), что критично для очистки куки
             data['role'] = roles.join(',');
         }
 
@@ -43,27 +40,27 @@ document.addEventListener('DOMContentLoaded', function() {
         const sortInput = document.querySelector('input[name="sort_users"]');
         if (sortInput) data['sort_users'] = sortInput.value;
 
-        // Search query
-        const qInput = document.getElementById('filter-hidden-q');
-        if (qInput) data['q'] = qInput.value;
+        // Search query (ИСПРАВЛЕНО: Берем из ВИДИМОГО поля поиска, если оно есть, иначе из скрытого)
+        const searchInput = document.getElementById('search-input');
+        const hiddenQInput = document.getElementById('filter-hidden-q');
+        
+        if (searchInput && searchInput.value) {
+            data['q'] = searchInput.value;
+        } else if (hiddenQInput) {
+            data['q'] = hiddenQInput.value;
+        }
 
         return data;
     }
 
-    // --- 2. СОХРАНЕНИЕ В КУКИ (С ОЧИСТКОЙ ПУСТОГО РОЛЕВОГО ФИЛЬТРА) ---
+    // --- 2. СОХРАНЕНИЕ В КУКИ ---
     function saveAllFiltersToCookies() {
         const data = getAllFiltersData();
         
-        // Логика для роли: всегда записываем, даже если пусто
         if ('role' in data) {
-            if (data.role === '') {
-                // Если ролей нет, записываем пустую строку, чтобы перезаписать старую куку
-                setCookie('role', ''); 
-            } else {
-                setCookie('role', data.role);
-            }
+            if (data.role === '') setCookie('role', ''); 
+            else setCookie('role', data.role);
         }
-
         if (data.per_page) setCookie('per_page_users', data.per_page);
         if (data.sort_users) setCookie('sort_users', data.sort_users);
     }
@@ -74,42 +71,29 @@ document.addEventListener('DOMContentLoaded', function() {
         const perPageVal = getCookie('per_page_users');
         const sortVal = getCookie('sort_users');
 
-        // --- ЛОГИКА ДЛЯ РОЛИ ---
+        // Логика для роли
         const roleSelect = document.getElementById('role-select-hidden');
-        
         if (roleSelect) {
-            // 1. Проверяем, есть ли уже выбранные опции в HTML (от Django)
             const hasSelectedInDOM = Array.from(roleSelect.options).some(opt => opt.selected);
-
             if (hasSelectedInDOM) {
-                // Если в HTML уже есть selected (Django отрисовал "Все" или конкретные роли),
-                // мы НЕ трогаем их и просто обновляем визуальный лейбл.
-                // Это решает проблему, когда кука пуста, но в HTML все выбрано.
                 updateRoleVisuals(roleSelect);
             } else {
-                // Если в HTML ничего не выбрано, пробуем восстановить из куки
                 if (roleVal !== null && roleVal !== '') {
                     const values = roleVal.split(',').map(v => v.trim()).filter(v => v !== '');
-                    
-                    // Сбрасываем все selected (на всякий случай)
                     Array.from(roleSelect.options).forEach(opt => opt.selected = false);
-                    
-                    // Выбираем нужные из куки
                     values.forEach(val => {
                         const opt = roleSelect.querySelector(`option[value="${val}"]`);
                         if (opt) opt.selected = true;
                     });
-                    
                     updateRoleVisuals(roleSelect);
                 } else {
-                    // Если ни в HTML, ни в куке ничего нет - явно сбрасываем визуально
                     Array.from(roleSelect.options).forEach(opt => opt.selected = false);
                     updateRoleVisuals(roleSelect);
                 }
             }
         }
 
-        // --- ЛОГИКА ДЛЯ PER_PAGE И SORT (без изменений) ---
+        // Логика для пер-страницы и сортировки
         const perPageEl = document.getElementById('per-page');
         if (perPageEl && perPageVal) perPageEl.value = perPageVal;
 
@@ -124,7 +108,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const labelSpan = wrapper.querySelector('.selected-label');
         const options = wrapper.querySelectorAll('.option-item');
         
-        // Синхронизируем классы .is-selected со скрытым селектом
         Array.from(hiddenSelect.options).forEach(opt => {
             const visualOpt = wrapper.querySelector(`.option-item[data-value="${opt.value}"]`);
             if (visualOpt) {
@@ -133,7 +116,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Пересчитываем текст лейбла
         const selectedItems = Array.from(options).filter(item => item.classList.contains('is-selected'));
         const realOptionsCount = Array.from(options).filter(opt => opt.dataset.value !== '').length;
         const selectedRealCount = selectedItems.filter(opt => opt.dataset.value !== '').length;
@@ -166,15 +148,20 @@ document.addEventListener('DOMContentLoaded', function() {
             const hiddenSort = searchForm.querySelector('input[name="sort_users"]');
             if (hiddenSort) hiddenSort.value = data.sort_users;
         }
-        if (data.q) {
+        
+        // ИСПРАВЛЕНО: Синхронизация поля поиска
+        if (data.q !== undefined) {
             const hiddenQ = searchForm.querySelector('input[name="q"]');
             if (hiddenQ) hiddenQ.value = data.q;
+            
+            // Также обновляем скрытое поле в форме фильтра, чтобы они были одинаковы
+            const filterHiddenQ = document.getElementById('filter-hidden-q');
+            if (filterHiddenQ) filterHiddenQ.value = data.q;
         }
     }
 
-    // --- 6. НАСТРОЙКА РЕАЛЬНОГО СОХРАНЕНИЯ ПРИ ИЗМЕНЕНИИ (REAL-TIME) ---
+    // --- 6. НАСТРОЙКА РЕАЛЬНОГО СОХРАНЕНИЯ ПРИ ИЗМЕНЕНИИ ---
     function setupRealTimeSaving() {
-        // Для селекта пер-страницы
         const perPageSelect = document.getElementById('per-page');
         if (perPageSelect) {
             perPageSelect.addEventListener('change', () => {
@@ -183,13 +170,11 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        // Для множественного выбора ролей
         const roleWrapper = document.querySelector('#role-select');
         if (roleWrapper) {
             const options = roleWrapper.querySelectorAll('.option-item');
             options.forEach(opt => {
                 opt.addEventListener('click', () => {
-                    // Небольшая задержка, чтобы скрытый select успел обновиться вашим основным скриптом
                     setTimeout(() => {
                         saveAllFiltersToCookies();
                         syncSearchFormHiddenFields();
@@ -197,15 +182,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             });
         }
+
+        // ИСПРАВЛЕНО: Слушаем ввод текста в поиске
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                // Сразу копируем значение в скрытые поля
+                syncSearchFormHiddenFields();
+                // Сохраняем в куки (опционально, можно делать только при сабмите)
+                saveAllFiltersToCookies();
+            });
+        }
     }
 
-    // --- ЗАПУСК И ОБРАБОТЧИКИ СОБЫТИЙ ---
+    // --- ЗАПУСК И ОБРАБОТЧИКИ ---
     
-    // 1. Восстановление состояния при загрузке
     restoreFilters();
     syncSearchFormHiddenFields();
-    
-    // 2. Настройка сохранения при кликах (Real-time)
     setupRealTimeSaving();
 
     const filterForm = document.getElementById('filter-form');
@@ -216,37 +209,33 @@ document.addEventListener('DOMContentLoaded', function() {
         filterForm.addEventListener('submit', function(e) {
             e.preventDefault(); 
             
-            // Обновляем скрытые поля и куки перед отправкой
             syncSearchFormHiddenFields();
             saveAllFiltersToCookies();
 
-            // Формируем URL вручную, чтобы гарантировать правильность параметров
             const formData = new FormData(filterForm);
             const params = new URLSearchParams();
             
-            // Добавляем все данные из формы, кроме role (его добавим вручную корректно)
             for (let [key, value] of formData.entries()) {
                 if (key === 'role') continue; 
                 params.append(key, value);
             }
 
-            // Добавляем роль как CSV строку
             const roleSelect = document.getElementById('role-select-hidden');
             if (roleSelect) {
                 const roles = Array.from(roleSelect.selectedOptions).map(o => o.value).filter(v => v);
                 if (roles.length > 0) {
                     params.append('role', roles.join(','));
                 }
-                // Если roles пуст, мы не добавляем параметр role в URL (или можно добавить role=)
-                // Обычно лучше не добавлять пустой параметр, но если нужно сбросить фильтр через URL:
-                // if (roles.length === 0) params.append('role', ''); 
             }
 
-            // Формируем итоговый URL
+            // Добавляем поиск из видимого поля, если оно отличается от formData
+            const searchInput = document.getElementById('search-input');
+            if (searchInput && searchInput.value) {
+                params.set('q', searchInput.value);
+            }
+
             const currentUrl = new URL(window.location.href);
             currentUrl.search = params.toString();
-            
-            // Перенаправляем пользователя
             window.location.href = currentUrl.toString();
         });
     }
@@ -254,10 +243,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Обработчик для формы поиска (кнопка в шапке)
     if (searchForm) {
         searchForm.addEventListener('submit', function(e) {
-            // Перед отправкой поиска убедимся, что скрытые поля актуальны
+            // Перед отправкой гарантируем, что все скрытые поля обновлены
             syncSearchFormHiddenFields();
             saveAllFiltersToCookies();
-            // Стандартная отправка формы продолжится автоматически
+            // Стандартная отправка продолжится
         });
     }
 });
