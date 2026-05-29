@@ -108,7 +108,7 @@
     const filtersConfig = [
         { id: 'read-select-hidden', cookieName: 'read', searchFieldName: 'read', type: 'multi_select' },
         { id: 'level-select-hidden', cookieName: 'level', searchFieldName: 'level', type: 'multi_select' },
-        { id: 'per-page', cookieName: 'per_page_notifications', searchFieldName: 'per_page', type: 'single_select' },
+        { id: 'per-page', cookieName: 'per_page_notifications', searchFieldName: 'per_page', type: 'single_select', skipOnReset: true },
     ];
 </script>
 <script src="{% static 'js/universal_filters.js' %}"></script>

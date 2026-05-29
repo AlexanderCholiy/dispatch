@@ -1,7 +1,5 @@
 /**
- * Универсальный обработчик фильтров.
- * Ожидает глобальную переменную filtersConfig до загрузки.
- * Примечание: Визуализация множественного выбора делегирована multiple_select.js
+ * Универсальный обработчик фильтров v2.1 (Упрощенная версия без сложного кодирования)
  */
 (function() {
     if (typeof filtersConfig === 'undefined') {
@@ -9,17 +7,20 @@
         return;
     }
 
-    // --- УТИЛИТЫ ДЛЯ КУКИ ---
+    // --- УТИЛИТЫ ДЛЯ КУКИ (УПРОЩЕНО) ---
     function setCookie(name, value, days = 30) {
         if (!name) return;
         const d = new Date();
         d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
+        // Убрали encodeURIComponent для простоты. Email и даты обычно безопасны.
+        // Если будут проблемы с символами & или ;, вернем его назад.
         document.cookie = `${name}=${value};path=/;expires=${d.toUTCString()}`;
     }
 
     function getCookie(name) {
         if (!name) return null;
         const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+        // Убрали decodeURIComponent
         return match ? match[1] : null;
     }
 
@@ -32,19 +33,29 @@
             if (!element) return;
 
             let value = '';
+            const tagName = element.tagName.toLowerCase();
+            const inputType = element.type ? element.type.toLowerCase() : '';
 
-            if (cfg.type === 'multi_select') {
+            if (cfg.type === 'multi_select' || (tagName === 'select' && element.multiple)) {
                 const options = Array.from(element.selectedOptions)
                                      .map(opt => opt.value.trim())
                                      .filter(v => v !== '');
                 value = options.join(',');
             } 
-            else if (cfg.type === 'single_select' || cfg.type === 'text' || cfg.type === 'date') {
-                value = element.value;
-            }
             else if (cfg.type === 'button') {
                 const hiddenInput = document.querySelector(`input[name="${cfg.searchFieldName}"]`);
                 value = hiddenInput ? hiddenInput.value : (element.getAttribute('data-sort') || '');
+            }
+            else if ((tagName === 'input' || tagName === 'textarea') && (inputType === 'checkbox' || inputType === 'radio')) {
+                if (inputType === 'checkbox') {
+                    value = element.checked ? 'true' : 'false';
+                } else {
+                    value = element.checked ? element.value : '';
+                }
+            }
+            else {
+                // text, email, number, date, datetime-local, time, url, tel
+                value = element.value;
             }
 
             if (value !== '') {
@@ -77,11 +88,14 @@
             const savedValue = getCookie(cfg.cookieName);
             if (savedValue === null) return;
 
-            if (cfg.type === 'multi_select') {
+            const tagName = element.tagName.toLowerCase();
+            const inputType = element.type ? element.type.toLowerCase() : '';
+
+            if (cfg.type === 'multi_select' || (tagName === 'select' && element.multiple)) {
                 const hasSelectedInDOM = Array.from(element.options).some(opt => opt.selected);
                 
                 if (hasSelectedInDOM) {
-                    // Если выбор уже есть в DOM (из шаблона), ждем multiple_select.js
+                    // Ждем multiple_select.js
                 } else {
                     if (savedValue !== '') {
                         const values = savedValue.split(',').map(v => v.trim()).filter(v => v !== '');
@@ -91,26 +105,30 @@
                             const opt = element.querySelector(`option[value="${CSS.escape(val)}"]`);
                             if (opt) opt.selected = true;
                         });
-                        
-                        // Принудительно обновляем визуал, так как multiple_select.js может еще не успеть отработать на загруженных данных
                         updateVisualsForReset(cfg.id, element);
                     }
                 }
-            } else if (cfg.type === 'single_select') {
-                if (savedValue) element.value = savedValue;
-            } else if (cfg.type === 'text' || cfg.type === 'date') {
-                if (savedValue) element.value = savedValue;
-            } else if (cfg.type === 'button') {
-                const hiddenInput = document.querySelector(`input[name="${cfg.searchFieldName}"]`);
-                if (hiddenInput && savedValue) hiddenInput.value = savedValue;
+            } 
+            else if (inputType === 'checkbox') {
+                element.checked = (savedValue === 'true');
+            }
+            else if (inputType === 'radio') {
+                const radios = document.querySelectorAll(`input[type="radio"][name="${cfg.searchFieldName}"]`);
+                radios.forEach(radio => {
+                    if (radio.value === savedValue) radio.checked = true;
+                    else radio.checked = false;
+                });
+            }
+            else {
+                // Прямая установка значения (email, date и т.д.)
+                element.value = savedValue;
             }
         });
     }
 
-    // --- 4. ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ДЛЯ ОБНОВЛЕНИЯ ВИЗУАЛА (ТОЛЬКО ДЛЯ СБРОСА/ВОССТАНОВЛЕНИЯ) ---
-    // Эта функция используется, когда мы меняем состояние программно (без клика пользователя)
+    // --- 4. ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ДЛЯ ОБНОВЛЕНИЯ ВИЗУАЛА ---
     function updateVisualsForReset(wrapperId, hiddenSelect) {
-        const wrapperIdBase = wrapperId.replace('-hidden', '');
+        const wrapperIdBase = wrapperId.replace('-hidden', '-wrapper');
         const wrapper = document.getElementById(wrapperIdBase);
         
         if (!wrapper) return;
@@ -124,7 +142,6 @@
         const realOptionsCount = Array.from(options).filter(opt => opt.dataset.value !== '').length;
         const selectedRealCount = selectedItems.filter(opt => opt.dataset.value !== '').length;
 
-        // Логика текста лейбла (синхронизирована с multiple_select.js)
         if (selectedRealCount === 0) {
             labelSpan.textContent = `${filterName}: Все`;
         } else if (selectedRealCount === realOptionsCount) {
@@ -158,28 +175,53 @@
 
     // --- 6. НАСТРОЙКА СОБЫТИЙ ---
     function setupEventListeners() {
-        // Слушаем изменения стандартных элементов (select, input)
         filtersConfig.forEach(cfg => {
             const element = document.getElementById(cfg.id);
             if (!element) return;
 
-            const eventType = (cfg.type === 'text' || cfg.type === 'date') ? 'input' : 'change';
+            const tagName = element.tagName.toLowerCase();
+            const inputType = element.type ? element.type.toLowerCase() : '';
+            
+            let eventType = 'change';
+            if (tagName === 'input' && !['checkbox', 'radio'].includes(inputType)) {
+                eventType = 'input';
+            }
 
             element.addEventListener(eventType, () => {
                 saveAllFiltersToCookies();
                 syncSearchFormHiddenFields();
-                // Для multi_select здесь ничего не делаем, так как визуал обновляется через click в multiple_select.js
-                // Но если изменение произошло программно (например, при восстановлении), можно вызвать обновление
-                if (cfg.type === 'multi_select') {
+                
+                if (cfg.type === 'multi_select' || (tagName === 'select' && element.multiple)) {
                      updateVisualsForReset(cfg.id, element);
                 }
             });
         });
 
-        // !!! УДАЛЕНЫ слушатели кликов по .option-item !!!
-        // Теперь этим занимается исключительно multiple_select.js
+        // Слушатели кликов для кастомных множественных выборов
+        const multiWrappers = document.querySelectorAll('.multiple-select-wrapper');
+        multiWrappers.forEach(wrapper => {
+            const options = wrapper.querySelectorAll('.option-item');
+            options.forEach(opt => {
+                opt.addEventListener('click', () => {
+                    setTimeout(() => {
+                        const wrapperId = wrapper.id;
+                        const hiddenId = wrapperId + '-hidden';
+                        const hiddenSelect = document.getElementById(hiddenId);
+                        
+                        if (hiddenSelect) {
+                            const cfg = filtersConfig.find(c => c.id === hiddenId);
+                            if (cfg) {
+                                saveAllFiltersToCookies();
+                                syncSearchFormHiddenFields();
+                                updateVisualsForReset(hiddenId, hiddenSelect);
+                            }
+                        }
+                    }, 10);
+                });
+            });
+        });
 
-        // Обработчик формы фильтрации (кнопка "Применить")
+        // Обработчик формы фильтрации
         const filterForm = document.getElementById('filter-form');
         if (filterForm) {
             filterForm.addEventListener('submit', function(e) {
@@ -192,23 +234,20 @@
                 const params = new URLSearchParams();
                 
                 for (let [key, value] of formData.entries()) {
-                    const isMultiField = filtersConfig.some(c => c.searchFieldName === key && c.type === 'multi_select');
+                    const isMultiField = filtersConfig.some(c => c.searchFieldName === key && (c.type === 'multi_select' || (document.getElementById(c.id)?.multiple)));
                     if (isMultiField) continue;
                     params.append(key, value);
                 }
 
-                // Ручной сбор мульти-полей
                 filtersConfig.forEach(cfg => {
-                    if (cfg.type === 'multi_select') {
-                        const element = document.getElementById(cfg.id);
-                        if (element) {
-                            const options = Array.from(element.selectedOptions)
-                                                 .map(opt => opt.value.trim())
-                                                 .filter(v => v !== '');
-                            
-                            if (options.length > 0) {
-                                params.append(cfg.searchFieldName, options.join(','));
-                            }
+                    const element = document.getElementById(cfg.id);
+                    if (element && (cfg.type === 'multi_select' || element.multiple)) {
+                        const options = Array.from(element.selectedOptions)
+                                             .map(opt => opt.value.trim())
+                                             .filter(v => v !== '');
+                        
+                        if (options.length > 0) {
+                            params.append(cfg.searchFieldName, options.join(','));
                         }
                     }
                 });
@@ -233,49 +272,120 @@
             });
         }
         
-        // Слушатель для кнопки сброса
+        // Слушатель для кнопки сброса (ИСПРАВЛЕНО)
         const resetBtn = document.getElementById('reset-filters');
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
+                // 1. Очищаем куки
                 filtersConfig.forEach(cfg => {
+                    // Если у конфига есть флаг skipOnReset, пропускаем очистку куки
+                    if (cfg.skipOnReset) return;
+                    
                     setCookie(cfg.cookieName, '', -1);
                 });
                 
+                // 2. Сбрасываем нативную форму
                 const form = document.getElementById('filter-form');
                 if (form) form.reset();
 
+                // 3. ЯВНЫЙ СБРОС ПОЛЕЙ INPUT (УНИВЕРСАЛЬНАЯ ЛОГИКА)
+                filtersConfig.forEach(cfg => {
+                    // Пропускаем элементы с флагом skipOnReset
+                    if (cfg.skipOnReset) return;
+
+                    const element = document.getElementById(cfg.id);
+                    if (!element) return;
+                    
+                    const inputType = element.type ? element.type.toLowerCase() : '';
+                    
+                    if (inputType === 'checkbox') {
+                        element.checked = false;
+                    } else if (inputType === 'radio') {
+                        element.checked = false;
+                    } else {
+                        // Для text, email, date, number и т.д. принудительно ставим пусто
+                        element.value = '';
+                    }
+                });
+
+                // 4. Очистка скрытого Q (всегда сбрасываем)
                 const filterHiddenQ = document.getElementById('filter-hidden-q');
                 if (filterHiddenQ) filterHiddenQ.value = '';
 
-                // 4. СБРОС ВСЕХ СКРЫТЫХ ПОЛЕЙ В ФОРМЕ ПОИСКА (#search-form)
-                // Находим все hidden inputs внутри формы поиска и обнуляем их
+                // 5. Сброс всех скрытых полей в search-form (ИСКЛЮЧАЯ те, что имеют skipOnReset)
                 const searchForm = document.getElementById('search-form');
                 if (searchForm) {
                     const hiddenInputs = searchForm.querySelectorAll('input[type="hidden"]');
                     hiddenInputs.forEach(input => {
+                        // Проверяем, есть ли у этого поля конфиг с skipOnReset
+                        const cfg = filtersConfig.find(c => c.searchFieldName === input.name);
+                        if (cfg && cfg.skipOnReset) return; // Не сбрасываем
+                        
                         input.value = '';
                     });
                 }
 
-                // Сброс визуальной части множественного выбора
+                // 6. Сброс визуальной части множественного выбора (тоже исключаем через флаг)
                 filtersConfig.forEach(cfg => {
+                    if (cfg.skipOnReset) return;
+
                     if (cfg.type === 'multi_select') {
                         const hiddenSelect = document.getElementById(cfg.id);
                         if (!hiddenSelect) return;
 
+                        // Сбрасываем опции в скрытом селекте
                         Array.from(hiddenSelect.options).forEach(opt => opt.selected = false);
 
-                        const wrapperIdBase = cfg.id.replace('-hidden', '');
+                        // ИСПРАВЛЕНО: Убираем суффикс "-hidden", чтобы получить ID обертки
+                        // folder-select-hidden -> folder-select
+                        const wrapperIdBase = cfg.id.replace(/-hidden$/, ''); 
+                        
                         const wrapper = document.getElementById(wrapperIdBase);
                         
                         if (wrapper) {
                             const options = wrapper.querySelectorAll('.option-item');
-                            options.forEach(opt => opt.classList.remove('is-selected'));
-                            updateVisualsForReset(cfg.id, hiddenSelect);
+                            
+                            // Удаляем классы
+                            let removedCount = 0;
+                            options.forEach(opt => {
+                                if (opt.classList.contains('is-selected')) {
+                                    opt.classList.remove('is-selected');
+                                    removedCount++;
+                                }
+                            });
+                            
+                            // Теперь принудительно обновляем текст лейбла
+                            // Мы повторяем логику updateLabel из multiple_select.js здесь, 
+                            // чтобы гарантировать обновление без зависимости от внешнего скрипта
+                            const labelSpan = wrapper.querySelector('.selected-label');
+                            const trigger = wrapper.querySelector('.dropdown-trigger');
+                            const filterName = trigger ? trigger.getAttribute('data-filter-name') || 'Фильтр' : 'Фильтр';
+                            
+                            // Пересчитываем выбранные элементы ПОСЛЕ удаления классов
+                            const selectedItemsAfter = Array.from(options).filter(item => item.classList.contains('is-selected'));
+                            const realOptionsCount = Array.from(options).filter(opt => opt.dataset.value !== '').length;
+                            const selectedRealCount = selectedItemsAfter.filter(opt => opt.dataset.value !== '').length;
+
+                            if (selectedRealCount === 0) {
+                                labelSpan.textContent = `${filterName}: Все`;
+                            } else if (selectedRealCount === realOptionsCount) {
+                                labelSpan.textContent = `${filterName}: Все`;
+                            } else if (selectedRealCount === 1) {
+                                const singleItem = selectedItemsAfter.find(opt => opt.dataset.value !== '');
+                                if (singleItem) {
+                                    labelSpan.textContent = `${filterName}: ${singleItem.querySelector('span').textContent}`;
+                                }
+                            } else {
+                                labelSpan.textContent = `${filterName}: ${selectedRealCount} шт`;
+                            }
+                            
+                        } else {
+                            console.error(`❌ Wrapper not found for ID: ${wrapperIdBase} (tried to find from ${cfg.id})`);
                         }
                     }
                 });
 
+                // 7. Очистка видимого поиска
                 const searchInput = document.getElementById('search-input');
                 if (searchInput) searchInput.value = '';
 
@@ -284,6 +394,7 @@
                 const currentUrl = new URL(window.location.href);
                 currentUrl.search = ''; 
                 window.history.replaceState({}, '', currentUrl.toString());
+
             });
         }
     }

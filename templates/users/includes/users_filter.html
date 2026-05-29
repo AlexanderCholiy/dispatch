@@ -65,7 +65,7 @@
 <script>
     const filtersConfig = [
         { id: 'role-select-hidden', cookieName: 'role', searchFieldName: 'role', type: 'multi_select' },
-        { id: 'per-page', cookieName: 'per_page_users', searchFieldName: 'per_page', type: 'single_select' },
+        { id: 'per-page', cookieName: 'per_page_users', searchFieldName: 'per_page', type: 'single_select', skipOnReset: true },
     ];
 </script>
 <script src="{% static 'js/universal_filters.js' %}"></script>

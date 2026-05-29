@@ -44,9 +44,23 @@ from .models import (
 def emails_list(request: HttpRequest) -> HttpResponse:
     query = request.GET.get('q', '').strip()
 
-    folder_name = (
+    folders = cache.get_or_set(
+        'email_filter_folders',
+        lambda: list(
+            EmailFolder.objects.values_list('name', flat=True)
+            .distinct()
+            .order_by('name')
+        ),
+        MAX_EMAILS_INFO_CACHE_SEC,
+    )
+
+    folder_name_filter: list[str] = (
         request.GET.get('folder', '').strip()
         or request.COOKIES.get('folder', '').strip()
+    ).split(',')
+
+    folder_name_filter = (
+        [v for v in folder_name_filter if v in folders] or folders[:]
     )
 
     email_from = (
@@ -109,8 +123,8 @@ def emails_list(request: HttpRequest) -> HttpResponse:
 
         base_qs = base_qs.filter(filters).distinct()
 
-    if folder_name:
-        base_qs = base_qs.filter(folder__name=folder_name)
+    if folder_name_filter and len(folder_name_filter) != len(folders):
+        base_qs = base_qs.filter(folder__name__in=folder_name_filter)
 
     if email_from:
         base_qs = base_qs.filter(email_from=email_from)
@@ -152,16 +166,6 @@ def emails_list(request: HttpRequest) -> HttpResponse:
     id_index = {id_: i for i, id_ in enumerate(page_ids)}
     emails = sorted(emails_qs, key=lambda n: id_index[n.id])
 
-    folders = cache.get_or_set(
-        'email_filter_folders',
-        lambda: list(
-            EmailFolder.objects.values_list('name', flat=True)
-            .distinct()
-            .order_by('name')
-        ),
-        MAX_EMAILS_INFO_CACHE_SEC,
-    )
-
     query_params = request.GET.copy()
     query_params.pop('page', None)
     page_url_base = f'?{query_params.urlencode()}&' if query_params else '?'
@@ -173,7 +177,7 @@ def emails_list(request: HttpRequest) -> HttpResponse:
         'page_url_base': page_url_base,
         'folders': folders,
         'selected': {
-            'folder': folder_name,
+            'folder': folder_name_filter,
             'email_from': email_from,
             'date_from': (
                 date_from.strftime(DATETIME_LOCAL_FORMAT) if date_from else ''

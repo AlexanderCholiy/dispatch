@@ -6,11 +6,27 @@
 
 <form method="get" class="table-filter-form" id="filter-form">
   <div class="left-part">
-    <div class="select-wrapper">
-      <select name="folder" id="folder-select" class="select tooltip" data-title="Email папка">
-        <option value="" {% if not selected.folder %}selected{% endif %}>Папка: Все</option>
+    <div class="multiple-select-wrapper" id="folder-select">
+      <div class="dropdown-trigger" data-filter-name="Папка">
+        <span class="selected-label">Папка</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="folder-dropdown-menu">
+        <div class="dropdown-options">
+          {% for f in folders %}
+            <label class="option-item {% if f in selected.folder %}is-selected{% endif %}" 
+                   data-value="{{ f }}">
+              <i class="bx bx-check"></i>
+              <span>{{ f }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <select name="folder" id="folder-select-hidden" style="display: none;" multiple>
         {% for f in folders %}
-          <option value="{{ f }}" {% if selected.folder == f %}selected{% endif %}>Папка: {{ f }}</option>
+          <option value="{{ f }}" {% if f in selected.folder %}selected{% endif %}></option>
         {% endfor %}
       </select>
     </div>
@@ -78,8 +94,16 @@
 </form>
 
 {% block extra_js %}
-<script src="{% static 'js/emails/search_filter.js' %}"></script>
-<script src="{% static 'js/save_elements_per_page.js' %}"></script>
-<script src="{% static 'js/reset_tables_filter.js' %}"></script>
+<script>
+    const filtersConfig = [
+        { id: 'folder-select-hidden', cookieName: 'folder', searchFieldName: 'folder', type: 'multi_select' },
+        { id: 'email-from-input', cookieName: 'email_from', searchFieldName: 'email_from', type: 'email' },
+        { id: 'email-date-from', cookieName: 'email_date_from', searchFieldName: 'email_date_from', type: 'datetime-local' },
+        { id: 'email-date-to', cookieName: 'email_date_to', searchFieldName: 'email_date_to', type: 'datetime-local' },
+        { id: 'per-page', cookieName: 'per_page_emails', searchFieldName: 'per_page', type: 'single_select', skipOnReset: true },
+    ];
+</script>
+<script src="{% static 'js/universal_filters.js' %}"></script>
 <script src="{% static 'js/sort_table.js' %}"></script>
+<script src="{% static 'js/multiple_select.js' %}"></script>
 {% endblock %}
