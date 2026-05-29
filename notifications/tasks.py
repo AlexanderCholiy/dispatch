@@ -128,6 +128,18 @@ def schedule_birthday_notifications(self):
     created_count = 0
 
     for user in users_with_bday:
+        existing_notification = Notification.objects.filter(
+            user=user,
+            title__startswith='🎉 С Днем Рождения',
+            send_at__date=today
+        ).exists()
+
+        if existing_notification:
+            celery_logger.debug(
+                f'Пользователь {user} уже был поздравлен сегодня.'
+            )
+            continue
+
         try:
             Notification.objects.create(
                 user=user,
