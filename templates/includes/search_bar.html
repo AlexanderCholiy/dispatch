@@ -84,11 +84,8 @@
         autocomplete="off"
       >
 
-    <input type="hidden"
-          name="read"
-          id="search-hidden-read"
-          value="{% if selected.read is True %}true{% elif selected.read is False %}false{% else %}{% endif %}">
-    <input type="hidden" name="level" value="{{ selected.level }}" id="search-hidden-level">
+    <input type="hidden" name="read" id="search-hidden-read">
+    <input type="hidden" name="level" id="search-hidden-level">
     <input type="hidden" name="per_page" value="{{ selected.per_page }}" id="search-hidden-per-page">
 
     <button type="submit" class="tooltip" 

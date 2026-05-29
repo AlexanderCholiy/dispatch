@@ -10,17 +10,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (!trigger || !menu || !hiddenSelect) return;
 
-    // Получаем имя фильтра
     let filterName = trigger.getAttribute('data-filter-name') || 'Фильтр';
-    
-    // Считаем общее количество реальных опций (исключая "Все", если оно есть с пустым value)
-    // Находим все опции, у которых value НЕ пустой
     const realOptionsCount = Array.from(options).filter(opt => opt.dataset.value !== '').length;
 
     function updateLabel() {
       const selectedItems = Array.from(options).filter(item => item.classList.contains('is-selected'));
-      
-      // 1. Если ничего не выбрано ИЛИ выбрана только опция "Все" (value="" )
       const hasOnlyAllOption = selectedItems.length === 1 && selectedItems[0].dataset.value === '';
       const isEmpty = selectedItems.length === 0;
 
@@ -29,8 +23,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
 
-      // 2. Если выбраны ВСЕ доступные опции (кроме "Все")
-      // Проверяем, что количество выбранных (без учета "Все") равно общему количеству опций
       const selectedRealCount = selectedItems.filter(opt => opt.dataset.value !== '').length;
       
       if (selectedRealCount === realOptionsCount) {
@@ -38,7 +30,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
 
-      // 3. Если выбрано ровно ОДНА реальная опция
       if (selectedRealCount === 1) {
         const singleItem = selectedItems.find(opt => opt.dataset.value !== '');
         if (singleItem) {
@@ -48,8 +39,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       }
 
-      // 4. Если выбрано больше одной опции (но не все)
-      labelSpan.textContent = `${filterName}: выбрано ${selectedRealCount}`;
+      labelSpan.textContent = `${filterName}: ${selectedRealCount} шт.`;
     }
 
     // Открытие/закрытие меню
@@ -57,10 +47,13 @@ document.addEventListener('DOMContentLoaded', function() {
       e.stopPropagation();
       const isOpen = menu.classList.contains('open');
 
+      // Закрываем ВСЕ открытые меню на странице, кроме текущего
       document.querySelectorAll('.dropdown-menu.open').forEach(m => {
-        if (m !== menu) m.classList.remove('open');
-        const otherTrigger = m.closest('.multiple-select-wrapper').querySelector('.dropdown-trigger');
-        if (otherTrigger) otherTrigger.classList.remove('active');
+        if (m !== menu) {
+          m.classList.remove('open');
+          const otherTrigger = m.closest('.multiple-select-wrapper').querySelector('.dropdown-trigger');
+          if (otherTrigger) otherTrigger.classList.remove('active');
+        }
       });
 
       if (!isOpen) {
@@ -72,6 +65,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
 
+    // Закрытие при клике вне меню
     document.addEventListener('click', (e) => {
       if (!wrapper.contains(e.target)) {
         menu.classList.remove('open');
@@ -101,7 +95,6 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     });
 
-    // Инициализация при загрузке страницы
     updateLabel();
   });
 });

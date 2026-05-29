@@ -6,34 +6,63 @@
 
 <form method="get" class="table-filter-form" id="filter-form">
   <div class="left-part">
-    <div class="select-wrapper">
-      <select name="read"
-              id="read-select"
-              class="select tooltip"
-              data-title="Было ли прочитоно уведомление">
+    <!-- Фильтр: Прочитано (Множественный выбор) -->
+    <div class="multiple-select-wrapper" id="read-select">
+      <div class="dropdown-trigger" data-filter-name="Статус">
+        <span class="selected-label">Статус</span>
+        <span class="arrow-icon">▼</span>
+      </div>
 
-        <option value="" {% if selected.read is None %}selected{% endif %}>
-          Все доступные
+      <div class="dropdown-menu" id="read-dropdown-menu">
+        <div class="dropdown-options">
+          <label class="option-item {% if 'true' in selected.read %}is-selected{% endif %}" 
+                 data-value="true">
+            <i class="bx bx-check"></i>
+            <span>Прочитанные</span>
+          </label>
+
+          <label class="option-item {% if 'false' in selected.read %}is-selected{% endif %}" 
+                 data-value="false">
+            <i class="bx bx-check"></i>
+            <span>Не прочитанные</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Скрытый select для отправки формы -->
+      <select name="read" id="read-select-hidden" style="display: none;" multiple>
+        <option value="true" 
+                {% if 'true' in selected.read %}selected{% endif %}>
         </option>
-
-        <option value="true" {% if selected.read is True %}selected{% endif %}>
-          Прочитанные
+        <option value="false" 
+                {% if 'false' in selected.read %}selected{% endif %}>
         </option>
-
-        <option value="false" {% if selected.read is False %}selected{% endif %}>
-          Не прочитанные
-        </option>
-
       </select>
     </div>
 
-    <div class="select-wrapper">
-      <select name="level" id="level-select" class="select tooltip" data-title="Уровень важности">
-        <option value="" {% if not selected.level %}selected{% endif %}>Приоритет: Все</option>
-        {% for l in levels %}
-          <option value="{{ l.value }}" {% if selected.level == l.value %}selected{% endif %}>
-            {{ l.label }}
-          </option>
+    <!-- Фильтр: Приоритет (Множественный выбор) -->
+    <div class="multiple-select-wrapper" id="level-select">
+      <div class="dropdown-trigger" data-filter-name="Приоритет">
+        <span class="selected-label">Приоритет</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="level-dropdown-menu">
+        <div class="dropdown-options">
+          {% for v in levels %}
+            <label class="option-item {% if v in selected.level %}is-selected{% endif %}" 
+                   data-value="{{ v }}">
+              <i class="bx bx-check"></i>
+              <span>{{ v.label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Скрытый select для отправки формы -->
+      <select name="level" id="level-select-hidden" style="display: none;" multiple>
+        {% for v in levels %}
+          <option value="{{ v }}" {% if v in selected.level %}selected{% endif %}></option>
         {% endfor %}
       </select>
     </div>
@@ -75,8 +104,14 @@
 </form>
 
 {% block extra_js %}
-<script src="{% static 'js/notifications/search_filter.js' %}"></script>
-<script src="{% static 'js/save_elements_per_page.js' %}"></script>
-<script src="{% static 'js/reset_tables_filter.js' %}"></script>
+<script>
+    const filtersConfig = [
+        { id: 'read-select-hidden', cookieName: 'read', searchFieldName: 'read', type: 'multi_select' },
+        { id: 'level-select-hidden', cookieName: 'level', searchFieldName: 'level', type: 'multi_select' },
+        { id: 'per-page', cookieName: 'per_page_notifications', searchFieldName: 'per_page', type: 'single_select' },
+    ];
+</script>
+<script src="{% static 'js/universal_filters.js' %}"></script>
 <script src="{% static 'js/sort_table.js' %}"></script>
+<script src="{% static 'js/multiple_select.js' %}"></script>
 {% endblock %}

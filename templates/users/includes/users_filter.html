@@ -2,7 +2,6 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/includes/table_filter.css' %}">
-<link rel="stylesheet" href="{% static 'css/includes/multiple_select.css' %}">
 {% endblock %}
 
 <form method="get" class="table-filter-form" id="filter-form">
@@ -63,9 +62,13 @@
 </form>
 
 {% block extra_js %}
-<script src="{% static 'js/users/search_filter.js' %}"></script>
-<script src="{% static 'js/save_elements_per_page.js' %}"></script>
-<script src="{% static 'js/reset_tables_filter.js' %}"></script>
+<script>
+    const filtersConfig = [
+        { id: 'role-select-hidden', cookieName: 'role', searchFieldName: 'role', type: 'multi_select' },
+        { id: 'per-page', cookieName: 'per_page_users', searchFieldName: 'per_page', type: 'single_select' },
+    ];
+</script>
+<script src="{% static 'js/universal_filters.js' %}"></script>
 <script src="{% static 'js/sort_table.js' %}"></script>
 <script src="{% static 'js/multiple_select.js' %}"></script>
 {% endblock %}

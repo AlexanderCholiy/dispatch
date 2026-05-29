@@ -392,7 +392,7 @@ def profile(request: HttpRequest) -> HttpResponse:
 @login_required
 @role_required()
 def users_list(request: HttpRequest) -> HttpResponse:
-    query = request.GET.get('q', '').strip()
+    query: str = request.GET.get('q', '').strip()
 
     roles = [role for role in Roles if role != Roles.GUEST]
 
@@ -426,7 +426,7 @@ def users_list(request: HttpRequest) -> HttpResponse:
     else:
         base_qs = base_qs.order_by('-last_name', '-first_name', '-email', 'id')
 
-    if role_filter and role_filter != roles:
+    if role_filter and len(role_filter) != len(roles):
         base_qs = base_qs.filter(role__in=role_filter)
 
     if query:

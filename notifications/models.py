@@ -13,9 +13,9 @@ from .constants import (
 
 
 class NotificationLevel(models.TextChoices):
-    LOW = ('low', 'Приоритет: Низкий')
-    MEDIUM = ('medium', 'Приоритет: Средний')
-    HIGH = ('high', 'Приоритет: Высокий')
+    LOW = ('low', 'Низкий')
+    MEDIUM = ('medium', 'Средний')
+    HIGH = ('high', 'Высокий')
 
 
 class Notification(models.Model):

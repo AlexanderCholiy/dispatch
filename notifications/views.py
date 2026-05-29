@@ -24,25 +24,20 @@ def notification_list(request: HttpRequest) -> HttpResponse:
 
     levels = [n for n in NotificationLevel]
 
-    read = (
+    read_filter: list[str] = (
         request.GET.get('read', '').strip()
         or request.COOKIES.get('read', '').strip()
+    ).split(',')
+
+    read_filter = (
+        [v for v in read_filter if v in ['true', 'false']] or ['true', 'false']
     )
 
-    if read == 'true':
-        read = True
-    elif read == 'false':
-        read = False
-    else:
-        read = None
-
-    level = (
+    level_filter: list[str] = (
         request.GET.get('level', '').strip().lower()
         or request.COOKIES.get('level', '').strip().lower()
-    )
-    level = level if (
-        level and level in [r.value for r in levels]
-    ) else ''
+    ).split(',')
+    level_filter = [v for v in level_filter if v in levels] or levels[:]
 
     per_page = int(
         request.GET.get('per_page')
@@ -70,11 +65,12 @@ def notification_list(request: HttpRequest) -> HttpResponse:
     if query:
         base_qs = base_qs.filter(title__icontains=query)
 
-    if read is not None:
-        base_qs = base_qs.filter(read=read)
+    if len(read_filter) == 1:
+        is_read = read_filter[0] == 'true'
+        base_qs = base_qs.filter(read=is_read)
 
-    if level:
-        base_qs = base_qs.filter(level=level)
+    if level_filter and len(level_filter) != len(levels):
+        base_qs = base_qs.filter(level__in=level_filter)
 
     if sort == 'asc':
         base_qs = base_qs.order_by('send_at', 'created_at', 'id')
@@ -106,8 +102,8 @@ def notification_list(request: HttpRequest) -> HttpResponse:
         'selected': {
             'per_page': per_page,
             'sort': sort,
-            'read': read,
-            'level': level,
+            'read': read_filter,
+            'level': level_filter,
         },
         'page_size_choices': PAGE_SIZE_NOTIFICATIONS_CHOICES,
     }
