@@ -17,24 +17,54 @@
       </select>
     </div>
 
-    <div class="select-wrapper">
-      <select name="company" id="company-select" class="select tooltip" data-title="Сетевая компания">
-        <option value="" {% if not selected.company %}selected{% endif %}>Компания: Все</option>
-        {% for c in companies %}
-          <option value="{{ c.id }}" {% if selected.company.id == c.id %}selected{% endif %}>
-            {{ c.name }}
-          </option>
+    <div class="multiple-select-wrapper" id="company-select">
+      <div class="dropdown-trigger" data-filter-name="Компания">
+        <span class="selected-label">Компания</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="company-dropdown-menu">
+        <div class="dropdown-options">
+          {% for v in companies %}
+            <label class="option-item {% if v.id in selected.company %}is-selected{% endif %}" 
+                   data-value="{{ v.id }}">
+              <i class="bx bx-check"></i>
+              <span>{{ v }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Скрытый select для отправки формы -->
+      <select name="company" id="company-select-hidden" style="display: none;" multiple>
+        {% for v in companies %}
+          <option value="{{ v.id }}" {% if v.id in selected.company %}selected{% endif %}></option>
         {% endfor %}
       </select>
     </div>
 
-    <div class="select-wrapper">
-      <select name="declarant" id="declarant-select" class="select tooltip" data-title="Юр. лица">
-        <option value="" {% if not selected.declarant %}selected{% endif %}>Заявитель Все</option>
-        {% for dc in declarants %}
-          <option value="{{ dc.id }}" {% if selected.declarant.id == dc.id %}selected{% endif %}>
-            {{ dc.name }}
-          </option>
+    <div class="multiple-select-wrapper" id="declarant-select">
+      <div class="dropdown-trigger" data-filter-name="Заявитель">
+        <span class="selected-label">Заявитель</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="declarant-dropdown-menu">
+        <div class="dropdown-options">
+          {% for v in declarants %}
+            <label class="option-item {% if v.id in selected.declarant %}is-selected{% endif %}" 
+                   data-value="{{ v.id }}">
+              <i class="bx bx-check"></i>
+              <span>{{ v }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Скрытый select для отправки формы -->
+      <select name="declarant" id="declarant-select-hidden" style="display: none;" multiple>
+        {% for v in declarants %}
+          <option value="{{ v.id }}" {% if v.id in selected.declarant %}selected{% endif %}></option>
         {% endfor %}
       </select>
     </div>
@@ -112,9 +142,16 @@
 </form>
 
 {% block extra_js %}
-<script src="{% static 'js/energy/search_filter.js' %}"></script>
-<script src="{% static 'js/save_elements_per_page.js' %}"></script>
-<script src="{% static 'js/reset_tables_filter.js' %}"></script>
+<script>
+    const filtersConfig = [
+        { id: 'type-select', cookieName: 'type', searchFieldName: 'type', type: 'single_select' },
+        { id: 'company-select-hidden', cookieName: 'company', searchFieldName: 'company', type: 'multi_select' },
+        { id: 'declarant-select-hidden', cookieName: 'declarant', searchFieldName: 'declarant', type: 'multi_select' },
+        { id: 'per-page', cookieName: 'per_page_energy', searchFieldName: 'per_page', type: 'single_select' },
+    ];
+</script>
+<script src="{% static 'js/universal_filters.js' %}"></script>
 <script src="{% static 'js/sort_table.js' %}"></script>
 <script src="{% static 'js/select_table_column.js' %}"></script>
+<script src="{% static 'js/multiple_select.js' %}"></script>
 {% endblock %}

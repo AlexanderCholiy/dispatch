@@ -59,14 +59,50 @@ def energy_companies(request: HttpRequest) -> HttpResponse:
         params['per_page'] = REQUESTS_PER_PAGE
         return redirect(f'{request.path}?{params.urlencode()}')
 
-    company_id = (
-        request.GET.get('company')
-        or request.COOKIES.get('company')
+    companies = cache.get_or_set(
+        'energy_filter_companies',
+        lambda: list(
+            Company.objects.only('id', 'name').order_by('name', 'id')
+        ),
+        MAX_ENERGY_INFO_CACHE_SEC,
     )
 
-    declarant_id = (
-        request.GET.get('declarant')
-        or request.COOKIES.get('declarant')
+    company_ids = [c.id for c in companies]
+
+    declarants = cache.get_or_set(
+        'energy_filter_declarants',
+        lambda: list(
+            Declarant.objects.only('id', 'name').order_by('name', 'id')
+        ),
+        MAX_ENERGY_INFO_CACHE_SEC,
+    )
+
+    declarant_ids = [d.id for d in declarants]
+
+    company_id_filter: list[str] = (
+        request.GET.get('company', '')
+        or request.COOKIES.get('company', '')
+    ).split(',')
+
+    company_id_filter = (
+        [
+            int(v) for v in company_id_filter
+            if v.isnumeric() and int(v) in company_ids
+        ]
+        or company_ids[:]
+    )
+
+    declarant_id_filter = (
+        request.GET.get('declarant', '')
+        or request.COOKIES.get('declarant', '')
+    ).split(',')
+
+    declarant_id_filter = (
+        [
+            int(v) for v in declarant_id_filter
+            if v.isnumeric() and int(v) in declarant_ids
+        ]
+        or declarant_ids[:]
     )
 
     if is_claims:
@@ -87,11 +123,11 @@ def energy_companies(request: HttpRequest) -> HttpResponse:
         ),
     )
 
-    if company_id:
-        base_qs = base_qs.filter(company__id=company_id)
+    if company_id_filter and len(company_id_filter) != len(company_ids):
+        base_qs = base_qs.filter(company__id__in=company_id_filter)
 
-    if declarant_id:
-        base_qs = base_qs.filter(declarant__id=declarant_id)
+    if declarant_id_filter and len(declarant_id_filter) != len(declarant_ids):
+        base_qs = base_qs.filter(declarant__id__in=declarant_id_filter)
 
     if query:
         base_qs = base_qs.filter(number__icontains=query).distinct()
@@ -196,22 +232,6 @@ def energy_companies(request: HttpRequest) -> HttpResponse:
         company_requests_qs, key=lambda n: id_index[n.id]
     )
 
-    companies = cache.get_or_set(
-        'energy_filter_companies',
-        lambda: list(
-            Company.objects.only('id', 'name').order_by('name')
-        ),
-        MAX_ENERGY_INFO_CACHE_SEC,
-    )
-
-    declarants = cache.get_or_set(
-        'energy_filter_declarants',
-        lambda: list(
-            Declarant.objects.only('id', 'name').order_by('name')
-        ),
-        MAX_ENERGY_INFO_CACHE_SEC,
-    )
-
     query_params = request.GET.copy()
     query_params.pop('page', None)
     page_url_base = f'?{query_params.urlencode()}&' if query_params else '?'
@@ -227,6 +247,8 @@ def energy_companies(request: HttpRequest) -> HttpResponse:
             'per_page': per_page,
             'sort': sort,
             'type': request_type,
+            'company': company_id_filter,
+            'declarant': declarant_id_filter,
         },
         'page_size_choices': PAGE_SIZE_REQUESTS_CHOICES,
     }

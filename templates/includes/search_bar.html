@@ -55,10 +55,10 @@
         autocomplete="off"
       >
 
-    <input type="hidden" name="type" value="{{ selected.type }}" id="search-hidden-type">
-    <input type="hidden" name="company" value="{{ selected.company.id }}" id="search-hidden-company">
-    <input type="hidden" name="declarant" value="{{ selected.declarant.id }}" id="search-hidden-declarant">
-    <input type="hidden" name="per_page" value="{{ selected.per_page }}" id="search-hidden-per-page">
+    <input type="hidden" name="type" id="search-hidden-type">
+    <input type="hidden" name="company" id="search-hidden-company">
+    <input type="hidden" name="declarant" id="search-hidden-declarant">
+    <input type="hidden" name="per_page" id="search-hidden-per-page">
 
     <button type="submit" class="tooltip" 
             {% if view_name in 'energy:claim_detail' %}
