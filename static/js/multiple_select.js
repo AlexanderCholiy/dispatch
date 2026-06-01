@@ -11,8 +11,72 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!trigger || !menu || !hiddenSelect) return;
 
     let filterName = trigger.getAttribute('data-filter-name') || 'Фильтр';
+    
+    // Считаем только реальные опции (не пустые)
     const realOptionsCount = Array.from(options).filter(opt => opt.dataset.value !== '').length;
 
+    // --- ДОБАВЛЕНИЕ КНОПКИ "ВЫБРАТЬ ВСЕ / СНЯТЬ ВСЕ" ---
+    // Проверяем, не создана ли уже кнопка (для надежности)
+    if (!menu.querySelector('.select-all-toggle')) {
+        const selectAllBtn = document.createElement('div');
+        selectAllBtn.className = 'select-all-toggle';
+        
+        const optionsContainer = menu.querySelector('.dropdown-options');
+        if (optionsContainer) {
+            optionsContainer.insertBefore(selectAllBtn, optionsContainer.firstChild);
+        } else {
+            // Если контейнера нет, добавляем перед первым элементом или в конец
+            if (options.length > 0) {
+                menu.insertBefore(selectAllBtn, options[0]);
+            } else {
+                menu.appendChild(selectAllBtn);
+            }
+        }
+
+        // Функция обновления текста кнопки
+        function updateSelectAllBtn() {
+          const selectedRealCount = Array.from(options).filter(opt => opt.classList.contains('is-selected') && opt.dataset.value !== '').length;
+          
+          if (selectedRealCount === realOptionsCount) {
+            selectAllBtn.textContent = 'Снять все';
+            selectAllBtn.classList.add('btn-deselect');
+            selectAllBtn.classList.remove('btn-select');
+          } else {
+            selectAllBtn.textContent = 'Выбрать все';
+            selectAllBtn.classList.add('btn-select');
+            selectAllBtn.classList.remove('btn-deselect');
+          }
+        }
+
+        // Обработчик клика по кнопке
+        selectAllBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          
+          const selectedRealCount = Array.from(options).filter(opt => opt.classList.contains('is-selected') && opt.dataset.value !== '').length;
+          const shouldSelectAll = selectedRealCount < realOptionsCount;
+
+          options.forEach(opt => {
+            // Пропускаем опцию "Все" (пустое значение)
+            if (opt.dataset.value === '') return;
+
+            if (shouldSelectAll) {
+              opt.classList.add('is-selected');
+            } else {
+              opt.classList.remove('is-selected');
+            }
+
+            const optionInSelect = hiddenSelect.querySelector(`option[value="${opt.dataset.value}"]`);
+            if (optionInSelect) {
+              optionInSelect.selected = shouldSelectAll;
+            }
+          });
+
+          updateLabel();
+          updateSelectAllBtn();
+        });
+    }
+
+    // --- ЛОГИКА ОБНОВЛЕНИЯ ПОДПИСИ (LABEL) ---
     function updateLabel() {
       const selectedItems = Array.from(options).filter(item => item.classList.contains('is-selected'));
       const hasOnlyAllOption = selectedItems.length === 1 && selectedItems[0].dataset.value === '';
@@ -20,26 +84,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
       if (isEmpty || hasOnlyAllOption) {
         labelSpan.textContent = `${filterName}: Все`;
-        return;
-      }
-
-      const selectedRealCount = selectedItems.filter(opt => opt.dataset.value !== '').length;
-      
-      if (selectedRealCount === realOptionsCount) {
-        labelSpan.textContent = `${filterName}: Все`;
-        return;
-      }
-
-      if (selectedRealCount === 1) {
-        const singleItem = selectedItems.find(opt => opt.dataset.value !== '');
-        if (singleItem) {
-          const text = singleItem.querySelector('span').textContent;
-          labelSpan.textContent = `${filterName}: ${text}`;
-          return;
+      } else {
+        const selectedRealCount = selectedItems.filter(opt => opt.dataset.value !== '').length;
+        
+        if (selectedRealCount === realOptionsCount) {
+          labelSpan.textContent = `${filterName}: Все`;
+        } else if (selectedRealCount === 1) {
+          const singleItem = selectedItems.find(opt => opt.dataset.value !== '');
+          if (singleItem) {
+            const text = singleItem.querySelector('span').textContent;
+            labelSpan.textContent = `${filterName}: ${text}`;
+          }
+        } else {
+          labelSpan.textContent = `${filterName}: ${selectedRealCount} шт.`;
         }
       }
-
-      labelSpan.textContent = `${filterName}: ${selectedRealCount} шт.`;
+      // Обновляем состояние кнопки после изменения лейбла
+      updateSelectAllBtn();
     }
 
     // Открытие/закрытие меню
@@ -73,11 +134,14 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
 
+    // Обработка кликов по обычным опциям
     options.forEach(opt => {
       opt.addEventListener('click', (e) => {
         e.stopPropagation();
         
         const value = opt.dataset.value;
+        if (value === '') return; 
+
         const isCurrentlySelected = opt.classList.contains('is-selected');
 
         if (isCurrentlySelected) {
@@ -95,6 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     });
 
+    // Первичное обновление
     updateLabel();
   });
 });

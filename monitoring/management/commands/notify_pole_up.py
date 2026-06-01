@@ -385,5 +385,5 @@ class Command(BaseCommand):
                 | Q(modem_longtitude__in=bad_gps)
                 | Q(modem_latitude__in=bad_gps)
             )
-            .order_by('modem_ip')
+            .order_by('updated_at', 'modem_ip')
         )

@@ -139,6 +139,24 @@ def index(request: HttpRequest) -> HttpResponse:
     macroregions = get_macro_region_map()
     avr_contractors = get_avr_contractor_map()
     operator_groups = get_operator_group_map()
+    statuses = cache.get_or_set(
+        'incident_filter_statuses',
+        lambda: list(
+            IncidentStatus.objects.only('id', 'name').order_by('name', 'id')
+        ),
+        MAX_INCIDENTS_INFO_CACHE_SEC,
+    )
+
+    statuses_ids = []
+    finished_status_ids = []
+    not_finished_status_ids = []
+
+    for st in statuses:
+        statuses_ids.append(st.id)
+        if st.name in FINISHED_STATUS_NAMES:
+            finished_status_ids.append(st.id)
+        else:
+            not_finished_status_ids.append(st.id)
 
     code_pattern = r"^(NT|AVRSERVICE)-\d+$"
     search_only_by_code = (
@@ -155,10 +173,18 @@ def index(request: HttpRequest) -> HttpResponse:
         or (get_raw_cookie(request, 'base_station') or '').strip()
     ) if not search_only_by_code else None
 
-    status_name = (
+    status_filter = (
         request.GET.get('status', '').strip()
         or (get_raw_cookie(request, 'status') or '').strip()
-    ) if not search_only_by_code else None
+    ).split(',') if not search_only_by_code else []
+
+    status_filter: list[int] = (
+        [
+            int(v) for v in status_filter
+            if v.isnumeric() and int(v) in statuses_ids
+        ]
+        or statuses_ids[:]
+    )
 
     region_responsible_manager = (
         request.GET.get('region_responsible_manager', '').strip()
@@ -230,17 +256,15 @@ def index(request: HttpRequest) -> HttpResponse:
     else:
         responsible_user_id = None
 
-    is_incident_finish = (
+    is_incident_finish: list[str] = (
         request.GET.get('finish', '').strip()
         or (get_raw_cookie(request, 'finish') or '').strip()
-    ) if not search_only_by_code else None
+    ).split(',') if not search_only_by_code else []
 
-    if is_incident_finish == 'true':
-        is_incident_finish = True
-    elif is_incident_finish == 'false':
-        is_incident_finish = False
-    else:
-        is_incident_finish = None
+    is_incident_finish = (
+        [v for v in is_incident_finish if v in ['true', 'false']]
+        or ['true', 'false']
+    )
 
     was_read = (
         request.GET.get('was_read', '').strip()
@@ -322,8 +346,8 @@ def index(request: HttpRequest) -> HttpResponse:
         )
         .prefetch_related('categories', 'related_incidents')
         .annotate(
-            latest_status_name=Subquery(
-                latest_status_subquery.values('status__name')[:1]
+            latest_status_id=Subquery(
+                latest_status_subquery.values('status__id')[:1]
             ),
         )
     )
@@ -368,8 +392,9 @@ def index(request: HttpRequest) -> HttpResponse:
         elif sla_dgu_status == TimeStatus.CLOSED_ON_TIME.value:
             base_qs = base_qs.filter(sla_dgu_closed_on_time=True)
 
-    if is_incident_finish is not None:
-        base_qs = base_qs.filter(is_incident_finish=is_incident_finish)
+    if len(is_incident_finish) == 1:
+        is_incident_finish_filter = is_incident_finish[0] == 'true'
+        base_qs = base_qs.filter(is_incident_finish=is_incident_finish_filter)
 
     if was_read is not None:
         base_qs = base_qs.filter(was_read=was_read)
@@ -410,16 +435,20 @@ def index(request: HttpRequest) -> HttpResponse:
     if date_to:
         base_qs = base_qs.filter(incident_date__lte=date_to)
 
-    if status_name:
-        if status_name in FINISHED_STATUS_NAMES:
+    if status_filter and len(status_filter) != len(statuses_ids):
+        if set(status_filter).issubset(finished_status_ids):
             base_qs = base_qs.filter(
-                latest_status_name=status_name,
+                latest_status_id__in=status_filter,
                 is_incident_finish=True
+            )
+        elif set(status_filter).issubset(not_finished_status_ids):
+            base_qs = base_qs.filter(
+                latest_status_id__in=status_filter,
+                is_incident_finish=False
             )
         else:
             base_qs = base_qs.filter(
-                latest_status_name=status_name,
-                is_incident_finish=False
+                latest_status_id__in=status_filter,
             )
 
     if category_id:
@@ -505,16 +534,6 @@ def index(request: HttpRequest) -> HttpResponse:
 
         incident.updated_human = humanize_datetime(incident.update_date)
 
-    statuses = cache.get_or_set(
-        'incident_filter_statuses',
-        lambda: list(
-            IncidentStatus.objects.values_list('name', flat=True)
-            .distinct()
-            .order_by('name')
-        ),
-        MAX_INCIDENTS_INFO_CACHE_SEC,
-    )
-
     categories = cache.get_or_set(
         'incident_filter_categories',
         lambda: list(
@@ -551,7 +570,7 @@ def index(request: HttpRequest) -> HttpResponse:
         'selected': {
             'is_incident_finish': is_incident_finish,
             'was_read': was_read,
-            'status': status_name,
+            'status_filter': status_filter,
             'category': category_id,
             'responsible_user': responsible_user_id,
             'region_responsible_manager': region_responsible_manager,

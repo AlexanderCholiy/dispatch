@@ -9,37 +9,64 @@
   <div class="left-part">
     {% include "incidents/includes/filter_select.html" %}
 
-    <div class="select-wrapper">
-      <select name="finish"
-              id="finish-select"
-              class="select tooltip"
-              data-title="Статус завершения инцидента">
+    <div class="multiple-select-wrapper" id="finish-select">
+      <div class="dropdown-trigger" data-filter-name="Инцидент">
+        <span class="selected-label">Инцидент</span>
+        <span class="arrow-icon">▼</span>
+      </div>
 
-        <option value="" {% if selected.is_incident_finish is None %}selected{% endif %}>
-          Все доступные
+      <div class="dropdown-menu" id="finish-dropdown-menu">
+        <div class="dropdown-options">
+          <label class="option-item {% if 'true' in selected.is_incident_finish %}is-selected{% endif %}" 
+                 data-value="true">
+            <i class="bx bx-check"></i>
+            <span>Завершенные</span>
+          </label>
+
+          <label class="option-item {% if 'false' in selected.is_incident_finish %}is-selected{% endif %}" 
+                 data-value="false">
+            <i class="bx bx-check"></i>
+            <span>Не завершенные</span>
+          </label>
+        </div>
+      </div>
+
+      <select name="finish" id="finish-select-hidden" style="display: none;" multiple>
+        <option value="true" 
+                {% if 'true' in selected.is_incident_finish %}selected{% endif %}>
         </option>
-
-        <option value="true" {% if selected.is_incident_finish is True %}selected{% endif %}>
-          Завершенные
+        <option value="false" 
+                {% if 'false' in selected.is_incident_finish %}selected{% endif %}>
         </option>
-
-        <option value="false" {% if selected.is_incident_finish is False %}selected{% endif %}>
-          Не завершенные
-        </option>
-
       </select>
     </div>
 
-    <div class="select-wrapper">
-      <select name="status" id="status-select" class="select tooltip" data-title="Последний статус инцидента">
-        <option value="" {% if not selected.status %}selected{% endif %}>Статус: Все</option>
-        {% for s in statuses %}
-        <option value="{{ s }}" {% if selected.status == s %}selected{% endif %}>{{ s }}</option>
+    <div class="multiple-select-wrapper" id="status-select">
+      <div class="dropdown-trigger" data-filter-name="Статус">
+        <span class="selected-label">Статус</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="status-dropdown-menu">
+        <div class="dropdown-options">
+          {% for v in statuses %}
+            <label class="option-item {% if v.id in selected.status_filter %}is-selected{% endif %}" 
+                   data-value="{{ v.id }}">
+              <i class="bx bx-check"></i>
+              <span>{{ v }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <select name="status" id="status-select-hidden" style="display: none;" multiple>
+        {% for v in statuses %}
+          <option value="{{ v.id }}" {% if v.id in selected.status_filter %}selected{% endif %}></option>
         {% endfor %}
       </select>
     </div>
 
-    <div class="select-wrapper">
+    <!-- <div class="select-wrapper">
       <select name="responsible_user" id="responsible-user-select" class="select tooltip" data-title="Диспетчер">
         <option value="" {% if not selected.responsible_user %}selected{% endif %}>Ответственный: Все</option>
         <option value="none" {% if selected.responsible_user == "none" %}selected{% endif %}>Отсутствует</option>
@@ -49,9 +76,9 @@
           </option>
         {% endfor %}
       </select>
-    </div>
+    </div> -->
   
-    <div class="select-wrapper">
+    <!-- <div class="select-wrapper">
       <select name="was_read"
               id="was-read"
               class="select tooltip"
@@ -70,9 +97,9 @@
         </option>
 
       </select>
-    </div>
+    </div> -->
 
-    <div class="select-wrapper">
+    <!-- <div class="select-wrapper">
       <select name="category" id="category-select" class="select tooltip" data-title="Категория инцидента">
         <option value="" {% if not selected.category %}selected{% endif %}>Категория: Все</option>
         {% for cat in categories %}
@@ -81,9 +108,9 @@
           </option>
         {% endfor %}
       </select>
-    </div>
+    </div> -->
 
-    <div class="select-wrapper">
+    <!-- <div class="select-wrapper">
       <select name="incident_type" id="incident-type-select" class="select tooltip" data-title="Тип инцидента">
         <option value="" {% if not selected.incident_type %}selected{% endif %}>Тип: Все</option>
         {% for type_id, type_name in incident_types.items %}
@@ -92,9 +119,9 @@
           </option>
         {% endfor %}
       </select>
-    </div>
+    </div> -->
 
-    <div class="select-wrapper">
+    <!-- <div class="select-wrapper">
       <select name="sla_avr" id="sla-avr" class="select tooltip" data-title="Статус SLA АВР">
         <option value="" {% if not selected.sla_avr_status %}selected{% endif %}>
           SLA АВР: Все
@@ -106,9 +133,9 @@
           </option>
         {% endfor %}
       </select>
-    </div>
+    </div> -->
 
-    <div class="select-wrapper">
+    <!-- <div class="select-wrapper">
       <select name="sla_rvr" id="sla-rvr" class="select tooltip" data-title="Статус SLA РВР">
         <option value="" {% if not selected.sla_rvr_status %}selected{% endif %}>
           SLA РВР: Все
@@ -120,9 +147,9 @@
           </option>
         {% endfor %}
       </select>
-    </div>
+    </div> -->
 
-    <div class="select-wrapper">
+    <!-- <div class="select-wrapper">
       <select name="sla_dgu" id="sla-dgu" class="select tooltip" data-title="Статус ВРТ ДГУ">
         <option value="" {% if not selected.sla_dgu_status %}selected{% endif %}>
           ВРТ ДГУ: Все
@@ -134,18 +161,18 @@
           </option>
         {% endfor %}
       </select>
-    </div>
+    </div> -->
 
-    <div class="select-wrapper">
+    <!-- <div class="select-wrapper">
       <select name="operator_group" id="operator-group-select" class="select tooltip" data-title="Группа операторов">
         <option value="" {% if not selected.operator_group %}selected{% endif %}>Оператор: Все</option>
         {% for g in operator_groups %}
         <option value="{{ g }}" {% if selected.operator_group == g %}selected{% endif %}>{{ g }}</option>
         {% endfor %}
       </select>
-    </div>
+    </div> -->
 
-    <div class="select-wrapper">
+    <!-- <div class="select-wrapper">
       <select name="macroregion" id="macroregion-select" class="select tooltip" data-title="Макрорегион">
         <option value="" {% if not selected.macroregion %}selected{% endif %}>МР: Все</option>
         {% for macroregion_id, macroregion_name in macroregions.items %}
@@ -154,25 +181,25 @@
           </option>
         {% endfor %}
       </select>
-    </div>
+    </div> -->
     
-    <div class="select-wrapper">
+    <!-- <div class="select-wrapper">
       <select name="region_responsible_manager" id="region-responsible-manager-select" class="select tooltip" data-title="Ответственный инженер-энергетик по региону">
         <option value="" {% if not selected.region_responsible_manager %}selected{% endif %}>Энергетик: Все</option>
         {% for u in region_responsible_managers %}
         <option value="{{ u }}" {% if selected.region_responsible_manager == u %}selected{% endif %}>{{ u }}</option>
         {% endfor %}
       </select>
-    </div>
+    </div> -->
 
-    <div class="select-wrapper">
+    <!-- <div class="select-wrapper">
       <select name="avr_contractor" id="avr-contractor-select" class="select tooltip" data-title="Подрядчик по АВР">
         <option value="" {% if not selected.avr_contractors %}selected{% endif %}>Подрядчик: Все</option>
         {% for avr_contractor_id, avr_contractor_name in avr_contractors.items %}
         <option value="{{ avr_contractor_id }}" {% if selected.avr_contractor == avr_contractor_id %}selected{% endif %}>{{ avr_contractor_name }}</option>
         {% endfor %}
       </select>
-    </div>
+    </div> -->
 
     <div class="filter-item-wrapper">
       <input
@@ -337,10 +364,23 @@
 </form>
 
 {% block extra_js %}
-<script src="{% static 'js/incidents/search_filter.js' %}"></script>
-<script src="{% static 'js/save_elements_per_page.js' %}"></script>
-<script src="{% static 'js/reset_tables_filter.js' %}"></script>
+<script>
+    const filtersConfig = [
+        // Для multi_select id скртытого поля.
+        { id: 'finish-select-hidden', cookieName: 'finish', searchFieldName: 'finish', type: 'multi_select' },
+        { id: 'status-select-hidden', cookieName: 'status', searchFieldName: 'status', type: 'multi_select' },
+        { id: 'pole-input', cookieName: 'pole', searchFieldName: 'pole', type: 'text' },
+        { id: 'base-station-input', cookieName: 'base_station', searchFieldName: 'base_station', type: 'text' },
+        { id: 'incident-date-from', cookieName: 'incident_date_from', searchFieldName: 'incident_date_from', type: 'datetime-local' },
+        { id: 'incident-date-to', cookieName: 'incident_date_to', searchFieldName: 'incident_date_to', type: 'datetime-local' },
+    ];
+</script>
+<script src="{% static 'js/universal_filters.js' %}"></script>
+<!-- <script src="{% static 'js/incidents/search_filter.js' %}"></script> -->
+<!-- <script src="{% static 'js/save_elements_per_page.js' %}"></script> -->
+<!-- <script src="{% static 'js/reset_tables_filter.js' %}"></script> -->
 <script src="{% static 'js/sort_table.js' %}"></script>
 <script src="{% static 'js/select_table_column.js' %}"></script>
 <script src="{% static 'js/manage_filters_visibility.js' %}"></script>
+<script src="{% static 'js/multiple_select.js' %}"></script>
 {% endblock %}

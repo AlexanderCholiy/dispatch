@@ -114,3 +114,27 @@
 select[multiple] {
   display: none !important;
 }
+
+/* Стиль для кнопки "Выбрать все / Снять все" */
+.select-all-toggle {
+  padding: var(--space-sm);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: var(--font-xs);
+  text-align: left;
+  border-bottom: 1px solid var(--extra-color);
+  margin-bottom: 5px;
+  transition: color var(--transition-value);
+  user-select: none;
+  color: var(--gray-color);
+}
+
+/* Цвет для кнопки "Выбрать все" */
+/* .select-all-toggle.btn-select:hover {
+  color: var(--blue-color);
+} */
+
+/* Цвет для кнопки "Снять все" */
+/* .select-all-toggle.btn-deselect:hover {
+  color: var(--red-color);
+} */

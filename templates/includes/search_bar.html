@@ -13,7 +13,7 @@
       >
 
     <input type="hidden" name="role" id="search-hidden-role">
-    <input type="hidden" name="per_page" value="{{ selected.per_page }}" id="search-hidden-per-page">
+    <input type="hidden" name="per_page" id="search-hidden-per-page">
 
     <button type="submit" class="tooltip" data-title="Поиск по имени, фамилии или email" tabindex="-1"><i class="bx bx-search"></i></button>
   {% elif view_name in 'emails:emails_list' %}
@@ -86,7 +86,7 @@
 
     <input type="hidden" name="read" id="search-hidden-read">
     <input type="hidden" name="level" id="search-hidden-level">
-    <input type="hidden" name="per_page" value="{{ selected.per_page }}" id="search-hidden-per-page">
+    <input type="hidden" name="per_page" id="search-hidden-per-page">
 
     <button type="submit" class="tooltip" 
             data-title="Поиск по теме уведомления" 
@@ -109,27 +109,27 @@
     <input type="hidden"
           name="finish"
           id="search-hidden-finish"
-          value="{% if selected.is_incident_finish is True %}true{% elif selected.is_incident_finish is False %}false{% else %}{% endif %}">
+        >
     <input type="hidden"
           name="was_read"
           id="search-hidden-was-read"
-          value="{% if selected.was_read is True %}true{% elif selected.was_read is False %}false{% else %}{% endif %}">
-    <input type="hidden" name="status" value="{{ selected.status }}" id="search-hidden-status">
-    <input type="hidden" name="category" value="{{ selected.category }}" id="search-hidden-category">
-    <input type="hidden" name="responsible_user" value="{{ selected.responsible_user }}" id="search-hidden-responsible-user">
-    <input type="hidden" name="sla_avr" value="{{ selected.sla_avr_status }}" id="search-hidden-sla-avr">
-    <input type="hidden" name="sla_rvr" value="{{ selected.sla_rvr_status }}" id="search-hidden-sla-rvr">
-    <input type="hidden" name="sla_dgu" value="{{ selected.sla_dgu_status }}" id="search-hidden-sla-dgu">
-    <input type="hidden" name="incident_type" value="{{ selected.incident_type }}" id="search-hidden-incident-type">
-    <input type="hidden" name="operator_group" value="{{ selected.operator_group }}" id="search-hidden-operator-group">
-    <input type="hidden" name="macroregion" value="{{ selected.macroregion }}" id="search-hidden-macroregion">
-    <input type="hidden" name="region_responsible_manager" value="{{ selected.region_responsible_manager }}" id="search-hidden-region-responsible-manager">
-    <input type="hidden" name="avr_contractor" value="{{ selected.avr_contractor }}" id="search-hidden-avr-contractor">
-    <input type="hidden" name="pole" value="{{ selected.pole }}" id="search-hidden-pole">
-    <input type="hidden" name="base_station" value="{{ selected.base_station }}" id="search-hidden-base-station">
-    <input type="hidden" name="incident_date_from" value="{{ selected.date_from }}" id="search-hidden-incident-date-from">
-    <input type="hidden" name="incident_date_to" value="{{ selected.date_to }}" id="search-hidden-incident-date-to">
-    <input type="hidden" name="per_page" value="{{ selected.per_page }}" id="search-hidden-per-page">
+        >
+    <input type="hidden" name="status" id="search-hidden-status">
+    <input type="hidden" name="category" id="search-hidden-category">
+    <input type="hidden" name="responsible_user" id="search-hidden-responsible-user">
+    <input type="hidden" name="sla_avr" id="search-hidden-sla-avr">
+    <input type="hidden" name="sla_rvr" id="search-hidden-sla-rvr">
+    <input type="hidden" name="sla_dgu" id="search-hidden-sla-dgu">
+    <input type="hidden" name="incident_type" id="search-hidden-incident-type">
+    <input type="hidden" name="operator_group" id="search-hidden-operator-group">
+    <input type="hidden" name="macroregion" id="search-hidden-macroregion">
+    <input type="hidden" name="region_responsible_manager" id="search-hidden-region-responsible-manager">
+    <input type="hidden" name="avr_contractor" id="search-hidden-avr-contractor">
+    <input type="hidden" name="pole" id="search-hidden-pole">
+    <input type="hidden" name="base_station" id="search-hidden-base-station">
+    <input type="hidden" name="incident_date_from" id="search-hidden-incident-date-from">
+    <input type="hidden" name="incident_date_to" id="search-hidden-incident-date-to">
+    <input type="hidden" name="per_page" id="search-hidden-per-page">
 
     <button type="submit" class="tooltip" data-title="Поиск по коду или названию инцидента" tabindex="-1"><i class="bx bx-search"></i></button>
   {% endif %}
