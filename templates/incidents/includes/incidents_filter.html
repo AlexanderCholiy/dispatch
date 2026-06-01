@@ -66,38 +66,70 @@
       </select>
     </div>
 
-    <!-- <div class="select-wrapper">
-      <select name="responsible_user" id="responsible-user-select" class="select tooltip" data-title="Диспетчер">
-        <option value="" {% if not selected.responsible_user %}selected{% endif %}>Ответственный: Все</option>
-        <option value="none" {% if selected.responsible_user == "none" %}selected{% endif %}>Отсутствует</option>
-        {% for user in responsible_users %}
-          <option value="{{ user.id }}" {% if selected.responsible_user == user.id|stringformat:"s" %}selected{% endif %}>
-            {{ user.full_name }}
-          </option>
+    <div class="multiple-select-wrapper" id="responsible-user-select">
+      <div class="dropdown-trigger" data-filter-name="Ответственный">
+        <span class="selected-label">Ответственный</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="responsible-user-dropdown-menu">
+        <div class="dropdown-options">
+          <label class="option-item {% if 0 in selected.responsible_user %}is-selected{% endif %}" 
+                 data-value="0">
+            <i class="bx bx-check"></i>
+            <span>Отсутствует</span>
+          </label>
+          {% for v in responsible_users %}
+            <label class="option-item {% if v.id in selected.responsible_user %}is-selected{% endif %}" 
+                   data-value="{{ v.id }}">
+              <i class="bx bx-check"></i>
+              <span>{{ v.full_name }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <select name="responsible_user" id="responsible-user-select-hidden" style="display: none;" multiple>
+        <option value="0" {% if 0 in selected.responsible_user %}selected{% endif %}>
+          Отсутствует
+        </option>
+        {% for v in responsible_users %}
+          <option value="{{ v.id }}" {% if v.id in selected.responsible_user %}selected{% endif %}></option>
         {% endfor %}
       </select>
-    </div> -->
-  
-    <!-- <div class="select-wrapper">
-      <select name="was_read"
-              id="was-read"
-              class="select tooltip"
-              data-title="Статус обработки входящих писем">
+    </div>
 
-        <option value="" {% if selected.was_read is None %}selected{% endif %}>
-          Обработка: Все
+    <div class="multiple-select-wrapper" id="was-read-select">
+      <div class="dropdown-trigger" data-filter-name="Обработка">
+        <span class="selected-label">Обработка</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="was-read-dropdown-menu">
+        <div class="dropdown-options">
+          <label class="option-item {% if 'true' in selected.was_read %}is-selected{% endif %}" 
+                 data-value="true">
+            <i class="bx bx-check"></i>
+            <span>Прочитаные</span>
+          </label>
+
+          <label class="option-item {% if 'false' in selected.was_read %}is-selected{% endif %}" 
+                 data-value="false">
+            <i class="bx bx-check"></i>
+            <span>Не прочитаные</span>
+          </label>
+        </div>
+      </div>
+
+      <select name="was_read" id="was-read-select-hidden" style="display: none;" multiple>
+        <option value="true" 
+                {% if 'true' in selected.was_read %}selected{% endif %}>
         </option>
-
-        <option value="true" {% if selected.was_read is True %}selected{% endif %}>
-          Прочитаные
+        <option value="false" 
+                {% if 'false' in selected.was_read %}selected{% endif %}>
         </option>
-
-        <option value="false" {% if selected.was_read is False %}selected{% endif %}>
-          Не прочитаные
-        </option>
-
       </select>
-    </div> -->
+    </div>
 
     <!-- <div class="select-wrapper">
       <select name="category" id="category-select" class="select tooltip" data-title="Категория инцидента">
@@ -369,10 +401,15 @@
         // Для multi_select id скртытого поля.
         { id: 'finish-select-hidden', cookieName: 'finish', searchFieldName: 'finish', type: 'multi_select' },
         { id: 'status-select-hidden', cookieName: 'status', searchFieldName: 'status', type: 'multi_select' },
+        { id: 'responsible-user-select-hidden', cookieName: 'responsible_user', searchFieldName: 'responsible_user', type: 'multi_select' },
+        { id: 'was-read-select-hidden', cookieName: 'was_read', searchFieldName: 'was_read', type: 'multi_select' },
+
         { id: 'pole-input', cookieName: 'pole', searchFieldName: 'pole', type: 'text' },
         { id: 'base-station-input', cookieName: 'base_station', searchFieldName: 'base_station', type: 'text' },
         { id: 'incident-date-from', cookieName: 'incident_date_from', searchFieldName: 'incident_date_from', type: 'datetime-local' },
         { id: 'incident-date-to', cookieName: 'incident_date_to', searchFieldName: 'incident_date_to', type: 'datetime-local' },
+
+        { id: 'per-page', cookieName: 'per_page_root', searchFieldName: 'per_page', type: 'single_select', skipOnReset: true },
     ];
 </script>
 <script src="{% static 'js/universal_filters.js' %}"></script>

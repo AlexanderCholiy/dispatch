@@ -134,6 +134,10 @@ def index(request: HttpRequest) -> HttpResponse:
     query = request.GET.get('q', '').strip()
 
     responsible_users = get_responsible_users()
+
+    responsible_users_ids = [v['id'] for v in responsible_users]
+    responsible_users_ids.append(0)  # отсутсвует
+
     region_responsible_managers = get_region_responsible_managers()
     incident_types = get_incident_type_map()
     macroregions = get_macro_region_map()
@@ -245,16 +249,14 @@ def index(request: HttpRequest) -> HttpResponse:
         category_id = None
 
     responsible_user_id = (
-        request.GET.get('responsible_user')
+        request.GET.get('responsible_user', '')
         or (get_raw_cookie(request, 'responsible_user') or '').strip()
-    ) if not search_only_by_code else None
+    ).split(',') if not search_only_by_code else []
 
-    if responsible_user_id and responsible_user_id.isdigit():
-        responsible_user_id = int(responsible_user_id)
-    elif responsible_user_id == 'none':
-        responsible_user_id = responsible_user_id
-    else:
-        responsible_user_id = None
+    responsible_user_id = [
+        int(u) for u in responsible_user_id
+        if u.isnumeric() and int(u) in responsible_users_ids
+    ] or responsible_users_ids
 
     is_incident_finish: list[str] = (
         request.GET.get('finish', '').strip()
@@ -269,14 +271,12 @@ def index(request: HttpRequest) -> HttpResponse:
     was_read = (
         request.GET.get('was_read', '').strip()
         or (get_raw_cookie(request, 'was_read') or '').strip()
-    ) if not search_only_by_code else None
+    ).split(',') if not search_only_by_code else []
 
-    if was_read == 'true':
-        was_read = True
-    elif was_read == 'false':
-        was_read = False
-    else:
-        was_read = None
+    was_read = (
+        [v for v in was_read if v in ['true', 'false']]
+        or ['true', 'false']
+    )
 
     sla_avr_status = (
         request.GET.get('sla_avr', '').strip()
@@ -396,8 +396,9 @@ def index(request: HttpRequest) -> HttpResponse:
         is_incident_finish_filter = is_incident_finish[0] == 'true'
         base_qs = base_qs.filter(is_incident_finish=is_incident_finish_filter)
 
-    if was_read is not None:
-        base_qs = base_qs.filter(was_read=was_read)
+    if len(was_read) == 1:
+        is_was_read = was_read[0] == 'true'
+        base_qs = base_qs.filter(was_read=is_was_read)
 
     if query:
         if search_only_by_code:
@@ -454,10 +455,21 @@ def index(request: HttpRequest) -> HttpResponse:
     if category_id:
         base_qs = base_qs.filter(categories__id=category_id)
 
-    if responsible_user_id == 'none':
-        base_qs = base_qs.filter(responsible_user__isnull=True)
-    elif responsible_user_id:
-        base_qs = base_qs.filter(responsible_user__id=responsible_user_id)
+    if (
+        responsible_user_id
+        and len(responsible_user_id) != len(responsible_users_ids)
+    ):
+        not_responsioble_user = 0 in responsible_user_id
+
+        if not_responsioble_user:
+            base_qs = base_qs.filter(
+                Q(responsible_user__isnull=True)
+                | Q(responsible_user__id__in=responsible_user_id)
+            )
+        else:
+            base_qs = base_qs.filter(
+                responsible_user__id__in=responsible_user_id
+            )
 
     if region_responsible_manager:
         regions_id = region_responsible_managers[region_responsible_manager]
