@@ -143,6 +143,8 @@ def index(request: HttpRequest) -> HttpResponse:
     macroregions = get_macro_region_map()
     avr_contractors = get_avr_contractor_map()
     operator_groups = get_operator_group_map()
+    operator_groups[UNDEFINED_CASE] = []
+
     statuses = cache.get_or_set(
         'incident_filter_statuses',
         lambda: list(
@@ -217,10 +219,11 @@ def index(request: HttpRequest) -> HttpResponse:
     operator_group = (
         request.GET.get('operator_group', '').strip()
         or (get_raw_cookie(request, 'operator_group') or '').strip()
-    ) if not search_only_by_code else None
+    ).split(',') if not search_only_by_code else []
 
-    if operator_group not in operator_groups:
-        operator_group = None
+    operator_group: list[str] = [
+        v for v in operator_group if v in operator_groups
+    ] or list(operator_groups.keys())
 
     incident_type_filter = (
         request.GET.get('incident_type', '').strip()
@@ -543,10 +546,18 @@ def index(request: HttpRequest) -> HttpResponse:
         regions_id = region_responsible_managers[region_responsible_manager]
         base_qs = base_qs.filter(pole__region_id__in=regions_id)
 
-    if operator_group:
-        base_qs = base_qs.filter(
-            base_station__operator__operator_group=operator_group
-        )
+    if operator_group and len(operator_group) != len(operator_groups):
+        if UNDEFINED_CASE in operator_group:
+            base_qs = base_qs.filter(
+                Q(base_station__isnull=True)
+                | Q(base_station__operator__isnull=True)
+                | Q(base_station__operator__operator_group__isnull=True)
+                | Q(base_station__operator__operator_group__in=operator_group)
+            )
+        else:
+            base_qs = base_qs.filter(
+                base_station__operator__operator_group__in=operator_group
+            )
 
     if macroregion:
         base_qs = base_qs.filter(pole__region__macroregion_id=macroregion)

@@ -264,14 +264,42 @@
       </select>
     </div>
 
-    <!-- <div class="select-wrapper">
-      <select name="operator_group" id="operator-group-select" class="select tooltip" data-title="Группа операторов">
-        <option value="" {% if not selected.operator_group %}selected{% endif %}>Оператор: Все</option>
-        {% for g in operator_groups %}
-        <option value="{{ g }}" {% if selected.operator_group == g %}selected{% endif %}>{{ g }}</option>
+    <div class="multiple-select-wrapper" id="operator-group-select">
+      <div class="dropdown-trigger" data-filter-name="Оператор">
+        <span class="selected-label">Оператор</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="operator-group-dropdown-menu">
+        <div class="dropdown-options">
+          <label class="option-item {% if 'undefined' in selected.operator_group %}is-selected{% endif %}" 
+                 data-value="undefined">
+            <i class="bx bx-check"></i>
+            <span>Отсутствует</span>
+          </label>
+          {% for v in operator_groups %}
+            {% if v != 'undefined' %}
+            <label class="option-item {% if v in selected.operator_group %}is-selected{% endif %}" 
+                   data-value="{{ v }}">
+              <i class="bx bx-check"></i>
+              <span>{{ v }}</span>
+            </label>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+
+      <select name="operator_group" id="operator-group-select-hidden" style="display: none;" multiple>
+        <option value="undefined" {% if 'undefined' in selected.operator_group %}selected{% endif %}>
+          Отсутствует
+        </option>
+        {% for v in operator_groups %}
+          {% if v != 'undefined' %}
+            <option value="{{ v }}" {% if v in selected.operator_group %}selected{% endif %}></option>
+          {% endif %}
         {% endfor %}
       </select>
-    </div> -->
+    </div>
 
     <!-- <div class="select-wrapper">
       <select name="macroregion" id="macroregion-select" class="select tooltip" data-title="Макрорегион">
@@ -477,6 +505,7 @@
         { id: 'sla-avr-select-hidden', cookieName: 'sla_avr', searchFieldName: 'sla_avr', type: 'multi_select' },
         { id: 'sla-rvr-select-hidden', cookieName: 'sla_rvr', searchFieldName: 'sla_rvr', type: 'multi_select' },
         { id: 'sla-dgu-select-hidden', cookieName: 'sla_dgu', searchFieldName: 'sla_dgu', type: 'multi_select' },
+        { id: 'operator-group-select-hidden', cookieName: 'operator_group', searchFieldName: 'operator_group', type: 'multi_select' },
 
         { id: 'pole-input', cookieName: 'pole', searchFieldName: 'pole', type: 'text' },
         { id: 'base-station-input', cookieName: 'base_station', searchFieldName: 'base_station', type: 'text' },
