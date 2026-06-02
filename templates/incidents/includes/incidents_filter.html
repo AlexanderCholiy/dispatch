@@ -351,14 +351,30 @@
       </select>
     </div>
 
-    <!-- <div class="select-wrapper">
-      <select name="avr_contractor" id="avr-contractor-select" class="select tooltip" data-title="Подрядчик по АВР">
-        <option value="" {% if not selected.avr_contractors %}selected{% endif %}>Подрядчик: Все</option>
-        {% for avr_contractor_id, avr_contractor_name in avr_contractors.items %}
-        <option value="{{ avr_contractor_id }}" {% if selected.avr_contractor == avr_contractor_id %}selected{% endif %}>{{ avr_contractor_name }}</option>
+    <div class="multiple-select-wrapper" id="avr-contractor-select">
+      <div class="dropdown-trigger" data-filter-name="Подрядчик">
+        <span class="selected-label">Подрядчик</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="avr-contractor-dropdown-menu">
+        <div class="dropdown-options">
+          {% for k, v in avr_contractors.items %}
+            <label class="option-item {% if k in selected.avr_contractor %}is-selected{% endif %}" 
+                   data-value="{{ k }}">
+              <i class="bx bx-check"></i>
+              <span>{{ v }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <select name="avr_contractor" id="avr-contractor-select-hidden" style="display: none;" multiple>
+        {% for k in avr_contractors %}
+          <option value="{{ k }}" {% if k in selected.avr_contractor %}selected{% endif %}></option>
         {% endfor %}
       </select>
-    </div> -->
+    </div>
 
     <div class="filter-item-wrapper">
       <input
@@ -538,6 +554,7 @@
         { id: 'operator-group-select-hidden', cookieName: 'operator_group', searchFieldName: 'operator_group', type: 'multi_select' },
         { id: 'macroregion-select-hidden', cookieName: 'macroregion', searchFieldName: 'macroregion', type: 'multi_select' },
         { id: 'region-responsible-manager-select-hidden', cookieName: 'region_responsible_manager', searchFieldName: 'region_responsible_manager', type: 'multi_select' },
+        { id: 'avr-contractor-select-hidden', cookieName: 'avr_contractor', searchFieldName: 'avr_contractor', type: 'multi_select' },
 
         { id: 'pole-input', cookieName: 'pole', searchFieldName: 'pole', type: 'text' },
         { id: 'base-station-input', cookieName: 'base_station', searchFieldName: 'base_station', type: 'text' },

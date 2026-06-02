@@ -153,6 +153,8 @@ def index(request: HttpRequest) -> HttpResponse:
     macroregion_ids = list(macroregions.keys())
 
     avr_contractors = get_avr_contractor_map()
+    avr_contractors = {0: 'Отсутствует', **avr_contractors}
+    avr_contractors_ids = list(avr_contractors.keys())
 
     operator_groups = get_operator_group_map()
     operator_groups[UNDEFINED_CASE] = []  # отсутсвует
@@ -268,12 +270,15 @@ def index(request: HttpRequest) -> HttpResponse:
     avr_contractor = (
         request.GET.get('avr_contractor', '').strip()
         or (get_raw_cookie(request, 'avr_contractor') or '').strip()
-    ) if not search_only_by_code else None
-    if avr_contractor and avr_contractor.isdigit():
-        avr_contractor = int(avr_contractor)
+    ).split(',') if not search_only_by_code else []
 
-    if avr_contractor not in avr_contractors:
-        avr_contractor = None
+    avr_contractor: list[int] = (
+        [
+            int(v) for v in avr_contractor
+            if v.isnumeric() and int(v) in avr_contractors_ids
+        ]
+        or avr_contractors_ids[:]
+    )
 
     category_id_filter = (
         request.GET.get('category', '')
@@ -622,8 +627,18 @@ def index(request: HttpRequest) -> HttpResponse:
                 incident_type_id__in=incident_type_filter
             )
 
-    if avr_contractor:
-        base_qs = base_qs.filter(pole__avr_contractor_id=avr_contractor)
+    if avr_contractor and len(avr_contractor) != len(avr_contractors_ids):
+        if 0 in avr_contractor:
+            base_qs = base_qs.filter(
+                Q(pole__isnull=True)
+                | Q(pole__avr_contractor_id__isnull=True)
+                | Q(pole__avr_contractor__contractor_name=UNDEFINED_CASE)
+                | Q(pole__avr_contractor__in=avr_contractor)
+            )
+        else:
+            base_qs = base_qs.filter(
+                pole__avr_contractor_id__in=avr_contractor
+            )
 
     if sort == 'asc':
         base_qs = base_qs.order_by('incident_date', 'update_date', 'id')
