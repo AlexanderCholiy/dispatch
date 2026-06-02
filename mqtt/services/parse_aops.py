@@ -81,6 +81,7 @@ class ParseAops:
         kv_pattern = re.compile(r'(\w+):(-?\d+)')
 
         lines = self.aops_raw.splitlines()
+
         current_operator: Optional[Operator] = None
 
         for line in lines:
@@ -110,6 +111,7 @@ class ParseAops:
                     rat_str = m_data['rat']
                     freq = m_data['freq']
                     cell_bar_int = int(m_data['cell_bar'])
+
                     rat = NetType(rat_str)
 
                     all_kvs = dict(kv_pattern.findall(line))
@@ -206,7 +208,10 @@ class ParseAops:
                     )
                     measure_kwargs['rsrq'] = rsrq
 
-                    measure_kwargs['cba'] = CellBar(cell_bar_int)
+                    measure_kwargs['cba'] = (
+                        CellBar(cell_bar_int)
+                        if cell_bar_int in CellBar else None
+                    )
 
                     cell_obj = Cell(
                         event_datetime=self.event_datetime,
