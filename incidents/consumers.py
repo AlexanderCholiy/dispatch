@@ -7,10 +7,12 @@ from django.core.exceptions import ValidationError
 
 from api.serializers.comment import CommentSerializer
 from core.loggers import django_logger
+from notifications.constants import MAX_NOTIFICATION_TEXT_LEN
+from notifications.models import Notification, NotificationLevel
 from users.models import Roles, User
 
 from .constants import MAX_COMMENT_TEXT_LEN, MAX_INCIDENT_COMMENTS_PER_PAGE
-from .models import Comment
+from .models import Comment, Incident
 
 
 class CommentConsumer(AsyncWebsocketConsumer):
@@ -162,6 +164,28 @@ class CommentConsumer(AsyncWebsocketConsumer):
         comment = Comment.objects.create(
             author=user, incident_id=self.incident_id, content=content
         )
+
+        incident = (
+            Incident.objects.only('id', 'was_read', 'responsible_user_id')
+            .get(id=self.incident_id)
+        )
+
+        if incident.was_read and incident.responsible_user_id != user.id:
+            incident.was_read = False
+            incident.save(update_fields=['was_read'])
+
+        if (
+            incident.responsible_user_id
+            and incident.responsible_user_id != user.id
+        ):
+            Notification.objects.create(
+                user=incident.responsible_user,
+                title=f'Новый комментарий от {user}',
+                message=content[:MAX_NOTIFICATION_TEXT_LEN],
+                level=NotificationLevel.MEDIUM,
+                data={'incident_id': incident.id},
+            )
+
         return comment
 
     @database_sync_to_async
