@@ -139,6 +139,13 @@ def index(request: HttpRequest) -> HttpResponse:
     responsible_users_ids.append(0)  # отсутсвует
 
     region_responsible_managers = get_region_responsible_managers()
+    region_responsible_managers = {
+        'Отсутствует': [], **region_responsible_managers  # отсутсвует в начале
+    }
+    region_responsible_managers_keys = list(
+        region_responsible_managers.keys()
+    )
+
     incident_types = get_incident_type_map()
 
     macroregions = get_macro_region_map()
@@ -216,10 +223,12 @@ def index(request: HttpRequest) -> HttpResponse:
         or (
             get_raw_cookie(request, 'region_responsible_manager') or ''
         ).strip()
-    ) if not search_only_by_code else None
+    ).split(',') if not search_only_by_code else []
 
-    if region_responsible_manager not in region_responsible_managers:
-        region_responsible_manager = None
+    region_responsible_manager = [
+        v for v in region_responsible_manager
+        if v in region_responsible_managers_keys
+    ] or region_responsible_managers_keys
 
     operator_group = (
         request.GET.get('operator_group', '').strip()
@@ -550,9 +559,27 @@ def index(request: HttpRequest) -> HttpResponse:
                 responsible_user__id__in=responsible_user_id
             )
 
-    if region_responsible_manager:
-        regions_id = region_responsible_managers[region_responsible_manager]
-        base_qs = base_qs.filter(pole__region_id__in=regions_id)
+    if (
+        region_responsible_manager
+        and len(region_responsible_manager) != len(
+            region_responsible_managers_keys
+        )
+    ):
+        if 'Отсутствует' in region_responsible_manager:
+            regions_ids = []
+            for mg in region_responsible_manager:
+                if region_responsible_managers[mg]:
+                    regions_ids.extend(region_responsible_managers[mg])
+            base_qs = base_qs.filter(
+                Q(pole__region_id__isnull=True)
+                | Q(pole__region_id__in=regions_ids)
+            )
+        else:
+            regions_ids = []
+            for mg in region_responsible_manager:
+                if region_responsible_managers[mg]:
+                    regions_ids.extend(region_responsible_managers[mg])
+            base_qs = base_qs.filter(pole__region_id__in=regions_ids)
 
     if operator_group and len(operator_group) != len(operator_groups):
         if UNDEFINED_CASE in operator_group:

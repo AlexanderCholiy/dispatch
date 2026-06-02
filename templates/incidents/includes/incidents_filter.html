@@ -325,15 +325,31 @@
         {% endfor %}
       </select>
     </div>
-    
-    <!-- <div class="select-wrapper">
-      <select name="region_responsible_manager" id="region-responsible-manager-select" class="select tooltip" data-title="Ответственный инженер-энергетик по региону">
-        <option value="" {% if not selected.region_responsible_manager %}selected{% endif %}>Энергетик: Все</option>
-        {% for u in region_responsible_managers %}
-        <option value="{{ u }}" {% if selected.region_responsible_manager == u %}selected{% endif %}>{{ u }}</option>
+
+    <div class="multiple-select-wrapper" id="region-responsible-manager-select">
+      <div class="dropdown-trigger" data-filter-name="Энергетик">
+        <span class="selected-label">Энергетик</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="region-responsible-manager-dropdown-menu">
+        <div class="dropdown-options">
+          {% for k in region_responsible_managers %}
+            <label class="option-item {% if k in selected.region_responsible_manager %}is-selected{% endif %}" 
+                   data-value="{{ k }}">
+              <i class="bx bx-check"></i>
+              <span>{{ k }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <select name="region_responsible_manager" id="region-responsible-manager-select-hidden" style="display: none;" multiple>
+        {% for k in region_responsible_managers %}
+          <option value="{{ k }}" {% if k in selected.region_responsible_manager %}selected{% endif %}></option>
         {% endfor %}
       </select>
-    </div> -->
+    </div>
 
     <!-- <div class="select-wrapper">
       <select name="avr_contractor" id="avr-contractor-select" class="select tooltip" data-title="Подрядчик по АВР">
@@ -521,6 +537,7 @@
         { id: 'sla-dgu-select-hidden', cookieName: 'sla_dgu', searchFieldName: 'sla_dgu', type: 'multi_select' },
         { id: 'operator-group-select-hidden', cookieName: 'operator_group', searchFieldName: 'operator_group', type: 'multi_select' },
         { id: 'macroregion-select-hidden', cookieName: 'macroregion', searchFieldName: 'macroregion', type: 'multi_select' },
+        { id: 'region-responsible-manager-select-hidden', cookieName: 'region_responsible_manager', searchFieldName: 'region_responsible_manager', type: 'multi_select' },
 
         { id: 'pole-input', cookieName: 'pole', searchFieldName: 'pole', type: 'text' },
         { id: 'base-station-input', cookieName: 'base_station', searchFieldName: 'base_station', type: 'text' },
