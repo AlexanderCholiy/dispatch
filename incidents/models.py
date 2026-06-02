@@ -42,6 +42,7 @@ def get_default_status_type():
 
 class SLAStatus(models.TextChoices):
     # Используй value такой же как у классов IncidentStatus
+    EMPTY = ('empty', 'Отсутсвует')
     IN_PROGRESS = ('in-progress', 'В работе')
     WAITING = ('waiting', 'Меньше часа')
     EXPIRED = ('canceled', 'Просрочен')
@@ -49,6 +50,7 @@ class SLAStatus(models.TextChoices):
 
 
 class TimeStatus(models.TextChoices):
+    EMPTY = ('empty', 'Отсутсвует')
     IN_PROGRESS = (
         'in-progress', f'Менее {DGU_SLA_IN_PROGRESS_DEADLINE_IN_HOURS} ч'
     )

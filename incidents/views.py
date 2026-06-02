@@ -298,23 +298,35 @@ def index(request: HttpRequest) -> HttpResponse:
         or ['true', 'false']
     )
 
+    sla_statuses = [st for st in SLAStatus]
+    time_statuses = [st for st in TimeStatus]
+
     sla_avr_status = (
         request.GET.get('sla_avr', '').strip()
         or (get_raw_cookie(request, 'sla_avr') or '').strip()
-        or None
-    ) if not search_only_by_code else None
+    ).split(',') if not search_only_by_code else []
+
+    sla_avr_status = (
+        [v for v in sla_avr_status if v in sla_statuses] or sla_statuses[:]
+    )
 
     sla_rvr_status = (
         request.GET.get('sla_rvr', '').strip()
         or (get_raw_cookie(request, 'sla_rvr') or '').strip()
-        or None
-    ) if not search_only_by_code else None
+    ).split(',') if not search_only_by_code else []
+
+    sla_rvr_status = (
+        [v for v in sla_rvr_status if v in sla_statuses] or sla_statuses[:]
+    )
 
     sla_dgu_status = (
         request.GET.get('sla_dgu', '').strip()
         or (get_raw_cookie(request, 'sla_dgu') or '').strip()
-        or None
-    ) if not search_only_by_code else None
+    ).split(',') if not search_only_by_code else []
+
+    sla_dgu_status = (
+        [v for v in sla_dgu_status if v in time_statuses] or time_statuses[:]
+    )
 
     date_from = (
         request.GET.get('incident_date_from', '').strip()
@@ -382,35 +394,71 @@ def index(request: HttpRequest) -> HttpResponse:
     base_qs = annotate_sla_rvr(base_qs)
     base_qs = annotate_sla_dgu(base_qs)
 
-    if sla_avr_status:
-        if sla_avr_status == SLAStatus.EXPIRED.value:
-            base_qs = base_qs.filter(sla_avr_expired=True)
-        elif sla_avr_status == SLAStatus.WAITING.value:
-            base_qs = base_qs.filter(sla_avr_waiting=True)
-        elif sla_avr_status == SLAStatus.IN_PROGRESS.value:
-            base_qs = base_qs.filter(sla_avr_in_progress=True)
-        elif sla_avr_status == SLAStatus.CLOSED_ON_TIME.value:
-            base_qs = base_qs.filter(sla_avr_closed_on_time=True)
+    if sla_avr_status and len(sla_avr_status) != len(sla_statuses):
+        q_filter = Q()
 
-    if sla_rvr_status:
-        if sla_rvr_status == SLAStatus.EXPIRED.value:
-            base_qs = base_qs.filter(sla_rvr_expired=True)
-        elif sla_rvr_status == SLAStatus.WAITING.value:
-            base_qs = base_qs.filter(sla_rvr_waiting=True)
-        elif sla_rvr_status == SLAStatus.IN_PROGRESS.value:
-            base_qs = base_qs.filter(sla_rvr_in_progress=True)
-        elif sla_rvr_status == SLAStatus.CLOSED_ON_TIME.value:
-            base_qs = base_qs.filter(sla_rvr_closed_on_time=True)
+        for status_val in sla_avr_status:
+            if status_val == SLAStatus.EXPIRED.value:
+                q_filter |= Q(sla_avr_expired=True)
+            elif status_val == SLAStatus.WAITING.value:
+                q_filter |= Q(sla_avr_waiting=True)
+            elif status_val == SLAStatus.IN_PROGRESS.value:
+                q_filter |= Q(sla_avr_in_progress=True)
+            elif status_val == SLAStatus.CLOSED_ON_TIME.value:
+                q_filter |= Q(sla_avr_closed_on_time=True)
+            else:
+                q_filter |= Q(
+                    sla_avr_expired=False,
+                    sla_avr_waiting=False,
+                    sla_avr_in_progress=False,
+                    sla_avr_closed_on_time=False,
+                )
 
-    if sla_dgu_status:
-        if sla_dgu_status == TimeStatus.EXPIRED.value:
-            base_qs = base_qs.filter(sla_dgu_expired=True)
-        elif sla_dgu_status == TimeStatus.WAITING.value:
-            base_qs = base_qs.filter(sla_dgu_waiting=True)
-        elif sla_dgu_status == TimeStatus.IN_PROGRESS.value:
-            base_qs = base_qs.filter(sla_dgu_in_progress=True)
-        elif sla_dgu_status == TimeStatus.CLOSED_ON_TIME.value:
-            base_qs = base_qs.filter(sla_dgu_closed_on_time=True)
+        base_qs = base_qs.filter(q_filter)
+
+    if sla_rvr_status and len(sla_rvr_status) != len(sla_statuses):
+        q_filter = Q()
+
+        for status_val in sla_rvr_status:
+            if status_val == SLAStatus.EXPIRED.value:
+                q_filter |= Q(sla_rvr_expired=True)
+            elif status_val == SLAStatus.WAITING.value:
+                q_filter |= Q(sla_rvr_waiting=True)
+            elif status_val == SLAStatus.IN_PROGRESS.value:
+                q_filter |= Q(sla_rvr_in_progress=True)
+            elif status_val == SLAStatus.CLOSED_ON_TIME.value:
+                q_filter |= Q(sla_rvr_closed_on_time=True)
+            else:
+                q_filter |= Q(
+                    sla_rvr_expired=False,
+                    sla_rvr_waiting=False,
+                    sla_rvr_in_progress=False,
+                    sla_rvr_closed_on_time=False,
+                )
+
+        base_qs = base_qs.filter(q_filter)
+
+    if sla_dgu_status and len(sla_dgu_status) != len(time_statuses):
+        q_filter = Q()
+
+        for status_val in sla_dgu_status:
+            if status_val == SLAStatus.EXPIRED.value:
+                q_filter |= Q(sla_dgu_expired=True)
+            elif status_val == SLAStatus.WAITING.value:
+                q_filter |= Q(sla_dgu_waiting=True)
+            elif status_val == SLAStatus.IN_PROGRESS.value:
+                q_filter |= Q(sla_dgu_in_progress=True)
+            elif status_val == SLAStatus.CLOSED_ON_TIME.value:
+                q_filter |= Q(sla_dgu_closed_on_time=True)
+            else:
+                q_filter |= Q(
+                    sla_dgu_expired=False,
+                    sla_dgu_waiting=False,
+                    sla_dgu_in_progress=False,
+                    sla_dgu_closed_on_time=False,
+                )
+
+        base_qs = base_qs.filter(q_filter)
 
     if len(is_incident_finish) == 1:
         is_incident_finish_filter = is_incident_finish[0] == 'true'
