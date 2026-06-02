@@ -131,27 +131,63 @@
       </select>
     </div>
 
-    <!-- <div class="select-wrapper">
-      <select name="category" id="category-select" class="select tooltip" data-title="Категория инцидента">
-        <option value="" {% if not selected.category %}selected{% endif %}>Категория: Все</option>
-        {% for cat in categories %}
-          <option value="{{ cat.id }}" {% if selected.category == cat.id|stringformat:"s" %}selected{% endif %}>
-            Категория: {{ cat.name }}
-          </option>
-        {% endfor %}
-      </select>
-    </div> -->
+    <div class="multiple-select-wrapper" id="category-select">
+      <div class="dropdown-trigger" data-filter-name="Категория">
+        <span class="selected-label">Категория</span>
+        <span class="arrow-icon">▼</span>
+      </div>
 
-    <!-- <div class="select-wrapper">
-      <select name="incident_type" id="incident-type-select" class="select tooltip" data-title="Тип инцидента">
-        <option value="" {% if not selected.incident_type %}selected{% endif %}>Тип: Все</option>
-        {% for type_id, type_name in incident_types.items %}
-          <option value="{{ type_id }}" {% if selected.incident_type == type_id %}selected{% endif %}>
-            {{ type_name }}
-          </option>
+      <div class="dropdown-menu" id="category-dropdown-menu">
+        <div class="dropdown-options">
+          {% for v in categories %}
+            <label class="option-item {% if v.id in selected.category %}is-selected{% endif %}" 
+                   data-value="{{ v.id }}">
+              <i class="bx bx-check"></i>
+              <span>{{ v.name }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <select name="category" id="category-select-hidden" style="display: none;" multiple>
+        {% for v in categories %}
+          <option value="{{ v.id }}" {% if v.id in selected.category %}selected{% endif %}></option>
         {% endfor %}
       </select>
-    </div> -->
+    </div>
+
+    <div class="multiple-select-wrapper" id="incident-type-select">
+      <div class="dropdown-trigger" data-filter-name="Тип">
+        <span class="selected-label">Тип</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="incident-type-dropdown-menu">
+        <div class="dropdown-options">
+          <label class="option-item {% if 0 in selected.incident_type %}is-selected{% endif %}" 
+                 data-value="0">
+            <i class="bx bx-check"></i>
+            <span>Отсутствует</span>
+          </label>
+          {% for k, v in incident_types.items %}
+            <label class="option-item {% if k in selected.incident_type %}is-selected{% endif %}" 
+                   data-value="{{ k }}">
+              <i class="bx bx-check"></i>
+              <span>{{ v }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <select name="incident_type" id="incident-type-select-hidden" style="display: none;" multiple>
+        <option value="0" {% if 0 in selected.incident_type %}selected{% endif %}>
+          Отсутствует
+        </option>
+        {% for k in incident_types %}
+          <option value="{{ k }}" {% if k in selected.incident_type %}selected{% endif %}></option>
+        {% endfor %}
+      </select>
+    </div>
 
     <!-- <div class="select-wrapper">
       <select name="sla_avr" id="sla-avr" class="select tooltip" data-title="Статус SLA АВР">
@@ -403,6 +439,8 @@
         { id: 'status-select-hidden', cookieName: 'status', searchFieldName: 'status', type: 'multi_select' },
         { id: 'responsible-user-select-hidden', cookieName: 'responsible_user', searchFieldName: 'responsible_user', type: 'multi_select' },
         { id: 'was-read-select-hidden', cookieName: 'was_read', searchFieldName: 'was_read', type: 'multi_select' },
+        { id: 'category-select-hidden', cookieName: 'category', searchFieldName: 'category', type: 'multi_select' },
+        { id: 'incident-type-select-hidden', cookieName: 'incident_type', searchFieldName: 'incident_type', type: 'multi_select' },
 
         { id: 'pole-input', cookieName: 'pole', searchFieldName: 'pole', type: 'text' },
         { id: 'base-station-input', cookieName: 'base_station', searchFieldName: 'base_station', type: 'text' },

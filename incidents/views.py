@@ -151,6 +151,20 @@ def index(request: HttpRequest) -> HttpResponse:
         MAX_INCIDENTS_INFO_CACHE_SEC,
     )
 
+    categories = cache.get_or_set(
+        'incident_filter_categories',
+        lambda: list(
+            IncidentCategory.objects.all().order_by('name')
+            .values('id', 'name')
+        ),
+        MAX_INCIDENTS_INFO_CACHE_SEC,
+    )
+
+    categories_ids = [v['id'] for v in categories]
+
+    incident_types_ids = list(incident_types.keys())
+    incident_types_ids.append(0)  # отсутсвует
+
     statuses_ids = []
     finished_status_ids = []
     not_finished_status_ids = []
@@ -208,16 +222,18 @@ def index(request: HttpRequest) -> HttpResponse:
     if operator_group not in operator_groups:
         operator_group = None
 
-    incident_type = (
+    incident_type_filter = (
         request.GET.get('incident_type', '').strip()
         or (get_raw_cookie(request, 'incident_type') or '').strip()
-    ) if not search_only_by_code else None
+    ).split(',') if not search_only_by_code else []
 
-    if incident_type and incident_type.isdigit():
-        incident_type = int(incident_type)
-
-    if incident_type not in incident_types:
-        incident_type = None
+    incident_type_filter: list[int] = (
+        [
+            int(v) for v in incident_type_filter
+            if v.isnumeric() and int(v) in incident_types_ids
+        ]
+        or incident_types_ids[:]
+    )
 
     macroregion = (
         request.GET.get('macroregion', '').strip()
@@ -239,14 +255,18 @@ def index(request: HttpRequest) -> HttpResponse:
     if avr_contractor not in avr_contractors:
         avr_contractor = None
 
-    category_id = (
-        request.GET.get('category')
+    category_id_filter = (
+        request.GET.get('category', '')
         or (get_raw_cookie(request, 'category') or '').strip()
-    ) if not search_only_by_code else None
-    if category_id and category_id.isdigit():
-        category_id = int(category_id)
-    else:
-        category_id = None
+    ).split(',') if not search_only_by_code else []
+
+    category_id_filter: list[int] = (
+        [
+            int(v) for v in category_id_filter
+            if v.isnumeric() and int(v) in categories_ids
+        ]
+        or categories_ids[:]
+    )
 
     responsible_user_id = (
         request.GET.get('responsible_user', '')
@@ -452,8 +472,8 @@ def index(request: HttpRequest) -> HttpResponse:
                 latest_status_id__in=status_filter,
             )
 
-    if category_id:
-        base_qs = base_qs.filter(categories__id=category_id)
+    if category_id_filter and len(category_id_filter) != len(categories_ids):
+        base_qs = base_qs.filter(categories__id__in=category_id_filter)
 
     if (
         responsible_user_id
@@ -483,8 +503,20 @@ def index(request: HttpRequest) -> HttpResponse:
     if macroregion:
         base_qs = base_qs.filter(pole__region__macroregion_id=macroregion)
 
-    if incident_type:
-        base_qs = base_qs.filter(incident_type_id=incident_type)
+    if (
+        incident_type_filter
+        and len(incident_type_filter) != len(incident_types_ids)
+    ):
+        has_not_incident_type = 0 in incident_type_filter
+        if has_not_incident_type:
+            base_qs = base_qs.filter(
+                Q(incident_type_id__isnull=True)
+                | Q(incident_type_id__in=incident_type_filter)
+            )
+        else:
+            base_qs = base_qs.filter(
+                incident_type_id__in=incident_type_filter
+            )
 
     if avr_contractor:
         base_qs = base_qs.filter(pole__avr_contractor_id=avr_contractor)
@@ -546,15 +578,6 @@ def index(request: HttpRequest) -> HttpResponse:
 
         incident.updated_human = humanize_datetime(incident.update_date)
 
-    categories = cache.get_or_set(
-        'incident_filter_categories',
-        lambda: list(
-            IncidentCategory.objects.all().order_by('name')
-            .values('id', 'name')
-        ),
-        MAX_INCIDENTS_INFO_CACHE_SEC,
-    )
-
     query_params = request.GET.copy()
     query_params.pop('page', None)
     page_url_base = f'?{query_params.urlencode()}&' if query_params else '?'
@@ -583,12 +606,12 @@ def index(request: HttpRequest) -> HttpResponse:
             'is_incident_finish': is_incident_finish,
             'was_read': was_read,
             'status_filter': status_filter,
-            'category': category_id,
+            'category': category_id_filter,
             'responsible_user': responsible_user_id,
             'region_responsible_manager': region_responsible_manager,
             'macroregion': macroregion,
             'avr_contractor': avr_contractor,
-            'incident_type': incident_type,
+            'incident_type': incident_type_filter,
             'operator_group': operator_group,
             'pole': pole,
             'base_station': base_station,

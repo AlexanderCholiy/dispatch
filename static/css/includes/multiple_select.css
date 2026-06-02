@@ -123,7 +123,6 @@ select[multiple] {
   font-size: var(--font-xs);
   text-align: left;
   border-bottom: 1px solid var(--extra-color);
-  margin-bottom: 5px;
   transition: color var(--transition-value);
   user-select: none;
   color: var(--gray-color);
