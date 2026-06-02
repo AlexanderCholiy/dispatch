@@ -140,10 +140,15 @@ def index(request: HttpRequest) -> HttpResponse:
 
     region_responsible_managers = get_region_responsible_managers()
     incident_types = get_incident_type_map()
+
     macroregions = get_macro_region_map()
+    macroregions = {0: 'Отсутствует', **macroregions}  # отсутсвует в начале
+    macroregion_ids = list(macroregions.keys())
+
     avr_contractors = get_avr_contractor_map()
+
     operator_groups = get_operator_group_map()
-    operator_groups[UNDEFINED_CASE] = []
+    operator_groups[UNDEFINED_CASE] = []  # отсутсвует
 
     statuses = cache.get_or_set(
         'incident_filter_statuses',
@@ -241,12 +246,15 @@ def index(request: HttpRequest) -> HttpResponse:
     macroregion = (
         request.GET.get('macroregion', '').strip()
         or (get_raw_cookie(request, 'macroregion') or '').strip()
-    ) if not search_only_by_code else None
-    if macroregion and macroregion.isdigit():
-        macroregion = int(macroregion)
+    ).split(',') if not search_only_by_code else []
 
-    if macroregion not in macroregions:
-        macroregion = None
+    macroregion: list[int] = (
+        [
+            int(v) for v in macroregion
+            if v.isnumeric() and int(v) in macroregion_ids
+        ]
+        or macroregion_ids[:]
+    )
 
     avr_contractor = (
         request.GET.get('avr_contractor', '').strip()
@@ -559,8 +567,18 @@ def index(request: HttpRequest) -> HttpResponse:
                 base_station__operator__operator_group__in=operator_group
             )
 
-    if macroregion:
-        base_qs = base_qs.filter(pole__region__macroregion_id=macroregion)
+    if macroregion and len(macroregion) != len(macroregion_ids):
+        if 0 in macroregion:
+            base_qs = base_qs.filter(
+                Q(pole__isnull=True)
+                | Q(pole__region__isnull=True)
+                | Q(pole__region__macroregion_id__isnull=True)
+                | Q(pole__region__macroregion_id__in=macroregion)
+            )
+        else:
+            base_qs = base_qs.filter(
+                pole__region__macroregion_id__in=macroregion
+            )
 
     if (
         incident_type_filter
