@@ -1223,7 +1223,7 @@ def confirm_move_emails(request: HttpRequest) -> HttpResponse:
             incident=source_incident,
             action=(
                 f'Письма с ID {", ".join(map(str, email_ids))} '
-                f'перенесены в инцидент {target_name}'
+                f'перенесены в инцидент {target_name}.'
             ),
             performed_by=request.user,
         )
@@ -1231,7 +1231,7 @@ def confirm_move_emails(request: HttpRequest) -> HttpResponse:
             incident=target_incident,
             action=(
                 f'Письма с ID {", ".join(map(str, email_ids))} '
-                f'добавлены из инцидента {source_name}'
+                f'добавлены из инцидента {source_name}.'
             ),
             performed_by=request.user,
         )
@@ -1451,6 +1451,21 @@ def new_email(
                     lambda: send_incident_email_task.delay(email_msg.id)
                 )
 
+                incident.save()  # Обновление update_date
+
+                log_msg = (
+                    f'Отправлен ответ (ID: {email_msg.id}) на '
+                    f'письмо (ID: {reply_email_id}).'
+                ) if reply_to_email else (
+                    f'Отправлено новое письмо (ID: {email_msg.id}).'
+                )
+
+                IncidentHistory.objects.create(
+                    incident=incident,
+                    action=log_msg,
+                    performed_by=request.user,
+                )
+
             messages.success(
                 request,
                 (
@@ -1644,6 +1659,17 @@ def notify_operator(request: HttpRequest, incident_id: int) -> HttpResponse:
                     )
                 )
 
+                incident.save()
+
+                IncidentHistory.objects.create(
+                    incident=incident,
+                    action=(
+                        f'Отправлено письмо (ID: {email_msg.id}) оператору '
+                        'о принятии инцидента в работу.'
+                    ),
+                    performed_by=request.user,
+                )
+
             messages.success(
                 request,
                 (
@@ -1705,7 +1731,7 @@ def notify_operator(request: HttpRequest, incident_id: int) -> HttpResponse:
         'first_email': first_email,
         'previous_plain': previous_plain,
         'previous_html': previous_html,
-        'email_header': 'Уведомление оператору о принятии в работу инцидента',
+        'email_header': 'Уведомление оператору о принятии инцидента в работу',
         'active_tab': 'email',
     }
 
@@ -1835,6 +1861,15 @@ def notify_avr_contractor(
                     or incident.incident_date
                 )
                 incident.save()
+
+                IncidentHistory.objects.create(
+                    incident=incident,
+                    action=(
+                        f'Отправлено письмо (ID: {email_msg.id}) подрядчику '
+                        'по АВР о передачи инцидента в работу.'
+                    ),
+                    performed_by=request.user,
+                )
 
             messages.success(
                 request,
@@ -2093,6 +2128,15 @@ def notify_rvr_contractor(
                 now = timezone.now()
                 incident.rvr_start_date = incident.rvr_start_date or now
                 incident.save()
+
+                IncidentHistory.objects.create(
+                    incident=incident,
+                    action=(
+                        f'Отправлено письмо (ID: {email_msg.id}) подрядчику '
+                        'по РВР о передачи инцидента в работу.'
+                    ),
+                    performed_by=request.user,
+                )
 
             messages.success(
                 request,
@@ -2392,6 +2436,15 @@ def notify_incident_closed(
 
                 contractor_was_notified = notify_contractor_incident_closed(
                     incident, subject
+                )
+
+                IncidentHistory.objects.create(
+                    incident=incident,
+                    action=(
+                        f'Отправлено письмо (ID: {email_msg.id}) о закрытии '
+                        'инцидента.'
+                    ),
+                    performed_by=request.user,
                 )
 
             messages.success(

@@ -9,7 +9,7 @@
           {% if log.changed_by.get_avatar_url %}
             <img src="{{ log.changed_by.get_avatar_url }}" class="user-journal-icon" alt="{{ log.changed_by.get_full_name }}">
           {% else %}
-            <div class="user-journal-icon">{{ user.username|first|upper }}</div>
+            <div class="user-journal-icon">{{ log.changed_by.username|first|upper }}</div>
           {% endif %}
             <span class="user-name">{{ log.changed_by }}</span>
           {% else %}

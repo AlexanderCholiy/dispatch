@@ -1,11 +1,23 @@
 {% if incident.history.all|length %}
-  <button type="button" class="toggle-incident-history">Показать историю событий</button>
+  <button type="button" class="toggle-incident-history">Показать журнал событий</button>
 
   <ul class="incident-history">
     {% for history in incident.history.all %}
       <li class="history-item">
         <div class="history-item-header">
-          <span class="history-user tooltip" data-title="{{ history.performed_by.email }}">{{ history.performed_by.get_full_name|default:history.performed_by.email }}</span>
+          <div class="user-info history-user">
+            {% if history.performed_by %}
+              {% if history.performed_by.get_avatar_url %}
+                <img src="{{ history.performed_by.get_avatar_url }}" class="user-journal-icon" alt="{{ history.performed_by.get_full_name }}">
+              {% else %}
+                <div class="user-journal-icon">{{ history.performed_by.username|first|upper }}</div>
+              {% endif %}
+                <span class="user-name">{{ history.performed_by }}</span>
+              {% else %}
+                <img src="/static/img/default_avatars/1__robot.png" class="user-journal-icon" alt="Система">
+                <span class="system-user">Система</span>
+            {% endif %}
+          </div>
           <span class="history-date">{{ history.insert_date|date:"d.m.Y H:i" }}</span>
         </div>
         <span class="history-action">{{ history.action }}</span>

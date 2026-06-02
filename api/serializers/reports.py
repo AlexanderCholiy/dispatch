@@ -58,6 +58,7 @@ class IncidentReportSerializer(serializers.ModelSerializer):
     dgu_duration = serializers.SerializerMethodField()
 
     incident_datetime = serializers.SerializerMethodField()
+    incident_update_datetime = serializers.SerializerMethodField()
     incident_finish_datetime = serializers.SerializerMethodField()
     operator_group = serializers.SerializerMethodField()
     categories = serializers.SerializerMethodField()
@@ -67,6 +68,9 @@ class IncidentReportSerializer(serializers.ModelSerializer):
     responsible_user_name = serializers.SerializerMethodField()
     is_sla_dispatch_expired = serializers.SerializerMethodField()
     dispatch_sla_duration = serializers.SerializerMethodField()
+
+    last_dispatch_comment_text = serializers.SerializerMethodField()
+    last_dispatch_comment_datetime = serializers.SerializerMethodField()
 
     class Meta:
         model = Incident
@@ -78,6 +82,7 @@ class IncidentReportSerializer(serializers.ModelSerializer):
             'incident_subtype',
             'categories',
             'incident_datetime',
+            'incident_update_datetime',
             'incident_finish_datetime',
 
             'avr_start_datetime',
@@ -113,6 +118,9 @@ class IncidentReportSerializer(serializers.ModelSerializer):
             'responsible_user_name',
             'is_sla_dispatch_expired',
             'dispatch_sla_duration',
+
+            'last_dispatch_comment_text',
+            'last_dispatch_comment_datetime',
         )
 
     def get_last_status(self, obj: Incident):
@@ -201,6 +209,9 @@ class IncidentReportSerializer(serializers.ModelSerializer):
     def get_incident_datetime(self, obj: Incident):
         return conversion_utc_datetime(obj.incident_date, False, True)
 
+    def get_incident_update_datetime(self, obj: Incident):
+        return conversion_utc_datetime(obj.update_date, False, True)
+
     def get_incident_finish_datetime(self, obj: Incident):
         if not obj.incident_finish_date:
             return
@@ -234,6 +245,23 @@ class IncidentReportSerializer(serializers.ModelSerializer):
 
     def get_is_sla_dispatch_expired(self, obj: Incident):
         return not obj.dispatch_sla_ok if obj.dispatch_sla_ok else None
+
+    def get_last_dispatch_comment_datetime(self, obj: Incident):
+        comments = obj.last_dispatch_comments
+
+        if not comments:
+            return None
+
+        latest_comment = comments[0]
+        return conversion_utc_datetime(latest_comment.created_at, False, True)
+
+    def get_last_dispatch_comment_text(self, obj: Incident):
+        comments = obj.last_dispatch_comments
+
+        if not comments:
+            return None
+
+        return comments[0].content
 
 
 class StatisticReportSerializer(serializers.ModelSerializer):

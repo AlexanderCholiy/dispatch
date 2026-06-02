@@ -76,9 +76,10 @@ from incidents.constants import (
     NOTIFIED_CONTRACTOR_STATUS_NAME,
     RUSSIA_EMPTY_MACRO_ID,
 )
-from incidents.models import Incident, IncidentStatusHistory
+from incidents.models import Comment, Incident, IncidentStatusHistory
 from ts.constants import UNDEFINED_CASE
 from ts.models import MacroRegion, PoleContractorEmail
+from users.models import Roles
 
 
 class IncidentSubtypeStat(TypedDict):
@@ -105,6 +106,7 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
     - categories: Категории инцидента.
 
     - incident_datetime: Дата и время возникновения инцидента (UTC, ISO).
+    - incident_update_datetime: Дата и время обновления инцидента (UTC, ISO).
     - incident_finish_datetime: Дата и время завершения инцидента (UTC, ISO).
 
     - avr_names: Название подрядчика АВР.
@@ -138,7 +140,11 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
     - responsible_user_id: Идентификатор ответственного пользователя.
     - responsible_user_name: Имя ответственного пользователя в системе.
     - is_sla_dispatch_expired: Просрочен ли SLA диспетчера.
-    - dispatch_sla_duration: Текущая длительность обработки заявки по SLA
+    - dispatch_sla_duration: Текущая длительность обработки заявки по SLA.
+
+    - last_dispatch_comment_text: Последний комментарий диспетчера.
+    - last_dispatch_comment_datetime: Дата и время последнего комментария
+    диспетчера.
 
     ДОСТУПНЫЕ ЭНДПОИНТЫ:
 
@@ -185,9 +191,16 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
             queryset=(
                 IncidentStatusHistory.objects
                 .select_related('status')
-                .order_by('insert_date')
+                .order_by('insert_date', 'id')
             ),
             to_attr='prefetched_statuses'
+        ),
+        Prefetch(
+            'comments',
+            queryset=Comment.objects.filter(
+                author__role=Roles.DISPATCH.value
+            ).order_by('-created_at', '-id'),
+            to_attr='last_dispatch_comments'
         ),
     )
     queryset = annotate_sla_dispatch(queryset)
