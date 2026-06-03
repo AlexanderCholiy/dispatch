@@ -640,14 +640,50 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                                     'text/plain', 'text/html'
                                 )
                             ):
-                                email_body = self.prepare_text_from_bytes(
-                                    part
-                                ) if email_body is None else email_body
+                                email_body_part = (
+                                    self.prepare_text_from_bytes(part)
+                                    if email_body is None else email_body
+                                )
 
                                 if content_type == 'text/html':
-                                    email_body = self.prepare_text_from_html(
-                                        email_body
-                                    ).replace(email_subject or '', '').strip()
+                                    cleaned_html = (
+                                        self
+                                        .prepare_text_from_html(
+                                            email_body_part
+                                        )
+                                        .replace(email_subject or '', '')
+                                        .strip()
+                                    )
+
+                                    original_file_name = part.get_filename()
+
+                                    if original_file_name:
+                                        try:
+                                            filename = (
+                                                f'{unique_filename_part}'
+                                                f'{original_file_name}'
+                                            )
+
+                                            self.save_email_attachments(
+                                                email_date, filename, part
+                                            )
+
+                                            email_attachments_urls.append(
+                                                filename
+                                            )
+
+                                        except ValidationError as e:
+                                            email_parser_logger.warning(e)
+                                        except OSError:
+                                            save_file_err = True
+
+                                    email_body = cleaned_html
+
+                                elif content_type == 'text/plain':
+                                    email_body = (
+                                        email_body_part
+                                        if email_body is None else email_body
+                                    )
 
                     else:
                         html_body_text = self.prepare_text_from_bytes(msg)
