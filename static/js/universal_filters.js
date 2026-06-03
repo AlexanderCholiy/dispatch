@@ -1,5 +1,6 @@
 /**
- * Универсальный обработчик фильтров v2.1 (Упрощенная версия без сложного кодирования)
+ * Универсальный обработчик фильтров v2.3 (Общие куки + Очистка пустых)
+ * Куки сохраняются без привязки к странице, но очищаются при удалении значения.
  */
 (function() {
     if (typeof filtersConfig === 'undefined') {
@@ -7,21 +8,27 @@
         return;
     }
 
-    // --- УТИЛИТЫ ДЛЯ КУКИ (УПРОЩЕНО) ---
+    // --- УТИЛИТЫ ДЛЯ КУКИ (БЕЗ ПРЕФИКСА СТРАНИЦЫ) ---
+    
     function setCookie(name, value, days = 30) {
         if (!name) return;
         const d = new Date();
         d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
-        // Убрали encodeURIComponent для простоты. Email и даты обычно безопасны.
-        // Если будут проблемы с символами & или ;, вернем его назад.
         document.cookie = `${name}=${value};path=/;expires=${d.toUTCString()}`;
     }
 
     function getCookie(name) {
         if (!name) return null;
         const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
-        // Убрали decodeURIComponent
         return match ? match[1] : null;
+    }
+
+    /**
+     * Удаляет куку по имени (используется при очистке полей)
+     */
+    function deleteCookie(name) {
+        if (!name) return;
+        document.cookie = `${name}=;path=/;expires=Thu, 01 Jan 1970 00:00:00 UTC`;
     }
 
     // --- 1. СОБРАТЬ ВСЕ ДАННЫЕ В ОБЪЕКТ ---
@@ -54,7 +61,6 @@
                 }
             }
             else {
-                // text, email, number, date, datetime-local, time, url, tel
                 value = element.value;
             }
 
@@ -66,15 +72,18 @@
         return data;
     }
 
-    // --- 2. СОХРАНЕНИЕ В КУКИ ---
+    // --- 2. СОХРАНЕНИЕ В КУКИ (ОЧИСТКА ПУСТЫХ) ---
     function saveAllFiltersToCookies() {
         const data = getAllFiltersData();
         filtersConfig.forEach(cfg => {
             const val = data[cfg.searchFieldName];
+            
             if (val !== undefined && val !== '') {
+                // Значение есть -> сохраняем
                 setCookie(cfg.cookieName, val);
-            } else if (val === '') {
-                setCookie(cfg.cookieName, '');
+            } else {
+                // Значения нет или оно пустое -> УДАЛЯЕМ куку!
+                deleteCookie(cfg.cookieName);
             }
         });
     }
@@ -120,7 +129,6 @@
                 });
             }
             else {
-                // Прямая установка значения (email, date и т.д.)
                 element.value = savedValue;
             }
         });
@@ -167,8 +175,12 @@
             if (cfg.searchFieldName === 'q') return;
 
             const hiddenInput = searchForm.querySelector(`input[name="${cfg.searchFieldName}"]`);
-            if (hiddenInput && data[cfg.searchFieldName] !== undefined) {
-                hiddenInput.value = data[cfg.searchFieldName];
+            if (hiddenInput) {
+                if (data[cfg.searchFieldName] !== undefined && data[cfg.searchFieldName] !== '') {
+                    hiddenInput.value = data[cfg.searchFieldName];
+                } else {
+                    hiddenInput.value = '';
+                }
             }
         });
     }
@@ -272,27 +284,23 @@
             });
         }
         
-        // Слушатель для кнопки сброса (ИСПРАВЛЕНО)
+        // Слушатель для кнопки сброса
         const resetBtn = document.getElementById('reset-filters');
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
                 // 1. Очищаем куки
                 filtersConfig.forEach(cfg => {
-                    // Если у конфига есть флаг skipOnReset, пропускаем очистку куки
                     if (cfg.skipOnReset) return;
-                    
-                    setCookie(cfg.cookieName, '', -1);
+                    deleteCookie(cfg.cookieName);
                 });
                 
                 // 2. Сбрасываем нативную форму
                 const form = document.getElementById('filter-form');
                 if (form) form.reset();
 
-                // 3. ЯВНЫЙ СБРОС ПОЛЕЙ INPUT (УНИВЕРСАЛЬНАЯ ЛОГИКА)
+                // 3. ЯВНЫЙ СБРОС ПОЛЕЙ INPUT
                 filtersConfig.forEach(cfg => {
-                    // Пропускаем элементы с флагом skipOnReset
                     if (cfg.skipOnReset) return;
-
                     const element = document.getElementById(cfg.id);
                     if (!element) return;
                     
@@ -303,84 +311,46 @@
                     } else if (inputType === 'radio') {
                         element.checked = false;
                     } else {
-                        // Для text, email, date, number и т.д. принудительно ставим пусто
                         element.value = '';
                     }
                 });
 
-                // 4. Очистка скрытого Q (всегда сбрасываем)
+                // 4. Очистка скрытого Q
                 const filterHiddenQ = document.getElementById('filter-hidden-q');
                 if (filterHiddenQ) filterHiddenQ.value = '';
 
-                // 5. Сброс всех скрытых полей в search-form (ИСКЛЮЧАЯ те, что имеют skipOnReset)
+                // 5. Сброс всех скрытых полей в search-form
                 const searchForm = document.getElementById('search-form');
                 if (searchForm) {
                     const hiddenInputs = searchForm.querySelectorAll('input[type="hidden"]');
                     hiddenInputs.forEach(input => {
-                        // Проверяем, есть ли у этого поля конфиг с skipOnReset
                         const cfg = filtersConfig.find(c => c.searchFieldName === input.name);
-                        if (cfg && cfg.skipOnReset) return; // Не сбрасываем
-                        
+                        if (cfg && cfg.skipOnReset) return;
                         input.value = '';
                     });
                 }
 
-                // 6. Сброс визуальной части множественного выбора (тоже исключаем через флаг)
+                // 6. Сброс визуальной части множественного выбора
                 filtersConfig.forEach(cfg => {
                     if (cfg.skipOnReset) return;
-
                     if (cfg.type === 'multi_select') {
                         const hiddenSelect = document.getElementById(cfg.id);
                         if (!hiddenSelect) return;
 
-                        // Сбрасываем опции в скрытом селекте
                         Array.from(hiddenSelect.options).forEach(opt => opt.selected = false);
 
-                        // ИСПРАВЛЕНО: Убираем суффикс "-hidden", чтобы получить ID обертки
-                        // folder-select-hidden -> folder-select
                         const wrapperIdBase = cfg.id.replace(/-hidden$/, ''); 
-                        
                         const wrapper = document.getElementById(wrapperIdBase);
                         
                         if (wrapper) {
                             const options = wrapper.querySelectorAll('.option-item');
+                            options.forEach(opt => opt.classList.remove('is-selected'));
                             
-                            // Удаляем классы
-                            let removedCount = 0;
-                            options.forEach(opt => {
-                                if (opt.classList.contains('is-selected')) {
-                                    opt.classList.remove('is-selected');
-                                    removedCount++;
-                                }
-                            });
-                            
-                            // Теперь принудительно обновляем текст лейбла
-                            // Мы повторяем логику updateLabel из multiple_select.js здесь, 
-                            // чтобы гарантировать обновление без зависимости от внешнего скрипта
                             const labelSpan = wrapper.querySelector('.selected-label');
                             const trigger = wrapper.querySelector('.dropdown-trigger');
                             const filterName = trigger ? trigger.getAttribute('data-filter-name') || 'Фильтр' : 'Фильтр';
                             
-                            // Пересчитываем выбранные элементы ПОСЛЕ удаления классов
-                            const selectedItemsAfter = Array.from(options).filter(item => item.classList.contains('is-selected'));
-                            const realOptionsCount = Array.from(options).filter(opt => opt.dataset.value !== '').length;
-                            const selectedRealCount = selectedItemsAfter.filter(opt => opt.dataset.value !== '').length;
-
-                            if (selectedRealCount === 0) {
-                                labelSpan.textContent = `${filterName}: Все`;
-                            } else if (selectedRealCount === realOptionsCount) {
-                                labelSpan.textContent = `${filterName}: Все`;
-                            } else if (selectedRealCount === 1) {
-                                const singleItem = selectedItemsAfter.find(opt => opt.dataset.value !== '');
-                                if (singleItem) {
-                                    labelSpan.textContent = `${filterName}: ${singleItem.querySelector('span').textContent}`;
-                                }
-                            } else {
-                                labelSpan.textContent = `${filterName}: ${selectedRealCount} шт`;
-                            }
-                            
-                        } else {
-                            console.error(`❌ Wrapper not found for ID: ${wrapperIdBase} (tried to find from ${cfg.id})`);
+                            labelSpan.textContent = `${filterName}: Все`;
                         }
                     }
                 });

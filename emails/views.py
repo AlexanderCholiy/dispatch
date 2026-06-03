@@ -73,14 +73,14 @@ def emails_list(request: HttpRequest) -> HttpResponse:
         or request.COOKIES.get('email_date_from', '').strip()
         or None
     )
-    date_from = get_aware_datetime(date_from)
+    date_from = get_aware_datetime(date_from, True)
 
     date_to = (
         request.GET.get('email_date_to', '').strip()
         or request.COOKIES.get('email_date_to', '').strip()
         or None
     )
-    date_to = get_aware_datetime(date_to)
+    date_to = get_aware_datetime(date_to, False)
 
     if date_from and date_to and date_from > date_to:
         date_from, date_to = date_to, date_from

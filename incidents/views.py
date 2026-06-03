@@ -358,14 +358,14 @@ def index(request: HttpRequest) -> HttpResponse:
         or (get_raw_cookie(request, 'incident_date_from') or '').strip()
         or None
     ) if not search_only_by_code else None
-    date_from = get_aware_datetime(date_from)
+    date_from = get_aware_datetime(date_from, True)
 
     date_to = (
         request.GET.get('incident_date_to', '').strip()
         or (get_raw_cookie(request, 'incident_date_to') or '').strip()
         or None
     ) if not search_only_by_code else None
-    date_to = get_aware_datetime(date_to)
+    date_to = get_aware_datetime(date_to, False)
 
     if date_from and date_to and date_from > date_to:
         date_from, date_to = date_to, date_from
