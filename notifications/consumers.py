@@ -10,7 +10,6 @@ from django.utils import timezone
 from .constants import (
     MAX_NOTIFICATION_PREWIE_LEN,
     NOTIFICATIONS_PER_PAGE,
-    OLD_NOTIFICATIONS_TTL,
 )
 from .models import Notification, NotificationLevel
 
@@ -54,7 +53,6 @@ class NotificationsConsumer(AsyncJsonWebsocketConsumer):
     @database_sync_to_async
     def get_unread_notifications(self) -> list[NotificationData]:
         now = timezone.now() + timedelta(milliseconds=1)
-        ago = now - OLD_NOTIFICATIONS_TTL
 
         qs = (
             Notification.objects
@@ -63,7 +61,6 @@ class NotificationsConsumer(AsyncJsonWebsocketConsumer):
                 read=False,
                 level__in=[NotificationLevel.MEDIUM, NotificationLevel.HIGH],
                 send_at__lte=now,
-                send_at__gte=ago,
             )
             .order_by('send_at', 'created_at', 'id')
             [:NOTIFICATIONS_PER_PAGE]
@@ -104,14 +101,12 @@ class NotificationsConsumer(AsyncJsonWebsocketConsumer):
     @database_sync_to_async
     def get_unread_count(self) -> int:
         now = timezone.now() + timedelta(seconds=10)
-        # ago = now - OLD_NOTIFICATIONS_TTL
 
         return Notification.objects.filter(
             user=self.user,
             read=False,
             level__in=[NotificationLevel.MEDIUM, NotificationLevel.HIGH],
             send_at__lte=now,
-            # send_at__gte=ago,
         ).count()
 
     @database_sync_to_async
@@ -145,14 +140,6 @@ class NotificationsConsumer(AsyncJsonWebsocketConsumer):
             not notif or notif.get('level', 'low') == NotificationLevel.LOW
         ):
             return
-
-        send_at = notif.get('send_at')
-        if send_at:
-            send_time = timezone.datetime.fromisoformat(send_at)
-            now = timezone.now()
-
-            if send_time < now - OLD_NOTIFICATIONS_TTL:
-                return
 
         count = await self.get_unread_count()
 

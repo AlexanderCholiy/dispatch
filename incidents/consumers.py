@@ -78,6 +78,7 @@ class CommentConsumer(AsyncWebsocketConsumer):
 
     async def send_initial_history(self):
         data = await self.get_comments_history()
+
         await self.send(text_data=json.dumps({
             'type': 'init_history',
             'data': data,
@@ -149,7 +150,7 @@ class CommentConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def create_comment(self, data):
-        user = self.scope['user']
+        user: User = self.scope['user']
         content = str(data.get('content', '')).strip()
 
         if not content:
@@ -170,13 +171,18 @@ class CommentConsumer(AsyncWebsocketConsumer):
             .get(id=self.incident_id)
         )
 
-        if incident.was_read and incident.responsible_user_id != user.id:
+        if (
+            incident.was_read
+            and incident.responsible_user_id != user.id
+            and user.role != Roles.DISPATCH
+        ):
             incident.was_read = False
             incident.save(update_fields=['was_read'])
 
         if (
             incident.responsible_user_id
             and incident.responsible_user_id != user.id
+            and user.role != Roles.DISPATCH
         ):
             Notification.objects.create(
                 user=incident.responsible_user,
