@@ -12,7 +12,7 @@
 }
 
 .tab-btn {
-  padding: var(--space-sm) var(--space-md);
+  padding: calc(var(--space-sm) + 6px) var(--space-md) var(--space-sm) var(--space-md);
   cursor: pointer;
   background: none;
   border: none;

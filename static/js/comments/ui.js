@@ -10,6 +10,14 @@ export class CommentsUI {
         this.cancelBtn = document.getElementById('cw-cancel-edit');
         this.editIdInput = document.getElementById('cw-edit-id');
         this.errorMsg = document.getElementById('cw-error-msg');
+
+        this.countBadge = document.getElementById('comments-count');
+        if (!this.countBadge) {
+            console.warn('Элемент #comments-count не найден в DOM');
+        } else {
+            this.updateCountDisplay(0);
+        }
+
         this.charCount = document.createElement('span'); 
         
         this.sortAscBtn = document.getElementById('comment-sort-asc');
@@ -141,6 +149,40 @@ export class CommentsUI {
         this.customModal = modalOverlay;
     }
 
+    updateCountDisplay(count) {
+        if (!this.countBadge) return;
+
+        let displayValue = count;
+        
+        // Логика ограничения 99+
+        if (count > 99) {
+            displayValue = '99+';
+        }
+
+        const prevText = this.countBadge.textContent;
+        
+        // Если значение изменилось, запускаем анимацию
+        if (prevText !== String(displayValue)) {
+            // Убираем класс анимации, чтобы перезапустить её
+            this.countBadge.classList.remove('bump');
+            
+            // Принудительный reflow (трюк для перезапуска CSS анимации)
+            void this.countBadge.offsetWidth; 
+            
+            // Добавляем класс анимации
+            this.countBadge.classList.add('bump');
+        }
+
+        this.countBadge.textContent = displayValue;
+
+        // Показываем/скрываем бейдж
+        if (count === 0) {
+            this.countBadge.style.display = 'none';
+        } else {
+            this.countBadge.style.display = 'inline-flex'; // inline-flex лучше для центровки внутри круга
+        }
+    }
+
     initListeners() {
         this.sortAscBtn.addEventListener('click', () => {
             this.setSort('asc');
@@ -242,13 +284,19 @@ export class CommentsUI {
         
         if (sorted.length === 0) {
             this.emptyEl.style.display = 'flex';
-            return;
+        } else {
+            this.emptyEl.style.display = 'none';
+            sorted.forEach(comment => {
+                const el = this.createCommentElement(comment);
+                this.listEl.appendChild(el);
+            });
         }
-        this.emptyEl.style.display = 'none';
-        sorted.forEach(comment => {
-            const el = this.createCommentElement(comment);
-            this.listEl.appendChild(el);
-        });
+
+        // --- Обновляем счетчик после рендера ---
+        // Считаем только видимые комментарии (после фильтрации)
+        // Если вам нужно считать ВСЕ комментарии (игнорируя фильтр), используйте this.rawComments.length
+        // this.updateCountDisplay(sorted.length);
+        this.updateCountDisplay(this.rawComments.length);
     }
 
     createCommentElement(comment) {

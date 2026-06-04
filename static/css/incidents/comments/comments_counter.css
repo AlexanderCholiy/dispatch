@@ -1,0 +1,42 @@
+.comment-section {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.comments-badge {
+  position: absolute;
+  top: -10px;
+  right: -18px;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-xxs);
+  font-weight: 600;
+  color: var(--add-background-color);
+  background: var(--red-color);
+  border-radius: var(--radius-xl);
+  pointer-events: none;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  box-shadow: 0 0 var(--space-xxs) var(--extra-color);
+  transition: all var(--transition-value);
+}
+
+@keyframes badge-bump {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.comments-badge.bump {
+  animation: badge-bump 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.comments-badge.hidden {
+  display: none !important;
+}
