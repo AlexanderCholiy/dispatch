@@ -12,8 +12,8 @@ from .constants import (
     AVR_CATEGORY,
     DGU_CATEGORY,
     END_STATUS_NAME,
-    NOTIFIED_OP_END_STATUS_NAME,
     RVR_CATEGORY,
+    STATUSES_FOR_AUTOCLOSE,
 )
 from .models import Incident, IncidentStatus, IncidentStatusHistory
 
@@ -62,7 +62,7 @@ def close_incident_auto(self, incident_id: int):
             )
             return
 
-        if not last_status or last_status.name != NOTIFIED_OP_END_STATUS_NAME:
+        if not last_status or last_status.name not in STATUSES_FOR_AUTOCLOSE:
             celery_logger.debug(
                 f'Статус инцидента {incident}: {last_status}. Пропуск.'
             )

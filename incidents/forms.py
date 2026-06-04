@@ -33,6 +33,7 @@ from .constants import (
     NOTIFIED_CONTRACTOR_STATUS_NAME,
     NOTIFIED_OP_END_STATUS_NAME,
     RVR_CATEGORY,
+    STATUSES_FOR_AUTOCLOSE,
 )
 from .models import (
     Incident,
@@ -602,10 +603,13 @@ class IncidentForm(forms.ModelForm):
                 'в закрытый статус.'
             )
 
-        if auto_close and new_status.name != NOTIFIED_OP_END_STATUS_NAME:
+        if auto_close and new_status.name not in STATUSES_FOR_AUTOCLOSE:
+            auto_close_statuses_str = ', '.join(
+                f'"{status}"' for status in STATUSES_FOR_AUTOCLOSE
+            )
             raise forms.ValidationError(
                 f'Нельзя включить автозакрытие в текущем статусе. '
-                f'Сначала выберите статус "{NOTIFIED_OP_END_STATUS_NAME}".'
+                f'Сначала выберите {auto_close_statuses_str}.'
             )
 
         return cleaned_data
