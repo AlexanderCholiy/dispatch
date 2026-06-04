@@ -100,6 +100,34 @@ def close_incident_auto(self, incident_id: int):
             is_dgu_category=DGU_CATEGORY in category_names,
         )
 
+        if AVR_CATEGORY in category_names:
+            incident.avr_end_date = (
+                now
+                if (
+                    incident.avr_start_date
+                    and not incident.avr_end_date
+                )
+                else incident.avr_end_date
+            )
+        if RVR_CATEGORY in category_names:
+            incident.rvr_end_date = (
+                now
+                if (
+                    incident.rvr_start_date
+                    and not incident.rvr_end_date
+                )
+                else incident.rvr_end_date
+            )
+        if DGU_CATEGORY in category_names:
+            incident.dgu_end_date = (
+                now
+                if (
+                    incident.dgu_start_date
+                    and not incident.dgu_end_date
+                )
+                else incident.dgu_end_date
+            )
+
         incident.auto_close_date = None
         incident.save()
 

@@ -779,6 +779,21 @@ class IncidentForm(forms.ModelForm):
                     else instance.rvr_end_date
                 )
             if (
+                DGU_CATEGORY in category_names
+                and (
+                    new_status.name in FINISHED_STATUS_NAMES
+                    or new_status.name == NOTIFIED_OP_END_STATUS_NAME
+                )
+            ):
+                instance.dgu_end_date = (
+                    now
+                    if (
+                        instance.dgu_start_date
+                        and not instance.dgu_end_date
+                    )
+                    else instance.dgu_end_date
+                )
+            if (
                 AVR_CATEGORY in category_names
                 and new_status.name == NOTIFIED_CONTRACTOR_STATUS_NAME
             ):
@@ -791,6 +806,11 @@ class IncidentForm(forms.ModelForm):
                 and new_status.name == NOTIFIED_CONTRACTOR_STATUS_NAME
             ):
                 instance.rvr_start_date = instance.rvr_start_date or now
+            if (
+                DGU_CATEGORY in category_names
+                and new_status.name == NOTIFIED_CONTRACTOR_STATUS_NAME
+            ):
+                instance.dgu_start_date = instance.dgu_start_date or now
 
         # Обновляем флаг завершённости
         instance.is_incident_finish = (
