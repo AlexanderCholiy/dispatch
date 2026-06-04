@@ -318,7 +318,6 @@ class IncidentChangeLogAdmin(admin.ModelAdmin):
         'field_name',
     )
     list_filter = (
-        'field_name',
         'created_at',
         'changed_by',
     )
