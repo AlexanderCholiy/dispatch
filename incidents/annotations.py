@@ -32,6 +32,9 @@ from .constants import (
     DGU_SLA_IN_PROGRESS_DEADLINE_IN_HOURS,
     DGU_SLA_WAITING_DEADLINE_IN_HOURS,
     DISPATCH_SLA_DEADLINE,
+    EKS_CATEGORY,
+    EKS_SLA_IN_PROGRESS_DEADLINE_IN_HOURS,
+    EKS_SLA_WAITING_DEADLINE_IN_HOURS,
     INCIDENT_ACCESS_TO_OBJECT_TYPE,
     INCIDENT_AMS_STRUCTURE_TYPE,
     INCIDENT_DESTRUCTION_OBJECT_TYPE,
@@ -58,9 +61,11 @@ class SlaPercentStats(TypedDict):
     avr_total: int
     rvr_total: int
     dgu_total: int
+    eks_total: int
     avr_percent_on_time: int | float
     rvr_percent_on_time: int | float
     dgu_percent_on_time: int | float
+    eks_percent_on_time: int | float
 
 
 def annotate_sla_avr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
@@ -303,6 +308,91 @@ def annotate_sla_dgu(qs: QuerySet[Incident]) -> QuerySet[Incident]:
     )
 
 
+def annotate_sla_eks(qs: QuerySet[Incident]) -> QuerySet[Incident]:
+    """Аннотация SLA для ЭКС"""
+    now = timezone.now()
+
+    in_progress_delta = timedelta(
+        hours=EKS_SLA_IN_PROGRESS_DEADLINE_IN_HOURS
+    )
+    waiting_delta = timedelta(
+        hours=EKS_SLA_WAITING_DEADLINE_IN_HOURS
+    )
+
+    return qs.annotate(
+        eks_has_start=Case(
+            When(eks_start_date__isnull=False, then=Value(True)),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+        eks_elapsed=ExpressionWrapper(
+            Case(
+                When(
+                    eks_start_date__isnull=False,
+                    eks_end_date__isnull=False,
+                    then=F('eks_end_date') - F('eks_start_date'),
+                ),
+                When(
+                    eks_start_date__isnull=False,
+                    eks_end_date__isnull=True,
+                    then=now - F('eks_start_date'),
+                ),
+                default=None,
+                output_field=DurationField(),
+            ),
+            output_field=DurationField(),
+        ),
+
+        # Просрочен (> 15 суток)
+        sla_eks_expired=Case(
+            When(
+                eks_start_date__isnull=False,
+                eks_elapsed__gt=waiting_delta,
+                then=Value(True),
+            ),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+
+        # In progress (< 12 часов)
+        sla_eks_in_progress=Case(
+            When(
+                eks_start_date__isnull=False,
+                eks_end_date__isnull=True,
+                eks_elapsed__lt=in_progress_delta,
+                then=Value(True),
+            ),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+
+        # Waiting (≥ 12 часов и < 15 суток)
+        sla_eks_waiting=Case(
+            When(
+                eks_start_date__isnull=False,
+                eks_end_date__isnull=True,
+                eks_elapsed__gte=in_progress_delta,
+                eks_elapsed__lte=waiting_delta,
+                then=Value(True),
+            ),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+
+        # Закрыт вовремя (≤ 15 суток)
+        sla_eks_closed_on_time=Case(
+            When(
+                eks_start_date__isnull=False,
+                eks_end_date__isnull=False,
+                eks_elapsed__lte=waiting_delta,
+                then=Value(True),
+            ),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+    )
+
+
 def annotate_is_power_issue(
     qs: QuerySet[Incident], monitoring_check: bool = True
 ) -> QuerySet[Incident]:
@@ -425,11 +515,16 @@ def annotate_incident_categories(
         incident_id=OuterRef('pk'),
         category__name=DGU_CATEGORY
     )
+    eks_cat = IncidentCategoryRelation.objects.filter(
+        incident_id=OuterRef('pk'),
+        category__name=EKS_CATEGORY
+    )
 
     return qs.annotate(
         has_avr_category=Exists(avr_cat),
         has_rvr_category=Exists(rvr_cat),
         has_dgu_category=Exists(dgu_cat),
+        has_eks_category=Exists(eks_cat),
     )
 
 
@@ -514,6 +609,7 @@ def aggregate_sla_percentages(
     - AVR
     - RVR
     - DGU
+    - EKS
 
     Округление: 1 знак, если не целое.
     """
@@ -563,6 +659,20 @@ def aggregate_sla_percentages(
                 sla_dgu_closed_on_time=True,
             ),
         ),
+
+        # === EKS ===
+        eks_total=Count(
+            'id',
+            filter=Q(
+                eks_start_date__isnull=False,
+            ),
+        ),
+        eks_on_time=Count(
+            'id',
+            filter=Q(
+                sla_eks_closed_on_time=True,
+            ),
+        ),
     )
 
     def percent(on_time: int, total: int) -> int | float:
@@ -575,6 +685,7 @@ def aggregate_sla_percentages(
         'avr_total': stats['avr_on_time'],
         'rvr_total': stats['rvr_on_time'],
         'dgu_total': stats['dgu_on_time'],
+        'eks_total': stats['eks_on_time'],
         'avr_percent_on_time': percent(
             stats['avr_on_time'], stats['avr_total']
         ),
@@ -583,6 +694,9 @@ def aggregate_sla_percentages(
         ),
         'dgu_percent_on_time': percent(
             stats['dgu_on_time'], stats['dgu_total']
+        ),
+        'eks_percent_on_time': percent(
+            stats['eks_on_time'], stats['eks_total']
         ),
     }
 

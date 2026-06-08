@@ -27,6 +27,7 @@ from .constants import (
     AVR_CATEGORY,
     DEFAULT_STATUS_NAME,
     DGU_CATEGORY,
+    EKS_CATEGORY,
     FINISHED_STATUS_NAMES,
     MAX_CODE_LEN,
     MAX_FUTURE_END_DELTA,
@@ -295,6 +296,8 @@ class IncidentForm(forms.ModelForm):
             'rvr_end_date',
             'dgu_start_date',
             'dgu_end_date',
+            'eks_start_date',
+            'eks_end_date',
             'auto_close',
         )
         labels = {
@@ -311,6 +314,8 @@ class IncidentForm(forms.ModelForm):
             'rvr_end_date': 'Закрытие РВР',
             'dgu_start_date': 'Передача на ДГУ',
             'dgu_end_date': 'Закрытие ДГУ',
+            'eks_start_date': 'Передача на ЭКС',
+            'eks_end_date': 'Закрытие ЭКС',
             'auto_close': 'Автоматическое закрытие',
         }
         help_texts = {
@@ -333,6 +338,12 @@ class IncidentForm(forms.ModelForm):
             ),
             'dgu_end_date': (
                 'Дата и время завершения подачи электроэнергии от ДГУ'
+            ),
+            'eks_start_date': (
+                'Дата и время начала эксплутационных работ'
+            ),
+            'eks_end_date': (
+                'Дата и время завершения эксплутационных работ'
             ),
         }
         widgets = {
@@ -373,6 +384,14 @@ class IncidentForm(forms.ModelForm):
                 format='%Y-%m-%dT%H:%M'
             ),
             'dgu_end_date': forms.DateTimeInput(
+                attrs={'type': 'datetime-local'},
+                format='%Y-%m-%dT%H:%M'
+            ),
+            'eks_start_date': forms.DateTimeInput(
+                attrs={'type': 'datetime-local'},
+                format='%Y-%m-%dT%H:%M'
+            ),
+            'eks_end_date': forms.DateTimeInput(
                 attrs={'type': 'datetime-local'},
                 format='%Y-%m-%dT%H:%M'
             ),
@@ -420,6 +439,7 @@ class IncidentForm(forms.ModelForm):
             'avr_start_date', 'avr_end_date',
             'rvr_start_date', 'rvr_end_date',
             'dgu_start_date', 'dgu_end_date',
+            'eks_start_date', 'eks_end_date',
         ]:
             field = self.fields[field_name]
             if field:
@@ -491,7 +511,8 @@ class IncidentForm(forms.ModelForm):
         for field_name in [
             'avr_start_date', 'avr_end_date',
             'rvr_start_date', 'rvr_end_date',
-            'dgu_start_date', 'dgu_end_date'
+            'dgu_start_date', 'dgu_end_date',
+            'eks_start_date', 'eks_end_date',
         ]:
             field = self.fields.get(field_name)
 
@@ -558,6 +579,7 @@ class IncidentForm(forms.ModelForm):
             ('avr_start_date', 'avr_end_date'),
             ('rvr_start_date', 'rvr_end_date'),
             ('dgu_start_date', 'dgu_end_date'),
+            ('eks_start_date', 'eks_end_date'),
         ]
 
         for start_field, end_field in date_pairs:
@@ -748,6 +770,7 @@ class IncidentForm(forms.ModelForm):
                 is_avr_category=AVR_CATEGORY in category_names,
                 is_rvr_category=RVR_CATEGORY in category_names,
                 is_dgu_category=DGU_CATEGORY in category_names,
+                is_eks_category=EKS_CATEGORY in category_names,
             )
             instance.statuses.add(new_status)
 
@@ -798,6 +821,21 @@ class IncidentForm(forms.ModelForm):
                     else instance.dgu_end_date
                 )
             if (
+                EKS_CATEGORY in category_names
+                and (
+                    new_status.name in FINISHED_STATUS_NAMES
+                    or new_status.name == NOTIFIED_OP_END_STATUS_NAME
+                )
+            ):
+                instance.eks_end_date = (
+                    now
+                    if (
+                        instance.eks_start_date
+                        and not instance.eks_end_date
+                    )
+                    else instance.eks_end_date
+                )
+            if (
                 AVR_CATEGORY in category_names
                 and new_status.name == NOTIFIED_CONTRACTOR_STATUS_NAME
             ):
@@ -815,6 +853,11 @@ class IncidentForm(forms.ModelForm):
                 and new_status.name == NOTIFIED_CONTRACTOR_STATUS_NAME
             ):
                 instance.dgu_start_date = instance.dgu_start_date or now
+            if (
+                EKS_CATEGORY in category_names
+                and new_status.name == NOTIFIED_CONTRACTOR_STATUS_NAME
+            ):
+                instance.eks_start_date = instance.eks_start_date or now
 
         # Обновляем флаг завершённости
         instance.is_incident_finish = (

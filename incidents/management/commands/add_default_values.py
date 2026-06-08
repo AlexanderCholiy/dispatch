@@ -10,6 +10,8 @@ from incidents.constants import (
     AVR_CATEGORY,
     DEFAULT_STATUS_DESC,
     DEFAULT_STATUS_NAME,
+    DGU_CATEGORY,
+    EKS_CATEGORY,
     END_STATUS_DESC,
     END_STATUS_NAME,
     ERR_STATUS_DESC,
@@ -191,8 +193,18 @@ class Command(BaseCommand):
                     description=description,
                 )
 
-        for category_name in (AVR_CATEGORY, RVR_CATEGORY):
-            IncidentCategory.objects.get_or_create(name=category_name)
+        category_descriptions = {
+            AVR_CATEGORY: 'Аварийно-восстановительные работы',
+            RVR_CATEGORY: 'Ремонтно-восстановительные работы',
+            DGU_CATEGORY: 'На дизелении',
+            EKS_CATEGORY: 'Эксплуатационные инциденты',
+        }
+
+        for category_name, description in category_descriptions.items():
+            obj, _ = IncidentCategory.objects.get_or_create(name=category_name)
+            if not obj.description:
+                obj.description = description
+                obj.save()
 
         valid_category_ids = set(
             IncidentCategory.objects.values_list('id', flat=True)

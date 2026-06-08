@@ -11,6 +11,7 @@ from notifications.models import Notification, NotificationLevel
 from .constants import (
     AVR_CATEGORY,
     DGU_CATEGORY,
+    EKS_CATEGORY,
     END_STATUS_NAME,
     RVR_CATEGORY,
     STATUSES_FOR_AUTOCLOSE,
@@ -98,6 +99,7 @@ def close_incident_auto(self, incident_id: int):
             is_avr_category=AVR_CATEGORY in category_names,
             is_rvr_category=RVR_CATEGORY in category_names,
             is_dgu_category=DGU_CATEGORY in category_names,
+            is_eks_category=EKS_CATEGORY in category_names,
         )
 
         if AVR_CATEGORY in category_names:
@@ -126,6 +128,15 @@ def close_incident_auto(self, incident_id: int):
                     and not incident.dgu_end_date
                 )
                 else incident.dgu_end_date
+            )
+        if EKS_CATEGORY in category_names:
+            incident.eks_end_date = (
+                now
+                if (
+                    incident.eks_start_date
+                    and not incident.eks_end_date
+                )
+                else incident.eks_end_date
             )
 
         incident.auto_close_date = None

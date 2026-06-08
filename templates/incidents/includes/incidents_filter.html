@@ -264,6 +264,31 @@
       </select>
     </div>
 
+    <div class="multiple-select-wrapper" id="sla-eks-select">
+      <div class="dropdown-trigger" data-filter-name="ВРТ ЭКС">
+        <span class="selected-label">ВРТ ЭКС</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="sla-eks-dropdown-menu">
+        <div class="dropdown-options">
+          {% for v in time_statuses %}
+            <label class="option-item {% if v in selected.sla_eks_status %}is-selected{% endif %}" 
+                   data-value="{{ v }}">
+              <i class="bx bx-check"></i>
+              <span>{{ v.label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <select name="sla_eks" id="sla-eks-select-hidden" style="display: none;" multiple>
+        {% for v in time_statuses %}
+          <option value="{{ v }}" {% if v in selected.sla_eks_status %}selected{% endif %}></option>
+        {% endfor %}
+      </select>
+    </div>
+
     <div class="multiple-select-wrapper" id="operator-group-select">
       <div class="dropdown-trigger" data-filter-name="Оператор">
         <span class="selected-label">Оператор</span>
@@ -483,6 +508,11 @@
         </label>
         <label class="column-option">
           <i class="bx check-icon"></i>
+          <input type="checkbox" data-col="sla_eks">
+          <span>ВРТ ЭКС</span>
+        </label>
+        <label class="column-option">
+          <i class="bx check-icon"></i>
           <input type="checkbox" data-col="pole">
           <span>Шифр опоры</span>
         </label>
@@ -551,6 +581,7 @@
         { id: 'sla-avr-select-hidden', cookieName: 'sla_avr', searchFieldName: 'sla_avr', type: 'multi_select' },
         { id: 'sla-rvr-select-hidden', cookieName: 'sla_rvr', searchFieldName: 'sla_rvr', type: 'multi_select' },
         { id: 'sla-dgu-select-hidden', cookieName: 'sla_dgu', searchFieldName: 'sla_dgu', type: 'multi_select' },
+        { id: 'sla-eks-select-hidden', cookieName: 'sla_eks', searchFieldName: 'sla_eks', type: 'multi_select' },
         { id: 'operator-group-select-hidden', cookieName: 'operator_group', searchFieldName: 'operator_group', type: 'multi_select' },
         { id: 'macroregion-select-hidden', cookieName: 'macroregion', searchFieldName: 'macroregion', type: 'multi_select' },
         { id: 'region-responsible-manager-select-hidden', cookieName: 'region_responsible_manager', searchFieldName: 'region_responsible_manager', type: 'multi_select' },

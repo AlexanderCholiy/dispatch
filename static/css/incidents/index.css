@@ -15,6 +15,11 @@
   color: var(--red-color);
 }
 
+.eks-category {
+  color: var(--yellow-color);
+}
+
+
 .badge {
   padding: var(--space-xxs);
   border-radius: var(--radius-sm);

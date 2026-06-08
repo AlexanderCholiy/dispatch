@@ -7,6 +7,7 @@ from core.loggers import celery_logger
 from incidents.constants import (
     AVR_CATEGORY,
     DGU_CATEGORY,
+    EKS_CATEGORY,
     ERR_STATUS_NAME,
     RVR_CATEGORY,
 )
@@ -83,6 +84,7 @@ def send_incident_email_task(
                     is_avr_category=AVR_CATEGORY in category_names,
                     is_rvr_category=RVR_CATEGORY in category_names,
                     is_dgu_category=DGU_CATEGORY in category_names,
+                    is_eks_category=EKS_CATEGORY in category_names,
                 )
                 incident.statuses.add(new_status)
 
@@ -127,5 +129,6 @@ def send_incident_email_task(
                         is_avr_category=AVR_CATEGORY in category_names,
                         is_rvr_category=RVR_CATEGORY in category_names,
                         is_dgu_category=DGU_CATEGORY in category_names,
+                        is_eks_category=EKS_CATEGORY in category_names,
                     )
                     incident.statuses.add(new_status)

@@ -160,6 +160,7 @@ class IncidentAdmin(admin.ModelAdmin):
         'sla_rvr_deadline',
         'is_sla_rvr_expired',
         'dgu_duration',
+        'eks_duration',
     )
 
     fieldsets = (
@@ -177,6 +178,7 @@ class IncidentAdmin(admin.ModelAdmin):
                 'sla_rvr_deadline',
                 'is_sla_rvr_expired',
                 'dgu_duration',
+                'eks_duration',
             ),
         }),
         ('Мета', {
@@ -196,6 +198,8 @@ class IncidentAdmin(admin.ModelAdmin):
                 'rvr_end_date',
                 'dgu_start_date',
                 'dgu_end_date',
+                'eks_start_date',
+                'eks_end_date',
             ),
         }),
     )

@@ -38,6 +38,10 @@ class IncidentReportSerializer(serializers.ModelSerializer):
         source='is_sla_dgu_expired',
         read_only=True
     )
+    is_vrt_eks_expired = serializers.BooleanField(
+        source='is_sla_eks_expired',
+        read_only=True
+    )
 
     last_status = serializers.SerializerMethodField()
     avr_emails = serializers.SerializerMethodField()
@@ -56,6 +60,11 @@ class IncidentReportSerializer(serializers.ModelSerializer):
     dgu_end_datetime = serializers.SerializerMethodField()
     dgu_deadline = serializers.SerializerMethodField()
     dgu_duration = serializers.SerializerMethodField()
+
+    eks_start_datetime = serializers.SerializerMethodField()
+    eks_end_datetime = serializers.SerializerMethodField()
+    eks_deadline = serializers.SerializerMethodField()
+    eks_duration = serializers.SerializerMethodField()
 
     incident_datetime = serializers.SerializerMethodField()
     incident_update_datetime = serializers.SerializerMethodField()
@@ -105,6 +114,12 @@ class IncidentReportSerializer(serializers.ModelSerializer):
             'is_vrt_dgu_expired',
             'dgu_deadline',
             'dgu_duration',
+
+            'eks_start_datetime',
+            'eks_end_datetime',
+            'is_vrt_eks_expired',
+            'eks_deadline',
+            'eks_duration',
 
             'pole',
             'infrastructure_company',
@@ -156,6 +171,11 @@ class IncidentReportSerializer(serializers.ModelSerializer):
             return
         return conversion_utc_datetime(obj.dgu_start_date, False, True)
 
+    def get_eks_start_datetime(self, obj: Incident):
+        if not obj.eks_start_date:
+            return
+        return conversion_utc_datetime(obj.eks_start_date, False, True)
+
     def get_avr_duration(self, obj: Incident):
         return obj.avr_duration_val_label
 
@@ -165,10 +185,18 @@ class IncidentReportSerializer(serializers.ModelSerializer):
     def get_dgu_duration(self, obj: Incident):
         return obj.dgu_duration_val_label
 
+    def get_eks_duration(self, obj: Incident):
+        return obj.eks_duration_val_label
+
     def get_dgu_end_datetime(self, obj: Incident):
         if not obj.dgu_end_date:
             return
         return conversion_utc_datetime(obj.dgu_end_date, False, True)
+
+    def get_eks_end_datetime(self, obj: Incident):
+        if not obj.eks_end_date:
+            return
+        return conversion_utc_datetime(obj.eks_end_date, False, True)
 
     def get_avr_emails(self, obj: Incident):
         if not obj.pole or not obj.pole.avr_contractor:
@@ -202,6 +230,12 @@ class IncidentReportSerializer(serializers.ModelSerializer):
 
     def get_dgu_deadline(self, obj: Incident):
         deadline = obj.sla_dgu_deadline
+        return conversion_utc_datetime(
+            deadline, False, True
+        ) if deadline else None
+
+    def get_eks_deadline(self, obj: Incident):
+        deadline = obj.sla_eks_deadline
         return conversion_utc_datetime(
             deadline, False, True
         ) if deadline else None
@@ -274,18 +308,22 @@ class StatisticReportSerializer(serializers.ModelSerializer):
     sla_avr_expired_count = serializers.IntegerField(read_only=True)
     sla_rvr_expired_count = serializers.IntegerField(read_only=True)
     sla_dgu_expired_count = serializers.IntegerField(read_only=True)
+    sla_eks_expired_count = serializers.IntegerField(read_only=True)
 
     sla_avr_closed_on_time_count = serializers.IntegerField(read_only=True)
     sla_rvr_closed_on_time_count = serializers.IntegerField(read_only=True)
     sla_dgu_closed_on_time_count = serializers.IntegerField(read_only=True)
+    sla_eks_closed_on_time_count = serializers.IntegerField(read_only=True)
 
     sla_avr_waiting_count = serializers.IntegerField(read_only=True)
     sla_rvr_waiting_count = serializers.IntegerField(read_only=True)
     sla_dgu_waiting_count = serializers.IntegerField(read_only=True)
+    sla_eks_waiting_count = serializers.IntegerField(read_only=True)
 
     sla_avr_in_progress_count = serializers.IntegerField(read_only=True)
     sla_rvr_in_progress_count = serializers.IntegerField(read_only=True)
     sla_dgu_in_progress_count = serializers.IntegerField(read_only=True)
+    sla_eks_in_progress_count = serializers.IntegerField(read_only=True)
 
     open_incidents_with_power_issue = serializers.IntegerField(read_only=True)
     closed_incidents_with_power_issue = serializers.IntegerField(
@@ -302,6 +340,7 @@ class StatisticReportSerializer(serializers.ModelSerializer):
     has_avr_category = serializers.IntegerField(read_only=True)
     has_rvr_category = serializers.IntegerField(read_only=True)
     has_dgu_category = serializers.IntegerField(read_only=True)
+    has_eks_category = serializers.IntegerField(read_only=True)
 
     total_incidents = serializers.SerializerMethodField()
     daily_incidents = serializers.SerializerMethodField()
@@ -335,6 +374,11 @@ class StatisticReportSerializer(serializers.ModelSerializer):
             'sla_dgu_closed_on_time_count',
             'sla_dgu_waiting_count',
             'sla_dgu_in_progress_count',
+            # SLA ДГУ:
+            'sla_eks_expired_count',
+            'sla_eks_closed_on_time_count',
+            'sla_eks_waiting_count',
+            'sla_eks_in_progress_count',
             # Типы инцидентов:
             'is_power_issue_type',
             'is_ams_issue_type',
@@ -346,6 +390,7 @@ class StatisticReportSerializer(serializers.ModelSerializer):
             'has_avr_category',
             'has_rvr_category',
             'has_dgu_category',
+            'has_eks_category',
             # Подкатегории инцидентов:
             'incident_subtype_stats',
             # Динамика по дням и часам:

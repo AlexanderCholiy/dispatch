@@ -35,6 +35,7 @@ from .constants import (
     DEFAULT_STATUS_DESC,
     DEFAULT_STATUS_NAME,
     DGU_CATEGORY,
+    EKS_CATEGORY,
     END_STATUS_DESC,
     END_STATUS_NAME,
     ERR_STATUS_DESC,
@@ -344,6 +345,7 @@ class IncidentManager(IncidentValidator):
             is_avr_category=AVR_CATEGORY in category_names,
             is_rvr_category=RVR_CATEGORY in category_names,
             is_dgu_category=DGU_CATEGORY in category_names,
+            is_eks_category=EKS_CATEGORY in category_names,
         )
         incident.statuses.add(status)
 
@@ -365,6 +367,7 @@ class IncidentManager(IncidentValidator):
             is_avr_category=AVR_CATEGORY in category_names,
             is_rvr_category=RVR_CATEGORY in category_names,
             is_dgu_category=DGU_CATEGORY in category_names,
+            is_eks_category=EKS_CATEGORY in category_names,
         )
         incident.statuses.add(status)
 
@@ -386,6 +389,7 @@ class IncidentManager(IncidentValidator):
             is_avr_category=AVR_CATEGORY in category_names,
             is_rvr_category=RVR_CATEGORY in category_names,
             is_dgu_category=DGU_CATEGORY in category_names,
+            is_eks_category=EKS_CATEGORY in category_names,
         )
         incident.statuses.add(status)
 
@@ -407,6 +411,7 @@ class IncidentManager(IncidentValidator):
             is_avr_category=AVR_CATEGORY in category_names,
             is_rvr_category=RVR_CATEGORY in category_names,
             is_dgu_category=DGU_CATEGORY in category_names,
+            is_eks_category=EKS_CATEGORY in category_names,
         )
         incident.statuses.add(status)
 
@@ -428,6 +433,7 @@ class IncidentManager(IncidentValidator):
             is_avr_category=AVR_CATEGORY in category_names,
             is_rvr_category=RVR_CATEGORY in category_names,
             is_dgu_category=DGU_CATEGORY in category_names,
+            is_eks_category=EKS_CATEGORY in category_names,
         )
         incident.statuses.add(status)
 
@@ -449,6 +455,7 @@ class IncidentManager(IncidentValidator):
             is_avr_category=AVR_CATEGORY in category_names,
             is_rvr_category=RVR_CATEGORY in category_names,
             is_dgu_category=DGU_CATEGORY in category_names,
+            is_eks_category=EKS_CATEGORY in category_names,
         )
         incident.statuses.add(status)
 
@@ -470,6 +477,7 @@ class IncidentManager(IncidentValidator):
             is_avr_category=AVR_CATEGORY in category_names,
             is_rvr_category=RVR_CATEGORY in category_names,
             is_dgu_category=DGU_CATEGORY in category_names,
+            is_eks_category=EKS_CATEGORY in category_names,
         )
         incident.statuses.add(status)
 
@@ -491,6 +499,7 @@ class IncidentManager(IncidentValidator):
             is_avr_category=AVR_CATEGORY in category_names,
             is_rvr_category=RVR_CATEGORY in category_names,
             is_dgu_category=DGU_CATEGORY in category_names,
+            is_eks_category=EKS_CATEGORY in category_names,
         )
         incident.statuses.add(status)
 
@@ -512,6 +521,7 @@ class IncidentManager(IncidentValidator):
             is_avr_category=AVR_CATEGORY in category_names,
             is_rvr_category=RVR_CATEGORY in category_names,
             is_dgu_category=DGU_CATEGORY in category_names,
+            is_eks_category=EKS_CATEGORY in category_names,
         )
         incident.statuses.add(status)
 
@@ -533,6 +543,7 @@ class IncidentManager(IncidentValidator):
             is_avr_category=AVR_CATEGORY in category_names,
             is_rvr_category=RVR_CATEGORY in category_names,
             is_dgu_category=DGU_CATEGORY in category_names,
+            is_eks_category=EKS_CATEGORY in category_names,
         )
         incident.statuses.add(status)
 
@@ -554,6 +565,7 @@ class IncidentManager(IncidentValidator):
             is_avr_category=AVR_CATEGORY in category_names,
             is_rvr_category=RVR_CATEGORY in category_names,
             is_dgu_category=DGU_CATEGORY in category_names,
+            is_eks_category=EKS_CATEGORY in category_names,
         )
         incident.statuses.add(status)
 
@@ -575,6 +587,7 @@ class IncidentManager(IncidentValidator):
             is_avr_category=AVR_CATEGORY in category_names,
             is_rvr_category=RVR_CATEGORY in category_names,
             is_dgu_category=DGU_CATEGORY in category_names,
+            is_eks_category=EKS_CATEGORY in category_names,
         )
         incident.statuses.add(status)
 
@@ -910,6 +923,7 @@ class IncidentManager(IncidentValidator):
         is_avr_category: Optional[bool] = None,
         is_rvr_category: Optional[bool] = None,
         is_dgu_category: Optional[bool] = None,
+        is_eks_category: Optional[bool] = None,
     ) -> Optional[IncidentStatusHistory]:
         """
         Возвращает последнее вхождение определенного статуса по его названию
@@ -928,6 +942,9 @@ class IncidentManager(IncidentValidator):
 
         if is_dgu_category is not None:
             queryset = queryset.filter(is_dgu_category=is_dgu_category)
+
+        if is_eks_category is not None:
+            queryset = queryset.filter(is_eks_category=is_eks_category)
 
         return queryset.order_by('-insert_date').first()
 
@@ -1327,6 +1344,7 @@ class IncidentManager(IncidentValidator):
                 sla_avr_status_val=Value('', output_field=CharField()),
                 sla_rvr_status_val=Value('', output_field=CharField()),
                 sla_dgu_status_val=Value('', output_field=CharField()),
+                sla_eks_status_val=Value('', output_field=CharField()),
             )
             .filter(pk=incident_id)
             .first()
@@ -1338,6 +1356,7 @@ class IncidentManager(IncidentValidator):
         incident.sla_avr_status_val = incident.sla_avr_status
         incident.sla_rvr_status_val = incident.sla_rvr_status
         incident.sla_dgu_status_val = incident.sla_dgu_status
+        incident.sla_eks_status_val = incident.sla_eks_status
 
         if not incident.prefetched_status_history:
             default_status, _ = IncidentStatus.objects.get_or_create(
@@ -1349,6 +1368,7 @@ class IncidentManager(IncidentValidator):
                 is_avr_category=False,
                 is_rvr_category=False,
                 is_dgu_category=False,
+                is_eks_category=False,
             )
             incident.prefetched_status_history = [hist]
 

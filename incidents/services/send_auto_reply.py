@@ -17,6 +17,7 @@ from incidents.constants import (
     AUTO_REPLY_MAX_AGE_TTL,
     AVR_CATEGORY,
     DGU_CATEGORY,
+    EKS_CATEGORY,
     IN_WORK_STATUS_NAME,
     MAX_EMAILS_ON_CLOSED_INCIDENTS,
     RVR_CATEGORY,
@@ -258,6 +259,7 @@ class AutoReply:
                     is_avr_category=AVR_CATEGORY in category_names,
                     is_rvr_category=RVR_CATEGORY in category_names,
                     is_dgu_category=DGU_CATEGORY in category_names,
+                    is_eks_category=EKS_CATEGORY in category_names,
                 )
                 incident.statuses.add(new_status)
                 incident.save()

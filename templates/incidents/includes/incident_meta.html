@@ -242,6 +242,8 @@
 
     {% include "incidents/includes/incident_sla_meta.html" with label="ВРТ ДГУ" status=incident.sla_dgu_status_val start=incident.dgu_start_date deadline=incident.sla_dgu_deadline start_field=incident_form.dgu_start_date end_field=incident_form.dgu_end_date %}
 
+    {% include "incidents/includes/incident_sla_meta.html" with label="ВРТ ЭКС" status=incident.sla_eks_status_val start=incident.eks_start_date deadline=incident.sla_eks_deadline start_field=incident_form.eks_start_date end_field=incident_form.eks_end_date %}
+
     {% include "incidents/includes/monitoring_section.html" with monitoring=monitoring %}
 
     {% include "incidents/includes/status_history.html" with incident=incident %}

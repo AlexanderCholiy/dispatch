@@ -70,6 +70,7 @@ from incidents.annotations import (
     annotate_sla_avr,
     annotate_sla_dgu,
     annotate_sla_dispatch,
+    annotate_sla_eks,
     annotate_sla_rvr,
 )
 from incidents.constants import (
@@ -129,6 +130,12 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
     - is_vrt_dgu_expired: Превышает ли период дизеления 15 суток
     - dgu_deadline: Дедлайн ВРТ ДГУ.
     - dgu_duration: Период дизеления.
+
+    - eks_start_datetime: Дата и время начала ЭКС.
+    - eks_end_datetime: Дата и время завершения ЭКС.
+    - is_vrt_eks_expired: Превышает ли период ЭКС 15 суток
+    - eks_deadline: Дедлайн длительности ЭКС.
+    - eks_duration: Период ЭКС.
 
     - pole: Шифр опоры.
     - region_ru: Регион опоры.
@@ -383,6 +390,15 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
     - sla_dgu_in_progress: количество инцидентов с ДГУ в процессе и SLA еще
     не истекла
 
+    SLA ЭКС:
+    - sla_eks_expired: количество инцидентов, где SLA ЭКС просрочена
+    - sla_eks_closed_on_time: количество инцидентов, где SLA ЭКС
+    выполнена вовремя
+    - sla_eks_waiting: количество инцидентов, где до SLA ЭКС осталось
+    меньше часа
+    - sla_eks_in_progress: количество инцидентов с ЭКС в процессе и SLA еще
+    не истекла
+
     ТИПЫ ИНЦИДЕНТОВ:
     - is_power_issue_type: Инциденты по питанию.
     - is_ams_issue_type: Инциденты по конструктиву / территории АМС.
@@ -395,6 +411,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
     - has_avr_category: Инциденты с категорией АВР.
     - has_rvr_category: Инциденты с категорией РВР.
     - has_dgu_category: Инциденты с категорией ДГУ.
+    - has_eks_category: Инциденты с категорией ЭКС.
 
     ПОДКАТЕГОРИИ ИНЦИДЕНТОВ:
     - incident_subtype_stats:
@@ -522,6 +539,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
         incidents = annotate_sla_avr(incidents)
         incidents = annotate_sla_rvr(incidents)
         incidents = annotate_sla_dgu(incidents)
+        incidents = annotate_sla_eks(incidents)
         incidents = annotate_incident_types(incidents)
         incidents = annotate_incident_categories(incidents)
         subtype_qs = annotate_incident_subtypes(incidents)
@@ -596,6 +614,19 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                 sla_dgu_in_progress_count=Count(
                     'id', distinct=True, filter=Q(sla_dgu_in_progress=True)
                 ),
+                # SLA ЭКС
+                sla_eks_expired_count=Count(
+                    'id', distinct=True, filter=Q(sla_eks_expired=True)
+                ),
+                sla_eks_closed_on_time_count=Count(
+                    'id', distinct=True, filter=Q(sla_eks_closed_on_time=True)
+                ),
+                sla_eks_waiting_count=Count(
+                    'id', distinct=True, filter=Q(sla_eks_waiting=True)
+                ),
+                sla_eks_in_progress_count=Count(
+                    'id', distinct=True, filter=Q(sla_eks_in_progress=True)
+                ),
                 # Типы инцидентов:
                 is_power_issue_type=Count(
                     'id', distinct=True, filter=Q(is_power_issue_type=True)
@@ -629,6 +660,10 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                 has_dgu_category=Count(
                     'id', distinct=True,
                     filter=Q(has_dgu_category=True)
+                ),
+                has_eks_category=Count(
+                    'id', distinct=True,
+                    filter=Q(has_eks_category=True)
                 ),
             )
         )
@@ -718,6 +753,11 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                 'sla_dgu_closed_on_time_count',
                 'sla_dgu_waiting_count',
                 'sla_dgu_in_progress_count',
+                # SLA ЭКС:
+                'sla_eks_expired_count',
+                'sla_eks_closed_on_time_count',
+                'sla_eks_waiting_count',
+                'sla_eks_in_progress_count',
                 # Типы инцидентов:
                 'is_power_issue_type',
                 'is_ams_issue_type',
@@ -729,6 +769,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
                 'has_avr_category',
                 'has_rvr_category',
                 'has_dgu_category',
+                'has_eks_category',
             ]:
                 setattr(macro, field, macro_stats.get(field, 0))
 
@@ -802,6 +843,10 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
             'sla_dgu_closed_on_time_count',
             'sla_dgu_waiting_count',
             'sla_dgu_in_progress_count',
+            'sla_eks_expired_count',
+            'sla_eks_closed_on_time_count',
+            'sla_eks_waiting_count',
+            'sla_eks_in_progress_count',
             'is_power_issue_type',
             'is_ams_issue_type',
             'is_goverment_request_issue_type',
@@ -811,6 +856,7 @@ class StatisticReportViewSet(viewsets.ReadOnlyModelViewSet):
             'has_avr_category',
             'has_rvr_category',
             'has_dgu_category',
+            'has_eks_category',
             'open_incidents_with_power_issue',
             'closed_incidents_with_power_issue',
         ]

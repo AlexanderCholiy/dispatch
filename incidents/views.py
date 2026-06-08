@@ -70,10 +70,16 @@ from users.models import Roles, User
 from users.utils import role_required
 from yandex_tracker.utils import yt_manager
 
-from .annotations import annotate_sla_avr, annotate_sla_dgu, annotate_sla_rvr
+from .annotations import (
+    annotate_sla_avr,
+    annotate_sla_dgu,
+    annotate_sla_eks,
+    annotate_sla_rvr
+)
 from .constants import (
     AVR_CATEGORY,
     DGU_CATEGORY,
+    EKS_CATEGORY,
     FINISHED_STATUS_NAMES,
     INCIDENTS_PER_PAGE,
     MAX_INCIDENT_LINKS,
@@ -353,6 +359,15 @@ def index(request: HttpRequest) -> HttpResponse:
         [v for v in sla_dgu_status if v in time_statuses] or time_statuses[:]
     )
 
+    sla_eks_status = (
+        request.GET.get('sla_eks', '').strip()
+        or (get_raw_cookie(request, 'sla_eks') or '').strip()
+    ).split(',') if not search_only_by_code else []
+
+    sla_eks_status = (
+        [v for v in sla_eks_status if v in time_statuses] or time_statuses[:]
+    )
+
     date_from = (
         request.GET.get('incident_date_from', '').strip()
         or (get_raw_cookie(request, 'incident_date_from') or '').strip()
@@ -418,6 +433,7 @@ def index(request: HttpRequest) -> HttpResponse:
     base_qs = annotate_sla_avr(base_qs)
     base_qs = annotate_sla_rvr(base_qs)
     base_qs = annotate_sla_dgu(base_qs)
+    base_qs = annotate_sla_eks(base_qs)
 
     if sla_avr_status and len(sla_avr_status) != len(sla_statuses):
         q_filter = Q()
@@ -481,6 +497,28 @@ def index(request: HttpRequest) -> HttpResponse:
                     sla_dgu_waiting=False,
                     sla_dgu_in_progress=False,
                     sla_dgu_closed_on_time=False,
+                )
+
+        base_qs = base_qs.filter(q_filter)
+
+    if sla_eks_status and len(sla_eks_status) != len(time_statuses):
+        q_filter = Q()
+
+        for status_val in sla_eks_status:
+            if status_val == SLAStatus.EXPIRED.value:
+                q_filter |= Q(sla_eks_expired=True)
+            elif status_val == SLAStatus.WAITING.value:
+                q_filter |= Q(sla_eks_waiting=True)
+            elif status_val == SLAStatus.IN_PROGRESS.value:
+                q_filter |= Q(sla_eks_in_progress=True)
+            elif status_val == SLAStatus.CLOSED_ON_TIME.value:
+                q_filter |= Q(sla_eks_closed_on_time=True)
+            else:
+                q_filter |= Q(
+                    sla_eks_expired=False,
+                    sla_eks_waiting=False,
+                    sla_eks_in_progress=False,
+                    sla_eks_closed_on_time=False,
                 )
 
         base_qs = base_qs.filter(q_filter)
@@ -685,6 +723,7 @@ def index(request: HttpRequest) -> HttpResponse:
         sla_avr_status_val=Value('', output_field=CharField()),
         sla_rvr_status_val=Value('', output_field=CharField()),
         sla_dgu_status_val=Value('', output_field=CharField()),
+        sla_eks_status_val=Value('', output_field=CharField()),
     )
 
     id_index = {id_: i for i, id_ in enumerate(page_ids)}
@@ -694,6 +733,7 @@ def index(request: HttpRequest) -> HttpResponse:
         incident.sla_avr_status_val = incident.sla_avr_status
         incident.sla_rvr_status_val = incident.sla_rvr_status
         incident.sla_dgu_status_val = incident.sla_dgu_status
+        incident.sla_eks_status_val = incident.sla_eks_status
 
         incident.updated_human = humanize_datetime(incident.update_date)
 
@@ -739,6 +779,7 @@ def index(request: HttpRequest) -> HttpResponse:
             'sla_avr_status': sla_avr_status,
             'sla_rvr_status': sla_rvr_status,
             'sla_dgu_status': sla_dgu_status,
+            'sla_eks_status': sla_eks_status,
             'date_from': (
                 date_from.strftime(DATETIME_LOCAL_FORMAT) if date_from else ''
             ),
@@ -1649,6 +1690,7 @@ def notify_operator(request: HttpRequest, incident_id: int) -> HttpResponse:
                     is_avr_category=AVR_CATEGORY in category_names,
                     is_rvr_category=RVR_CATEGORY in category_names,
                     is_dgu_category=DGU_CATEGORY in category_names,
+                    is_eks_category=EKS_CATEGORY in category_names,
                 )
                 incident.statuses.add(new_status)
 
@@ -1846,6 +1888,7 @@ def notify_avr_contractor(
                     is_avr_category=AVR_CATEGORY in category_names,
                     is_rvr_category=RVR_CATEGORY in category_names,
                     is_dgu_category=DGU_CATEGORY in category_names,
+                    is_eks_category=EKS_CATEGORY in category_names,
                 )
                 incident.statuses.add(new_status)
 
@@ -2115,6 +2158,7 @@ def notify_rvr_contractor(
                     is_avr_category=AVR_CATEGORY in category_names,
                     is_rvr_category=RVR_CATEGORY in category_names,
                     is_dgu_category=DGU_CATEGORY in category_names,
+                    is_eks_category=EKS_CATEGORY in category_names,
                 )
                 incident.statuses.add(new_status)
 
@@ -2402,6 +2446,7 @@ def notify_incident_closed(
                     is_avr_category=AVR_CATEGORY in category_names,
                     is_rvr_category=RVR_CATEGORY in category_names,
                     is_dgu_category=DGU_CATEGORY in category_names,
+                    is_eks_category=EKS_CATEGORY in category_names,
                 )
                 incident.statuses.add(new_status)
 

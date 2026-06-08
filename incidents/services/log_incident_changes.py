@@ -75,6 +75,8 @@ def log_incident_changes(
         'rvr_end_date',
         'dgu_start_date',
         'dgu_end_date',
+        'eks_start_date',
+        'eks_end_date',
         'was_read',
         'auto_close_date',
     ]

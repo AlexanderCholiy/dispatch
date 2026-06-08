@@ -22,6 +22,8 @@ from .constants import (
     DEFAULT_IS_YT_TRACKER_CONTROLLED,
     DGU_SLA_IN_PROGRESS_DEADLINE_IN_HOURS,
     DGU_SLA_WAITING_DEADLINE_IN_HOURS,
+    EKS_SLA_IN_PROGRESS_DEADLINE_IN_HOURS,
+    EKS_SLA_WAITING_DEADLINE_IN_HOURS,
     INCIDENT_CODE_PREFIX,
     INCIDENT_COMMENT_MAX_PREVIEW_LEN,
     MAX_CODE_LEN,
@@ -198,6 +200,16 @@ class Incident(models.Model):
         blank=True,
         verbose_name='Дата и время закрытия ДГУ',
     )
+    eks_start_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Дата и время передачи на ЭКС',
+    )
+    eks_end_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Дата и время закрытия ЭКС',
+    )
     disable_thread_auto_link = models.BooleanField(
         default=False,
         verbose_name='Запрет авто-привязки по email цепочке',
@@ -354,6 +366,12 @@ class Incident(models.Model):
                     'Дата закрытия ДГУ не может быть раньше даты начала.'
                 )
 
+        if self.eks_start_date and self.eks_end_date:
+            if self.eks_end_date < self.eks_start_date:
+                errors['eks_end_date'] = (
+                    'Дата закрытия ЭКС не может быть раньше даты начала.'
+                )
+
         if self.avr_start_date and self.avr_start_date < min_date:
             errors['avr_start_date'] = (
                 'Дата начала АВР не может быть раньше '
@@ -372,6 +390,12 @@ class Incident(models.Model):
                 f'{min_date.strftime(DATETIME_FORMAT)}'
             )
 
+        if self.eks_start_date and self.eks_start_date < min_date:
+            errors['eks_start_date'] = (
+                'Дата начала ЭКС не может быть раньше '
+                f'{min_date.strftime(DATETIME_FORMAT)}'
+            )
+
         if self.avr_end_date and self.avr_end_date > max_future_date:
             errors['avr_end_date'] = (
                 'Дата закрытия АВР не может быть позже '
@@ -387,6 +411,12 @@ class Incident(models.Model):
         if self.dgu_end_date and self.dgu_end_date > max_future_date:
             errors['dgu_end_date'] = (
                 'Дата закрытия ДГУ не может быть позже '
+                f'{max_future_date.strftime(DATETIME_FORMAT)}'
+            )
+
+        if self.eks_end_date and self.eks_end_date > max_future_date:
+            errors['eks_end_date'] = (
+                'Дата закрытия ЭКС не может быть позже '
                 f'{max_future_date.strftime(DATETIME_FORMAT)}'
             )
 
@@ -435,6 +465,19 @@ class Incident(models.Model):
     is_sla_dgu_expired.fget.short_description = 'Просрочен ли SLA (ДГУ)'
 
     @property
+    def is_sla_eks_expired(self) -> Optional[bool]:
+        if not self.eks_start_date:
+            return None
+
+        end_date = self.eks_end_date or timezone.now()
+        elapsed = end_date - self.eks_start_date
+
+        return elapsed > timedelta(
+            hours=EKS_SLA_WAITING_DEADLINE_IN_HOURS
+        )
+    is_sla_eks_expired.fget.short_description = 'Просрочен ли SLA (ЭКС)'
+
+    @property
     def avr_contractor(self) -> Optional[AVRContractor]:
         return self.pole.avr_contractor if self.pole else None
     avr_contractor.fget.short_description = 'Подрядчик по АВР'
@@ -468,7 +511,16 @@ class Incident(models.Model):
                 hours=DGU_SLA_WAITING_DEADLINE_IN_HOURS
             )
         return None
-    sla_rvr_deadline.fget.short_description = 'Срок устранения ДГУ'
+    sla_dgu_deadline.fget.short_description = 'Срок устранения ДГУ'
+
+    @property
+    def sla_eks_deadline(self) -> Optional[datetime]:
+        if self.eks_start_date:
+            return self.eks_start_date + timedelta(
+                hours=EKS_SLA_WAITING_DEADLINE_IN_HOURS
+            )
+        return None
+    sla_eks_deadline.fget.short_description = 'Срок устранения ЭКС'
 
     @property
     def avr_duration(self) -> Optional[timedelta]:
@@ -517,6 +569,18 @@ class Incident(models.Model):
     dgu_duration.fget.short_description = 'Длительность дизеления'
 
     @property
+    def eks_duration(self) -> Optional[timedelta]:
+        """Длительность проведения эксплуатационных работ (ЭКС)."""
+        if not self.eks_start_date:
+            return None
+
+        end_date = self.eks_end_date or timezone.now()
+        return end_date - self.eks_start_date
+    eks_duration.fget.short_description = (
+        'Длительность проведения эксплуатационных работ'
+    )
+
+    @property
     def sla_avr_status(self) -> Optional[SLAStatus]:
         return self._get_sla_status('avr')
 
@@ -529,12 +593,24 @@ class Incident(models.Model):
         return self._get_sla_status('dgu')
 
     @property
+    def sla_eks_status(self) -> Optional[TimeStatus]:
+        return self._get_sla_status('eks')
+
+    @property
     def dgu_duration_val_label(self) -> Optional[str]:
         dgu_duration = self.dgu_duration
         if dgu_duration is None:
             return
 
         return timedelta_to_human_time(dgu_duration)
+
+    @property
+    def eks_duration_val_label(self) -> Optional[str]:
+        eks_duration = self.eks_duration
+        if eks_duration is None:
+            return
+
+        return timedelta_to_human_time(eks_duration)
 
     def _get_sla_status(
         self, category: str
@@ -616,6 +692,43 @@ class Incident(models.Model):
             )
             waiting_limit = timedelta(
                 hours=DGU_SLA_WAITING_DEADLINE_IN_HOURS
+            )
+
+            # Закрыт
+            if end:
+                return (
+                    TimeStatus.EXPIRED
+                    if elapsed > waiting_limit
+                    else TimeStatus.CLOSED_ON_TIME
+                )
+
+            # В работе (< 12 часов)
+            if elapsed < in_progress_limit:
+                return TimeStatus.IN_PROGRESS
+
+            # Ожидание (< 15 суток)
+            if elapsed < waiting_limit:
+                return TimeStatus.WAITING
+
+            # Просрочен
+            return TimeStatus.EXPIRED
+
+        # ---------- EKS ----------
+        if category == 'eks':
+            start = self.eks_start_date
+            end = self.eks_end_date
+
+            if not start:
+                return None
+
+            end_date = end or now
+            elapsed = end_date - start
+
+            in_progress_limit = timedelta(
+                hours=EKS_SLA_IN_PROGRESS_DEADLINE_IN_HOURS
+            )
+            waiting_limit = timedelta(
+                hours=EKS_SLA_WAITING_DEADLINE_IN_HOURS
             )
 
             # Закрыт
@@ -856,6 +969,10 @@ class IncidentStatusHistory(models.Model):
     is_dgu_category = models.BooleanField(
         default=False,
         verbose_name='Категория ДГУ'
+    )
+    is_eks_category = models.BooleanField(
+        default=False,
+        verbose_name='Категория ЭКС'
     )
 
     class Meta:
