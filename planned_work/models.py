@@ -120,8 +120,7 @@ class PlannedWork(models.Model):
 
     def __str__(self):
         return (
-            f'ПЛР {self.pole} ({PlannedWorkReason(self.reason).label}) '
-            f'- {PlannedWorkStatus(self.status).label}'
+            f'{PlannedWorkReason(self.reason).label} на {self.pole}'
         )
 
     def clean(self):

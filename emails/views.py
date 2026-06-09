@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 
+from dal import autocomplete
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -327,3 +328,22 @@ def download_email_attachments(
     response['Content-Disposition'] = f'attachment; filename="{archive_name}"'
 
     return response
+
+
+class EmailAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return EmailMessage.objects.none()
+
+        q = self.q
+        qs = EmailMessage.objects.all()
+
+        if q:
+            try:
+                email_id = int(q)
+                qs = qs.filter(id=email_id)
+            except ValueError:
+                qs = qs.filter(subject__icontains=q)
+
+        return qs[:EMAILS_PER_PAGE]

@@ -1,0 +1,10 @@
+from django.urls import path
+from django.views.generic import RedirectView
+
+from . import views
+
+app_name = 'planned_work'
+
+urlpatterns = [
+    path('create/', views.create_planned_work, name='planned_work_create'),
+]
