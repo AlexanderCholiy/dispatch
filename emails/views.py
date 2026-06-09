@@ -13,7 +13,7 @@ from django.http import (
     HttpResponse,
     StreamingHttpResponse,
 )
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, get_object_or_404
 from django.urls import reverse
 from django_ratelimit.decorators import ratelimit
 from stream_zip import ZIP_32, ZIP_64, stream_zip
@@ -193,6 +193,35 @@ def emails_list(request: HttpRequest) -> HttpResponse:
     }
 
     return render(request, 'emails/emais_list.html', context)
+
+
+@login_required
+@role_required()
+@ratelimit(key='user_or_ip', rate='200/m', block=True)
+def email_detail(request: HttpRequest, email_id: int) -> HttpResponse:
+    email_qs = EmailMessage.objects.filter(id=email_id).select_related(
+        'email_incident',
+        'folder',
+        'email_mime',
+    ).prefetch_related(
+        Prefetch(
+            'email_attachments', to_attr='prefetched_attachments'
+        ),
+        Prefetch(
+            'email_intext_attachments', to_attr='prefetched_intext_attachments'
+        ),
+        Prefetch(
+            'email_msg_to', to_attr='prefetched_to'
+        ),
+        Prefetch(
+            'email_msg_cc', to_attr='prefetched_cc'
+        ),
+    )
+    email = get_object_or_404(email_qs)
+
+    context = {'email': email}
+
+    return render(request, 'emails/email_detail.html', context)
 
 
 @login_required

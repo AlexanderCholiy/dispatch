@@ -146,7 +146,7 @@ class EmailMessage(models.Model):
         verbose_name_plural = 'Почта'
 
     def __str__(self):
-        return self.email_msg_id
+        return f'ID: {self.id} - {self.email_subject or "без темы"}'
 
 
 class EmailReference(models.Model):
