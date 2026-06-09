@@ -13,7 +13,7 @@ from django.http import (
     HttpResponse,
     StreamingHttpResponse,
 )
-from django.shortcuts import redirect, render, get_object_or_404
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django_ratelimit.decorators import ratelimit
 from stream_zip import ZIP_32, ZIP_64, stream_zip
@@ -217,6 +217,13 @@ def email_detail(request: HttpRequest, email_id: int) -> HttpResponse:
             'email_msg_cc', to_attr='prefetched_cc'
         ),
     )
+
+    user: User = request.user
+    if user.role == Roles.AVR_CONTRACTOR:
+        email_qs = email_qs.filter(
+            email_incident__pole__avr_contractor=user.avr_contractor
+        )
+
     email = get_object_or_404(email_qs)
 
     context = {'email': email}

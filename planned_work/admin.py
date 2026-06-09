@@ -1,7 +1,9 @@
 from django.contrib import admin
-from .models import PlannedWork
-from .constants import MAX_PLR_PER_PAGE
+
 from core.constants import EMPTY_VALUE
+
+from .constants import MAX_PLR_PER_PAGE
+from .models import PlannedWork
 
 admin.site.empty_value_display = EMPTY_VALUE
 
