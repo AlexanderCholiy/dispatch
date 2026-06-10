@@ -62,21 +62,29 @@ class PlannedWorkForm(forms.ModelForm):
             self.fields['author'].initial = self.author_user
 
 
-class PlannedWorkEmailRowForm(forms.Form):
+class PlannedWorkEmailForm(forms.Form):
+    """Форма для выбора одного письма для связи с использованием автодополнения."""
+    
+    # Явно определяем поле
     email = forms.ModelChoiceField(
-        queryset=EmailMessage.objects.all(),
+        queryset=EmailMessage.objects.none(), # Заглушка, так как мы используем autocomplete
         required=False,
+        empty_label="Не выбрано",
         widget=autocomplete.ModelSelect2(
             url='emails:emails_autocomplete',
-            attrs={'data-placeholder': 'Поиск по ID или теме письма...'}
-        ),
-        label='Письмо'
+            attrs={
+                'data-placeholder': 'Поиск по ID или теме письма...',
+            }
+        )
     )
 
 
 class PlannedWorkEmailFormSet(forms.BaseFormSet):
+    """Кастомный FormSet для проверки дубликатов."""
+    
     def add_fields(self, form, index):
         super().add_fields(form, index)
+        # Добавляем чекбокс удаления
         form.fields['DELETE'] = forms.BooleanField(
             required=False,
             label='',
@@ -85,7 +93,7 @@ class PlannedWorkEmailFormSet(forms.BaseFormSet):
 
     def clean(self):
         super().clean()
-
+        
         if any(self.errors):
             return
 
@@ -93,19 +101,10 @@ class PlannedWorkEmailFormSet(forms.BaseFormSet):
         for form in self.forms:
             if form.cleaned_data.get('DELETE'):
                 continue
-
+            
             email = form.cleaned_data.get('email')
+            
             if email:
                 if email.id in seen_emails:
-                    raise forms.ValidationError('Это письмо уже добавлено.')
+                    raise forms.ValidationError("Это письмо уже добавлено в список.")
                 seen_emails.add(email.id)
-
-
-PlannedWorkEmailFormSet = forms.formset_factory(
-    PlannedWorkEmailRowForm,
-    formset=PlannedWorkEmailFormSet,
-    extra=1,
-    can_delete=True,
-    min_num=0,
-    validate_min=False
-)

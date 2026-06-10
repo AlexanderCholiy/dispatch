@@ -1,0 +1,102 @@
+{% load static %}
+
+{% block extra_css %}
+{% endblock %}
+
+<form method="post">
+  {% csrf_token %}
+  
+  <!-- Управление формой -->
+  <div class="card-header">
+    <div class="planned-work-link-buttons">
+      <button type="submit" 
+              name="planned_work_links_submit" 
+              class="btn btn-primary" 
+              {% if not can_manage %}disabled{% endif %}>
+        Сохранить
+      </button>
+  
+      <button type="button" id="toggle-all-delete" class="btn btn-secondary" {% if not can_manage %}disabled{% endif %}>
+        Выбрать все
+      </button>
+    </div>
+  </div>
+
+  <div class="card-body">      
+    <!-- Важно: management_form должен быть внутри тега form -->
+    {{ email_formset.management_form }}
+
+    <div class="table-wrapper">
+      <table class="custom-table link-table">
+          <thead>
+              <tr>
+                <th>Письмо</th>
+                <th>Тема</th> <!-- Добавили заголовок темы -->
+                <th>Дата</th>   <!-- Добавили заголовок даты -->
+                <th>Удалить</th>
+              </tr>
+          </thead>
+          <tbody>
+              {% for form in email_formset %}
+              <tr>
+                <td>
+                    {{ form.email }}
+                    {% for error in form.email.errors %}
+                        <div class="form-error">{{ error }}</div>
+                    {% endfor %}
+                </td>
+
+                <td>
+                  —
+                </td>
+
+                <td>
+                  —
+                </td>
+
+                <td>
+                  —
+                </td>
+
+                <td class="delete-checkbox-td">
+                    <label class="custom-checkbox-wrapper tooltip" data-title="Отметьте, чтобы удалить эту связь">
+                      {{ form.DELETE }}
+                      <i class="bx bx-x check-icon delete-icon"></i>
+                    </label>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="4" class="empty">Нет связанных писем</td></tr>
+              {% endfor %}
+          </tbody>
+      </table>
+    </div>
+  </div>
+</form>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleBtn = document.getElementById('toggle-all-delete');
+    // Находим все чекбоксы удаления
+    const deleteCheckboxes = document.querySelectorAll('input[name$="-DELETE"]');
+    
+    let isAllChecked = false;
+
+    if (toggleBtn && deleteCheckboxes.length > 0) {
+        toggleBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const anyUnchecked = Array.from(deleteCheckboxes).some(cb => !cb.checked);
+            isAllChecked = anyUnchecked;
+            
+            deleteCheckboxes.forEach(cb => {
+                cb.checked = isAllChecked;
+            });
+
+            toggleBtn.innerHTML = isAllChecked ? 'Снять все' : 'Выбрать все';
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -72,6 +72,11 @@ class PlannedWork(models.Model):
         verbose_name='Автор',
         db_index=True,
     )
+    insert_date = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата и время добавления',
+        db_index=True,
+    )
 
     class Meta:
         verbose_name = 'ПЛР'

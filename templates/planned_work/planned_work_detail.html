@@ -3,82 +3,40 @@
 {% load static %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/includes/tabs.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="container-sm">
+<div class="container">
 
   <div class="card">
+    <div class="tabs" data-default-tab="{{ active_tab|default:'planned_work' }}">
 
-    <div class="card-body">
-
-      <form method="post">
-        {% csrf_token %}
-
-        {% if form.non_field_errors %}
-          <div class="form-non-field-errors">
-            {% for error in form.non_field_errors %}
-              <div class="form-error">{{ error }}</div>
-            {% endfor %}
-          </div>
-        {% endif %}
-  
-        <div class="planned-work-row">
-          <div class="form-group {% if form.pole.errors %}has-error{% endif %}">
-            <label for="{{ form.pole.id_for_label }}" class="field-label">{{ form.pole.label }}</label>
-
-            {{ form.pole }}
-
-            {% for error in form.pole.errors %}
-              <div class="form-error">{{ error }}</div>
-            {% endfor %}
-          </div>
-
-          <div class="select-wrapper {% if field.errors %}has-error{% endif %}">
-            <label for="{{ form.reason.id_for_label }}">{{ form.reason.label }}</label>
-
-            <select 
-              name="{{ form.reason.name }}" 
-              id="{{ form.reason.id_for_label }}"
-            >
-
-              {% for value, label in form.reason.field.choices %}
-                {% if value %}
-                  <option value="{{ value }}"
-                    {% if field.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}
-                  >
-                    {{ label }}
-                  </option>
-                {% endif %}
-              {% endfor %}
-
-            </select>
-
-            {% for error in form.reason.errors %}
-              <div class="form-error">{{ error }}</div>
-            {% endfor %}
-          </div>
-
+      <div class="tabs-header">
+        <div class="left-tabs-part">
+          <button class="tab-btn" data-tab="planned_work">ПЛР</button>
+          <button class="tab-btn" data-tab="emails-links">Связанные письма</button>
         </div>
+        <div class="right-tabs-part">
+          {% if planned_work.id %}
+            <strong class="planned-work-id copy-text" data-text="{{ planned_work.id }}">{{ planned_work.id }}</strong>
+          {% else %}
+            <strong class="planned-work-new">Новый</strong>
+          {% endif %}
+        </div>
+      </div>
 
-        <div class="planned-work-row">
-          {% include "planned_work/includes/planned_work_sla_meta.html" with label="SLA ПЛР" status=form.instance.status start=form.start_date deadline=form.end_date start_field=form.start_date end_field=form.end_date  %}
+      <div class="tabs-content">
+        <div class="tab-panel" data-tab-content="planned_work">
+          {% include "planned_work/includes/planned_work_meta.html" with planned_work=planned_work main_form=main_form %}
         </div>
   
-        <div class="planned-work-row">
-          {% include "planned_work/includes/planned_work_emails.html" with email_formset=email_formset %}
+        <div class="tab-panel" data-tab-content="emails-links">
+          {% include "planned_work/includes/planned_work_links.html" with planned_work=planned_work email_formset=email_formset %}
         </div>
+      </div>
 
-        <div class="form-actions"> 
-          <button type="submit" class="btn btn-primary">
-            Сохранить
-          </button>
-        </div>
-  
-      </form>
     </div>
-
-
 
   </div>
 </div>
@@ -86,6 +44,7 @@
 
 <!-- jQuery должен подключаться до media формы -->
 {% block extra_js %}
+  <script src="{% static 'js/tabs.js' %}"></script>
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-  {{ form.media }}
+  {{ main_form.media }}
 {% endblock %}
