@@ -3,7 +3,10 @@
 {% load static %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/includes/tables.css' %}">
 <link rel="stylesheet" href="{% static 'css/includes/tabs.css' %}">
+<link rel="stylesheet" href="{% static 'css/includes/autoselect_forms.css' %}">
+<link rel="stylesheet" href="{% static 'css/planned_work/planned_work_meta.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -15,11 +18,13 @@
       <div class="tabs-header">
         <div class="left-tabs-part">
           <button class="tab-btn" data-tab="planned_work">ПЛР</button>
-          <button class="tab-btn" data-tab="emails-links">Связанные письма</button>
+          {% if planned_work.id %}
+            <button class="tab-btn" data-tab="emails-links">Связанные письма</button>
+          {% endif %}
         </div>
         <div class="right-tabs-part">
           {% if planned_work.id %}
-            <strong class="planned-work-id copy-text" data-text="{{ planned_work.id }}">{{ planned_work.id }}</strong>
+            <strong class="planned-work-id copy-text" data-text="{{ planned_work.id }}">ID: {{ planned_work.id }}</strong>
           {% else %}
             <strong class="planned-work-new">Новый</strong>
           {% endif %}
@@ -31,9 +36,11 @@
           {% include "planned_work/includes/planned_work_meta.html" with planned_work=planned_work main_form=main_form %}
         </div>
   
-        <div class="tab-panel" data-tab-content="emails-links">
-          {% include "planned_work/includes/planned_work_links.html" with planned_work=planned_work email_formset=email_formset %}
-        </div>
+        {% if planned_work.id %}
+          <div class="tab-panel" data-tab-content="emails-links">
+            {% include "planned_work/includes/planned_work_links.html" with planned_work=planned_work email_formset=email_formset %}
+          </div>
+        {% endif %}
       </div>
 
     </div>

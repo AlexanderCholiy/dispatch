@@ -30,10 +30,9 @@ class PlannedWorkForm(forms.ModelForm):
         ]
         labels = {
             'pole': 'Опора',
-            'reason': 'Причина проведения работ',
-            'start_date': 'Дата и время начала',
-            'end_date': 'Дата и время окончания',
-            'emails': 'Связанные письма',
+            'reason': 'Причина',
+            'start_date': 'Начало ПЛР',
+            'end_date': 'Закрытие ПЛР',
             'author': 'Автор',
         }
         widgets = {
@@ -41,7 +40,12 @@ class PlannedWorkForm(forms.ModelForm):
                 url='ts:pole_autocomplete',
                 attrs={'data-placeholder': 'Не выбрано'}
             ),
-            'reason': forms.Select(attrs={'class': 'form-select'}),
+            'reason': forms.Select(
+                attrs={'class': 'select'},
+            ),
+            'author': forms.Select(
+                attrs={'class': 'select author-select'},
+            ),
             'start_date': forms.DateTimeInput(
                 attrs={'type': 'datetime-local'},
                 format='%Y-%m-%dT%H:%M'
@@ -64,25 +68,41 @@ class PlannedWorkForm(forms.ModelForm):
 
 
 class PlannedWorkEmailForm(forms.Form):
-    """Форма для выбора одного письма для связи с использованием автодополнения."""
+    """Форма для выбора одного письма."""
     
-    # Явно определяем поле
     email = forms.ModelChoiceField(
-        queryset=EmailMessage.objects.none(), # Заглушка, так как мы используем autocomplete
+        queryset=EmailMessage.objects.all(),
         required=False,
         empty_label="Не выбрано",
         widget=autocomplete.ModelSelect2(
             url='emails:emails_autocomplete',
-            attrs={
-                'data-placeholder': 'Поиск по ID или теме письма...',
-            }
+            attrs={'data-placeholder': 'Поиск по ID или теме письма...'}
         )
     )
 
 
 class PlannedWorkEmailFormSet(forms.BaseFormSet):
-    """Кастомный FormSet для проверки дубликатов."""
+    """Кастомный FormSet для управления связями ManyToMany."""
     
+    def __init__(self, *args, **kwargs):
+        # Извлекаем наш кастомный аргумент
+        self.planned_work = kwargs.pop('planned_work', None)
+        
+        if not self.planned_work:
+            raise ValueError("PlannedWorkEmailFormSet требует аргумент 'planned_work'.")
+
+        # Заполняем initial данными из БД, если это GET запрос
+        if not args and not kwargs.get('data'):
+            try:
+                # Получаем связанные письма
+                related_emails = self.planned_work.emails.all()
+                self.initial = [{'email': email} for email in related_emails]
+            except Exception as e:
+                # Логирование ошибки, если связь не найдена
+                pass
+
+        super().__init__(*args, **kwargs)
+
     def add_fields(self, form, index):
         super().add_fields(form, index)
         # Добавляем чекбокс удаления
@@ -94,11 +114,12 @@ class PlannedWorkEmailFormSet(forms.BaseFormSet):
 
     def clean(self):
         super().clean()
-        
         if any(self.errors):
             return
 
         seen_emails = set()
+        duplicates_found = False
+        
         for form in self.forms:
             if form.cleaned_data.get('DELETE'):
                 continue
@@ -107,5 +128,27 @@ class PlannedWorkEmailFormSet(forms.BaseFormSet):
             
             if email:
                 if email.id in seen_emails:
-                    raise forms.ValidationError("Это письмо уже добавлено в список.")
-                seen_emails.add(email.id)
+                    # Игнорируем дубликаты вместо ошибки
+                    duplicates_found = True
+                else:
+                    seen_emails.add(email.id)
+        
+        # Если нужно строго запрещать дубликаты при сохранении, можно добавить проверку здесь
+        # Но для отображения мы просто игнорируем их
+
+    def save(self):
+        """Сохраняет связи ManyToMany."""
+        if not hasattr(self, 'planned_work') or not self.planned_work.pk:
+            return
+
+        selected_emails = []
+        for form in self.forms:
+            if form.cleaned_data.get('DELETE'):
+                continue
+            
+            email = form.cleaned_data.get('email')
+            if email:
+                selected_emails.append(email)
+        
+        # Устанавливаем связи
+        self.planned_work.emails.set(selected_emails)

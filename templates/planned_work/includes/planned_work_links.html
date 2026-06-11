@@ -1,6 +1,7 @@
 {% load static %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/planned_work/email_links.css' %}">
 {% endblock %}
 
 <form method="post">
@@ -31,8 +32,8 @@
           <thead>
               <tr>
                 <th>Письмо</th>
-                <th>Тема</th> <!-- Добавили заголовок темы -->
-                <th>Дата</th>   <!-- Добавили заголовок даты -->
+                <th>Дата</th>
+                <th>Ссылка</th>
                 <th>Удалить</th>
               </tr>
           </thead>
@@ -44,10 +45,6 @@
                     {% for error in form.email.errors %}
                         <div class="form-error">{{ error }}</div>
                     {% endfor %}
-                </td>
-
-                <td>
-                  —
                 </td>
 
                 <td>

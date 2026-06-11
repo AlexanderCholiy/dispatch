@@ -1,24 +1,34 @@
 {% load static %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/incidents/includes/select_forms.css' %}">
+<link rel="stylesheet" href="{% static 'css/incidents/includes/incident_meta_forms.css' %}">
+<link rel="stylesheet" href="{% static 'css/incidents/includes/sla_forms.css' %}">
+<link rel="stylesheet" href="{% static 'css/incidents/includes/incident_detail.css' %}">
 {% endblock %}
 
 <form method="post">
   {% csrf_token %}
 
   <div class="card-header">
-    <div class="planned-work-form-actions">
-      <button type="submit" 
-              name="planned_work_submit" 
-              class="btn btn-primary submit-planned-work-button" 
-              {% if not can_manage %}disabled{% endif %}>
-        Сохранить
-      </button>
-
+    <div class="card-header-bottom">
+      <div class="planned-work-form-actions">
+        <button type="submit" 
+                name="planned_work_submit" 
+                class="btn btn-primary submit-planned-work-button" 
+                {% if not can_manage %}disabled{% endif %}>
+          Сохранить
+        </button>
+  
+      </div>
+      <p class="planned-work-date">
+        {% if planned_work.id %}
+          зарегистрировано {{ planned_work.insert_date|date:"d.m.Y H:i" }}
+        {% else %}
+          —
+        {% endif %}
+      </p>
     </div>
-    <p class="planned-work-date">
-      зарегистрировано {{ planned_work.insert_date|date:"d.m.Y H:i" }}
-    </p>
   </div>
 
   <div class="card-body">
@@ -30,9 +40,22 @@
       </div>
     {% endif %}
 
-    <div class="planned-work-row">
+    <div class="incident-row">
       <div class="form-group {% if main_form.pole.errors %}has-error{% endif %}">
-        <label for="{{ main_form.pole.id_for_label }}" class="field-label">{{ main_form.pole.label }}</label>
+        <label for="{{ main_form.pole.id_for_label }}" class="field-label pole-label">
+          <div class="pole-label-left">{{ main_form.pole.label }}:</div>
+          <div class="pole-label-right">
+            {% if planned_work.pole %}
+              <a href="https://fridge.newtowers.ru/site/passport/{{ planned_work.pole.site_id }}?proj={{ planned_work.pole.site_id }}" 
+                class="pole-link tooltip" data-title="{{ planned_work.pole.region.macroregion|default:planned_work.pole.region }}" target="_blank">
+                {{ planned_work.pole }}
+              </a>
+              {% if planned_work.pole %}<span class="ts-pole-status">{{ planned_work.pole.pole_status }}</span>{% endif %}
+            {% else %}
+              —
+            {% endif %}
+          </div>
+        </label>
 
         {{ main_form.pole }}
 
@@ -41,24 +64,44 @@
         {% endfor %}
       </div>
 
-      <div class="select-wrapper {% if main_form.errors %}has-error{% endif %}">
-        <label for="{{ main_form.reason.id_for_label }}">{{ main_form.reason.label }}</label>
+      <div class="incident-info">
+        {% if planned_work.pole %}
+        <div class="infrastructure-company">
+          {{ planned_work.pole.infrastructure_company }}, {{ planned_work.pole.region }}
+        </div>
+        {% endif %}
+        <label class="field-label">Подрядчик по АВР</label>
+        <span class="field-value {% if planned_work.avr_contractor %}copy-text{% endif %}" data-text="{% for e in planned_work.pole.prefetched_avr_emails %}{{ e.email }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+          {% if planned_work.avr_contractor %}
+            {{ planned_work.avr_contractor }}
+          {% else %}
+            —
+          {% endif %}
+        </span>
+      </div>
+    </div>
+
+    <div class="incident-meta-row">
+      <div class="select-wrapper status-select incident-form-select {% if main_form.errors %}has-error{% endif %}">
+        <label for="{{ main_form.reason.id_for_label }}">{{ main_form.reason.label }}:</label>
 
         <select 
           name="{{ main_form.reason.name }}" 
           id="{{ main_form.reason.id_for_label }}"
+          class="select"
+          {% if not can_manage %}disabled{% endif %}
         >
-
-          {% for value, label in main_form.reason.field.choices %}
-            {% if value %}
-              <option value="{{ value }}"
-                {% if field.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}
-              >
-                {{ label }}
-              </option>
-            {% endif %}
-          {% endfor %}
-
+          {% with current_value=main_form.reason.value %}
+            {% for value, label in main_form.reason.field.choices %}
+              {% if value %}
+                <option value="{{ value }}"
+                  {% if current_value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}
+                >
+                  {{ label }}
+                </option>
+              {% endif %}
+            {% endfor %}
+          {% endwith %}
         </select>
 
         {% for error in main_form.reason.errors %}
@@ -66,26 +109,11 @@
         {% endfor %}
       </div>
 
-      <div class="select-wrapper {% if main_form.errors %}has-error{% endif %}">
-        <label for="{{ main_form.author.id_for_label }}">{{ main_form.author.label }}</label>
+      <div class="select-wrapper status-select incident-form-select {% if main_form.author.errors %}has-error{% endif %}">
+        <label for="{{ main_form.author.id_for_label }}">{{ main_form.author.label }}:</label>
 
-        <select 
-          name="{{ main_form.author.name }}" 
-          id="{{ main_form.author.id_for_label }}"
-        >
-
-          {% for value, label in main_form.author.field.choices %}
-            {% if value %}
-              <option value="{{ value }}"
-                {% if main_form.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}
-              >
-                {{ label }}
-              </option>
-            {% endif %}
-          {% endfor %}
-
-        </select>
-
+        {{ main_form.author }}
+        
         {% for error in main_form.author.errors %}
           <div class="form-error">{{ error }}</div>
         {% endfor %}
@@ -93,9 +121,7 @@
 
     </div>
 
-    <div class="planned-work-row">
-      {% include "planned_work/includes/planned_work_sla_meta.html" with label="SLA ПЛР" status=main_form.instance.status start=main_form.start_date deadline=main_form.end_date start_field=main_form.start_date end_field=main_form.end_date  %}
-    </div>
+    {% include "planned_work/includes/planned_work_sla_meta.html" with label="SLA ПЛР" status=main_form.instance.status start=main_form.start_date deadline=main_form.end_date start_field=main_form.start_date end_field=main_form.end_date  %}
 
   </div>
 </form>

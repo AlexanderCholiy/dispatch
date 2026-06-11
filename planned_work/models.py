@@ -24,8 +24,8 @@ class PlannedWorkReason(models.TextChoices):
 class PlannedWorkStatus(models.TextChoices):
     """Статусы плановой работы"""
     PLANNED = 'planned', 'В планах'
-    IN_PROGRESS = 'in_progress', 'В работе'
-    COMPLETED = 'completed', 'Завершена'
+    IN_PROGRESS = 'in-progress', 'В работе'
+    COMPLETED = 'closed', 'Завершена'
 
 
 class PlannedWork(models.Model):
@@ -130,7 +130,6 @@ class PlannedWork(models.Model):
 
     def clean(self):
         errors = {}
-        now = timezone.now()
 
         if self.start_date and self.end_date:
             if self.end_date < self.start_date:
@@ -142,29 +141,42 @@ class PlannedWork(models.Model):
             errors['pole'] = 'Опора обязательна для выбора.'
             raise ValidationError(errors)
 
+        if errors:
+            raise ValidationError(errors)
+
+        # Ищем работы для этой же опоры и причины, исключая текущую:
         qs = PlannedWork.objects.filter(
             pole_id=self.pole_id,
             reason=self.reason
-        ).exclude(pk=self.pk)
-
-        # Фильтруем только те, которые активны сейчас:
-        active_works = qs.filter(
-            models.Q(end_date__isnull=True)
-            | models.Q(end_date__gt=now)
-        ).filter(
-            start_date__lte=now
         )
 
-        if active_works.exists():
-            conflicting = active_works.first()
+        if self.pk:
+            qs = qs.exclude(pk=self.pk)
+
+        # 1. Проверяем пересечение с работами, у которых НЕТ даты окончания
+        open_works = qs.filter(end_date__isnull=True)
+        if self.end_date:
+            open_works = open_works.filter(start_date__lt=self.end_date)
+
+        # 2. Проверяем пересечение с работами, у которых ЕСТЬ дата окончания
+        closed_works = qs.filter(end_date__isnull=False)
+        if self.end_date:
+            closed_works = closed_works.filter(
+                start_date__lt=self.end_date,
+                end_date__gt=self.start_date
+            )
+        else:
+            closed_works = closed_works.filter(end_date__gt=self.start_date)
+
+        conflicting_works = open_works | closed_works
+
+        if conflicting_works.exists():
+            conflicting = conflicting_works.first()
             errors['pole'] = (
-                f'Для данной опоры и причины уже существует '
-                f'активная плановая работа '
+                f'На данный период времени для этой опоры и причины уже '
+                f'существует активная или запланированная работа '
                 f'(ID: {conflicting.id})'
             )
 
         if errors:
             raise ValidationError(errors)
-
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)

@@ -1,0 +1,39 @@
+.planned-work-id,
+.planned-work-new {
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-md);
+  font-weight: 500;
+  color: var(--add-color);
+}
+
+.planned-work-new {
+  color: var(--blue-color);
+}
+
+.card-header-top, .card-header-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.planned-work-form-actions button {
+  flex: 1;
+  font-size: var(--font-sm);
+  padding: var(--space-xxs) var(--space-md);
+  text-align: center;
+}
+
+.planned-work-date {
+  font-size: var(--font-sm);
+  color: var(--gray-color);
+  margin: 0;
+  font-weight: 450;
+  flex: 1 1 auto;
+  text-align: right;
+  max-width: 80%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
