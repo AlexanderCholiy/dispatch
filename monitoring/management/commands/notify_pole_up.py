@@ -118,6 +118,7 @@ class Command(BaseCommand):
         ) as pbar_outer:
             for device in devices.iterator(chunk_size=MONITORING_CHUNK_SIZE):
                 try:
+                    ip = device.modem_ip.strip()
                     dev_lat_str = str(device.modem_latitude).strip()
                     dev_lon_str = str(device.modem_longtitude).strip()
 
@@ -258,6 +259,9 @@ class Command(BaseCommand):
                     f'зафиксировано включение оборудования ({dev_type_name}).'
                 )
                 msg_lines.append('')
+                msg_lines.append(
+                    f'• IP адрес: {ip.strip()}'
+                )
 
                 serial = device.modem_serial
                 cabinet = device.cabinet

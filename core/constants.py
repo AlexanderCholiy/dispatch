@@ -42,6 +42,9 @@ MONITORING_LOG_ROTATING_FILE = os.path.join(
 MONITORING_PAAS_LOG_ROTATING_FILE = os.path.join(
     LOG_DIR, 'monitoring', 'monitoring_paas.log'
 )
+MONITORING_RVR_SMS_LOG_ROTATING_FILE = os.path.join(
+    LOG_DIR, 'monitoring', 'monitoring_rvr_sms.log'
+)
 YANDEX_TRACKER_ROTATING_FILE = os.path.join(
     LOG_DIR, 'yandex_tracker', 'yandex_tracker.log')
 INCIDENTS_LOG_ROTATING_FILE = os.path.join(

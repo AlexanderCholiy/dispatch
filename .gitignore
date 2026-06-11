@@ -231,3 +231,6 @@ logs/cron/*
 
 # Django
 collected_static
+
+# Data
+data/monitoring/rvr_sms/*
