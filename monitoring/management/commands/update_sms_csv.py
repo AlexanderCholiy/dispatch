@@ -1,33 +1,27 @@
 import csv
 import os
 import shutil
+import subprocess
 from typing import TypedDict
 
-from django.conf import settings
 from django.core.cache import cache
-from django.core.mail import send_mail
 from django.core.management.base import BaseCommand
-from django.db import connections
-from django.db.models import Q
+from pydantic import ValidationError
 from tqdm import tqdm
 
 from core.constants import DEBUG_MODE
 from core.loggers import monitoring_rvr_sms_logger
-from core.services.haversine_distance import haversine_distance
 from core.wraps import timer
 from monitoring.constants import (
-    SMS_RVR_LOCK_KEY,
-    SMS_RVR_LOCK_TIMEOUT,
     SMS_RVR_CONTROLLER_HOST,
     SMS_RVR_CONTROLLER_PSWD,
-    SMS_RVR_DIR,
-    SMS_RVR_TMP_FILE,
     SMS_RVR_CSV_FILE,
+    SMS_RVR_DIR,
+    SMS_RVR_LOCK_KEY,
+    SMS_RVR_LOCK_TIMEOUT,
+    SMS_RVR_TMP_FILE,
 )
-import subprocess
-from tqdm import tqdm
 from monitoring.services.parse_sms_file import parse_sms_file
-from pydantic import ValidationError
 
 
 class NearestDevice(TypedDict):
@@ -66,7 +60,7 @@ class Command(BaseCommand):
 
         try:
             self.copy_sms_from_controller()
-            self.prepare_sms_csv()
+            self.update_sms_csv()
         except KeyboardInterrupt:
             raise
         except Exception as e:
@@ -99,6 +93,9 @@ class Command(BaseCommand):
                 text=True,
                 check=True,
             )
+            monitoring_rvr_sms_logger.debug(
+                f'SMS с контроллера скопированы в: {SMS_RVR_DIR}'
+            )
         except subprocess.CalledProcessError as e:
             monitoring_rvr_sms_logger.exception(
                 f'Ошибка при выполнении команды '
@@ -116,7 +113,7 @@ class Command(BaseCommand):
             )
         self._error_cnt += 1
 
-    def prepare_sms_csv(self):
+    def update_sms_csv(self):
         files_processed = 0
         files_err = 0
 
@@ -153,6 +150,15 @@ class Command(BaseCommand):
 
                     try:
                         sms = parse_sms_file(item)
+
+                        if not sms:
+                            pbar_outer.update(1)
+                            item.unlink()
+                            monitoring_rvr_sms_logger.debug(
+                                f'Удален пустой файл: {item.name}'
+                            )
+                            continue
+
                         received_time = (
                             sms.received_time.strftime(excel_dt_format)
                             if sms.received_time else None
@@ -169,6 +175,7 @@ class Command(BaseCommand):
 
                     except ValidationError as e:
                         self._log_error(e, item.name)
+                        files_err += 1
 
                     except UnicodeDecodeError:
                         monitoring_rvr_sms_logger.warning(

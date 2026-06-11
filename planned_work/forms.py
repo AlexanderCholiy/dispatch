@@ -1,15 +1,16 @@
+from dal import autocomplete
 from django import forms
 from django.core.exceptions import ValidationError
-from django.utils import timezone
 from django.urls import reverse
+from django.utils import timezone
 
-from dal import autocomplete
-from .models import PlannedWork, PlannedWorkReason, PlannedWorkStatus
 from emails.models import EmailMessage
+from emails.views import EmailAutocomplete
+from planned_work.constants import MAX_PLR_REASON_LEN
 from ts.models import Pole
 from users.models import User
-from planned_work.constants import MAX_PLR_REASON_LEN
-from emails.views import EmailAutocomplete
+
+from .models import PlannedWork, PlannedWorkReason, PlannedWorkStatus
 
 
 class PlannedWorkForm(forms.ModelForm):

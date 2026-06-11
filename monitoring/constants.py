@@ -1,8 +1,10 @@
 import os
 import re
 from pathlib import Path
-from core.constants import DATA_DIR
+
 from django.conf import settings
+
+from core.constants import DATA_DIR
 
 MSYS_MODEMS_PER_PAGE = 100
 MSYS_STATUSES_PER_PAGE = 100

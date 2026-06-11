@@ -1,11 +1,10 @@
 import re
-
-from typing import TypedDict, Optional
 from datetime import datetime
-
 from pathlib import Path
-from monitoring.shemas.rvr_sms import SMSParseSchema
+from typing import Optional, TypedDict
+
 from core.loggers import monitoring_rvr_sms_logger
+from monitoring.shemas.rvr_sms import SMSParseSchema
 
 
 class SMSResponse(TypedDict):
@@ -16,8 +15,11 @@ class SMSResponse(TypedDict):
     answer: Optional[str]
 
 
-def parse_sms_file(file_path: Path) -> SMSParseSchema:
+def parse_sms_file(file_path: Path) -> Optional[SMSParseSchema]:
     content = file_path.read_text(encoding='utf-8')
+
+    if not content.strip():
+        return None
 
     # Регулярные выражения для поиска значений
     # \s+ - один или более пробелов после двоеточия:
@@ -75,13 +77,16 @@ def parse_sms_file(file_path: Path) -> SMSParseSchema:
             ):
                 answer_candidate = line
 
-                if not all(c.isdigit() or c.isspace() for c in line):
-                    monitoring_rvr_sms_logger.debug(
-                        f'{file_path.name}: '
-                        f'Подозрительный ответ: {answer_candidate}'
-                    )
+                # if not all(c.isdigit() or c.isspace() for c in line):
+                #     monitoring_rvr_sms_logger.debug(
+                #         f'{file_path.name}: '
+                #         f'Подозрительный ответ: {answer_candidate}'
+                #     )
 
     if answer_candidate:
         data['answer'] = answer_candidate
+
+    if not data or not data.get('phone_from'):
+        return None
 
     return SMSParseSchema.model_validate(data)
