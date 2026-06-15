@@ -14,6 +14,7 @@ from .constants import (
     MAX_EMAIL_STATUS_LEN,
     MAX_EMAIL_SUBJECT_LEN,
 )
+from core.services.formatters import truncate_text
 
 User = get_user_model()
 
@@ -146,7 +147,10 @@ class EmailMessage(models.Model):
         verbose_name_plural = 'Почта'
 
     def __str__(self):
-        return f'ID: {self.id} - {self.email_subject or "без темы"}'
+        safe_email_subject = truncate_text(
+            self.email_subject or 'без темы', 96
+        )
+        return f'ID: {self.id} - {safe_email_subject}'
 
 
 class EmailReference(models.Model):

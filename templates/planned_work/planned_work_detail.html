@@ -24,7 +24,7 @@
         </div>
         <div class="right-tabs-part">
           {% if planned_work.id %}
-            <strong class="planned-work-id copy-text" data-text="{{ planned_work.id }}">ID: {{ planned_work.id }}</strong>
+            <strong class="planned-work-id copy-text" data-text="{{ planned_work.id }}">{{ planned_work }}</strong>
           {% else %}
             <strong class="planned-work-new">Новый</strong>
           {% endif %}

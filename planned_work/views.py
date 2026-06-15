@@ -4,6 +4,7 @@ from django.db.models import Prefetch
 from django.forms import formset_factory
 from django.http import (
     HttpRequest,
+    HttpResponse,
 )
 from django.shortcuts import get_object_or_404, redirect, render
 from django_ratelimit.decorators import ratelimit
@@ -11,6 +12,8 @@ from django_ratelimit.decorators import ratelimit
 from planned_work.constants import (
     MAX_PLR_EMAILS_LINKS,
     PLR_CHANGE_LOG_PER_PAGE,
+    MAX_PLR_PER_PAGE,
+    PAGE_SIZE_PLR_CHOICES,
 )
 from planned_work.forms import (
     PlannedWorkEmailForm,
@@ -21,9 +24,13 @@ from planned_work.models import (
     PlannedWork,
     PlannedWorkChangeLog,
     PlannedWorkStatus,
+    PlannedWorkEmailLink,
 )
 from users.models import Roles, User
 from users.utils import role_required
+from core.services.get_raw_cookie import get_raw_cookie
+from django.core.paginator import Paginator
+from emails.models import EmailMessage
 
 
 @login_required
@@ -185,3 +192,88 @@ def planned_work_detail(request: HttpRequest, pk: int):
     }
 
     return render(request, 'planned_work/planned_work_detail.html', context)
+
+
+@login_required
+@role_required()
+@ratelimit(key='user_or_ip', rate='200/m', block=True)
+def planned_work_list(request: HttpRequest) -> HttpResponse:
+    query = request.GET.get('q', '').strip()
+
+    sort = (
+        request.GET.get('sort_planned_work')
+        or (get_raw_cookie(request, 'sort_planned_work') or '').strip()
+        or 'desc'
+    )
+
+    per_page = int(
+        request.GET.get('per_page')
+        or (get_raw_cookie(request, 'per_page_planned_work') or '').strip()
+        or MAX_PLR_PER_PAGE
+    )
+
+    if per_page not in PAGE_SIZE_PLR_CHOICES:
+        params = request.GET.copy()
+        params['per_page'] = MAX_PLR_PER_PAGE
+        return redirect(f'{request.path}?{params.urlencode()}')
+
+    base_qs = (
+        PlannedWork.objects
+        .select_related(
+            'pole',
+            'pole__region',
+            'author',
+        )
+        .prefetch_related('emails',)
+    )
+
+    if sort == 'asc':
+        base_qs = base_qs.order_by('insert_date', 'id')
+    else:
+        base_qs = base_qs.order_by('-insert_date', 'id')
+
+    paginator = Paginator(base_qs.values_list('id', flat=True), per_page)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    page_ids = list(page_obj.object_list)
+
+    user: User = request.user
+    allowed_roles = [Roles.DISPATCH]
+    can_manage = user.role in allowed_roles or user.is_superuser
+
+    planned_work_qs = (
+        PlannedWork.objects.filter(id__in=page_ids)
+        .select_related(
+            'pole',
+            'pole__region',
+            'author',
+        )
+        .prefetch_related(
+            Prefetch(
+                'email_links',
+                queryset=(
+                    PlannedWorkEmailLink.objects.select_related('email')
+                    .order_by('-added_at', '-id')[:1]
+                ),
+                to_attr='latest_email_link'
+            ),
+        )
+    )
+
+    id_index = {id_: i for i, id_ in enumerate(page_ids)}
+    planned_works = sorted(planned_work_qs, key=lambda n: id_index[n.id])
+
+    context = {
+        'page_obj': page_obj,
+        'planned_works': planned_works,
+        'search_query': query,
+        'selected': {
+            'per_page': per_page,
+            'sort': sort,
+        },
+        'page_size_choices': PAGE_SIZE_PLR_CHOICES,
+        'can_manage': can_manage,
+    }
+
+    return render(request, 'planned_work/planned_work_list.html', context)

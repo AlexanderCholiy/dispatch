@@ -7,6 +7,7 @@ from emails.models import EmailMessage
 from planned_work.constants import MAX_PLR_REASON_LEN
 from ts.models import Pole
 from users.models import User
+from emails.models import EmailMessage
 
 
 class PlannedWorkReason(models.TextChoices):
@@ -27,6 +28,29 @@ class PlannedWorkStatus(models.TextChoices):
     PLANNED = 'planned', 'В планах'
     IN_PROGRESS = 'in-progress', 'В работе'
     COMPLETED = 'closed', 'Завершена'
+
+
+class PlannedWorkEmailLink(models.Model):
+    """Промежуточная модель для хранения времени добавления письма в связь"""
+
+    planned_work = models.ForeignKey(
+        'PlannedWork',
+        on_delete=models.CASCADE,
+        related_name='email_links'
+    )
+    email = models.ForeignKey(
+        EmailMessage,
+        on_delete=models.CASCADE
+    )
+    added_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата добавления в связь',
+        db_index=True,
+    )
+
+    class Meta:
+        unique_together = ('planned_work', 'email')
+        ordering = ['-added_at', '-id']
 
 
 class PlannedWork(models.Model):
@@ -62,6 +86,7 @@ class PlannedWork(models.Model):
         related_name='planned_works',
         blank=True,
         verbose_name='Связанные письма',
+        through=PlannedWorkEmailLink,
         help_text='Письма, связанные с данной плановой работой'
     )
     author = models.ForeignKey(
@@ -124,10 +149,16 @@ class PlannedWork(models.Model):
 
         return PlannedWorkStatus.PLANNED
 
+    @property
+    def reason_label(self):
+        """Возвращает человекочитаемое название причины."""
+        try:
+            return PlannedWorkReason(self.reason).label
+        except ValueError:
+            return self.reason
+
     def __str__(self):
-        return (
-            f'{PlannedWorkReason(self.reason).label} на {self.pole}'
-        )
+        return f'PLR-{self.pk}' if self.pk else 'Новый ПЛР'
 
     def clean(self):
         errors = {}

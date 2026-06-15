@@ -2,11 +2,29 @@ from django.contrib import admin
 from django.utils.html import format_html
 
 from core.constants import EMPTY_VALUE
-
 from .constants import MAX_PLR_CHANGE_LOG_PER_PAGE, MAX_PLR_PER_PAGE
-from .models import PlannedWork, PlannedWorkChangeLog
+from .models import PlannedWork, PlannedWorkChangeLog, PlannedWorkEmailLink
 
 admin.site.empty_value_display = EMPTY_VALUE
+
+
+class PlannedWorkEmailLinkInline(admin.TabularInline):
+    """
+    Встроенная форма для управления связями с письмами.
+    Позволяет видеть дату добавления и удалять связи.
+    """
+    model = PlannedWorkEmailLink
+    extra = 0
+    show_change_link = True
+
+    fields = ('email', 'added_at')
+    readonly_fields = ('added_at',)
+
+    autocomplete_fields = ['email']
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('email').order_by('-added_at')
 
 
 @admin.register(PlannedWork)
@@ -42,10 +60,7 @@ class PlannedWorkAdmin(admin.ModelAdmin):
     autocomplete_fields = [
         'pole',
         'author',
-        'emails',
     ]
-
-    filter_horizontal = ('emails',)
 
     fieldsets = (
         ('Основная информация', {
@@ -55,21 +70,18 @@ class PlannedWorkAdmin(admin.ModelAdmin):
             'fields': ('start_date', 'end_date'),
             'description': 'Дата начала по умолчанию равна текущему времени.'
         }),
-        ('Связанные письма', {
-            'fields': ('emails',),
-            'description': (
-                'Выберите письма, связанные с этой работой. '
-                'Дубликаты автоматически игнорируются.'
-            )
-        }),
     )
+
+    inlines = [
+        PlannedWorkEmailLinkInline,
+    ]
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.select_related(
             'author',
             'pole',
-        ).prefetch_related('emails',)
+        )
 
 
 @admin.register(PlannedWorkChangeLog)
