@@ -1,19 +1,27 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.forms import formset_factory, modelformset_factory
+from django.db.models import Prefetch
+from django.forms import formset_factory
 from django.http import (
-    Http404,
     HttpRequest,
-    HttpResponse,
-    StreamingHttpResponse,
 )
-from django.shortcuts import redirect, render, get_object_or_404
+from django.shortcuts import get_object_or_404, redirect, render
 from django_ratelimit.decorators import ratelimit
 
-from emails.models import EmailMessage
-from planned_work.constants import MAX_PLR_EMAILS_LINKS
-from planned_work.forms import PlannedWorkEmailForm, PlannedWorkForm, PlannedWorkEmailFormSet
-from planned_work.models import PlannedWork, PlannedWorkStatus
+from planned_work.constants import (
+    MAX_PLR_EMAILS_LINKS,
+    PLR_CHANGE_LOG_PER_PAGE,
+)
+from planned_work.forms import (
+    PlannedWorkEmailForm,
+    PlannedWorkEmailFormSet,
+    PlannedWorkForm
+)
+from planned_work.models import (
+    PlannedWork,
+    PlannedWorkChangeLog,
+    PlannedWorkStatus,
+)
 from users.models import Roles, User
 from users.utils import role_required
 
@@ -43,7 +51,7 @@ def create_planned_work(request: HttpRequest):
 
             return redirect('planned_work:planned_work_detail', pk=instance.pk)
 
-        messages.error(request, 'Исправьте ошибки в формах ПЛР')
+        messages.error(request, 'Исправьте ошибки в форме ПЛР')
 
     context = {
         'main_form': main_form,
@@ -57,7 +65,30 @@ def create_planned_work(request: HttpRequest):
 @login_required
 @role_required()
 def planned_work_detail(request: HttpRequest, pk: int):
-    planned_work = get_object_or_404(PlannedWork, pk=pk)
+    planned_work = get_object_or_404(
+        (
+            PlannedWork.objects
+            .select_related(
+                'pole',
+                'pole__region',
+                'pole__region__macroregion',
+                'pole__avr_contractor',
+                'author',
+            )
+            .prefetch_related(
+                'emails',
+                Prefetch(
+                    'change_logs',
+                    queryset=PlannedWorkChangeLog.objects.select_related(
+                        'changed_by'
+                    ).order_by('-created_at', 'field_name')
+                    [:PLR_CHANGE_LOG_PER_PAGE],
+                    to_attr='prefetched_change_logs'
+                ),
+            )
+        ),
+        pk=pk
+    )
 
     user: User = request.user
     allowed_roles = [Roles.DISPATCH]
@@ -67,22 +98,34 @@ def planned_work_detail(request: HttpRequest, pk: int):
         instance=planned_work, author_user=planned_work.author
     )
 
+    related_emails_data = []
+    for email_obj in planned_work.emails.all():
+        related_emails_data.append({
+            'id': email_obj.id,
+            'email_date': email_obj.email_date,
+        })
+    initial_email_form_data = [
+        {'email': email} for email in planned_work.emails.all()
+    ]
+
     if not can_manage:
         for field_name in main_form.fields:
             main_form.fields[field_name].widget.attrs['disabled'] = True
 
     EmailFormSetClass = formset_factory(
         PlannedWorkEmailForm,
-        extra=1,
-        can_delete=True,
-        max_num=10,
+        extra=1 if can_manage else 0,
+        can_delete=True if can_manage else False,
+        max_num=MAX_PLR_EMAILS_LINKS,
         validate_max=True,
         formset=PlannedWorkEmailFormSet
     )
 
     email_formset = EmailFormSetClass(
         planned_work=planned_work,
+        initial=initial_email_form_data,
         prefix='emails',
+        author_user=user,
     )
 
     if request.method == 'POST' and not can_manage:
@@ -102,7 +145,7 @@ def planned_work_detail(request: HttpRequest, pk: int):
         if main_form.is_valid():
             instance: PlannedWork = main_form.save()
 
-            msg = f'Плановая работа "{instance}" успешно создана.'
+            msg = f'Плановая работа "{instance}" успешно обновлена.'
 
             if instance.status == PlannedWorkStatus.PLANNED:
                 messages.info(request, f'{msg}')
@@ -113,12 +156,31 @@ def planned_work_detail(request: HttpRequest, pk: int):
 
             return redirect('planned_work:planned_work_detail', pk=instance.pk)
 
-        messages.error(request, 'Исправьте ошибки в формах ПЛР')
+        messages.error(request, 'Исправьте ошибки в форме ПЛР')
+
+    if (
+        request.method == 'POST'
+        and 'planned_work_links_submit' in request.POST
+    ):
+        email_formset = EmailFormSetClass(
+            request.POST,
+            prefix='emails',
+            planned_work=planned_work,
+            author_user=user,
+        )
+
+        if email_formset.is_valid():
+            email_formset.save()
+            messages.success(request, 'Связи с письмами обновлены.')
+            return redirect('planned_work:planned_work_detail', pk=pk)
+
+        messages.error(request, 'Исправьте ошибки в форме связей с письмами')
 
     context = {
         'main_form': main_form,
         'email_formset': email_formset,
         'planned_work': planned_work,
+        'related_emails_data': related_emails_data,
         'can_manage': can_manage,
     }
 

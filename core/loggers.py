@@ -16,6 +16,7 @@ from .constants import (
     MONITORING_RVR_SMS_LOG_ROTATING_FILE,
     MQTT_LOG_ROTATING_FILE,
     MQTT_PARSER_LOG_ROTATING_FILE,
+    PLANNED_WORK_LOG_ROTATING_FILE,
     TG_NOTIFICATIONS_ROTATING_FILE,
     TS_LOG_ROTATING_FILE,
     YANDEX_TRACKER_AUTO_EMAILS_ROTATING_FILE,
@@ -150,6 +151,10 @@ django_logger = LoggerFactory(
 
 incident_logger = LoggerFactory(
     'incident_logger', INCIDENTS_LOG_ROTATING_FILE
+).get_logger()
+
+planned_work_logger = LoggerFactory(
+    'planned_work_logger', PLANNED_WORK_LOG_ROTATING_FILE
 ).get_logger()
 
 default_logger = LoggerFactory(

@@ -5,6 +5,7 @@
 <link rel="stylesheet" href="{% static 'css/incidents/includes/incident_meta_forms.css' %}">
 <link rel="stylesheet" href="{% static 'css/incidents/includes/sla_forms.css' %}">
 <link rel="stylesheet" href="{% static 'css/incidents/includes/incident_detail.css' %}">
+<link rel="stylesheet" href="{% static 'css/incidents/includes/incident_journal.css' %}">
 {% endblock %}
 
 <form method="post">
@@ -123,9 +124,12 @@
 
     {% include "planned_work/includes/planned_work_sla_meta.html" with label="SLA ПЛР" status=main_form.instance.status start=main_form.start_date deadline=main_form.end_date start_field=main_form.start_date end_field=main_form.end_date  %}
 
+    {% include "planned_work/includes/change_log.html" with planned_work=planned_work %}
+
   </div>
 </form>
 
 
 {% block extra_js %}
+<script src="{% static 'js/incidents/hide_sections.js' %}"></script>
 {% endblock %}

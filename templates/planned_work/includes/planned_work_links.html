@@ -48,11 +48,29 @@
                 </td>
 
                 <td>
-                  —
+                  {% with email_id=form.email.value %}
+                    {% if email_id %}
+                      {% for data in related_emails_data %}
+                        {% if data.id == email_id %}
+                          {{ data.email_date|date:"d.m.Y H:i" }}
+                        {% endif %}
+                      {% endfor %}
+                    {% else %}
+                      —
+                    {% endif %}
+                  {% endwith %}
                 </td>
 
                 <td>
-                  —
+                  {% if form.email.value %}
+                    {% with email_obj=form.email.value %}
+                      <a href="{% url 'emails:email_detail' email_id=email_obj %}" class="link">
+                        ID: {{ email_obj }}
+                      </a>
+                    {% endwith %}
+                  {% else %}
+                    —
+                  {% endif %}
                 </td>
 
                 <td class="delete-checkbox-td">

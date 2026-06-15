@@ -2,6 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
+from core.constants import MAX_LG_DESCRIPTION, MAX_ST_DESCRIPTION
 from emails.models import EmailMessage
 from planned_work.constants import MAX_PLR_REASON_LEN
 from ts.models import Pole
@@ -180,3 +181,78 @@ class PlannedWork(models.Model):
 
         if errors:
             raise ValidationError(errors)
+
+
+class PlannedWorkChangeLog(models.Model):
+    """Детальный журнал изменений полей инцидента."""
+    planned_work = models.ForeignKey(
+        PlannedWork,
+        on_delete=models.CASCADE,
+        related_name='change_logs',
+        verbose_name='Плановая работа',
+        db_index=True
+    )
+    changed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Изменил пользователь',
+        db_index=True
+    )
+    field_name = models.CharField(
+        max_length=MAX_ST_DESCRIPTION,
+        verbose_name='Поле',
+        help_text='Название поля модели'
+    )
+    old_value = models.CharField(
+        max_length=MAX_LG_DESCRIPTION,
+        null=True,
+        blank=True,
+        verbose_name='Старое значение',
+        help_text='JSON строка или текст старого значения'
+    )
+    new_value = models.CharField(
+        max_length=MAX_LG_DESCRIPTION,
+        null=True,
+        blank=True,
+        verbose_name='Новое значение',
+        help_text='JSON строка или текст нового значения'
+    )
+    created_at = models.DateTimeField(
+        default=timezone.now,
+        verbose_name='Дата изменения',
+        db_index=True
+    )
+
+    class Meta:
+        verbose_name = 'журнал'
+        verbose_name_plural = 'Журналы изменений'
+        ordering = ['-created_at', 'field_name', 'id']
+        indexes = [
+            models.Index(fields=['planned_work', '-created_at']),
+        ]
+        unique_together = ('planned_work', 'field_name', 'created_at')
+
+    def clean(self):
+        """Запрещает записи, если старое и новое значение идентичны."""
+        super().clean()
+
+        if not self.pk and self.old_value == self.new_value:
+            raise ValidationError({
+                'old_value': (
+                    'Невозможно записать лог, '
+                    'так как старое и новое значение идентичны.'
+                ),
+                'new_value': ('Значение не изменилось.')
+            })
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return (
+            f'{self.planned_work} | {self.field_name}: '
+            f'{self.old_value} → {self.new_value}'
+        )

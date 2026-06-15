@@ -341,9 +341,12 @@ class EmailAutocomplete(autocomplete.Select2QuerySetView):
 
         if q:
             try:
-                email_id = int(q)
-                qs = qs.filter(id=email_id)
+                search_id = int(q)
+                qs = qs.filter(
+                    Q(id=search_id)
+                    | Q(email_subject__icontains=q)
+                )
             except ValueError:
-                qs = qs.filter(subject__icontains=q)
+                qs = qs.filter(email_subject__icontains=q)
 
         return qs[:EMAILS_PER_PAGE]

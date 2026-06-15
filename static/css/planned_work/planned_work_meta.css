@@ -37,3 +37,17 @@
   overflow-wrap: anywhere;
   word-break: break-word;
 }
+
+.toggle-planned-work-journal {
+  margin-top: var(--space-sm);
+  margin-bottom: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-md);
+  border: 1px solid var(--add-background-color);
+  border-collapse: collapse;
+  border-radius: var(--radius-sm);
+  background-color: var(--add-background-color);
+  color: var(--color);
+  cursor: pointer;
+  transition: all var(--transition-value);
+}

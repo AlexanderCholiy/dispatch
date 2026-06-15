@@ -1,16 +1,13 @@
 from dal import autocomplete
 from django import forms
-from django.core.exceptions import ValidationError
-from django.urls import reverse
-from django.utils import timezone
 
+from core.loggers import django_logger
 from emails.models import EmailMessage
-from emails.views import EmailAutocomplete
-from planned_work.constants import MAX_PLR_REASON_LEN
-from ts.models import Pole
-from users.models import User
+from planned_work.services.log_planned_work_changes import (
+    log_planned_work_changes,
+)
 
-from .models import PlannedWork, PlannedWorkReason, PlannedWorkStatus
+from .models import PlannedWork
 
 
 class PlannedWorkForm(forms.ModelForm):
@@ -66,10 +63,43 @@ class PlannedWorkForm(forms.ModelForm):
         if not self.instance.pk and self.author_user:
             self.fields['author'].initial = self.author_user
 
+        self._old_instance = None
+
+        if self.instance.pk:
+            try:
+                self._old_instance = (
+                    PlannedWork.objects
+                    .select_related('pole', 'author')
+                    .prefetch_related('emails')
+                    .get(pk=self.instance.pk)
+                )
+            except PlannedWork.DoesNotExist:
+                pass
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+
+        if not instance.author_id and self.author_user:
+            instance.author = self.author_user
+
+        if commit:
+            instance.save()
+
+            if self._old_instance:
+                log_planned_work_changes(
+                    old_instance=self._old_instance,
+                    new_instance=instance,
+                    changed_by=self.author_user,
+                )
+            else:
+                pass
+
+        return instance
+
 
 class PlannedWorkEmailForm(forms.Form):
     """Форма для выбора одного письма."""
-    
+
     email = forms.ModelChoiceField(
         queryset=EmailMessage.objects.all(),
         required=False,
@@ -83,29 +113,30 @@ class PlannedWorkEmailForm(forms.Form):
 
 class PlannedWorkEmailFormSet(forms.BaseFormSet):
     """Кастомный FormSet для управления связями ManyToMany."""
-    
-    def __init__(self, *args, **kwargs):
-        # Извлекаем наш кастомный аргумент
-        self.planned_work = kwargs.pop('planned_work', None)
-        
-        if not self.planned_work:
-            raise ValueError("PlannedWorkEmailFormSet требует аргумент 'planned_work'.")
 
-        # Заполняем initial данными из БД, если это GET запрос
+    def __init__(self, *args, **kwargs):
+        self.planned_work = kwargs.pop('planned_work', None)
+        self.author_user = kwargs.pop('author_user', None)
+
+        if not self.planned_work:
+            raise ValueError(
+                'PlannedWorkEmailFormSet требует аргумент "planned_work".'
+            )
+
         if not args and not kwargs.get('data'):
             try:
-                # Получаем связанные письма
                 related_emails = self.planned_work.emails.all()
                 self.initial = [{'email': email} for email in related_emails]
             except Exception as e:
-                # Логирование ошибки, если связь не найдена
+                django_logger.exception(
+                    f'Связь PlannedWork/EmailMessage не найдена: {e}'
+                )
                 pass
 
         super().__init__(*args, **kwargs)
 
     def add_fields(self, form, index):
         super().add_fields(form, index)
-        # Добавляем чекбокс удаления
         form.fields['DELETE'] = forms.BooleanField(
             required=False,
             label='',
@@ -118,23 +149,16 @@ class PlannedWorkEmailFormSet(forms.BaseFormSet):
             return
 
         seen_emails = set()
-        duplicates_found = False
-        
+
         for form in self.forms:
             if form.cleaned_data.get('DELETE'):
                 continue
-            
+
             email = form.cleaned_data.get('email')
-            
+
             if email:
-                if email.id in seen_emails:
-                    # Игнорируем дубликаты вместо ошибки
-                    duplicates_found = True
-                else:
+                if email.id not in seen_emails:
                     seen_emails.add(email.id)
-        
-        # Если нужно строго запрещать дубликаты при сохранении, можно добавить проверку здесь
-        # Но для отображения мы просто игнорируем их
 
     def save(self):
         """Сохраняет связи ManyToMany."""
@@ -145,10 +169,20 @@ class PlannedWorkEmailFormSet(forms.BaseFormSet):
         for form in self.forms:
             if form.cleaned_data.get('DELETE'):
                 continue
-            
+
             email = form.cleaned_data.get('email')
             if email:
                 selected_emails.append(email)
-        
-        # Устанавливаем связи
+
+        old_email_ids = list(
+            self.planned_work.emails.values_list('id', flat=True)
+        )
+
         self.planned_work.emails.set(selected_emails)
+
+        log_planned_work_changes(
+            old_instance=None,
+            new_instance=self.planned_work,
+            changed_by=self.author_user,
+            old_email_ids=old_email_ids,
+        )
