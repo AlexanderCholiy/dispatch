@@ -2,7 +2,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Prefetch, Q, OuterRef, Subquery
+from django.db.models import OuterRef, Prefetch, Q, Subquery
 from django.forms import formset_factory
 from django.http import (
     HttpRequest,
@@ -15,6 +15,7 @@ from django_ratelimit.decorators import ratelimit
 from core.constants import DATETIME_LOCAL_FORMAT
 from core.services.get_raw_cookie import get_raw_cookie
 from core.validators import get_aware_datetime
+from incidents.models import Incident, IncidentStatusHistory
 from incidents.services.get_avr_contractor_map import get_avr_contractor_map
 from incidents.services.get_macroregions import get_macro_region_map
 from incidents.services.get_region_responsible_manager import (
@@ -42,7 +43,6 @@ from planned_work.models import (
 from ts.constants import UNDEFINED_CASE
 from users.models import Roles, User
 from users.utils import role_required
-from incidents.models import Incident, IncidentStatusHistory
 
 from .services.get_planned_work_author import get_planned_work_author
 

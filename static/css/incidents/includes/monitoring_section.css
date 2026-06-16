@@ -32,7 +32,7 @@
   font-weight: 450;
 }
 
-.status-badge {
+.monitoring-content.status-badge {
   display: inline-block;
   padding: var(--space-xs) var(--space-md);
   font-size: var(--font-sm);
@@ -43,7 +43,7 @@
   box-shadow: 0 0 var(--space-xs) var(--extra-color);
   cursor: default;
   user-select: none;
-  color: var(--add-color);
+  color: var(--background-color);
   letter-spacing: 0.05em;
 }
 

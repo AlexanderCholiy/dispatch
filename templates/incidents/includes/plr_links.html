@@ -1,0 +1,50 @@
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/incidents/plr/plr_link.css' %}">
+{% endblock %}
+
+<div class="card-body">      
+
+<div class="table-wrapper">
+    <table class="custom-table">
+        <thead>
+            <tr>
+              <th>#</th>
+              <th data-col="reason">Причина</th>
+              <th data-col="status">Статус</th>
+              <th data-col="created">Дата регистрации</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for planned_work in planned_works %}
+            <tr>
+              <td>
+                  <a href="{% url 'planned_work:planned_work_detail' planned_work.id %}" class="link">
+                    {{ planned_work }}
+                  </a>
+              </td>
+
+              <td>
+                <span class="{{ planned_work.reason }}">{{ planned_work.reason_label }}</span>
+              </td>
+
+              <td>
+                <span class="status-badge {{ planned_work.status.value|default:'status-unknown' }}">
+                  {{ planned_work.status.label }}
+                </span>
+              </td>
+
+              <td>{{ planned_work.insert_date|date:"d.m.Y H:i" }}</td>
+
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="empty">Нет связанных плановых работ</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+</div>
+
+{% block extra_js %}
+{% endblock %}
