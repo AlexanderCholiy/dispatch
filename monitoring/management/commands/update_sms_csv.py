@@ -80,7 +80,7 @@ class Command(BaseCommand):
             'sshpass', '-p', SMS_RVR_CONTROLLER_PSWD,
             'rsync', '-avh', '--ignore-existing',
             '-e',
-            'ssh -o StrictHostKeyChecking=no -o HostKeyAlgorithms=+ssh-rsa',
+            'ssh -o StrictHostKeyChecking=no -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa',  # noqa: E501
             f'root@{SMS_RVR_CONTROLLER_HOST}:/var/spool/sms/incoming/',
             str(SMS_RVR_DIR)
         ]

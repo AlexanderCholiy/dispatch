@@ -324,21 +324,22 @@ class Command(BaseCommand):
                 # Стоит запрет на редактирование данных мониторинга, поэтому
                 # используем сырые SQL запросы:
                 try:
-                    with connections['monitoring'].cursor() as cursor:
-                        sql_update = """
-                            UPDATE MSys_Modems
-                            SET is_notification_sent = 1
-                            WHERE ModemID = %s;
-                        """
-                        cursor.execute(sql_update, [device.modem_ip])
+                    if not DEBUG_MODE:
+                        with connections['monitoring'].cursor() as cursor:
+                            sql_update = """
+                                UPDATE MSys_Modems
+                                SET is_notification_sent = 1
+                                WHERE ModemID = %s;
+                            """
+                            cursor.execute(sql_update, [device.modem_ip])
 
-                    send_mail(
-                        subject=subject,
-                        message=full_message,
-                        from_email=settings.DEFAULT_FROM_EMAIL,
-                        recipient_list=NOTIFY_NEW_POLE_EMAILS,
-                        fail_silently=False,
-                    )
+                        send_mail(
+                            subject=subject,
+                            message=full_message,
+                            from_email=settings.DEFAULT_FROM_EMAIL,
+                            recipient_list=NOTIFY_NEW_POLE_EMAILS,
+                            fail_silently=False,
+                        )
 
                     new_poles.append(nearest_pole['pole'])
 

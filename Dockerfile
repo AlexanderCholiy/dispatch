@@ -13,6 +13,8 @@ RUN apt-get update && apt-get install -y \
     apt-transport-https \
     unixodbc \
     unixodbc-dev \
+    sshpass \
+    rsync \
     && rm -rf /var/lib/apt/lists/*
 
 # Добавление репозитория Microsoft для ODBC Driver 17:
