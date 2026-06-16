@@ -2,7 +2,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Prefetch, Q
+from django.db.models import Prefetch, Q, OuterRef, Subquery
 from django.forms import formset_factory
 from django.http import (
     HttpRequest,
@@ -42,6 +42,7 @@ from planned_work.models import (
 from ts.constants import UNDEFINED_CASE
 from users.models import Roles, User
 from users.utils import role_required
+from incidents.models import Incident, IncidentStatusHistory
 
 from .services.get_planned_work_author import get_planned_work_author
 
@@ -160,6 +161,34 @@ def planned_work_detail(request: HttpRequest, pk: int):
         author_user=user,
     )
 
+    latest_status_subquery = IncidentStatusHistory.objects.filter(
+        incident=OuterRef('pk')
+    ).order_by('-insert_date', '-id')
+
+    incidents = (
+        Incident.objects
+        .filter(pole=planned_work.pole, is_incident_finish=False)
+        .select_related(
+            'incident_type',
+            'incident_subtype',
+        )
+        .prefetch_related('categories',)
+        .annotate(
+            latest_status_name=Subquery(
+                latest_status_subquery.values('status__name')[:1]
+            ),
+            latest_status_date=Subquery(
+                latest_status_subquery.values('insert_date')[:1]
+            ),
+            latest_status_class=Subquery(
+                latest_status_subquery
+                .values('status__status_type__css_class')[:1]
+            ),
+        )
+        .order_by('incident_date', 'update_date', 'id')
+    )
+    incidents_total = len(incidents)
+
     if request.method == 'POST' and not can_manage:
         roles = [f'"{role.label}"' for role in allowed_roles]
         messages.error(
@@ -212,6 +241,8 @@ def planned_work_detail(request: HttpRequest, pk: int):
         'main_form': main_form,
         'email_formset': email_formset,
         'planned_work': planned_work,
+        'incidents': incidents,
+        'incidents_total': incidents_total,
         'related_emails_data': related_emails_data,
         'can_manage': can_manage,
     }
