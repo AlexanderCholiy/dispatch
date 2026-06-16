@@ -7,14 +7,15 @@
 
 {% block content %}
  <div class="container-xl">
+  {% include "planned_work/includes/planned_work_filter.html" %}
 
     <div class="card">
       <div class="table-wrapper">
         <table class="custom-table">
           <thead>
             <tr>
-              <th data-col="code">Код</th>
-              <th data-col="plr">Плановая работа</th>
+              <th data-col="id">#</th>
+              <th data-col="last-email-link">Письмо</th>
               <th data-col="status">Статус</th>
               <th data-col="author">Автор</th>
               <th data-col="reason">Причина</th>
@@ -34,9 +35,9 @@
                 <td>
                     {% if planned_work.latest_email_link %}
                         {% with link=planned_work.latest_email_link.0 %}
-                        <span class="tooltip" data-title="ОТ: {{ link.email.email_date|date:"d.m.Y H:i" }}">
+                        <a href="{% url 'emails:email_detail' link.email.id %}" class="link tooltip" data-title="{{ link.email.email_from }}">
                           {{ link.email.email_subject|truncatechars:64|default:"Без темы" }}
-                        </span>
+                        </a>
                         {% endwith %}
                     {% else %}
                         —
@@ -75,7 +76,7 @@
                 <td>{{ planned_work.insert_date|date:"d.m.Y H:i" }}</td>
               </tr>
             {% empty %}
-              <tr><td colspan="5" class="empty">Нет данных...</td></tr>
+              <tr><td colspan="7" class="empty">Нет данных...</td></tr>
             {% endfor %}
           </tbody>
         </table>

@@ -140,7 +140,6 @@ def index(request: HttpRequest) -> HttpResponse:
     query = request.GET.get('q', '').strip()
 
     responsible_users = get_responsible_users()
-
     responsible_users_ids = [v['id'] for v in responsible_users]
     responsible_users_ids.append(0)  # отсутсвует
 

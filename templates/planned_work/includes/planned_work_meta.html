@@ -84,7 +84,7 @@
 
     <div class="incident-meta-row">
       <div class="select-wrapper status-select incident-form-select {% if main_form.errors %}has-error{% endif %}">
-        <label for="{{ main_form.reason.id_for_label }}">{{ main_form.reason.label }}:</label>
+        <label for="{{ main_form.reason.id_for_label }}">{{ main_form.reason.label }}</label>
 
         <select 
           name="{{ main_form.reason.name }}" 
@@ -111,7 +111,7 @@
       </div>
 
       <div class="select-wrapper status-select incident-form-select {% if main_form.author.errors %}has-error{% endif %}">
-        <label for="{{ main_form.author.id_for_label }}">{{ main_form.author.label }}:</label>
+        <label for="{{ main_form.author.id_for_label }}">{{ main_form.author.label }}</label>
 
         {{ main_form.author }}
         
@@ -122,7 +122,7 @@
 
     </div>
 
-    {% include "planned_work/includes/planned_work_sla_meta.html" with label="SLA ПЛР" status=main_form.instance.status start=main_form.start_date deadline=main_form.end_date start_field=main_form.start_date end_field=main_form.end_date  %}
+    {% include "planned_work/includes/planned_work_sla_meta.html" with label="Статус ПЛР" status=main_form.instance.status start=main_form.start_date deadline=main_form.end_date start_field=main_form.start_date end_field=main_form.end_date  %}
 
     {% include "planned_work/includes/change_log.html" with planned_work=planned_work %}
 

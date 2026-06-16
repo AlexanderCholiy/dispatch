@@ -7,7 +7,6 @@ from emails.models import EmailMessage
 from planned_work.constants import MAX_PLR_REASON_LEN
 from ts.models import Pole
 from users.models import User
-from emails.models import EmailMessage
 
 
 class PlannedWorkReason(models.TextChoices):
@@ -158,7 +157,7 @@ class PlannedWork(models.Model):
             return self.reason
 
     def __str__(self):
-        return f'PLR-{self.pk}' if self.pk else 'Новый ПЛР'
+        return f'ID: {self.pk}' if self.pk else 'Новый ПЛР'
 
     def clean(self):
         errors = {}

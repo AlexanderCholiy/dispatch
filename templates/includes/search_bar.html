@@ -95,6 +95,35 @@
             tabindex="-1">
       <i class="bx bx-search"></i>
     </button>
+  {% elif view_name in 'planned_work:planned_work_create planned_work:planned_work_detail planned_work:planned_work_list' %}
+    <form method="get" action="{% url 'planned_work:planned_work_list' %}" class="header-search" id="search-form" autocomplete="off">
+      <input
+        type="text"
+        name="q"
+        value="{{ search_query|default:'' }}"
+        placeholder="Поиск плановой работы"
+        aria-label="Поиск"
+        id="search-input"
+        maxlength="256"
+        autocomplete="off"
+      >
+
+    <input type="hidden" name="planned_work_status" id="search-hidden-status">
+    <input type="hidden" name="planned_work_responsible_user" id="search-hidden-responsible-user-select">
+    <input type="hidden" name="planned_work_reason" id="search-hidden-reason">
+    <input type="hidden" name="planned_work_macroregion" id="search-hidden-macroregion">
+    <input type="hidden" name="planned_work_region_responsible_manager" id="search-hidden-region-responsible-manager">
+    <input type="hidden" name="planned_work_avr_contractor" id="search-hidden-avr-contractor">
+    <input type="hidden" name="planned_work_pole" id="search-hidden-pole">
+    <input type="hidden" name="planned_work_date_from" id="search-hidden-planned-work-date-from">
+    <input type="hidden" name="planned_work_date_to" id="search-hidden-planned-work-date-to">
+    <input type="hidden" name="per_page" id="search-hidden-per-page">
+
+    <button type="submit" class="tooltip" 
+            data-title="Поиск по ID ПЛР или теме связанных писем" 
+            tabindex="-1">
+      <i class="bx bx-search"></i>
+    </button>
   {% else %}
     <form method="get" action="{% url 'incidents:index' %}" class="header-search" id="search-form" autocomplete="off">
       <input

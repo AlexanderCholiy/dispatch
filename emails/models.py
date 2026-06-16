@@ -6,6 +6,7 @@ from django.db import models
 
 from core.constants import MAX_EMAIL_ID_LEN
 from core.models import Attachment, Detail, Msg2, SpecialEmail
+from core.services.formatters import truncate_text
 from core.utils import email_mime_upload_to
 from incidents.models import Incident
 
@@ -14,7 +15,6 @@ from .constants import (
     MAX_EMAIL_STATUS_LEN,
     MAX_EMAIL_SUBJECT_LEN,
 )
-from core.services.formatters import truncate_text
 
 User = get_user_model()
 

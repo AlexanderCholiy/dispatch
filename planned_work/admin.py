@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 
 from core.constants import EMPTY_VALUE
+
 from .constants import MAX_PLR_CHANGE_LOG_PER_PAGE, MAX_PLR_PER_PAGE
 from .models import PlannedWork, PlannedWorkChangeLog, PlannedWorkEmailLink
 

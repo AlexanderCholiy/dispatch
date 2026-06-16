@@ -1,0 +1,311 @@
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/includes/table_filter.css' %}">
+<link rel="stylesheet" href="{% static 'css/includes/select_table_column.css' %}">
+{% endblock %}
+
+<form method="get" class="table-filter-form" id="filter-form">
+  <div class="left-part">
+    {% include "planned_work/includes/filter_select.html" %}
+
+    <div class="multiple-select-wrapper" id="status-select">
+      <div class="dropdown-trigger" data-filter-name="Статус">
+        <span class="selected-label">Статус</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="status-dropdown-menu">
+        <div class="dropdown-options">
+          {% for v in statuses %}
+            <label class="option-item {% if v in selected.status %}is-selected{% endif %}" 
+                   data-value="{{ v }}">
+              <i class="bx bx-check"></i>
+              <span>{{ v.label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <select name="planned_work_status" id="status-select-hidden" style="display: none;" multiple>
+        {% for v in statuses %}
+          <option value="{{ v }}" {% if v in selected.status %}selected{% endif %}></option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="multiple-select-wrapper" id="responsible-user-select">
+      <div class="dropdown-trigger" data-filter-name="Автор">
+        <span class="selected-label">Автор</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="responsible-user-dropdown-menu">
+        <div class="dropdown-options">
+          <label class="option-item {% if 0 in selected.responsible_user %}is-selected{% endif %}" 
+                 data-value="0">
+            <i class="bx bx-check"></i>
+            <span>Отсутствует</span>
+          </label>
+          {% for v in responsible_users %}
+            <label class="option-item {% if v.id in selected.responsible_user %}is-selected{% endif %}" 
+                   data-value="{{ v.id }}">
+              <i class="bx bx-check"></i>
+              <span>{{ v.full_name }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <select name="planned_work_responsible_user" id="responsible-user-select-hidden" style="display: none;" multiple>
+        <option value="0" {% if 0 in selected.responsible_user %}selected{% endif %}>
+          Отсутствует
+        </option>
+        {% for v in responsible_users %}
+          <option value="{{ v.id }}" {% if v.id in selected.responsible_user %}selected{% endif %}></option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="multiple-select-wrapper" id="reason-select">
+      <div class="dropdown-trigger" data-filter-name="Причина">
+        <span class="selected-label">Причина</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="reason-dropdown-menu">
+        <div class="dropdown-options">
+          {% for v in reasons %}
+            <label class="option-item {% if v in selected.reason %}is-selected{% endif %}" 
+                   data-value="{{ v }}">
+              <i class="bx bx-check"></i>
+              <span>{{ v.label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <select name="planned_work_reason" id="reason-select-hidden" style="display: none;" multiple>
+        {% for v in reasons %}
+          <option value="{{ v }}" {% if v in selected.reason %}selected{% endif %}></option>
+        {% endfor %}
+      </select>
+    </div>
+
+
+    <div class="multiple-select-wrapper" id="macroregion-select">
+      <div class="dropdown-trigger" data-filter-name="МР">
+        <span class="selected-label">МР</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="macroregion-dropdown-menu">
+        <div class="dropdown-options">
+          {% for k, v in macroregions.items %}
+            <label class="option-item {% if k in selected.macroregion %}is-selected{% endif %}" 
+                   data-value="{{ k }}">
+              <i class="bx bx-check"></i>
+              <span>{{ v }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <select name="planned_work_macroregion" id="macroregion-select-hidden" style="display: none;" multiple>
+        {% for k in macroregions %}
+          <option value="{{ k }}" {% if k in selected.macroregion %}selected{% endif %}></option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="multiple-select-wrapper" id="region-responsible-manager-select">
+      <div class="dropdown-trigger" data-filter-name="Энергетик">
+        <span class="selected-label">Энергетик</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="region-responsible-manager-dropdown-menu">
+        <div class="dropdown-options">
+          {% for k in region_responsible_managers %}
+            <label class="option-item {% if k in selected.region_responsible_manager %}is-selected{% endif %}" 
+                   data-value="{{ k }}">
+              <i class="bx bx-check"></i>
+              <span>{{ k }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <select name="planned_work_region_responsible_manager" id="region-responsible-manager-select-hidden" style="display: none;" multiple>
+        {% for k in region_responsible_managers %}
+          <option value="{{ k }}" {% if k in selected.region_responsible_manager %}selected{% endif %}></option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="multiple-select-wrapper" id="avr-contractor-select">
+      <div class="dropdown-trigger" data-filter-name="Подрядчик">
+        <span class="selected-label">Подрядчик</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="avr-contractor-dropdown-menu">
+        <div class="dropdown-options">
+          {% for k, v in avr_contractors.items %}
+            <label class="option-item {% if k in selected.avr_contractor %}is-selected{% endif %}" 
+                   data-value="{{ k }}">
+              <i class="bx bx-check"></i>
+              <span>{{ v }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <select name="planned_work_avr_contractor" id="avr-contractor-select-hidden" style="display: none;" multiple>
+        {% for k in avr_contractors %}
+          <option value="{{ k }}" {% if k in selected.avr_contractor %}selected{% endif %}></option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="filter-item-wrapper">
+      <input
+        type="text"
+        name="planned_work_pole"
+        value="{{ selected.pole|default:'' }}"
+        placeholder="Шифр опоры"
+        aria-label="Фильтр опоры"
+        id="pole-input"
+        maxlength="32"
+        pattern="[a-zA-Z0-9\-]*"
+        class="tooltip"
+        data-title="Только латинские буквы, цифры и дефис"
+      />
+    </div>
+
+    <div class="filter-item-wrapper">
+      <input 
+        type="datetime-local"
+        name="planned_work_date_from" 
+        id="planned-work-date-from" 
+        max="{{ max_datetime }}"
+        value="{{ selected.date_from|default:'' }}" 
+        class="tooltip" 
+        data-title="Дата регистрации ОТ">
+    </div>
+  
+    <div class="filter-item-wrapper">
+      <input 
+        type="datetime-local"
+        name="planned_work_date_to" 
+        id="planned-work-date-to"
+        max="{{ max_datetime }}"
+        value="{{ selected.date_to|default:'' }}" 
+        class="tooltip" 
+        data-title="Дата регистрации ДО">
+    </div>
+  </div>
+    
+  <div class="right-parts">
+    <div class="column-select-wrapper">
+      <div class="column-select-trigger tooltip" data-title="Настроить столбцы">
+        Столбцы
+      </div>
+
+      <div class="column-select-dropdown">
+        <label class="column-option">
+          <i class="bx check-icon"></i>
+          <input type="checkbox" data-col="last-email-link">
+          <span>Письмо</span>
+        </label>
+        <label class="column-option">
+          <i class="bx check-icon"></i>
+          <input type="checkbox" data-col="status">
+          <span>Статус</span>
+        </label>
+        <label class="column-option">
+          <i class="bx check-icon"></i>
+          <input type="checkbox" data-col="author">
+          <span>Автор</span>
+        </label>
+        <label class="column-option">
+          <i class="bx check-icon"></i>
+          <input type="checkbox" data-col="reason">
+          <span>Причина</span>
+        </label>
+        <label class="column-option">
+          <i class="bx check-icon"></i>
+          <input type="checkbox" data-col="pole">
+          <span>Шифр опоры</span>
+        </label>
+        <label class="column-option">
+          <i class="bx check-icon"></i>
+          <input type="checkbox" data-col="created">
+          <span>Дата регистрации</span>
+        </label>
+      </div>
+
+    </div>
+
+    <div class="select-wrapper">
+      <select name="per_page" id="per-page" class="select tooltip" data-title="Кол-во ПЛР на странице">
+        {% for size in page_size_choices %}
+        <option value="{{ size }}" {% if selected.per_page == size %}selected{% endif %}>Показать: {{ size }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    {% if can_manage %}
+      <a href="{% url 'planned_work:planned_work_create' %}" 
+        class="btn btn-warning tooltip" 
+        data-title="Добавить ПЛР">
+        <i class="bx bx-plus"></i>
+      </a>
+    {% endif %}
+
+    <button type="button" id="reset-filters" class="btn btn-secondary tooltip" data-title="Сбросить фильтры">
+      <i class="bx bx-x-circle"></i>
+    </button>
+
+    {% if selected.sort == "asc" %}
+    <button type="button" class="btn btn-secondary sort-planned-work-btn tooltip" data-sort="desc" data-param="sort_planned_work" data-cookie="sort_planned_work" data-title="Сначала старые">
+      <i class='bx bx-chevrons-down'></i>
+    </button>
+    {% else %}
+    <button type="button" class="btn btn-secondary sort-planned-work-btn tooltip" data-sort="asc" data-param="sort_planned_work" data-cookie="sort_planned_work" data-title="Сначала новые">
+      <i class='bx bx-chevrons-up'></i>
+    </button>
+    {% endif %}
+
+    <button type="submit" class="btn btn-primary tooltip" data-title="Применить фильтр">
+      <i class="bx bx-filter"></i>
+    </button>
+  </div>
+
+  <input type="hidden" name="q" value="{{ search_query }}" id="filter-hidden-q">
+</form>
+
+{% block extra_js %}
+<script>
+    const filtersConfig = [
+        // Для multi_select id скртытого поля.
+        { id: 'status-select-hidden', cookieName: 'planned_work_status', searchFieldName: 'planned_work_status', type: 'multi_select' },
+        { id: 'responsible-user-select-hidden', cookieName: 'planned_work_responsible_user', searchFieldName: 'planned_work_responsible_user', type: 'multi_select' },
+        { id: 'reason-select-hidden', cookieName: 'planned_work_reason', searchFieldName: 'planned_work_reason', type: 'multi_select' },
+        { id: 'macroregion-select-hidden', cookieName: 'planned_work_macroregion', searchFieldName: 'planned_work_macroregion', type: 'multi_select' },
+        { id: 'region-responsible-manager-select-hidden', cookieName: 'planned_work_region_responsible_manager', searchFieldName: 'planned_work_region_responsible_manager', type: 'multi_select' },
+        { id: 'avr-contractor-select-hidden', cookieName: 'planned_work_avr_contractor', searchFieldName: 'planned_work_avr_contractor', type: 'multi_select' },
+
+        { id: 'pole-input', cookieName: 'planned_work_pole', searchFieldName: 'planned_work_pole', type: 'text' },
+        { id: 'planned-work-date-from', cookieName: 'planned_work_date_from', searchFieldName: 'planned_work_date_from', type: 'datetime-local' },
+        { id: 'planned-work-date-to', cookieName: 'planned_work_date_to', searchFieldName: 'planned_work_date_to', type: 'datetime-local' },
+
+        { id: 'per-page', cookieName: 'per_page_planned_work', searchFieldName: 'per_page', type: 'single_select', skipOnReset: true },
+    ];
+</script>
+<script src="{% static 'js/universal_filters.js' %}"></script>
+<script src="{% static 'js/sort_table.js' %}"></script>
+<script src="{% static 'js/select_table_column.js' %}"></script>
+<script src="{% static 'js/manage_filters_visibility.js' %}"></script>
+<script src="{% static 'js/multiple_select.js' %}"></script>
+{% endblock %}
