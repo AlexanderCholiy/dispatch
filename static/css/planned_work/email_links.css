@@ -1,0 +1,18 @@
+.planned-work-link-buttons {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  padding: var(--space-sm) 0;
+}
+
+.planned-work-link-buttons button {
+  font-size: var(--font-sm);
+  padding: var(--space-xxs) var(--space-md);
+  text-align: center;
+}
+
+.delete-icon {
+  color: var(--red-color) !important;
+}

@@ -6,6 +6,7 @@ from django.db import models
 
 from core.constants import MAX_EMAIL_ID_LEN
 from core.models import Attachment, Detail, Msg2, SpecialEmail
+from core.services.formatters import truncate_text
 from core.utils import email_mime_upload_to
 from incidents.models import Incident
 
@@ -146,7 +147,10 @@ class EmailMessage(models.Model):
         verbose_name_plural = 'Почта'
 
     def __str__(self):
-        return self.email_msg_id
+        safe_email_subject = truncate_text(
+            self.email_subject or 'без темы', 96
+        )
+        return f'ID: {self.id} - {safe_email_subject}'
 
 
 class EmailReference(models.Model):

@@ -1,4 +1,5 @@
 .default,
+.planned,
 .new {
   background-color: var(--gray-color);
   letter-spacing: 0.05em;

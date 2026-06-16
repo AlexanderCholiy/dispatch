@@ -13,8 +13,10 @@ from .constants import (
     INCIDENTS_LOG_ROTATING_FILE,
     MONITORING_LOG_ROTATING_FILE,
     MONITORING_PAAS_LOG_ROTATING_FILE,
+    MONITORING_RVR_SMS_LOG_ROTATING_FILE,
     MQTT_LOG_ROTATING_FILE,
     MQTT_PARSER_LOG_ROTATING_FILE,
+    PLANNED_WORK_LOG_ROTATING_FILE,
     TG_NOTIFICATIONS_ROTATING_FILE,
     TS_LOG_ROTATING_FILE,
     YANDEX_TRACKER_AUTO_EMAILS_ROTATING_FILE,
@@ -151,6 +153,10 @@ incident_logger = LoggerFactory(
     'incident_logger', INCIDENTS_LOG_ROTATING_FILE
 ).get_logger()
 
+planned_work_logger = LoggerFactory(
+    'planned_work_logger', PLANNED_WORK_LOG_ROTATING_FILE
+).get_logger()
+
 default_logger = LoggerFactory(
     'default', DEFAULT_ROTATING_LOG_FILE
 ).get_logger()
@@ -161,6 +167,10 @@ monitoring_logger = LoggerFactory(
 
 monitoring_paas_logger = LoggerFactory(
     'monitoring_paas', MONITORING_PAAS_LOG_ROTATING_FILE
+).get_logger()
+
+monitoring_rvr_sms_logger = LoggerFactory(
+    'monitoring_rvr_sms', MONITORING_RVR_SMS_LOG_ROTATING_FILE
 ).get_logger()
 
 mqtt_logger = LoggerFactory(

@@ -4,7 +4,8 @@ from datetime import timedelta
 MAX_EMAIL_SUBJECT_LEN = 1024
 MAX_EMAIL_LEN = 64
 
-MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024  # (в YandexTracker max 50 MB)
+# В YandexTracker max 50 MB, в Exchange 20 MB:
+MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024
 MAX_TOTAL_ATTACHMENTS_SIZE = MAX_ATTACHMENT_SIZE
 
 # Кол-во дней через которое для не актуальных инцидентов будут удалены

@@ -1,5 +1,10 @@
 import os
 import re
+from pathlib import Path
+
+from django.conf import settings
+
+from core.constants import DATA_DIR
 
 MSYS_MODEMS_PER_PAGE = 100
 MSYS_STATUSES_PER_PAGE = 100
@@ -44,3 +49,15 @@ MQTT_PAAS_PORT = int(os.getenv('MQTT_PAAS_PORT', 1883))
 MQTT_PAAS_TOPIC = os.getenv('MQTT_PAAS_TOPIC')
 MQTT_PAAS_USER = os.getenv('MQTT_PAAS_USER')
 MQTT_PAAS_PSWD = os.getenv('MQTT_PAAS_PSWD')
+
+# SMS контроллер с РВР:
+SMS_RVR_LOCK_KEY = 'lock_sms_rvr'
+SMS_RVR_LOCK_TIMEOUT = 3600
+SMS_RVR_CONTROLLER_HOST = os.getenv('SMS_RVR_CONTROLLER_HOST')
+SMS_RVR_CONTROLLER_PSWD = os.getenv('SMS_RVR_CONTROLLER_PSWD')
+SMS_RVR_DIR = Path(DATA_DIR) / 'monitoring' / 'rvr_sms'
+
+SMS_RVR_TMP_FILE = Path(DATA_DIR) / 'tmp' / 'monitoring_rvr_sms.tmp'
+SMS_RVR_CSV_FILE = (
+    Path(settings.MEDIA_ROOT) / 'monitoring_cache' / 'monitoring_rvr_sms.csv'
+)

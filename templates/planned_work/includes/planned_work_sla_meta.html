@@ -1,0 +1,55 @@
+<div class="incident-meta-sla">
+
+  <!-- Start -->
+  <div class="field-group {% if start_field.errors %}has-error{% endif %}">
+    <label for="{{ start_field.id_for_label }}" class="field-label">
+      {{ start_field.label }}
+    </label>
+
+    <div class="field-control">
+      {{ start_field }}
+    </div>
+
+    {% if start_field.errors %}
+      <div class="field-errors">
+        {% for error in start_field.errors %}
+          <span class="form-error">{{ error }}</span>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- End -->
+  <div class="field-group {% if end_field.errors %}has-error{% endif %}">
+    <label for="{{ end_field.id_for_label }}" class="field-label">
+      {{ end_field.label }}
+    </label>
+
+    <div class="field-control">
+      {{ end_field }}
+    </div>
+
+    {% if end_field.errors %}
+      <div class="field-errors">
+        {% for error in end_field.errors %}
+          <span class="form-error">{{ error }}</span>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- SLA Block -->
+  <div class="field-group sla-group">
+    <span class="field-label">{{ label }}</span>
+
+    <div class="sla-wrapper">
+      <span
+        class="status-tag {{ status.value|default:'unknown' }} {% if deadline %}tooltip{% endif %}"
+        data-title="{{ start|date:'d.m.Y H:i' }} — {{ deadline|date:'d.m.Y H:i' }}"
+      >
+        {{ status.label|default:'Отсутствует' }}
+      </span>
+    </div>
+  </div>
+
+</div>

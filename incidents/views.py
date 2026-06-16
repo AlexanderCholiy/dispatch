@@ -65,6 +65,7 @@ from monitoring.models import DeviceStatus, DeviceType
 from monitoring.services.monitoring_equipment import (
     get_monitiring_cache_equipment,
 )
+from planned_work.models import PlannedWork
 from ts.constants import UNDEFINED_CASE
 from users.models import Roles, User
 from users.utils import role_required
@@ -140,7 +141,6 @@ def index(request: HttpRequest) -> HttpResponse:
     query = request.GET.get('q', '').strip()
 
     responsible_users = get_responsible_users()
-
     responsible_users_ids = [v['id'] for v in responsible_users]
     responsible_users_ids.append(0)  # отсутсвует
 
@@ -1016,6 +1016,14 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
                 }
             )
 
+            planned_works = (
+                PlannedWork.objects
+                .filter(
+                    pole=target_incident.pole, start_date__lte=timezone.now()
+                )
+            )
+            planned_works_total = len(planned_works)
+
             context = {
                 'incident': target_incident,
                 'source_incident': incident,
@@ -1027,6 +1035,8 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
                 'incident_form': incident_form,
                 'monitoring': sorted_monitoring,
                 'active_tab': 'email',
+                'planned_works': planned_works,
+                'planned_works_total': planned_works_total,
             }
             return render(request, template_name, context)
 
@@ -1183,6 +1193,16 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
             queryset=incident_links_queryset
         )
 
+    planned_works = (
+        PlannedWork.objects
+        .filter(
+            Q(end_date__isnull=True) | Q(end_date__gt=timezone.now()),
+            pole=incident.pole,
+        )
+        .order_by('insert_date', 'id')
+    )
+    planned_works_total = len(planned_works)
+
     context = {
         'incident': incident,
         'email_three': email_three,
@@ -1195,6 +1215,8 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         'active_tab': 'incident',
         'emails_view_type': emails_view_type,
         'incident_links_formset': incident_links_formset,
+        'planned_works': planned_works,
+        'planned_works_total': planned_works_total,
     }
 
     return render(request, template_name, context)

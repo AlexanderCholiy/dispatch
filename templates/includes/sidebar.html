@@ -18,6 +18,14 @@
               <span class="link-text">Почта</span>
             </a>
           </li>
+          <li>
+            <a href="{% url 'planned_work:planned_work_list' %}" 
+              class="nav-link {% if view_name == 'planned_work:planned_work_list' %}active{% endif %}">
+              <i class='bx bx-cog'></i> 
+              
+              <span class="link-text">Плановые работы</span>
+            </a>
+          </li>
           {% if user.role == 'energy' or user.is_superuser %}
             <li>
               <a href="{% url 'energy:energy_companies' %}" 

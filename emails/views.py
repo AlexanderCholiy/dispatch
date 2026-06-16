@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 
+from dal import autocomplete
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -13,7 +14,7 @@ from django.http import (
     HttpResponse,
     StreamingHttpResponse,
 )
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django_ratelimit.decorators import ratelimit
 from stream_zip import ZIP_32, ZIP_64, stream_zip
@@ -197,6 +198,42 @@ def emails_list(request: HttpRequest) -> HttpResponse:
 
 @login_required
 @role_required()
+@ratelimit(key='user_or_ip', rate='200/m', block=True)
+def email_detail(request: HttpRequest, email_id: int) -> HttpResponse:
+    email_qs = EmailMessage.objects.filter(id=email_id).select_related(
+        'email_incident',
+        'folder',
+        'email_mime',
+    ).prefetch_related(
+        Prefetch(
+            'email_attachments', to_attr='prefetched_attachments'
+        ),
+        Prefetch(
+            'email_intext_attachments', to_attr='prefetched_intext_attachments'
+        ),
+        Prefetch(
+            'email_msg_to', to_attr='prefetched_to'
+        ),
+        Prefetch(
+            'email_msg_cc', to_attr='prefetched_cc'
+        ),
+    )
+
+    user: User = request.user
+    if user.role == Roles.AVR_CONTRACTOR:
+        email_qs = email_qs.filter(
+            email_incident__pole__avr_contractor=user.avr_contractor
+        )
+
+    email = get_object_or_404(email_qs)
+
+    context = {'email': email}
+
+    return render(request, 'emails/email_detail.html', context)
+
+
+@login_required
+@role_required()
 @ratelimit(key='user_or_ip', rate='60/m', block=True)
 def download_email_attachments(
     request: HttpRequest, email_id: int
@@ -291,3 +328,25 @@ def download_email_attachments(
     response['Content-Disposition'] = f'attachment; filename="{archive_name}"'
 
     return response
+
+
+class EmailAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return EmailMessage.objects.none()
+
+        q = self.q
+        qs = EmailMessage.objects.all()
+
+        if q:
+            try:
+                search_id = int(q)
+                qs = qs.filter(
+                    Q(id=search_id)
+                    | Q(email_subject__icontains=q)
+                )
+            except ValueError:
+                qs = qs.filter(email_subject__icontains=q)
+
+        return qs[:EMAILS_PER_PAGE]

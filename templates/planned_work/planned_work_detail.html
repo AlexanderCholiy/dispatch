@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/includes/tables.css' %}">
+<link rel="stylesheet" href="{% static 'css/includes/tabs.css' %}">
+<link rel="stylesheet" href="{% static 'css/includes/autoselect_forms.css' %}">
+<link rel="stylesheet" href="{% static 'css/planned_work/planned_work_meta.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <div class="card">
+    <div class="tabs" data-default-tab="{{ active_tab|default:'planned_work' }}">
+
+      <div class="tabs-header">
+        <div class="left-tabs-part">
+          <button class="tab-btn" data-tab="planned_work">ПЛР</button>
+          {% if planned_work.id %}
+            <button class="tab-btn" data-tab="emails-links">Связанные письма</button>
+            <button class="tab-btn" data-tab="incidents-links">
+              <div class="incidents-section">
+                Активные инциденты
+                {% if incidents_total %}
+                  <span id="incidents-count" class="incidents-badge">{{ incidents_total }}</span>
+                {% else %}
+                  <span id="incidents-count" class="incidents-badge" style="display: none;">0</span>
+                {% endif %}
+              </div>
+            </button>
+          {% endif %}
+        </div>
+        <div class="right-tabs-part">
+          {% if planned_work.id %}
+            <strong class="planned-work-id copy-text" data-text="{{ planned_work.id }}">{{ planned_work }}</strong>
+          {% else %}
+            <strong class="planned-work-new">Новый</strong>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="tabs-content">
+        <div class="tab-panel" data-tab-content="planned_work">
+          {% include "planned_work/includes/planned_work_meta.html" with planned_work=planned_work main_form=main_form %}
+        </div>
+  
+        {% if planned_work.id %}
+          <div class="tab-panel" data-tab-content="emails-links">
+            {% include "planned_work/includes/planned_work_links.html" with planned_work=planned_work email_formset=email_formset %}
+          </div>
+          <div class="tab-panel" data-tab-content="incidents-links">
+            {% include "planned_work/includes/incidents_links.html" with planned_work=planned_work %}
+          </div>
+        {% endif %}
+      </div>
+
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+<!-- jQuery должен подключаться до media формы -->
+{% block extra_js %}
+  <script src="{% static 'js/tabs.js' %}"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  {{ main_form.media }}
+{% endblock %}

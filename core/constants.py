@@ -42,10 +42,15 @@ MONITORING_LOG_ROTATING_FILE = os.path.join(
 MONITORING_PAAS_LOG_ROTATING_FILE = os.path.join(
     LOG_DIR, 'monitoring', 'monitoring_paas.log'
 )
+MONITORING_RVR_SMS_LOG_ROTATING_FILE = os.path.join(
+    LOG_DIR, 'monitoring', 'monitoring_rvr_sms.log'
+)
 YANDEX_TRACKER_ROTATING_FILE = os.path.join(
     LOG_DIR, 'yandex_tracker', 'yandex_tracker.log')
 INCIDENTS_LOG_ROTATING_FILE = os.path.join(
     LOG_DIR, 'incidents', 'incidents.log')
+PLANNED_WORK_LOG_ROTATING_FILE = os.path.join(
+    LOG_DIR, 'planned_work', 'planned_work.log')
 TG_NOTIFICATIONS_ROTATING_FILE = os.path.join(
     LOG_DIR, 'telegram', 'telegram.log')
 YANDEX_TRACKER_AUTO_EMAILS_ROTATING_FILE = os.path.join(
@@ -72,6 +77,7 @@ os.makedirs(os.path.dirname(MONITORING_LOG_ROTATING_FILE), exist_ok=True)
 os.makedirs(os.path.dirname(MONITORING_PAAS_LOG_ROTATING_FILE), exist_ok=True)
 os.makedirs(os.path.dirname(YANDEX_TRACKER_ROTATING_FILE), exist_ok=True)
 os.makedirs(os.path.dirname(INCIDENTS_LOG_ROTATING_FILE), exist_ok=True)
+os.makedirs(os.path.dirname(PLANNED_WORK_LOG_ROTATING_FILE), exist_ok=True)
 os.makedirs(os.path.dirname(TG_NOTIFICATIONS_ROTATING_FILE), exist_ok=True)
 os.makedirs(
     os.path.dirname(YANDEX_TRACKER_AUTO_EMAILS_ROTATING_FILE), exist_ok=True

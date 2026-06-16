@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/includes/tables.css' %}">
+{% endblock %}
+
+{% block content %}
+ <div class="container-xl">
+  {% include "planned_work/includes/planned_work_filter.html" %}
+
+    <div class="card">
+      <div class="table-wrapper">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th data-col="id">#</th>
+              <th data-col="last-email-link">Письмо</th>
+              <th data-col="status">Статус</th>
+              <th data-col="author">Автор</th>
+              <th data-col="reason">Причина</th>
+              <th data-col="pole">Шифр опоры</th>
+              <th data-col="created">Дата регистрации</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for planned_work in planned_works %}
+              <tr>
+                <td>
+                  <a href="{% url 'planned_work:planned_work_detail' planned_work.id %}" class="link">
+                    {{ planned_work }}
+                  </a>
+                </td>
+
+                <td>
+                    {% if planned_work.latest_email_link %}
+                        {% with link=planned_work.latest_email_link.0 %}
+                        <a href="{% url 'emails:email_detail' link.email.id %}" class="link tooltip" data-title="{{ link.email.email_from }}">
+                          {{ link.email.email_subject|truncatechars:64|default:"Без темы" }}
+                        </a>
+                        {% endwith %}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+
+                <td>
+                  <span class="status-badge {{ planned_work.status.value|default:'status-unknown' }}">
+                    {{ planned_work.status.label }}
+                  </span>
+                </td>
+
+                <td class="tooltip"
+                    data-title="{{ planned_work.author.email|default:'' }}">
+                  {% if planned_work.author %}
+                    <a href="{% url 'users:user_detail' planned_work.author.id %}" class="link">
+                      {{ planned_work.author }}
+                    </a>
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+
+                <td>
+                  <span class="{{ planned_work.reason }}">{{ planned_work.reason_label }}</span>
+                </td>
+                
+                <td class="tooltip" data-title="{{ planned_work.pole.region.region_ru|default_if_none:'' }}">
+                    {% if planned_work.pole %}
+                    <span class="copy-text" data-text="{{ planned_work.pole.pole }}">{{ planned_work.pole.pole|default:"—" }}</span>
+                    {% else %}
+                    —
+                    {% endif %}
+                </td>
+
+                <td>{{ planned_work.insert_date|date:"d.m.Y H:i" }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="7" class="empty">Нет данных...</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+      {% include "includes/paginator.html" %}
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+{% endblock %}

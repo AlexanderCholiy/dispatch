@@ -268,6 +268,22 @@ class Incident(models.Model):
             ),
             CheckConstraint(
                 check=(
+                    Q(dgu_end_date__gte=F('dgu_start_date'))
+                    | Q(dgu_end_date__isnull=True)
+                    | Q(dgu_start_date__isnull=True)
+                ),
+                name='dgu_end_after_start',
+            ),
+            CheckConstraint(
+                check=(
+                    Q(eks_end_date__gte=F('eks_start_date'))
+                    | Q(eks_end_date__isnull=True)
+                    | Q(eks_start_date__isnull=True)
+                ),
+                name='eks_end_after_start',
+            ),
+            CheckConstraint(
+                check=(
                     Q(
                         avr_start_date__gte=Least(
                             F('insert_date'), F('incident_date')
@@ -287,6 +303,28 @@ class Incident(models.Model):
                     | Q(rvr_start_date__isnull=True)
                 ),
                 name='rvr_start_after_min_date',
+            ),
+            CheckConstraint(
+                check=(
+                    Q(
+                        dgu_start_date__gte=Least(
+                            F('insert_date'), F('incident_date')
+                        )
+                    )
+                    | Q(dgu_start_date__isnull=True)
+                ),
+                name='dgu_start_after_min_date',
+            ),
+            CheckConstraint(
+                check=(
+                    Q(
+                        eks_start_date__gte=Least(
+                            F('insert_date'), F('incident_date')
+                        )
+                    )
+                    | Q(eks_start_date__isnull=True)
+                ),
+                name='eks_start_after_min_date',
             )
         ]
 
