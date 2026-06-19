@@ -37,7 +37,7 @@
     <input type="hidden" name="email_date_to" id="search-hidden-email-date-to">
     <input type="hidden" name="per_page" id="search-hidden-per-page">
 
-    <button type="submit" class="tooltip" data-title="Поиск по коду инцидента, ID письма или теме" tabindex="-1"><i class="bx bx-search"></i></button>
+    <button type="submit" class="tooltip" data-title="Поиск по коду инцидента, ID письма, теме или шифру опоры" tabindex="-1"><i class="bx bx-search"></i></button>
   {% elif view_name in 'energy:energy_companies energy:claim_detail energy:appeal_detail' %}
     <form method="get" action="{% url 'energy:energy_companies' %}" class="header-search" id="search-form" autocomplete="off">
       <input
@@ -120,7 +120,7 @@
     <input type="hidden" name="per_page" id="search-hidden-per-page">
 
     <button type="submit" class="tooltip" 
-            data-title="Поиск по ID ПЛР или теме связанных писем" 
+            data-title="Поиск по ID ПЛР, теме связанных писем или шифру опоры" 
             tabindex="-1">
       <i class="bx bx-search"></i>
     </button>
@@ -164,7 +164,7 @@
     <input type="hidden" name="incident_date_to" id="search-hidden-incident-date-to">
     <input type="hidden" name="per_page" id="search-hidden-per-page">
 
-    <button type="submit" class="tooltip" data-title="Поиск по коду или названию инцидента" tabindex="-1"><i class="bx bx-search"></i></button>
+    <button type="submit" class="tooltip" data-title="Поиск по коду, названию инцидента или шифру опоры" tabindex="-1"><i class="bx bx-search"></i></button>
   {% endif %}
     </form>
 {% endwith %}

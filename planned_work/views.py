@@ -405,6 +405,7 @@ def planned_work_list(request: HttpRequest) -> HttpResponse:
     if query:
         filters = (
             Q(emails__email_subject__icontains=query)
+            | Q(pole__pole__startswith=query)
         )
         if query.isdigit():
             filters |= Q(pk=int(query))

@@ -116,8 +116,8 @@ from .models import (
 from .selectors.incidents import IncidentSelector
 from .services.get_avr_contractor_map import get_avr_contractor_map
 from .services.get_incident_responsible_users import get_responsible_users
-from .services.get_incident_type import get_incident_type_map
 from .services.get_incident_subtype import get_incident_subtype_map
+from .services.get_incident_type import get_incident_type_map
 from .services.get_macroregions import get_macro_region_map
 from .services.get_operator_group_map import get_operator_group_map
 from .services.get_region_responsible_manager import (
@@ -568,7 +568,8 @@ def index(request: HttpRequest) -> HttpResponse:
                 base_qs = base_qs.filter(id__in=all_ids)
         else:
             base_qs = base_qs.filter(
-                email_messages__email_subject__icontains=query
+                Q(email_messages__email_subject__icontains=query)
+                | Q(pole__pole__startswith=query)
             ).distinct()
 
     if pole:

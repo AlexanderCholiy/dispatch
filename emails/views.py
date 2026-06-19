@@ -117,6 +117,7 @@ def emails_list(request: HttpRequest) -> HttpResponse:
     if query:
         filters = (
             Q(email_incident__code=query)
+            | Q(email_incident__pole__pole__startswith=query)
             | Q(email_subject__icontains=query)
         )
         if query.isdigit():
