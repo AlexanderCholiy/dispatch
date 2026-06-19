@@ -117,6 +117,7 @@ from .selectors.incidents import IncidentSelector
 from .services.get_avr_contractor_map import get_avr_contractor_map
 from .services.get_incident_responsible_users import get_responsible_users
 from .services.get_incident_type import get_incident_type_map
+from .services.get_incident_subtype import get_incident_subtype_map
 from .services.get_macroregions import get_macro_region_map
 from .services.get_operator_group_map import get_operator_group_map
 from .services.get_region_responsible_manager import (
@@ -153,6 +154,7 @@ def index(request: HttpRequest) -> HttpResponse:
     )
 
     incident_types = get_incident_type_map()
+    incident_subtypes = get_incident_subtype_map()
 
     macroregions = get_macro_region_map()
     macroregions = {0: 'Отсутствует', **macroregions}  # отсутсвует в начале
@@ -186,6 +188,9 @@ def index(request: HttpRequest) -> HttpResponse:
 
     incident_types_ids = list(incident_types.keys())
     incident_types_ids.append(0)  # отсутсвует
+
+    incident_subtypes_ids = list(incident_subtypes.keys())
+    incident_subtypes_ids.append(0)  # отсутсвует
 
     statuses_ids = []
     finished_status_ids = []
@@ -258,6 +263,19 @@ def index(request: HttpRequest) -> HttpResponse:
             if v.isnumeric() and int(v) in incident_types_ids
         ]
         or incident_types_ids[:]
+    )
+
+    incident_subtype_filter = (
+        request.GET.get('incident_subtype', '').strip()
+        or (get_raw_cookie(request, 'incident_subtype') or '').strip()
+    ).split(',') if not search_only_by_code else []
+
+    incident_subtype_filter: list[int] = (
+        [
+            int(v) for v in incident_subtype_filter
+            if v.isnumeric() and int(v) in incident_subtypes_ids
+        ]
+        or incident_subtypes_ids[:]
     )
 
     macroregion = (
@@ -665,6 +683,21 @@ def index(request: HttpRequest) -> HttpResponse:
                 incident_type_id__in=incident_type_filter
             )
 
+    if (
+        incident_subtype_filter
+        and len(incident_subtype_filter) != len(incident_subtypes_ids)
+    ):
+        has_not_incident_subtype = 0 in incident_subtype_filter
+        if has_not_incident_subtype:
+            base_qs = base_qs.filter(
+                Q(incident_subtype_id__isnull=True)
+                | Q(incident_subtype_id__in=incident_subtype_filter)
+            )
+        else:
+            base_qs = base_qs.filter(
+                incident_subtype_id__in=incident_subtype_filter
+            )
+
     if avr_contractor and len(avr_contractor) != len(avr_contractors_ids):
         if 0 in avr_contractor:
             base_qs = base_qs.filter(
@@ -760,6 +793,7 @@ def index(request: HttpRequest) -> HttpResponse:
         'time_statuses': TimeStatus,
         'region_responsible_managers': region_responsible_managers,
         'incident_types': incident_types,
+        'incident_subtypes': incident_subtypes,
         'macroregions': macroregions,
         'selected': {
             'is_incident_finish': is_incident_finish,
@@ -771,6 +805,7 @@ def index(request: HttpRequest) -> HttpResponse:
             'macroregion': macroregion,
             'avr_contractor': avr_contractor,
             'incident_type': incident_type_filter,
+            'incident_subtype': incident_subtype_filter,
             'operator_group': operator_group,
             'pole': pole,
             'base_station': base_station,

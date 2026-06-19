@@ -189,6 +189,39 @@
       </select>
     </div>
 
+    <div class="multiple-select-wrapper" id="incident-subtype-select">
+      <div class="dropdown-trigger" data-filter-name="Подтип">
+        <span class="selected-label">Подтип</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="incident-subtype-dropdown-menu">
+        <div class="dropdown-options">
+          <label class="option-item {% if 0 in selected.incident_subtype %}is-selected{% endif %}" 
+                 data-value="0">
+            <i class="bx bx-check"></i>
+            <span>Отсутствует</span>
+          </label>
+          {% for k, v in incident_subtypes.items %}
+            <label class="option-item {% if k in selected.incident_subtype %}is-selected{% endif %}" 
+                   data-value="{{ k }}">
+              <i class="bx bx-check"></i>
+              <span>{{ v }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <select name="incident_subtype" id="incident-subtype-select-hidden" style="display: none;" multiple>
+        <option value="0" {% if 0 in selected.incident_subtype %}selected{% endif %}>
+          Отсутствует
+        </option>
+        {% for k in incident_subtypes %}
+          <option value="{{ k }}" {% if k in selected.incident_subtype %}selected{% endif %}></option>
+        {% endfor %}
+      </select>
+    </div>
+
     <div class="multiple-select-wrapper" id="sla-avr-select">
       <div class="dropdown-trigger" data-filter-name="SLA АВР">
         <span class="selected-label">SLA АВР</span>
@@ -578,6 +611,7 @@
         { id: 'was-read-select-hidden', cookieName: 'was_read', searchFieldName: 'was_read', type: 'multi_select' },
         { id: 'category-select-hidden', cookieName: 'category', searchFieldName: 'category', type: 'multi_select' },
         { id: 'incident-type-select-hidden', cookieName: 'incident_type', searchFieldName: 'incident_type', type: 'multi_select' },
+        { id: 'incident-subtype-select-hidden', cookieName: 'incident_subtype', searchFieldName: 'incident_subtype', type: 'multi_select' },
         { id: 'sla-avr-select-hidden', cookieName: 'sla_avr', searchFieldName: 'sla_avr', type: 'multi_select' },
         { id: 'sla-rvr-select-hidden', cookieName: 'sla_rvr', searchFieldName: 'sla_rvr', type: 'multi_select' },
         { id: 'sla-dgu-select-hidden', cookieName: 'sla_dgu', searchFieldName: 'sla_dgu', type: 'multi_select' },
