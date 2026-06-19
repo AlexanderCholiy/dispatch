@@ -72,9 +72,13 @@
         </div>
       {% endif %}
       
-      <div class="email-date"><strong>Дата:</strong>{{ node.email.email_date|date:"d.m.Y H:i" }}</div>
+      <div class="email-date"><strong>Отправлено:</strong>{{ node.email.email_date|date:"d.m.Y H:i" }}</div>
 
-      <div class="email-meta-id"><strong>ID письма:</strong>{{ node.email.id }}</div>
+      {% if node.email.created_at %}
+        <div class="email-date"><strong>Добавлено:</strong>{{ node.email.created_at|date:"d.m.Y H:i" }}</div>
+      {% endif %}
+  
+      <div class="email-meta-id"><strong>ID письма:</strong><span class="copy-text" data-text="{{ node.email.id }}">{{ node.email.id }}</span></div>
       {% if node.branch_ids and forloop.parentloop %}
         <div class="email-meta-ref">
           <strong>Ответ на:</strong> 

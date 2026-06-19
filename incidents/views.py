@@ -1203,6 +1203,11 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
     )
     planned_works_total = len(planned_works)
 
+    incident_links_total = len(incident_links_formset)
+    incident_links_total = (
+        incident_links_total - 1 if can_manage else incident_links_total
+    )
+
     context = {
         'incident': incident,
         'email_three': email_three,
@@ -1215,6 +1220,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         'active_tab': 'incident',
         'emails_view_type': emails_view_type,
         'incident_links_formset': incident_links_formset,
+        'incident_links_total': incident_links_total,
         'planned_works': planned_works,
         'planned_works_total': planned_works_total,
     }

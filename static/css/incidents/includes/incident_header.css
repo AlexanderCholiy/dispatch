@@ -51,17 +51,35 @@
   text-align: center;
 }
 
-.incident-date {
+.incident-timeline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0;
   font-size: var(--font-sm);
   color: var(--gray-color);
-  margin: 0;
-  font-weight: 450;
-  flex: 1 1 auto;
-  text-align: right;
-  max-width: 80%;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-word; 
+  line-height: 2;
+  max-width: 100%;
+}
+
+.date-item {
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Подсветка labels (опционально, можно сделать жирнее или другим цветом) */
+.date-label {
+  font-weight: 600;
+  margin-right: 4px;
+  color: var(--add-color);
+}
+
+/* Разделитель между элементами (кроме последнего) */
+.date-item:not(:last-child)::after {
+  content: " | ";
+  margin: 0 8px;
 }
 
 @media (max-width: 768px) {

@@ -92,6 +92,7 @@ class EmailMessageAdmin(admin.ModelAdmin):
         'email_intext_attachments_list',
         'get_email_recipients_to',
         'get_email_recipients_cc',
+        'created_at',
     )
 
     fieldsets = (
@@ -105,6 +106,7 @@ class EmailMessageAdmin(admin.ModelAdmin):
                 'need_2_add_in_yandex_tracker',
                 'folder',
                 'status',
+                'created_at',
             )
         }),
         (None, {

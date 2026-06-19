@@ -73,19 +73,49 @@
         </label>
 
       </div>
-      <p class="incident-date">
+      <div class="incident-timeline">
         {% if incident.incident_finish_date %}
-          зарегистрировано {{ incident.incident_date|date:"d.m.Y H:i" }},
-          закрыто {{ incident.incident_finish_date|date:"d.m.Y H:i" }}
+          <!-- Завершенная инцидент -->
+          <span class="date-item tooltip" data-title="Дата регистрации: определяется по дате первого входящего письма или момента добавления в систему.">
+            <span class="date-label">REG:</span> 
+            {{ incident.incident_date|date:"d.m.Y H:i" }}
+          </span>
+          <span class="date-item tooltip" data-title="Дата добавления в систему.">
+            <span class="date-label">ADD:</span> 
+            {{ incident.insert_date|date:"d.m.Y H:i" }}
+          </span>
+          <span class="date-item status-closed tooltip" data-title="Дата закрытия.">
+            <span class="date-label">CLOSE:</span> 
+            {{ incident.incident_finish_date|date:"d.m.Y H:i" }}
+          </span>
+
+        {% elif incident.auto_close_date %}
+          <!-- Инцидент будет закрыт автоматически -->
+          <span class="date-item tooltip" data-title="Дата регистрации: определяется по дате первого входящего письма или момента добавления в систему.">
+            <span class="date-label">REG:</span> 
+            {{ incident.incident_date|date:"d.m.Y H:i" }}
+          </span>
+          <span class="date-item tooltip" data-title="Дата добавления в систему.">
+            <span class="date-label">ADD:</span> 
+            {{ incident.insert_date|date:"d.m.Y H:i" }}
+          </span>
+          <span class="date-item status-pending tooltip" data-title="Дата автоматического закрытия.">
+            <span class="date-label">CLOSE:</span> 
+            {{ incident.auto_close_date|date:"d.m.Y H:i" }}
+          </span>
+
         {% else %}
-          {% if incident.auto_close_date %}
-            зарегистрировано {{ incident.incident_date|date:"d.m.Y H:i" }},
-            будет закрыто {{ incident.auto_close_date|date:"d.m.Y H:i" }}
-          {% else %}
-            зарегистрировано {{ incident.incident_date|date:"d.m.Y H:i" }}
-          {% endif %}
+          <!-- Активный инцидент без авто-закрытия -->
+          <span class="date-item tooltip" data-title="Дата регистрации: определяется по дате первого входящего письма или момента добавления в систему.">
+            <span class="date-label">REG:</span> 
+            {{ incident.incident_date|date:"d.m.Y H:i" }}
+          </span>
+          <span class="date-item tooltip" data-title="Дата добавления в систему.">
+            <span class="date-label">ADD:</span> 
+            {{ incident.insert_date|date:"d.m.Y H:i" }}
+          </span>
         {% endif %}
-      </p>
+      </div>
     </div>
   </div>
 

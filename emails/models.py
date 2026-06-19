@@ -141,6 +141,13 @@ class EmailMessage(models.Model):
         verbose_name='Папка письма',
         db_index=True
     )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата и время добавления в систему',
+        db_index=True,
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         verbose_name = 'сообщение'
