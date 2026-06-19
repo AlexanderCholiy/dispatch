@@ -278,7 +278,7 @@ class IncidentReportSerializer(serializers.ModelSerializer):
         )
 
     def get_is_sla_dispatch_expired(self, obj: Incident):
-        return not obj.dispatch_sla_ok if obj.dispatch_sla_ok else None
+        return not obj.dispatch_sla_ok
 
     def get_last_dispatch_comment_datetime(self, obj: Incident):
         comments = obj.last_dispatch_comments

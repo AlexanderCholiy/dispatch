@@ -35,6 +35,7 @@ from .constants import (
     EKS_CATEGORY,
     EKS_SLA_IN_PROGRESS_DEADLINE_IN_HOURS,
     EKS_SLA_WAITING_DEADLINE_IN_HOURS,
+    FINISHED_STATUS_NAMES,
     INCIDENT_ACCESS_TO_OBJECT_TYPE,
     INCIDENT_AMS_STRUCTURE_TYPE,
     INCIDENT_DESTRUCTION_OBJECT_TYPE,
@@ -702,6 +703,15 @@ def aggregate_sla_percentages(
 
 
 def annotate_sla_dispatch(queryset: QuerySet[Incident]):
+    """
+    Аннотирует инциденты датами для расчета SLA диспетчирования.
+
+    Логика определения dispatch_end_date:
+    1. Дата запроса дополнительных данных (если есть).
+    2. Дата передачи подрядчику (если нет запроса данных).
+    3. Дата первого события закрытия/генерации.
+    4. Текущее время (если инцидент еще активен).
+    """
     add_data_subquery = (
         IncidentStatusHistory.objects
         .filter(
@@ -720,6 +730,16 @@ def annotate_sla_dispatch(queryset: QuerySet[Incident]):
         .order_by('insert_date')
     )
 
+    finished_subquery = (
+        IncidentStatusHistory.objects
+        .filter(
+            incident=OuterRef('pk'),
+            status__name__in=FINISHED_STATUS_NAMES,
+        )
+        .order_by('insert_date')
+        .values('insert_date')
+    )
+
     queryset = queryset.annotate(
         request_add_data_date=Subquery(
             add_data_subquery.values('insert_date')[:1],
@@ -728,7 +748,11 @@ def annotate_sla_dispatch(queryset: QuerySet[Incident]):
         transfer_to_contractor_date=Subquery(
             contractor_subquery.values('insert_date')[:1],
             output_field=DateTimeField(),
-        )
+        ),
+        first_finish_date=Subquery(
+            finished_subquery.values('insert_date')[:1],
+            output_field=DateTimeField()
+        ),
     )
 
     queryset = queryset.annotate(
@@ -744,11 +768,10 @@ def annotate_sla_dispatch(queryset: QuerySet[Incident]):
                 transfer_to_contractor_date__isnull=False,
                 then=F('transfer_to_contractor_date'),
             ),
-            # Приоритет 3: Если инцидент закрыт
-            # (на всякий случай, если оба выше не сработали)
+            # Приоритет 3: Если инцидент был закрыт
             When(
-                incident_finish_date__isnull=False,
-                then=F('incident_finish_date'),
+                first_finish_date__isnull=False,
+                then=F('first_finish_date'),
             ),
             # Приоритет 4: Иначе считаем до текущего момента
             default=Value(timezone.now()),

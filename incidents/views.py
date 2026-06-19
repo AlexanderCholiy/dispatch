@@ -1554,13 +1554,14 @@ def new_email(
             and first_email.email_subject
         ):
             clean_subj = clean_email_subject(
-                first_email.email_subject or '', incident.code
+                first_email.email_subject or '', incident
             )
+
             initial_data['subject'] = clean_subj
 
         elif reply_to_email is not None:
             clean_subj = clean_email_subject(
-                first_email.email_subject or '', incident.code
+                first_email.email_subject or '', incident
             )
             initial_data['subject'] = f'Re: {clean_subj}'
 
@@ -1576,6 +1577,9 @@ def new_email(
                 obj.email_to for obj in reply_to_email.prefetched_cc
                 if obj.email_to != email_parser.email_login
             ])
+        else:
+            clean_subj = clean_email_subject('', incident)
+            initial_data['subject'] = clean_subj
 
         initial_data['body'] = get_incident_signature(incident)
 
@@ -1759,13 +1763,13 @@ def notify_operator(request: HttpRequest, incident_id: int) -> HttpResponse:
             and first_email.email_subject
         ):
             clean_subj = clean_email_subject(
-                first_email.email_subject or '', incident.code
+                first_email.email_subject or '', incident
             )
             initial_data['subject'] = clean_subj
 
         elif reply_to_email is not None:
             clean_subj = clean_email_subject(
-                first_email.email_subject or '', incident.code
+                first_email.email_subject or '', incident
             )
             initial_data['subject'] = f'Re: {clean_subj}'
 
@@ -1960,7 +1964,7 @@ def notify_avr_contractor(
             and first_email.email_subject
         ):
             clean_subj = clean_email_subject(
-                first_email.email_subject or '', incident.code
+                first_email.email_subject or '', incident
             )
             initial_data['subject'] = clean_subj
 
@@ -2228,7 +2232,7 @@ def notify_rvr_contractor(
             and first_email.email_subject
         ):
             clean_subj = clean_email_subject(
-                first_email.email_subject or '', incident.code
+                first_email.email_subject or '', incident
             )
             initial_data['subject'] = clean_subj
 
@@ -2561,13 +2565,13 @@ def notify_incident_closed(
             and first_email.email_subject
         ):
             clean_subj = clean_email_subject(
-                first_email.email_subject or '', incident.code
+                first_email.email_subject or '', incident
             )
             initial_data['subject'] = clean_subj
 
         elif reply_to_email is not None:
             clean_subj = clean_email_subject(
-                first_email.email_subject or '', incident.code
+                first_email.email_subject or '', incident
             )
             initial_data['subject'] = f'Re: {clean_subj}'
 
