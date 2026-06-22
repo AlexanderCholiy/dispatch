@@ -79,8 +79,8 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
         else:
             search_query = f'(SINCE {date_since} BEFORE {date_before})'
 
-        # status, messages = mail.search(None, search_query)
-        status, messages = mail.uid('SEARCH', None, search_query)
+        status, messages = mail.search(None, search_query)
+        # status, messages = mail.uid('SEARCH', None, search_query)
 
         if status != 'OK' or not messages[0]:
             return []
