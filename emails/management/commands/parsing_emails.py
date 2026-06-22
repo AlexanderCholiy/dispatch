@@ -9,7 +9,6 @@ from django.core.management.base import (
 
 from core.constants import MIN_WAIT_SEC_WITH_CRITICAL_EXC
 from core.loggers import email_parser_logger
-from core.utils import run_with_timeout_process
 from emails.email_parser import email_parser
 
 
@@ -19,6 +18,7 @@ class Command(BaseCommand):
         'inbox': email_parser.inbox_folder_name,
         'sent': email_parser.sent_folder_name,
     }
+    conn_timeout = 600
 
     def add_arguments(self, parser: CommandParser):
         parser.add_argument(
@@ -28,8 +28,34 @@ class Command(BaseCommand):
             help=(
                 'Выбор почтовой папки. '
                 f'Допустимые значения: {", ".join(self.mailbox_map.keys())}.'
-            )
+            ),
         )
+
+    def create_mail_connection(self, mailbox_name: str) -> imaplib.IMAP4_SSL:
+        """Создает новое соединение, логинится и выбирает папку."""
+        mail = None
+        try:
+            mail = imaplib.IMAP4_SSL(
+                email_parser.email_server,
+                email_parser.email_port,
+                timeout=self.conn_timeout,
+            )
+            mail.login(email_parser.email_login, email_parser.email_pswd)
+            mail.select(mailbox_name, readonly=True)
+
+            email_parser_logger.debug(
+                f'Успешное подключение к папке {mailbox_name}'
+            )
+            return mail
+        except Exception as e:
+            email_parser_logger.error(f'Ошибка при создании соединения: {e}')
+            if mail:
+                try:
+                    mail.close()
+                    mail.logout()
+                except Exception:
+                    pass
+            raise
 
     def handle(self, *args, **kwargs):
         mailbox = (kwargs.get('mailbox') or '').strip().lower()
@@ -43,60 +69,68 @@ class Command(BaseCommand):
             raise CommandError(err_msg)
 
         mailbox_name = self.mailbox_map[mailbox]
-
-        last_error_type = None
-
-        min_timeout = 600  # 10 минут
-        max_timeout = 1200  # 20 минут
-        timeout_step = 300
-        reserve_sec = 30
-        current_timeout = min_timeout
+        mail = None
 
         while True:
-            err = None
 
-            start_time = time.time()
+            if mail is None:
+                try:
+                    mail = self.create_mail_connection(mailbox_name)
+                except Exception as conn_err:
+                    email_parser_logger.exception(
+                        f'Не удалось создать соединение: {conn_err}'
+                    )
+                    time.sleep(MIN_WAIT_SEC_WITH_CRITICAL_EXC)
+                    continue
 
             try:
-                run_with_timeout_process(
-                    email_parser.fetch_unread_emails,
-                    func_timeout=max_timeout + reserve_sec,
+                email_parser.fetch_unread_emails(
+                    mail=mail,
                     mailbox=mailbox_name,
-                    imap_ssl_timeout=current_timeout,
                 )
+
             except KeyboardInterrupt:
                 return
+
             except TimeoutError:
-                # Плавное увеличение таймаута при ошибке:
-                current_timeout = min(
-                    current_timeout + timeout_step, max_timeout
+                email_parser_logger.warning('Таймаут парсинга писем.')
+
+                if mail:
+                    try:
+                        mail.close()
+                        mail.logout()
+                    except Exception:
+                        pass
+
+                mail = None
+
+            except (
+                imaplib.IMAP4.abort, imaplib.IMAP4.error, ConnectionResetError
+            ) as e:
+                email_parser_logger.error(
+                    f'Ошибка соединения с почты сервером: {e}.'
                 )
-                email_parser_logger.warning(
-                    'IMAP timeout. Устанавливаем новый таймаут: '
-                    f'{current_timeout} секунд.'
-                )
-            except imaplib.IMAP4.abort:
-                email_parser_logger.debug(
-                    'Соединение с IMAP-сервером неожиданно закрылось'
-                )
+
+                if mail:
+                    try:
+                        mail.close()
+                        mail.logout()
+                    except Exception:
+                        pass
+
+                mail = None
+
             except Exception as e:
-                email_parser_logger.critical(e, exc_info=True)
-                err = e
+                email_parser_logger.exception(
+                    f'Критическая ошибка парсинга почты: {e}'
+                )
+
+                if mail:
+                    try:
+                        mail.close()
+                        mail.logout()
+                    except Exception:
+                        pass
+
                 time.sleep(MIN_WAIT_SEC_WITH_CRITICAL_EXC)
-            else:
-                # Адаптируем таймаут под фактическое время:
-                elapsed = time.time() - start_time
-                new_timeout = int(elapsed + reserve_sec)
-                calculated_timeout = max(
-                    min_timeout, min(new_timeout, max_timeout)
-                )
-
-                email_parser_logger.debug(
-                    f'Установлен новый таймаут: {current_timeout} сек.'
-                )
-
-                current_timeout = calculated_timeout
-
-            finally:
-                if err is not None and last_error_type != type(err).__name__:
-                    last_error_type = type(err).__name__
+                mail = None

@@ -1,5 +1,8 @@
+import os
 import re
 from datetime import timedelta
+
+from core.utils import Config
 
 MAX_EMAIL_SUBJECT_LEN = 1024
 MAX_EMAIL_LEN = 64
@@ -140,3 +143,16 @@ EMAIL_SUBJECT_NOT_FOR_YT_CONTROLLED = 'V8ieFf'
 EMAILS_BATCH_SIZE = 1000
 
 CLEANUP_EMAILS_WITHOUT_INCIDENT_TTL = timedelta(days=90)
+
+EMAIL_PARSER_CONFIG = {
+    'PARSING_EMAIL_LOGIN': os.getenv('PARSING_EMAIL_LOGIN'),
+    'PARSING_EMAIL_PSWD': os.getenv('PARSING_EMAIL_PSWD'),
+    'PARSING_EMAIL_SERVER': os.getenv('PARSING_EMAIL_SERVER'),
+    'PARSING_EMAIL_PORT': os.getenv('PARSING_EMAIL_PORT', 993),
+    'PARSING_EMAIL_SENT_FOLDER_NAME': os.getenv('PARSING_EMAIL_SENT_FOLDER_NAME'),  # noqa: E501
+}
+
+Config.validate_env_variables(EMAIL_PARSER_CONFIG)
+
+EMAILD_UID_CACHE_PREFIX_KEY = 'imap_uid_map__'
+EMAILD_UID_CACHE_TTL = 3600 * 24 * 2

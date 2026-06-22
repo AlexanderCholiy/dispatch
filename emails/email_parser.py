@@ -2,14 +2,14 @@ import email
 import hashlib
 import imaplib
 import json
-import os
 import re
 from datetime import datetime, time, timedelta
 from email import header, message
 from imaplib import IMAP4
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 from zoneinfo import ZoneInfo
 
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db import IntegrityError, transaction
@@ -20,8 +20,12 @@ from core.constants import API_STATUS_EXCEPTIONS
 from core.exceptions import ApiServerError, ApiTooManyRequests
 from core.loggers import email_parser_logger
 from core.pretty_print import PrettyPrint
-from core.utils import Config
 from core.wraps import min_wait_timer, timer
+from emails.constants import (
+    EMAIL_PARSER_CONFIG,
+    EMAILD_UID_CACHE_PREFIX_KEY,
+    EMAILD_UID_CACHE_TTL,
+)
 from emails.models import EmailErr, EmailFolder, EmailMessage, EmailMime
 from emails.services.turn_off_incident_auto_close import (
     turn_off_incident_auto_close,
@@ -32,16 +36,6 @@ from yandex_tracker.utils import YandexTrackerManager, yt_manager
 
 from .utils import EmailManager
 from .validators import EmailValidator
-
-email_parser_config = {
-    'PARSING_EMAIL_LOGIN': os.getenv('PARSING_EMAIL_LOGIN'),
-    'PARSING_EMAIL_PSWD': os.getenv('PARSING_EMAIL_PSWD'),
-    'PARSING_EMAIL_SERVER': os.getenv('PARSING_EMAIL_SERVER'),
-    'PARSING_EMAIL_PORT': os.getenv('PARSING_EMAIL_PORT', 993),
-    'PARSING_EMAIL_SENT_FOLDER_NAME': os.getenv('PARSING_EMAIL_SENT_FOLDER_NAME'),  # noqa: E501
-}
-
-Config.validate_env_variables(email_parser_config)
 
 
 class EmailParser(EmailValidator, EmailManager, IncidentManager):
@@ -85,7 +79,9 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
         else:
             search_query = f'(SINCE {date_since} BEFORE {date_before})'
 
-        status, messages = mail.search(None, search_query)
+        # status, messages = mail.search(None, search_query)
+        status, messages = mail.uid('SEARCH', None, search_query)
+
         if status != 'OK' or not messages[0]:
             return []
 
@@ -273,12 +269,21 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
 
         return result
 
+    def _save_uid_2_cache(self, msg_uid: str | int, email_msg_id: str):
+        """Кеш для будущей ускоренной фильтрации на сервере IMAP."""
+        email_cache_key = f'{EMAILD_UID_CACHE_PREFIX_KEY}{msg_uid}'
+        cache.set(
+            email_cache_key, email_msg_id, EMAILD_UID_CACHE_TTL
+        )
+
+    @timer(email_parser_logger)
     def fetch_emails_in_chunks(
         self,
         mail: IMAP4,
-        email_ids: List[Union[bytes, str]],
-        chunk_size: int = 500
-    ) -> List[Tuple[bytes, Any]]:
+        email_ids: list[Union[bytes, str]],
+        skip_msg_ids: set[str] = set(),
+        chunk_size: int = 100,
+    ) -> list[tuple[bytes, Any]]:
         """
         Получает письма чанками, чтобы не перегружать IMAP сервер.
 
@@ -290,16 +295,35 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
         Returns:
             list: список сообщений в сыром виде от imaplib
         """
-        normalized_ids = [
-            id_.decode() if isinstance(id_, bytes) else str(id_)
-            for id_ in email_ids
-        ]
+        filtered_ids = []
 
-        total = len(normalized_ids)
+        for id_ in email_ids:
+            current_id = id_.decode() if isinstance(id_, bytes) else str(id_)
+
+            cache_key = f'{EMAILD_UID_CACHE_PREFIX_KEY}{current_id}'
+            email_msg_id: str | None = cache.get(cache_key)
+
+            if email_msg_id and email_msg_id in skip_msg_ids:
+                continue
+
+            filtered_ids.append(current_id)
+
+        total = len(filtered_ids)
+
+        if total == 0:
+            email_parser_logger.debug(
+                'Все письма были отфильтрованы. '
+                'Запрос к серверу не выполняется.'
+            )
+            return []
+
         all_messages = []
+        email_parser_logger.debug(
+            f'Всего {len(email_ids)} исходных, {total} после фильтрации'
+        )
 
         for i in range(0, total, chunk_size):
-            chunk = normalized_ids[i:i + chunk_size]
+            chunk = filtered_ids[i:i + chunk_size]
             id_range = ','.join(chunk)
 
             try:
@@ -307,6 +331,9 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
             except KeyboardInterrupt:
                 raise
             except (imaplib.IMAP4.abort, ConnectionResetError, OSError):
+                email_parser_logger.warning(
+                    'Соединение разорвано при обработке чанка'
+                )
                 continue
             except Exception as e:
                 email_parser_logger.error(
@@ -316,12 +343,13 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
 
             if status != 'OK':
                 email_parser_logger.warning(
-                    f'Ошибка при получении писем (status={status})',
+                    f'Ошибка при получении писем (status={status})'
                 )
                 continue
 
             all_messages.extend(messages)
 
+        email_parser_logger.debug('END')
         return all_messages
 
     @property
@@ -338,10 +366,10 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
     @timer(email_parser_logger)
     def fetch_unread_emails(
         self,
+        mail: imaplib.IMAP4_SSL,
         check_days: int = 0,
         check_err_days: int = 7,
         mailbox: str = inbox_folder_name,
-        imap_ssl_timeout: int = 600
     ):
         """
         Парсинг писем для получения непрочитанных сообщений и запись их в БД.
@@ -392,481 +420,483 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
             days=max((check_days + 1), (check_err_days + 1))
         )
 
-        with imaplib.IMAP4_SSL(
-            self.email_server,
-            self.email_port,
-            timeout=imap_ssl_timeout
-        ) as mail:
-            mail.login(self.email_login, self.email_pswd)
-            mail.select(mailbox, readonly=True)
+        err_msg_ids: set[str] = set(
+            EmailErr.objects
+            .filter(incert_date__gte=err_days_ago, incert_date__lte=today)
+            .values_list('email_msg_id', flat=True)
+        )
 
-            err_msg_ids: set[str] = set(
-                EmailErr.objects
-                .filter(incert_date__gte=err_days_ago, incert_date__lte=today)
-                .values_list('email_msg_id', flat=True)
-            )
+        archive_msg_ids: set[str] = set(
+            EmailMessage.objects
+            .filter(email_date__gte=err_days_ago, email_date__lte=today)
+            .values_list('email_msg_id', flat=True)
+        )
 
-            archive_msg_ids: set[str] = set(
-                EmailMessage.objects
-                .filter(email_date__gte=err_days_ago, email_date__lte=today)
-                .values_list('email_msg_id', flat=True)
-            )
+        new_emails_ids = (
+            self._find_emails_by_date(today, check_days, mail)
+        )
 
-            new_emails_ids = (
-                self._find_emails_by_date(today, check_days, mail)
-            )
+        found_emails_ids = self._find_email_by_id(
+            err_msg_ids, mail, today, check_err_days
+        )
 
-            found_emails_ids = self._find_email_by_id(
-                err_msg_ids, mail, today, check_err_days
-            )
+        email_ids = list(set(new_emails_ids + found_emails_ids))
+        skip_msg_ids = archive_msg_ids - err_msg_ids
 
-            email_ids = list(set(new_emails_ids + found_emails_ids))
-            messages = self.fetch_emails_in_chunks(mail, email_ids)
+        messages = self.fetch_emails_in_chunks(mail, email_ids, skip_msg_ids)
 
-            parsed_messages: list[tuple[message.Message, bytes]] = []
-            for part in messages:
-                if isinstance(part, tuple) and len(part) == 2:
-                    msg_bytes = part[1]
-                    if not msg_bytes:
-                        continue
-                    msg = email.message_from_bytes(msg_bytes)
-                    parsed_messages.append((msg, msg_bytes))
+        parsed_messages: list[tuple[message.Message, bytes, str]] = []
+        for part in messages:
+            if isinstance(part, tuple) and len(part) == 2:
+                uid_raw, msg_bytes = part
 
-            email_err_msg_ids = []
-            email_err_msg_ids_to_del = []
-            email_msg_counter = 0
+                if not msg_bytes:
+                    continue
 
-            total = len(parsed_messages)
+                msg = email.message_from_bytes(msg_bytes)
+                msg_uid = uid_raw.split()[0].decode().strip('()')
 
-            our_message_ids = set(
-                EmailMessage.objects.all()
-                .values_list('email_msg_id', flat=True)
-            )
+                parsed_messages.append((msg, msg_bytes, msg_uid))
 
-            for index, (msg, raw_msg_bytes) in enumerate(parsed_messages):
+        email_err_msg_ids = []
+        email_err_msg_ids_to_del = []
+        email_msg_counter = 0
 
-                PrettyPrint.progress_bar_debug(
-                    index, total, f'Парсинг почты (папка {folder.name}):')
-                email_msg_id = None
+        total = len(parsed_messages)
 
+        our_message_ids = set(
+            EmailMessage.objects.all()
+            .values_list('email_msg_id', flat=True)
+        )
+
+        for index, (msg, raw_msg_bytes, msg_uid) in enumerate(parsed_messages):
+
+            PrettyPrint.progress_bar_debug(
+                index, total, f'Парсинг почты (папка {folder.name}):')
+            email_msg_id = None
+
+            try:
+                email_msg_id: str = self.prepare_msg_id(msg['Message-ID'])
+
+                if (
+                    email_msg_id in archive_msg_ids
+                    and email_msg_id not in err_msg_ids
+                ):
+                    self._save_uid_2_cache(msg_uid, email_msg_id)
+                    continue
+                email_msg_counter += 1
+
+                subject_header = msg.get('Subject')
+                if subject_header is not None:
+                    subject, encoding_sj = header.decode_header(
+                        subject_header)[0]
+                else:
+                    subject, encoding_sj = None, None
+
+                encoding = (
+                    msg.get_content_charset() or encoding_sj or 'utf-8'
+                )
+
+                email_subject: str = self.prepare_subject_from_bytes(
+                    subject, encoding
+                )
+                if email_subject and 'undeliverable mail' in (
+                    email_subject.lower()
+                ):
+                    continue
+
+                email_from: str = self.prepare_email_from(msg['From'])
+
+                cleaned_date_string = msg.get('Date').split(' (')[0]
                 try:
-                    email_msg_id: str = self.prepare_msg_id(msg['Message-ID'])
+                    email_date: datetime = datetime.strptime(
+                        cleaned_date_string, '%a, %d %b %Y %H:%M:%S %z'
+                    )
+                except ValueError:
+                    email_date: datetime = datetime.strptime(
+                        cleaned_date_string, '%d %b %Y %H:%M:%S %z'
+                    )
 
+                email_date = self.normalize_email_datetime(
+                    email_date, email_msg_id
+                )
+
+                in_reply_to = msg.get('In-Reply-To')
+                prepared_id: Optional[str] = (
+                    self.prepare_msg_id(in_reply_to)
+                    if in_reply_to and in_reply_to.strip() else None
+                )
+                email_msg_reply_id: Optional[str] = (
+                    prepared_id
+                    if prepared_id and prepared_id.strip() else None
+                )
+
+                raw_to = self.prepare_email_to(
+                    msg.get_all('To', []), email_msg_id
+                )
+                email_to: list[str] = [
+                    addr for addr in dict.fromkeys(raw_to)
+                    if addr.lower() != email_from.lower()
+                ]
+
+                raw_cc_bcc = (
+                    self.prepare_email_to(
+                        msg.get_all('Cc', []), email_msg_id
+                    )
+                    + self.prepare_email_to(
+                        msg.get_all('Bcc', []), email_msg_id
+                    )
+                )
+                _cc_bcc_check = {addr.lower() for addr in email_to}
+                email_to_cc: list[str] = [
+                    addr for addr in dict.fromkeys(raw_cc_bcc)
                     if (
-                        email_msg_id in archive_msg_ids
-                        and email_msg_id not in err_msg_ids
-                    ):
-                        continue
-                    email_msg_counter += 1
-
-                    subject_header = msg.get('Subject')
-                    if subject_header is not None:
-                        subject, encoding_sj = header.decode_header(
-                            subject_header)[0]
-                    else:
-                        subject, encoding_sj = None, None
-
-                    encoding = (
-                        msg.get_content_charset() or encoding_sj or 'utf-8'
+                        addr.lower() != email_from.lower()
+                        and addr.lower() not in _cc_bcc_check
                     )
+                ]
 
-                    email_subject: str = self.prepare_subject_from_bytes(
-                        subject, encoding
+                references: Optional[str] = msg.get('References')
+                email_msg_references = [
+                    prepared
+                    for reference in (
+                        references.split('<') if references else []
                     )
-                    if email_subject and 'undeliverable mail' in (
-                        email_subject.lower()
-                    ):
-                        continue
+                    if (
+                        (prepared := self.prepare_msg_id(f'<{reference}'))
+                        and prepared.strip()
+                    )
+                ]
+                email_msg_references = list(
+                    dict.fromkeys(email_msg_references)
+                )
 
-                    email_from: str = self.prepare_email_from(msg['From'])
+                email_attachments_urls = []
+                email_attachments_intext_urls = []
+                email_body = None
 
-                    cleaned_date_string = msg.get('Date').split(' (')[0]
-                    try:
-                        email_date: datetime = datetime.strptime(
-                            cleaned_date_string, '%a, %d %b %Y %H:%M:%S %z'
+                save_file_err = False
+
+                if msg.is_multipart():
+                    for sub_index, part in enumerate(msg.walk()):
+                        email_msg_id_hash: str = (
+                            hashlib.md5(email_msg_id.encode()).hexdigest()
                         )
-                    except ValueError:
-                        email_date: datetime = datetime.strptime(
-                            cleaned_date_string, '%d %b %Y %H:%M:%S %z'
+                        unique_filename_part: str = (
+                            f'{email_date.strftime("%H%M%S")}__'
+                            f'{email_msg_id_hash}__{sub_index}__'
                         )
 
-                    email_date = self.normalize_email_datetime(
-                        email_date, email_msg_id
-                    )
-
-                    in_reply_to = msg.get('In-Reply-To')
-                    prepared_id: Optional[str] = (
-                        self.prepare_msg_id(in_reply_to)
-                        if in_reply_to and in_reply_to.strip() else None
-                    )
-                    email_msg_reply_id: Optional[str] = (
-                        prepared_id
-                        if prepared_id and prepared_id.strip() else None
-                    )
-
-                    raw_to = self.prepare_email_to(
-                        msg.get_all('To', []), email_msg_id
-                    )
-                    email_to: list[str] = [
-                        addr for addr in dict.fromkeys(raw_to)
-                        if addr.lower() != email_from.lower()
-                    ]
-
-                    raw_cc_bcc = (
-                        self.prepare_email_to(
-                            msg.get_all('Cc', []), email_msg_id
+                        content_type: Optional[str] = (
+                            part.get_content_type()
                         )
-                        + self.prepare_email_to(
-                            msg.get_all('Bcc', []), email_msg_id
+                        content_disposition: Optional[str] = (
+                            part.get_content_disposition()
                         )
-                    )
-                    _cc_bcc_check = {addr.lower() for addr in email_to}
-                    email_to_cc: list[str] = [
-                        addr for addr in dict.fromkeys(raw_cc_bcc)
+
                         if (
-                            addr.lower() != email_from.lower()
-                            and addr.lower() not in _cc_bcc_check
-                        )
-                    ]
-
-                    references: Optional[str] = msg.get('References')
-                    email_msg_references = [
-                        prepared
-                        for reference in (
-                            references.split('<') if references else []
-                        )
-                        if (
-                            (prepared := self.prepare_msg_id(f'<{reference}'))
-                            and prepared.strip()
-                        )
-                    ]
-                    email_msg_references = list(
-                        dict.fromkeys(email_msg_references)
-                    )
-
-                    email_attachments_urls = []
-                    email_attachments_intext_urls = []
-                    email_body = None
-
-                    save_file_err = False
-
-                    if msg.is_multipart():
-                        for sub_index, part in enumerate(msg.walk()):
-                            email_msg_id_hash: str = (
-                                hashlib.md5(email_msg_id.encode()).hexdigest()
+                            (
+                                content_disposition
+                                and content_disposition == 'attachment'
                             )
-                            unique_filename_part: str = (
-                                f'{email_date.strftime("%H%M%S")}__'
-                                f'{email_msg_id_hash}__{sub_index}__'
+                            or (
+                                content_type
+                                and content_type == 'message/rfc822'
                             )
-
-                            content_type: Optional[str] = (
-                                part.get_content_type()
-                            )
-                            content_disposition: Optional[str] = (
-                                part.get_content_disposition()
+                        ):
+                            original_file_name: Optional[str] = (
+                                part.get_filename()
                             )
 
                             if (
-                                (
-                                    content_disposition
-                                    and content_disposition == 'attachment'
-                                )
-                                or (
-                                    content_type
-                                    and content_type == 'message/rfc822'
-                                )
+                                not original_file_name
+                                and content_type
+                                and content_type == 'message/rfc822'
                             ):
-                                original_file_name: Optional[str] = (
-                                    part.get_filename()
+                                original_file_name = 'msg.eml'
+
+                            if not original_file_name:
+                                continue
+
+                            email_filename: str = (
+                                self.prepare_text_from_encode(
+                                    original_file_name
+                                )
+                            )
+                            try:
+                                filename = (
+                                    f'{unique_filename_part}'
+                                    f'{email_filename}'
+                                )
+                                self.save_email_attachments(
+                                    email_date, filename, part
+                                )
+                                email_attachments_urls.append(
+                                    filename
+                                )
+                            except ValidationError as e:
+                                email_parser_logger.warning(e)
+                            except OSError:
+                                save_file_err = True
+
+                        elif (
+                            content_type and content_type.startswith(
+                                'image/'
+                            )
+                        ):
+                            try:
+                                filename = (
+                                    f'{unique_filename_part}'
+                                    f'intext.{content_type.split("/")[1]}'
+                                )
+                                self.save_email_attachments(
+                                    email_date,
+                                    filename,
+                                    part,
+                                )
+                                email_attachments_intext_urls.append(
+                                    filename
+                                )
+                            except ValidationError as e:
+                                email_parser_logger.warning(e)
+                            except OSError:
+                                save_file_err = True
+
+                        elif (
+                            content_type and content_type in (
+                                'text/plain', 'text/html'
+                            )
+                        ):
+                            email_body_part = (
+                                self.prepare_text_from_bytes(part)
+                                if email_body is None else email_body
+                            )
+
+                            if content_type == 'text/html':
+                                cleaned_html = (
+                                    self
+                                    .prepare_text_from_html(
+                                        email_body_part
+                                    )
+                                    .replace(email_subject or '', '')
+                                    .strip()
                                 )
 
-                                if (
-                                    not original_file_name
-                                    and content_type
-                                    and content_type == 'message/rfc822'
-                                ):
-                                    original_file_name = 'msg.eml'
+                                original_file_name = part.get_filename()
 
-                                if not original_file_name:
-                                    continue
+                                if original_file_name:
+                                    try:
+                                        filename = (
+                                            f'{unique_filename_part}'
+                                            f'{original_file_name}'
+                                        )
 
-                                email_filename: str = (
-                                    self.prepare_text_from_encode(
-                                        original_file_name
-                                    )
-                                )
-                                try:
-                                    filename = (
-                                        f'{unique_filename_part}'
-                                        f'{email_filename}'
-                                    )
-                                    self.save_email_attachments(
-                                        email_date, filename, part
-                                    )
-                                    email_attachments_urls.append(
-                                        filename
-                                    )
-                                except ValidationError as e:
-                                    email_parser_logger.warning(e)
-                                except OSError:
-                                    save_file_err = True
+                                        self.save_email_attachments(
+                                            email_date, filename, part
+                                        )
 
-                            elif (
-                                content_type and content_type.startswith(
-                                    'image/'
-                                )
-                            ):
-                                try:
-                                    filename = (
-                                        f'{unique_filename_part}'
-                                        f'intext.{content_type.split("/")[1]}'
-                                    )
-                                    self.save_email_attachments(
-                                        email_date,
-                                        filename,
-                                        part,
-                                    )
-                                    email_attachments_intext_urls.append(
-                                        filename
-                                    )
-                                except ValidationError as e:
-                                    email_parser_logger.warning(e)
-                                except OSError:
-                                    save_file_err = True
+                                        email_attachments_urls.append(
+                                            filename
+                                        )
 
-                            elif (
-                                content_type and content_type in (
-                                    'text/plain', 'text/html'
-                                )
-                            ):
-                                email_body_part = (
-                                    self.prepare_text_from_bytes(part)
+                                    except ValidationError as e:
+                                        email_parser_logger.warning(e)
+                                    except OSError:
+                                        save_file_err = True
+
+                                email_body = cleaned_html
+
+                            elif content_type == 'text/plain':
+                                email_body = (
+                                    email_body_part
                                     if email_body is None else email_body
                                 )
 
-                                if content_type == 'text/html':
-                                    cleaned_html = (
-                                        self
-                                        .prepare_text_from_html(
-                                            email_body_part
-                                        )
-                                        .replace(email_subject or '', '')
-                                        .strip()
-                                    )
+                else:
+                    html_body_text = self.prepare_text_from_bytes(msg)
+                    email_body = self.prepare_text_from_html(
+                        html_body_text
+                    )
 
-                                    original_file_name = part.get_filename()
+                if save_file_err:
+                    email_parser_logger.warning((
+                        'Ошибка при сохранении файла для email: ',
+                        email_msg_id
+                    ))
 
-                                    if original_file_name:
-                                        try:
-                                            filename = (
-                                                f'{unique_filename_part}'
-                                                f'{original_file_name}'
-                                            )
+            except KeyboardInterrupt:
+                raise
+            except Exception:
+                if email_msg_id:
+                    email_parser_logger.exception(
+                        f'Ошибка при обрабоке email: {email_msg_id}'
+                    )
+                    email_err_msg_ids.append(email_msg_id)
+            else:
+                json_dicts = None
+                if email_body:
+                    json_dicts, _ = EmailParser.parse_all_json_from_text(
+                        email_body
+                    )
+                    email_body = EmailManager.normalize_text_with_json(
+                        email_body
+                    )
+                else:
+                    email_body = None
 
-                                            self.save_email_attachments(
-                                                email_date, filename, part
-                                            )
+                email_subject = EmailManager.normalize_text_with_json(
+                    email_subject
+                ) if email_subject else None
 
-                                            email_attachments_urls.append(
-                                                filename
-                                            )
+                is_first_email = self._is_first_email(
+                    email_msg_reply_id,
+                    email_msg_references,
+                    email_msg_id,
+                    our_message_ids
+                )
 
-                                        except ValidationError as e:
-                                            email_parser_logger.warning(e)
-                                        except OSError:
-                                            save_file_err = True
+                if json_dicts and is_first_email:
+                    email_from_i = json_dicts[0].get(
+                        'E-mail для обратной связи'
+                    )
 
-                                    email_body = cleaned_html
+                    email_cc_i = []
+                    for key, value in json_dicts[0].items():
+                        if (
+                            isinstance(key, str)
+                            and key.startswith(
+                                'E-mail наблюдателя по заявке'
+                            )
+                        ):
+                            email_cc_i.append(value)
 
-                                elif content_type == 'text/plain':
-                                    email_body = (
-                                        email_body_part
-                                        if email_body is None else email_body
-                                    )
+                    email_to_cc = (
+                        email_cc_i + email_to_cc
+                    ) if email_cc_i else email_to_cc
+                    email_from = (
+                        email_from_i
+                    ) if email_from_i else email_from
 
-                    else:
-                        html_body_text = self.prepare_text_from_bytes(msg)
-                        email_body = self.prepare_text_from_html(
-                            html_body_text
+                is_email_from_yandex_tracker = (
+                    self._is_from_yandex_tracker(msg, email_subject)
+                )
+
+                email_subject = EmailValidator.normalize_invisible_spaces(
+                    email_subject
+                )
+
+                try:
+                    with transaction.atomic():
+                        email_msg = self.add_email_message(
+                            email_msg_id=email_msg_id,
+                            email_msg_reply_id=email_msg_reply_id,
+                            email_subject=email_subject,
+                            email_from=email_from,
+                            email_date=email_date,
+                            email_body=email_body,
+                            is_first_email=is_first_email,
+                            is_email_from_yandex_tracker=(
+                                is_email_from_yandex_tracker
+                            ),
+                            was_added_2_yandex_tracker=(
+                                is_email_from_yandex_tracker
+                            ),
+                            email_to=email_to,
+                            email_to_cc=email_to_cc,
+                            email_msg_references=email_msg_references,
+                            email_attachments_urls=email_attachments_urls,
+                            email_attachments_intext_urls=(
+                                email_attachments_intext_urls
+                            ),
+                            folder=folder,
                         )
 
-                    if save_file_err:
-                        email_parser_logger.warning((
-                            'Ошибка при сохранении файла для email: ',
-                            email_msg_id
-                        ))
+                        email_mime, _ = EmailMime.objects.get_or_create(
+                            email_msg=email_msg
+                        )
+                        filename = f'{email_msg_id}.eml'
+                        email_mime.file_url.save(
+                            filename, ContentFile(raw_msg_bytes), save=True
+                        )
+
+                        self.add_incident_from_email(
+                            email_msg, self.yt_manager
+                        )
+
+                        # Обновляем объект в памяти
+                        email_msg.refresh_from_db()
+
+                        AutoReply().open_incident_or_reply(
+                            email_msg, self.email_login
+                        )
+                        turn_off_incident_auto_close(email_msg)
+
+                    email_err_msg_ids_to_del.append(email_msg_id)
+
+                    self._save_uid_2_cache(msg_uid, email_msg_id)
 
                 except KeyboardInterrupt:
                     raise
+                except IntegrityError:
+                    email_err_msg_ids.append(email_msg_id)
+                    email_parser_logger.error(
+                        f'Ошибка добавления email: {email_msg_id}',
+                        exc_info=True
+                    )
+                except RequestException:
+                    email_err_msg_ids.append(email_msg_id)
+                    email_parser_logger.error(
+                        f'Ошибка добавления email: {email_msg_id}',
+                        exc_info=True
+                    )
+                except (ApiTooManyRequests, ApiServerError) as e:
+                    email_err_msg_ids.append(email_msg_id)
+                    email_parser_logger.warning(e)
+                except YandexTrackerAuthErr as e:
+                    email_err_msg_ids.append(email_msg_id)
+                    email_parser_logger.critical(e)
+                except tuple(API_STATUS_EXCEPTIONS.values()) as e:
+                    email_err_msg_ids.append(email_msg_id)
+                    email_parser_logger.error(e)
                 except Exception:
-                    if email_msg_id:
-                        email_parser_logger.exception(
-                            f'Ошибка при обрабоке email: {email_msg_id}'
-                        )
-                        email_err_msg_ids.append(email_msg_id)
-                else:
-                    json_dicts = None
-                    if email_body:
-                        json_dicts, _ = EmailParser.parse_all_json_from_text(
-                            email_body
-                        )
-                        email_body = EmailManager.normalize_text_with_json(
-                            email_body
-                        )
-                    else:
-                        email_body = None
+                    invalid_data = {
+                        'email_msg_id': email_msg_id,
+                        'email_msg_reply_id': email_msg_reply_id,
+                        'email_subject': email_subject,
+                        'email_from': email_from,
+                        'email_date': email_date,
+                        'email_body': email_body,
+                        'is_first_email': is_first_email,
+                        'is_email_from_yandex_tracker': (
+                            is_email_from_yandex_tracker),
+                        'email_to': email_to,
+                        'email_to_cc': email_to_cc,
+                        'email_msg_references': email_msg_references,
+                        'email_attachments_urls': email_attachments_urls,
+                        'email_attachments_intext_urls': (
+                            email_attachments_intext_urls
+                        ),
+                        'folder': folder,
+                    }
+                    email_err_msg_ids.append(email_msg_id)
+                    email_parser_logger.exception(
+                        f'Данные письма: {invalid_data}')
 
-                    email_subject = EmailManager.normalize_text_with_json(
-                        email_subject
-                    ) if email_subject else None
+        if email_msg_counter:
+            email_parser_logger.debug(
+                f'Было найдено {email_msg_counter} новых сообщений '
+                f'в папке {folder.name}'
+            )
 
-                    is_first_email = self._is_first_email(
-                        email_msg_reply_id,
-                        email_msg_references,
-                        email_msg_id,
-                        our_message_ids
-                    )
-
-                    if json_dicts and is_first_email:
-                        email_from_i = json_dicts[0].get(
-                            'E-mail для обратной связи'
-                        )
-
-                        email_cc_i = []
-                        for key, value in json_dicts[0].items():
-                            if (
-                                isinstance(key, str)
-                                and key.startswith(
-                                    'E-mail наблюдателя по заявке'
-                                )
-                            ):
-                                email_cc_i.append(value)
-
-                        email_to_cc = (
-                            email_cc_i + email_to_cc
-                        ) if email_cc_i else email_to_cc
-                        email_from = (
-                            email_from_i
-                        ) if email_from_i else email_from
-
-                    is_email_from_yandex_tracker = (
-                        self._is_from_yandex_tracker(msg, email_subject)
-                    )
-
-                    email_subject = EmailValidator.normalize_invisible_spaces(
-                        email_subject
-                    )
-
-                    try:
-                        with transaction.atomic():
-                            email_msg = self.add_email_message(
-                                email_msg_id=email_msg_id,
-                                email_msg_reply_id=email_msg_reply_id,
-                                email_subject=email_subject,
-                                email_from=email_from,
-                                email_date=email_date,
-                                email_body=email_body,
-                                is_first_email=is_first_email,
-                                is_email_from_yandex_tracker=(
-                                    is_email_from_yandex_tracker
-                                ),
-                                was_added_2_yandex_tracker=(
-                                    is_email_from_yandex_tracker
-                                ),
-                                email_to=email_to,
-                                email_to_cc=email_to_cc,
-                                email_msg_references=email_msg_references,
-                                email_attachments_urls=email_attachments_urls,
-                                email_attachments_intext_urls=(
-                                    email_attachments_intext_urls
-                                ),
-                                folder=folder,
-                            )
-
-                            email_mime, _ = EmailMime.objects.get_or_create(
-                                email_msg=email_msg
-                            )
-                            filename = f'{email_msg_id}.eml'
-                            email_mime.file_url.save(
-                                filename, ContentFile(raw_msg_bytes), save=True
-                            )
-
-                            self.add_incident_from_email(
-                                email_msg, self.yt_manager
-                            )
-
-                            # Обновляем объект в памяти
-                            email_msg.refresh_from_db()
-
-                            AutoReply().open_incident_or_reply(
-                                email_msg, self.email_login
-                            )
-                            turn_off_incident_auto_close(email_msg)
-
-                        email_err_msg_ids_to_del.append(email_msg_id)
-                    except KeyboardInterrupt:
-                        raise
-                    except IntegrityError:
-                        email_err_msg_ids.append(email_msg_id)
-                        email_parser_logger.error(
-                            f'Ошибка добавления email: {email_msg_id}',
-                            exc_info=True
-                        )
-                    except RequestException:
-                        email_err_msg_ids.append(email_msg_id)
-                        email_parser_logger.error(
-                            f'Ошибка добавления email: {email_msg_id}',
-                            exc_info=True
-                        )
-                    except (ApiTooManyRequests, ApiServerError) as e:
-                        email_err_msg_ids.append(email_msg_id)
-                        email_parser_logger.warning(e)
-                    except YandexTrackerAuthErr as e:
-                        email_err_msg_ids.append(email_msg_id)
-                        email_parser_logger.critical(e)
-                    except tuple(API_STATUS_EXCEPTIONS.values()) as e:
-                        email_err_msg_ids.append(email_msg_id)
-                        email_parser_logger.error(e)
-                    except Exception:
-                        invalid_data = {
-                            'email_msg_id': email_msg_id,
-                            'email_msg_reply_id': email_msg_reply_id,
-                            'email_subject': email_subject,
-                            'email_from': email_from,
-                            'email_date': email_date,
-                            'email_body': email_body,
-                            'is_first_email': is_first_email,
-                            'is_email_from_yandex_tracker': (
-                                is_email_from_yandex_tracker),
-                            'email_to': email_to,
-                            'email_to_cc': email_to_cc,
-                            'email_msg_references': email_msg_references,
-                            'email_attachments_urls': email_attachments_urls,
-                            'email_attachments_intext_urls': (
-                                email_attachments_intext_urls
-                            ),
-                            'folder': folder,
-                        }
-                        email_err_msg_ids.append(email_msg_id)
-                        email_parser_logger.exception(
-                            f'Данные письма: {invalid_data}')
-
-            if email_msg_counter:
-                email_parser_logger.debug(
-                    f'Было найдено {email_msg_counter} новых сообщений '
-                    f'в папке {folder.name}'
-                )
-
-            self.add_err_msg_bulk(email_err_msg_ids)
-            self.del_err_msg_bulk(email_err_msg_ids_to_del)
+        self.add_err_msg_bulk(email_err_msg_ids)
+        self.del_err_msg_bulk(email_err_msg_ids_to_del)
 
 
 email_parser = EmailParser(
-    email_login=email_parser_config['PARSING_EMAIL_LOGIN'],
-    email_pswd=email_parser_config['PARSING_EMAIL_PSWD'],
-    email_server=email_parser_config['PARSING_EMAIL_SERVER'],
-    email_port=email_parser_config['PARSING_EMAIL_PORT'],
+    email_login=EMAIL_PARSER_CONFIG['PARSING_EMAIL_LOGIN'],
+    email_pswd=EMAIL_PARSER_CONFIG['PARSING_EMAIL_PSWD'],
+    email_server=EMAIL_PARSER_CONFIG['PARSING_EMAIL_SERVER'],
+    email_port=EMAIL_PARSER_CONFIG['PARSING_EMAIL_PORT'],
     yt_manager=yt_manager,
-    sent_folder_name=email_parser_config['PARSING_EMAIL_SENT_FOLDER_NAME'],
+    sent_folder_name=EMAIL_PARSER_CONFIG['PARSING_EMAIL_SENT_FOLDER_NAME'],
 )

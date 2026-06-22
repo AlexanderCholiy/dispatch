@@ -166,8 +166,8 @@ class EmailManager:
             sanitized = self.sanitize_email_reference(ref)
             if sanitized:
                 clean_references.append(sanitized)
-            else:
-                email_parser_logger.debug(f'Отброшен битый Reference: {ref}')
+            # else:
+            #     email_parser_logger.debug(f'Отброшен битый Reference: {ref}')
 
         self._update_related_records(
             EmailReference, 'email_msg_references',
