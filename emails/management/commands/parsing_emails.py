@@ -108,7 +108,7 @@ class Command(BaseCommand):
                 imaplib.IMAP4.abort, imaplib.IMAP4.error, ConnectionResetError
             ) as e:
                 email_parser_logger.error(
-                    f'Ошибка соединения с почты сервером: {e}.'
+                    f'Ошибка соединения с сервером почты: {e}.'
                 )
 
                 if mail:

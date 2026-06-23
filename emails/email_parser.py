@@ -80,7 +80,6 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
             search_query = f'(SINCE {date_since} BEFORE {date_before})'
 
         status, messages = mail.search(None, search_query)
-        # status, messages = mail.uid('SEARCH', None, search_query)
 
         if status != 'OK' or not messages[0]:
             return []
@@ -349,7 +348,6 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
 
             all_messages.extend(messages)
 
-        email_parser_logger.debug('END')
         return all_messages
 
     @property
