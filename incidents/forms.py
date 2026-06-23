@@ -12,10 +12,9 @@ from django.utils import timezone
 from emails.constants import (
     ALLOWED_EXTENSIONS,
     ALLOWED_MIME_PREFIXES,
-    MAX_ATTACHMENT_SIZE,
     MAX_EMAIL_LEN,
     MAX_EMAIL_SUBJECT_LEN,
-    MAX_TOTAL_ATTACHMENTS_SIZE,
+    MAX_SEND_ATTACHMENT_SIZE,
 )
 from emails.models import EmailMessage, EmailReference
 from incidents.services.log_incident_changes import log_incident_changes
@@ -73,8 +72,8 @@ class MultipleFileField(forms.FileField):
             if not f:
                 continue
 
-            if f.size > MAX_ATTACHMENT_SIZE:
-                limit_mb = MAX_ATTACHMENT_SIZE / (1024 * 1024)
+            if f.size > MAX_SEND_ATTACHMENT_SIZE:
+                limit_mb = MAX_SEND_ATTACHMENT_SIZE / (1024 * 1024)
                 current_mb = round(f.size / (1024 * 1024), 2)
                 raise ValidationError(
                     f'Файл "{f.name}" слишком большой ({current_mb} МБ). '
@@ -108,9 +107,9 @@ class MultipleFileField(forms.FileField):
                     f'Тип файла "{f.name}" ({file_mime}) не разрешен.'
                 )
 
-        if total_size > MAX_TOTAL_ATTACHMENTS_SIZE:
+        if total_size > MAX_SEND_ATTACHMENT_SIZE:
             total_mb = round(total_size / (1024 * 1024), 1)
-            limit_total_mb = MAX_TOTAL_ATTACHMENTS_SIZE / (1024 * 1024)
+            limit_total_mb = MAX_SEND_ATTACHMENT_SIZE / (1024 * 1024)
             raise ValidationError(
                 f'Общий объем вложений ({total_mb} МБ) превышает лимит '
                 f'{int(limit_total_mb)} МБ.'

@@ -19,7 +19,7 @@ from .constants import (
     ALLOWED_EXTENSIONS,
     ALLOWED_MIME_PREFIXES,
     EMAIL_RE,
-    MAX_ATTACHMENT_SIZE,
+    MAX_DOWNLOAD_ATTACHMENT_SIZE,
     MAX_EMAIL_LEN,
 )
 
@@ -322,10 +322,10 @@ class EmailValidator:
                 f'Недопустимый тип файла {filename} ({content_type})'
             )
 
-        if file_size > MAX_ATTACHMENT_SIZE:
+        if file_size > MAX_DOWNLOAD_ATTACHMENT_SIZE:
             raise ValidationError(
                 f'Файл {filename} превышает max размер '
-                f'{MAX_ATTACHMENT_SIZE / (1024 * 1024):.1f} MB'
+                f'{MAX_DOWNLOAD_ATTACHMENT_SIZE / (1024 * 1024):.1f} MB'
             )
 
         file_dir: str = os.path.join(
