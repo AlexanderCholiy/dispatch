@@ -1,0 +1,45 @@
+.probability {
+  font-weight: 500;
+}
+
+.probability.text-danger {
+  color: var(--red-color);
+}
+
+.probability.text-warning {
+  color: var(--yellow-color);
+}
+
+.probability.text-info {
+  color: var(--blue-color);
+}
+
+.probability.text-success {
+  color: var(--add-color);
+}
+
+.probability.text-muted {
+  color: var(--gray-color);
+}
+
+.reasons-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: var(--font-xs);
+  line-height: 1.5;
+}
+
+.reasons-list li {
+  position: relative;
+  padding-left: var(--space-lg);
+}
+
+.reasons-list li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--green-color);
+    font-weight: bold;
+    font-size: var(--font-xs);
+}

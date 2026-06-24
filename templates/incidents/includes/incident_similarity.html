@@ -1,0 +1,81 @@
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/incidents/includes/incident_similarity.css' %}">
+{% endblock %}
+
+<button type="button" class="toggle-incident-similarity">Показать возможные связи</button>
+
+<div class="similarity-content table-wrapper">
+    <table class="custom-table link-table">
+        <thead>
+            <tr>
+              <th>Инцидент</th>
+              <th>Статус</th>
+              <th>Категория</th>
+              <th>Причины</th>
+              <th class="tooltip" data-title="Вероятность, что инциденты связаны">P, %</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for candidate in incident_similarity %}            
+            <tr>
+              <td>
+                <a href="{% url 'incidents:incident_detail' candidate.candidate_id %}" class="link">
+                  {{ candidate.candidate_str }}
+                </a>
+              </td>
+
+              <td class="tooltip"
+                data-title="{{ candidate.status_date|date:'d.m.Y H:i'|default:'—' }}"
+              >
+                {% if candidate.status_name %}
+                <span class="status-badge {{ candidate.status_type_css|default:'status-unknown' }}">
+                  {{ candidate.status_name }}
+                </span>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+
+              <td class="category">
+                {% for cat_name in candidate.cat_names %}
+                  <span class="{% if cat_name == 'АВР' %}avr-category
+                              {% elif cat_name == 'РВР' %}rvr-category
+                              {% elif cat_name == 'ДГУ' %}dgu-category
+                              {% elif cat_name == 'ЭКС' %}eks-category
+                              {% else %}default-category
+                              {% endif %}">
+                      {{ cat_name }}
+                  </span>{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+              </td>
+
+              <td class="reasons-cell">
+                {% if candidate.reasons %}
+                  <ul class="reasons-list">
+                    {% for reason in candidate.reasons %}
+                      <li>
+                        {{ reason }}
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+
+              <td>
+                {% widthratio candidate.probability 1 100 as percent %}
+                <span class="probability {% if candidate.probability >= 0.9 %}text-danger{% elif candidate.probability >= 0.8 %}text-warning {% elif candidate.probability >= 0.7 %}text-info{% elif candidate.probability >= 0.6 %}text-success{% else %}text-muted{% endif %}">
+                    {{ percent|floatformat:0 }}%
+                </span>
+              </td>
+
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="empty">Нет возможных связей</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

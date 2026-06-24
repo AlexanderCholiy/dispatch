@@ -97,6 +97,8 @@ RVR_CATEGORY = 'РВР'
 DGU_CATEGORY = 'ДГУ'
 EKS_CATEGORY = 'ЭКС'
 
+TOTAL_CATEGORIES = [AVR_CATEGORY, RVR_CATEGORY, DGU_CATEGORY, EKS_CATEGORY]
+
 # Дедлайн SLA РВР:
 RVR_SLA_DEADLINE_IN_HOURS = 72
 
@@ -226,3 +228,23 @@ STATUSES_FOR_AUTOCLOSE = [
     NOTIFIED_OP_END_STATUS_NAME,
     REQUEST_FOR_ADD_DATA_STATUS_NAME,
 ]
+
+CACHE_SIMILAR_INCIDENTS_PREFIX = 'similar_incidents'
+CACHE_SIMILAR_INCIDENTS_TTL = 900
+
+# Максимальное окно поиска в секундах (3 недели) схожих инцидентов:
+MAX_SIMILAR_INCIDENTS_WINDOW_TTL = 7 * 3 * 24 * 3600
+MAX_SIMILAR_INCIDENTS_THRESHOLD = 0.5
+MAX_SIMILAR_INCIDENTS_CANDIDATES = 1000
+
+
+class SimilarFactor:
+    """Константы весов для расчета схожести инцидентов."""
+
+    pole = 0.2
+    bs = 0.4
+    incident_type = 0.05
+    incident_sub_type = 0.1
+    categories = 0.1
+    incident_email_subject = 0.13
+    incident_email_from = 0.02

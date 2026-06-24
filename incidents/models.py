@@ -1035,11 +1035,13 @@ class Comment(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name='comments',
-        verbose_name='Автор комментария'
+        verbose_name='Автор комментария',
+        db_index=True
     )
     content = models.CharField(
         max_length=MAX_COMMENT_TEXT_LEN,
         verbose_name='Сообщение',
+        db_index=True,
     )
     created_at = models.DateTimeField(
         auto_now_add=True,

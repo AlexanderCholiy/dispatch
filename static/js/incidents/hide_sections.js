@@ -31,9 +31,16 @@ document.addEventListener("DOMContentLoaded", function() {
     {
       btnSelector: ".toggle-planned-work-journal",
       blockSelector: ".journal-content",
-      cookieName: "incidentJournalVisible",
+      cookieName: "incidentPlrVisible",
       showText: "Показать журнал событий",
       hideText: "Скрыть журнал событий"
+    },
+    {
+      btnSelector: ".toggle-incident-similarity",
+      blockSelector: ".similarity-content",
+      cookieName: "incidentSimilarityVisible",
+      showText: "Показать возможные связи",
+      hideText: "Скрыть возможные связи"
     }
   ];
 

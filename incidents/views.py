@@ -124,6 +124,7 @@ from .services.get_region_responsible_manager import (
     get_region_responsible_managers,
 )
 from .services.incident_signature import get_incident_signature
+from .services.incident_similarity import incident_similarity_service
 from .services.normalize_incident_subject import normalize_incident_subject
 from .utils import IncidentManager
 from .validators import (
@@ -1060,6 +1061,10 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
             )
             planned_works_total = len(planned_works)
 
+            incident_similarity = incident_similarity_service.find_similar(
+                target_incident
+            )
+
             context = {
                 'incident': target_incident,
                 'source_incident': incident,
@@ -1073,6 +1078,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
                 'active_tab': 'email',
                 'planned_works': planned_works,
                 'planned_works_total': planned_works_total,
+                'incident_similarity': incident_similarity,
             }
             return render(request, template_name, context)
 
@@ -1244,6 +1250,8 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         incident_links_total - 1 if can_manage else incident_links_total
     )
 
+    incident_similarity = incident_similarity_service.find_similar(incident)
+
     context = {
         'incident': incident,
         'email_three': email_three,
@@ -1259,6 +1267,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         'incident_links_total': incident_links_total,
         'planned_works': planned_works,
         'planned_works_total': planned_works_total,
+        'incident_similarity': incident_similarity,
     }
 
     return render(request, template_name, context)
