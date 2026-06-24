@@ -2627,12 +2627,21 @@ def notify_incident_closed(
 
             initial_data['cc'] = ', '.join(initial_data_cc)
 
-        incident_label = f'{incident.code} ' if incident.code else ''
+        if incident.code:
+            incident_label = (
+                f'{incident.code} ({incident.incident_type})'
+                if incident.incident_type else f'{incident.code}'
+            )
+        else:
+            incident_label = (
+                f'{incident.incident_type}'
+                if incident.incident_type else ''
+            )
 
         signature = get_incident_signature(incident)
 
         initial_data['body'] = (
-            f'Инцидент {incident_label}устранён.'
+            f'Инцидент {incident_label} устранён.'
             '\n\nПросим проверить и подтвердить. '
             'Если в течение 12 часов обратная связь не поступит, '
             'заявка будет автоматически закрыта.'

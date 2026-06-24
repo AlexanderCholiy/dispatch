@@ -7,10 +7,10 @@ from core.utils import Config
 MAX_EMAIL_SUBJECT_LEN = 1024
 MAX_EMAIL_LEN = 64
 
-# В Exchange на отправку было 20 Mb, В Nginx (внутр. и внешн.) стоит 105 Mb,
-# в js на отправку 20 Mb (static/js/download_files.js):
+# В Exchange на отправку было 50 Mb, В Nginx (внутр. и внешн.) стоит 105 Mb,
+# в js на отправку 50 Mb (static/js/download_files.js):
 MAX_DOWNLOAD_ATTACHMENT_SIZE = 100 * 1024 * 1024
-MAX_SEND_ATTACHMENT_SIZE = 20 * 1024 * 1024
+MAX_SEND_ATTACHMENT_SIZE = 50 * 1024 * 1024
 
 # Кол-во дней через которое для не актуальных инцидентов будут удалены
 # вложения:

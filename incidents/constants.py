@@ -214,7 +214,7 @@ AUTO_CLOSE_TTL = timedelta(hours=12)
 # Необходимая добавка для SLA, т.к. секунды frontend не передает:
 SLA_BUFFER = timedelta(minutes=1)
 
-CLEANUP_OLD_INCIDENT_CHANGE_LOG_TTL = timedelta(days=90)
+CLEANUP_OLD_INCIDENT_CHANGE_LOG_TTL = timedelta(days=365)
 
 INCIDENT_CHANGE_LOG_BATCH_SIZE = 1000
 
