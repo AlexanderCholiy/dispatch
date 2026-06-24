@@ -230,7 +230,7 @@ STATUSES_FOR_AUTOCLOSE = [
 ]
 
 CACHE_SIMILAR_INCIDENTS_PREFIX = 'similar_incidents'
-CACHE_SIMILAR_INCIDENTS_TTL = 900
+CACHE_SIMILAR_INCIDENTS_TTL = 600
 
 # Максимальное окно поиска в секундах (3 недели) схожих инцидентов:
 MAX_SIMILAR_INCIDENTS_WINDOW_TTL = 7 * 3 * 24 * 3600
