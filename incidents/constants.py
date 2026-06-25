@@ -240,7 +240,6 @@ MAX_SIMILAR_INCIDENTS_CANDIDATES = 1000
 
 class SimilarFactor:
     """Константы весов для расчета схожести инцидентов."""
-
     pole = 0.2
     bs = 0.4
     incident_type = 0.05
