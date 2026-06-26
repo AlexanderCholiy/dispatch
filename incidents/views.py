@@ -38,6 +38,7 @@ from core.exceptions import (
     ApiTooManyRequests
 )
 from core.loggers import yt_logger
+from core.services.formatters import format_timedelta_readable
 from core.services.get_max_today_datetime import get_max_today_datetime
 from core.services.get_raw_cookie import get_raw_cookie
 from core.threads import tasks_in_threads
@@ -57,6 +58,9 @@ from emails.services.clean_email_subject import clean_email_subject
 from emails.services.generate_email_msg_id import generate_message_id
 from emails.services.get_previous_email_body import get_previous_email_body
 from emails.tasks import send_incident_email_task
+from incidents.services.get_incident_auto_close_ttl import (
+    get_incident_auto_close_ttl,
+)
 from incidents.services.notify_contractor_incident_closed import (
     notify_contractor_incident_closed
 )
@@ -2649,11 +2653,14 @@ def notify_incident_closed(
 
         signature = get_incident_signature(incident)
 
+        auto_close_ttl = get_incident_auto_close_ttl(incident)
+        auto_close_human_ttl = format_timedelta_readable(auto_close_ttl)
+
         initial_data['body'] = (
             f'Инцидент {incident_label} устранён.'
             '\n\nПросим проверить и подтвердить. '
-            'Если в течение 12 часов обратная связь не поступит, '
-            'заявка будет автоматически закрыта.'
+            f'Если в течение {auto_close_human_ttl} '
+            'обратная связь не поступит, заявка будет автоматически закрыта.'
             f'{signature}'
         )
 
