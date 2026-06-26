@@ -345,7 +345,7 @@ class IncidentSimilarityService:
 
             candidate_first_email = emails_map.get(candidate.id)
 
-            if candidate_first_email:
+            if candidate_first_email and incident_first_email:
                 subject_sim = self._get_text_similarity(
                     incident_first_email.email_subject or '',
                     candidate_first_email.email_subject or ''
