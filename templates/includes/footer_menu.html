@@ -29,15 +29,21 @@
         </li>
       {% endif %}
       <li>
-        <a href="{% url 'users:users_list' %}" 
-            class="{% if view_name == 'users:users_list' %}active{% endif %}">
-          <span>Пользователи</span>
-        </a>
-      </li>
-      <li>
         <a href="{% url 'metrics:dispatch_general_stats' %}" 
           class="{% if view_name == 'metrics:dispatch_general_stats' %}active{% endif %}">
           <span>Статистика</span>
+        </a>
+      </li>
+        <li>
+          <a href="{% url 'metrics:dispatch_general_map' %}" 
+          class="{% if view_name == 'metrics:dispatch_general_map' %}active{% endif %}">
+          <span>Карта</span>
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'users:users_list' %}" 
+            class="{% if view_name == 'users:users_list' %}active{% endif %}">
+          <span>Пользователи</span>
         </a>
       </li>
       {% endif %}

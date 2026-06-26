@@ -36,20 +36,27 @@
             </li>
           {% endif %}
           <li>
-            <a href="{% url 'users:users_list' %}" 
-              class="nav-link {% if view_name == 'users:users_list' %}active{% endif %}">
-              <i class="bx bx-user"></i>
-              <span class="link-text">Пользователи</span>
-            </a>
-          </li>
-          <li>
             <a href="{% url 'metrics:dispatch_general_stats' %}" 
               class="nav-link {% if view_name == 'metrics:dispatch_general_stats' %}active{% endif %}">
               <i class='bx bx-bar-chart'></i> 
               <span class="link-text">Статистика</span>
             </a>
           </li>
-        {% endif %}
+            <li>
+              <a href="{% url 'metrics:dispatch_general_map' %}" 
+              class="nav-link {% if view_name == 'metrics:dispatch_general_map' %}active{% endif %}">
+              <i class='bx bx-map'></i> 
+              <span class="link-text">Карта</span>
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'users:users_list' %}" 
+              class="nav-link {% if view_name == 'users:users_list' %}active{% endif %}">
+              <i class="bx bx-user"></i>
+              <span class="link-text">Пользователи</span>
+            </a>
+          </li>
+          {% endif %}
         <li>
           <a href="{% url 'pages:about' %}" 
             class="nav-link {% if view_name == 'pages:about' %}active{% endif %}">
