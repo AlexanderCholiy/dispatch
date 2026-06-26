@@ -871,6 +871,10 @@ class TSManager(SocialValidators):
             if not pole:
                 continue
 
+            if isinstance(operator_group, str):
+                if not operator_group.strip():
+                    operator_group = None
+
             bs_key = (bs_name, pole.id)
             base_station = bs_cache.get(bs_key)
             if not base_station:

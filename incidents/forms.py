@@ -17,12 +17,14 @@ from emails.constants import (
     MAX_SEND_ATTACHMENT_SIZE,
 )
 from emails.models import EmailMessage, EmailReference
+from incidents.services.get_incident_auto_close_ttl import (
+    get_incident_auto_close_ttl,
+)
 from incidents.services.log_incident_changes import log_incident_changes
 from incidents.services.normalize_datetime_to_minute import is_data_changed
 from users.models import Roles, User
 
 from .constants import (
-    AUTO_CLOSE_TTL,
     AVR_CATEGORY,
     DEFAULT_STATUS_NAME,
     DGU_CATEGORY,
@@ -712,7 +714,8 @@ class IncidentForm(forms.ModelForm):
         was_auto_close_set = instance.auto_close_date is not None
 
         if auto_closed and not was_auto_close_set:
-            instance.auto_close_date = timezone.now() + AUTO_CLOSE_TTL
+            auto_close_ttl = get_incident_auto_close_ttl(instance)
+            instance.auto_close_date = timezone.now() + auto_close_ttl
         elif not auto_closed:
             instance.auto_close_date = None
 

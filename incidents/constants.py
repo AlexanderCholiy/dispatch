@@ -211,7 +211,15 @@ DEFAULT_IS_YT_TRACKER_CONTROLLED = False
 
 AUTO_CLOSE_CACHE_KEY_PREFIX = 'auto_close_task:'
 
-AUTO_CLOSE_TTL = timedelta(hours=12)
+AUTO_CLOSE_DEFAULT_TTL = timedelta(hours=12)
+
+AUTO_CLOSE_BY_OPERATOR_TTL = {
+    'other': AUTO_CLOSE_DEFAULT_TTL,
+    'tele2': AUTO_CLOSE_DEFAULT_TTL,
+    'vimpelcom': timedelta(hours=24),
+    'mts': AUTO_CLOSE_DEFAULT_TTL,
+    'megafon': AUTO_CLOSE_DEFAULT_TTL,
+}
 
 # Необходимая добавка для SLA, т.к. секунды frontend не передает:
 SLA_BUFFER = timedelta(minutes=1)

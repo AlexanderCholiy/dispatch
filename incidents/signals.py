@@ -10,7 +10,10 @@ from django.utils import timezone
 
 from api.serializers.comment import CommentSerializer
 from core.loggers import celery_logger
-from incidents.constants import AUTO_CLOSE_CACHE_KEY_PREFIX, AUTO_CLOSE_TTL
+from incidents.constants import AUTO_CLOSE_CACHE_KEY_PREFIX
+from incidents.services.get_incident_auto_close_ttl import (
+    get_incident_auto_close_ttl,
+)
 from incidents.tasks import close_incident_auto
 from users.models import User
 
@@ -75,11 +78,15 @@ def preload_old_auto_close_date(sender, instance: Incident, **kwargs):
         cache_key = f'{AUTO_CLOSE_CACHE_KEY_PREFIX}{instance.pk}'
         try:
             old_obj = (
-                Incident.objects.only('auto_close_date').get(pk=instance.pk)
+                Incident.objects
+                .select_related('base_station')
+                .prefetch_related('base_station__operator')
+                .get(pk=instance.pk)
             )
             old_date = old_obj.auto_close_date
             val = old_date.isoformat() if old_date else None
-            cache.set(cache_key, val, timeout=AUTO_CLOSE_TTL.seconds)
+            auto_close_ttl = get_incident_auto_close_ttl(old_obj)
+            cache.set(cache_key, val, timeout=auto_close_ttl.seconds)
 
         except Incident.DoesNotExist:
             cache.delete(cache_key)
