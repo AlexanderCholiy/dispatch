@@ -3,14 +3,14 @@ from rest_framework.routers import DefaultRouter
 
 from .views.comment import CommentViewSet
 from .views.energy import AppealViewSet, ClaimViewSet
+from .views.incidents import IncidentReportViewSet
 from .views.monitoring import SMSCsvExportView
-from .views.reports import IncidentReportViewSet
 
 app_name = 'api'
 
 router = DefaultRouter()
 router.register(
-    'report/incidents', IncidentReportViewSet, basename='incidents_report'
+    'reports/incidents', IncidentReportViewSet, basename='incidents_report'
 )
 router.register(
     'energy/claims', ClaimViewSet, basename='energy_api_claims'

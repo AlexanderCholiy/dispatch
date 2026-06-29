@@ -85,7 +85,7 @@ class IncidentStatsConsumer(AsyncWebsocketConsumer):
         Любые ошибки валидации (например, неверный формат дат) ловятся и
         возвращаются клиенту в JSON.
         """
-        from api.views.reports import (
+        from api.views.incidents import (
             AVRContractorViewSet,
             DispatchViewSet,
             StatisticReportViewSet,

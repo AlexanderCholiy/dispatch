@@ -20,9 +20,7 @@ class SMSCsvExportView(viewsets.ViewSet):
     def export_csv(self, request: Request):
         """Выгрузка CSV файла."""
 
-        cache_file = SMS_RVR_CSV_FILE
-
-        response = self._get_cached_file_response(cache_file)
+        response = self._get_cached_file_response(SMS_RVR_CSV_FILE)
         if response:
             return response
 

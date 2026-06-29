@@ -212,9 +212,17 @@ class IncidentReportSerializer(serializers.ModelSerializer):
     def get_operator_group(self, obj: Incident):
         if not obj.base_station:
             return None
-        return ', '.join({
-            op.operator_group for op in obj.base_station.operator.all()
-        })
+
+        groups = {
+            op.operator_group
+            for op in obj.base_station.operator.all()
+            if op.operator_group is not None
+        }
+
+        if not groups:
+            return None
+
+        return ', '.join(sorted(groups))
 
     def get_avr_deadline(self, obj: Incident):
         deadline = obj.sla_avr_deadline
