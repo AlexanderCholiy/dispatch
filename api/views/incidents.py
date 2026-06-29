@@ -93,7 +93,7 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
        GET /api/v1/reports/incidents/?last_month=true
 
     3) Выгрузка актуальных данных в CSV:
-       GET /api/v1/reports/incidents/csv_export/
+       GET /api/v1/reports/incidents/csv-export/
        (Файл: actual_incidents.csv)
 
     4) Список доступных архивных отчетов:
@@ -154,7 +154,7 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
     ordering_fields = ('incident_date', 'id')
     ordering = ('-incident_date', '-id')
 
-    @action(detail=False, methods=['get'], url_path='csv_export')
+    @action(detail=False, methods=['get'], url_path='csv-export')
     def csv_export(self, request: Request):
         """
         Выгрузка CSV файла с актуальными инцидентами.
