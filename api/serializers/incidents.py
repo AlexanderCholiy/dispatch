@@ -303,7 +303,12 @@ class IncidentReportSerializer(serializers.ModelSerializer):
         if not comments:
             return None
 
-        return comments[0].content
+        text = comments[0].content
+
+        if text:
+            text = text.replace('\n', ' ').replace('\r', '')
+
+        return text
 
 
 class StatisticReportSerializer(serializers.ModelSerializer):
