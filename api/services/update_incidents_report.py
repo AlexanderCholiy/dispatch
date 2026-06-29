@@ -92,8 +92,8 @@ class IncidentsCsvBuilder:
         - Все зарегестрированные с первого числа предыдущего месяца
         """
         fresh, _ = is_file_fresh(ACTUAL_INCIDENTS_FILE, ACTUAL_INCIDENTS_TTL)
-        # if fresh:
-        #     return
+        if fresh:
+            return
 
         first_day = get_first_day_prev_month()
         qs = self.qs.filter(
