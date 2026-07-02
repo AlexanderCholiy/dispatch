@@ -782,7 +782,7 @@ def index(request: HttpRequest) -> HttpResponse:
 
     allowed_roles = [Roles.DISPATCH]
     can_manage = (
-        request.user.role in allowed_roles or request.user.is_superuser
+        user.role in allowed_roles or user.is_superuser or user.is_staff
     )
 
     context = {
@@ -880,7 +880,9 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
 
     user: User = request.user
     allowed_roles = [Roles.DISPATCH]
-    can_manage = user.role in allowed_roles or user.is_superuser
+    can_manage = (
+        user.role in allowed_roles or user.is_superuser or user.is_staff
+    )
 
     incident_form = IncidentForm(
         instance=incident,

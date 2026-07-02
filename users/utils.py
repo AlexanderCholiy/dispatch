@@ -27,7 +27,11 @@ def role_required(
         @wraps(view_func)
         def wrapped_view(request: HttpRequest, *args, **kwargs):
             user: User = request.user
-            if user.role not in allowed_roles and not user.is_superuser:
+            if (
+                user.role not in allowed_roles
+                and not user.is_superuser
+                and not user.is_staff
+            ):
                 if user.role == Roles.GUEST:
                     messages.success(
                         request,

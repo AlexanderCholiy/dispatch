@@ -74,9 +74,15 @@ def create_planned_work(request: HttpRequest):
 
         messages.error(request, 'Исправьте ошибки в форме ПЛР')
 
+    user: User = request.user
+    allowed_roles = [Roles.DISPATCH]
+    can_manage = (
+        user.role in allowed_roles or user.is_superuser or user.is_staff
+    )
+
     context = {
         'main_form': main_form,
-        'can_manage': True,
+        'can_manage': can_manage,
         'active_tab': 'planned_work',
     }
 
@@ -125,7 +131,9 @@ def planned_work_detail(request: HttpRequest, pk: int):
         return redirect(reverse(settings.LOGIN_URL))
 
     allowed_roles = [Roles.DISPATCH]
-    can_manage = user.role in allowed_roles or user.is_superuser
+    can_manage = (
+        user.role in allowed_roles or user.is_superuser or user.is_staff
+    )
 
     main_form = PlannedWorkForm(
         instance=planned_work, author_user=planned_work.author
@@ -514,7 +522,9 @@ def planned_work_list(request: HttpRequest) -> HttpResponse:
 
     user: User = request.user
     allowed_roles = [Roles.DISPATCH]
-    can_manage = user.role in allowed_roles or user.is_superuser
+    can_manage = (
+        user.role in allowed_roles or user.is_superuser or user.is_staff
+    )
 
     planned_work_qs = (
         PlannedWork.objects.filter(id__in=page_ids)
