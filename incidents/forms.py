@@ -920,23 +920,35 @@ class NewEmailForm(forms.Form):
         required=False,
     )
 
-    def _clean_email_list(self, data):
+    def _clean_email_list(self, data: str):
         if not data:
             return []
 
-        emails = [e.strip() for e in data.split(',') if e.strip()]
+        raw_emails = [e.strip() for e in data.split(',') if e.strip()]
 
-        for email in emails:
-            validate_email(email)
+        if not raw_emails:
+            return []
+
+        emails_to_validate = []
+
+        for email in raw_emails:
+            try:
+                validate_email(email)
+            except ValidationError:
+                raise ValidationError(f'Некорректный email адрес: "{email}"')
 
             if len(email) > MAX_EMAIL_LEN:
                 raise ValidationError(
                     f'Email "{email[:30]}..." слишком длинный. '
                     f'Максимальная длина одного адреса — {MAX_EMAIL_LEN} '
-                    'символа.'
+                    'символов.'
                 )
 
-        return emails
+            emails_to_validate.append(email)
+
+        unique_emails = list(dict.fromkeys(emails_to_validate))
+
+        return unique_emails
 
     def clean_to(self):
         emails = self._clean_email_list(self.cleaned_data.get('to', ''))

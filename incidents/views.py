@@ -782,7 +782,9 @@ def index(request: HttpRequest) -> HttpResponse:
 
     allowed_roles = [Roles.DISPATCH]
     can_manage = (
-        user.role in allowed_roles or user.is_superuser or user.is_staff
+        user.role in allowed_roles
+        or user.is_superuser
+        or user.is_staff
     )
 
     context = {
