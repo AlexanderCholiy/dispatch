@@ -39,7 +39,7 @@ os.makedirs(CACHE_ENERGY_DIR, exist_ok=True)
 
 CACHE_ENERGY_CLAIMS_FILE = CACHE_ENERGY_DIR / 'claims_export.csv'
 CACHE_ENERGY_APPEALS_FILE = CACHE_ENERGY_DIR / 'appeals_export.csv'
-CACHE_ENERGY_TTL = timedelta(minutes=20)
+CACHE_ENERGY_TTL = timedelta(minutes=30)
 ENERGY_DB_CHUNK_SIZE = 1_000
 
 LOCK_KEY_CACHE_ENERGY_CLAIMS_FILE = f'lock__{CACHE_ENERGY_CLAIMS_FILE.name}'

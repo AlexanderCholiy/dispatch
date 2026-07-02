@@ -259,7 +259,7 @@ CELERY_BEAT_SCHEDULE = {
     },
     'rebuild_energy_reports': {
         'task': 'api.tasks.rebuild_energy_reports',
-        'schedule': 600,  # каждые 10 мин (cache 20 мин)
+        'schedule': 900,  # каждые 15 мин (cache 30 мин)
     },
     'check_overdue_notifications': {
         'task': 'notifications.tasks.check_overdue_notifications',
