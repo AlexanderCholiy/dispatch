@@ -68,14 +68,14 @@ services:
       - dispatch_network
     restart: unless-stopped
 
-  # Celery worker (основные задачи)
+  # Celery worker (основные задачи: отправка писем, уведомлений, автозакрытие и т.д.)
   dispatch_celery_worker:
     <<: *default-logging
     build:
       context: .
     working_dir: /app
     command: >
-      celery -A backend.celery worker --loglevel=error --logfile=/app/logs/celery/celery_worker.log -Q default,low,medium,high  --concurrency=4
+      celery -A backend.celery worker --loglevel=error --logfile=/app/logs/celery/celery_worker.log -Q default,low,medium,high  --concurrency=2
     env_file: .env
     volumes:
       - dispatch_media:/app/media
@@ -87,8 +87,14 @@ services:
     networks:
       - dispatch_network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G  # Ограничиваем контейнер 2 ГБ
+        reservations:
+          memory: 1G  # Гарантируем 1 ГБ (опционально)
 
-  # Celery worker (тяжелые задачи)
+  # Celery worker (тяжелые задачи: формирование отчетов)
   dispatch_celery_heavy_worker:
     <<: *default-logging
     build:
@@ -106,6 +112,12 @@ services:
     networks:
       - dispatch_network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 3G  # Больше памяти для тяжелых задач
+        reservations:
+          memory: 1.5G
 
   # Celery worker (планировщик задач)
   dispatch_celery_beat:
@@ -123,6 +135,12 @@ services:
     networks:
       - dispatch_network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M  # Минимум для beat
+        reservations:
+          memory: 256M
 
   # Django backend
   dispatch_backend:
@@ -197,6 +215,12 @@ services:
       - dispatch_network
     depends_on:
       - dispatch_db
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
 
   # Nginx
   dispatch_gateway:

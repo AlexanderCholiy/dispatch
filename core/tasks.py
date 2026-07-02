@@ -51,7 +51,7 @@ def heavy_test_task(self: Task) -> None:
     """Тяжёлая задача для теста нагрузки"""
 
 
-@shared_task(bind=True, queue='default')
+@shared_task(bind=True, queue='low')
 def cleanup_old_task_results(self: Task) -> None:
     """Удаляет старые записи TaskResult согласно CELERY_RESULT_EXPIRES"""
     expires_seconds = settings.CELERY_RESULT_EXPIRES

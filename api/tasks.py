@@ -20,7 +20,7 @@ from .constants import (
 )
 
 
-@shared_task(bind=True, ignore_result=True, queue='default')
+@shared_task(bind=True, ignore_result=True, queue='heavy')
 def rebuild_actual_incidents(self):
     """Задача обновления CSV отчета (актуальные инциденты)."""
     lock_key = LOCK_KEY_ACTUAL_INCIDENTS
@@ -41,7 +41,7 @@ def rebuild_actual_incidents(self):
         builder.update_actual_file()
 
 
-@shared_task(bind=True, ignore_result=True, queue='default')
+@shared_task(bind=True, ignore_result=True, queue='heavy')
 def rebuild_archive_incidents(self, year: int, quarter: int):
     """Задача обновления архивного CSV отчета за конкретны год и квартал."""
     lock_key = f"{LOCK_KEY_ARCHIVE_INCIDENTS}_{year}_Q{quarter}"
@@ -62,7 +62,7 @@ def rebuild_archive_incidents(self, year: int, quarter: int):
         builder.update_archive_file(year, quarter)
 
 
-@shared_task(bind=True, ignore_result=True, queue='default')
+@shared_task(bind=True, ignore_result=True, queue='heavy')
 def rebuild_all_archives(self):
     """Задача обновления архивных CSV отчетов."""
     min_date_obj = (
@@ -82,7 +82,7 @@ def rebuild_all_archives(self):
             rebuild_archive_incidents.delay(year, q)
 
 
-@shared_task(bind=True, ignore_result=True, queue='default')
+@shared_task(bind=True, ignore_result=True, queue='heavy')
 def rebuild_energy_reports(self: Task):
     builder = EnergyCSVBuilder()
 

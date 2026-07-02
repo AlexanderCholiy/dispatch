@@ -77,7 +77,7 @@ def send_notification_task(self, notification_id: int):
         raise self.retry(exc=e)
 
 
-@shared_task
+@shared_task(queue='low')
 def check_overdue_notifications():
     """Проверка уведомлений, которые должны быть отправлены, но не были."""
     now = timezone.now() + timedelta(seconds=1)

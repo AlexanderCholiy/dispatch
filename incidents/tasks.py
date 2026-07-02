@@ -162,7 +162,7 @@ def close_incident_auto(self, incident_id: int):
         raise self.retry(exc=e, countdown=60)
 
 
-@shared_task
+@shared_task(queue='low')
 def check_stale_auto_closes():
     """
     Периодическая задача.
