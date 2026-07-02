@@ -1019,7 +1019,7 @@ class TSManager(SocialValidators):
             FROM "{TS_REGION_RESPONSIBLE_MANAGER_TABLE}"
             WHERE
                 "RegionId" IS NOT NULL
-                OR "Ответственный" IS NOT NULL
+                AND "Ответственный" IS NOT NULL
             GROUP BY "RegionId", "Ответственный"
             ORDER BY "RegionId", cnt DESC, "Ответственный";
             '''

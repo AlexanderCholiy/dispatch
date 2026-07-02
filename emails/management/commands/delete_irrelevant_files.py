@@ -32,14 +32,15 @@ class Command(BaseCommand):
         """
         Удаляем EmailAttachment, EmailInTextAttachment, EmailMime если:
 
-        - нет инцидента и пиьсмо пришло раньше вчерашнего дня;
-        - есть инцидент, он закрыт и с момента закрытия прошло больше N дней.
+        - нет инцидента и пиьсмо пришло раньше N дней назад;
+        - есть инцидент, он закрыт, с момента закрытия прошло больше N дней и
+        пиьсмо пришло раньше N дней назад.
         """
         threshold_for_incident = (
             timezone.now() - dt.timedelta(days=MAX_EMAILS_ATTACHMENT_DAYS)
         )
         threshold_for_email = (
-            timezone.now() - dt.timedelta(days=1)
+            timezone.now() - dt.timedelta(days=MAX_EMAILS_ATTACHMENT_DAYS)
         )
 
         attachment_models: list[
@@ -60,6 +61,7 @@ class Command(BaseCommand):
                         email_msg__email_incident__incident_finish_date__lt=(
                             threshold_for_incident
                         ),
+                        email_msg__email_date__lt=threshold_for_email,
                     )
                 )
             )
