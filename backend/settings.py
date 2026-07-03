@@ -255,7 +255,7 @@ CELERY_BEAT_SCHEDULE = {
     },
     'rebuild_actual_incidents_report': {
         'task': 'api.tasks.rebuild_actual_incidents',
-        'schedule': 150,  # каждую 2.5 мин (cache 5 мин)
+        'schedule': 300,  # каждые 5 мин (cache 10 мин)
     },
     'rebuild_energy_reports': {
         'task': 'api.tasks.rebuild_energy_reports',

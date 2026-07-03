@@ -70,7 +70,7 @@ def rebuild_all_archives(self):
     )
 
     if not min_date_obj:
-        celery_logger.warning('Нет данных для архивации (бада пуста).')
+        celery_logger.warning('Нет данных для архивации (база данных пуста).')
         return
 
     min_date = min_date_obj.date()

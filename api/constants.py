@@ -19,8 +19,8 @@ ACTUAL_INCIDENTS_FILE = CACHE_INCIDENTS_DIR / 'actual_incidents.csv'
 CACHE_INCIDENTS_DIR.mkdir(parents=True, exist_ok=True)
 ARCHIVE_INCIDENTS_DIR.mkdir(parents=True, exist_ok=True)
 
-ARCHIVE_INCIDENTS_TTL = timedelta(seconds=1200)
-ACTUAL_INCIDENTS_TTL = timedelta(seconds=300)
+ARCHIVE_INCIDENTS_TTL = timedelta(minutes=20)
+ACTUAL_INCIDENTS_TTL = timedelta(minutes=10)
 
 LOCK_KEY_ACTUAL_INCIDENTS = 'lock_incidents_csv_actual'
 LOCK_KEY_ARCHIVE_INCIDENTS = 'lock_incidents_csv_archive'
