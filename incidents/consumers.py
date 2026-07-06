@@ -11,7 +11,10 @@ from notifications.constants import MAX_NOTIFICATION_TEXT_LEN
 from notifications.models import Notification, NotificationLevel
 from users.models import Roles, User
 
-from .constants import MAX_COMMENT_TEXT_LEN, MAX_INCIDENT_COMMENTS_PER_PAGE
+from .constants import (
+    MAX_COMMENT_TEXT_LEN,
+    MAX_INCIDENT_COMMENTS_PER_PAGE,
+)
 from .models import Comment, Incident
 
 
