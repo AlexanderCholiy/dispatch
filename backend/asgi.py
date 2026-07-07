@@ -14,11 +14,13 @@ from channels.routing import ProtocolTypeRouter, URLRouter  # noqa: E402
 from incidents import routing as incidents_routing  # noqa: E402
 from notifications import routing as notifications_routing  # noqa: E402
 from stats import routing as stats_routing  # noqa: E402
+from users import routing as users_routing  # noqa: E402
 
 websocket_patterns = (
     stats_routing.websocket_urlpatterns
     + notifications_routing.websocket_urlpatterns
     + incidents_routing.websocket_urlpatterns
+    + users_routing.websocket_urlpatterns
 )
 
 application = ProtocolTypeRouter({

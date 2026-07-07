@@ -103,6 +103,15 @@
     <script src="{% static 'js/checkbox_v2.js' %}"></script>
     {% if user.is_authenticated %}
       <script type="module" src="{% static 'js/notifications/init_skeleton_notifications.js' %}"></script>
+      <script>
+          // Передаем ID и имя пользователя в глобальную область видимости
+          window.PRESENCE_CONFIG = window.PRESENCE_CONFIG || {};
+          window.PRESENCE_CONFIG.currentUser = {
+              id: {{ user.id }},
+              username: "{{ user.username }}"
+          };
+      </script>
+      <script type="module" src="{% static 'js/users/presence/init_skeleton_presence.js' %}"></script>
     {% endif %}
     {% block extra_js %}{% endblock %}
   </body>

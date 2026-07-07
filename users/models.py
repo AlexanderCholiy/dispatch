@@ -111,6 +111,13 @@ class User(AbstractUser):
         verbose_name='Подрядчик по АВР',
         db_index=True
     )
+    last_online = models.DateTimeField(
+        'Последний онлайн',
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text='Дата и время последнего посещения сайта.',
+    )
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
