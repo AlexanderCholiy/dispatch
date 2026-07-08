@@ -6,11 +6,11 @@ export const PRESENCE_CONFIG = {
     
     // Настройки переподключения
     MAX_RECONNECT_ATTEMPTS: 5,
-    RECONNECT_DELAY_BASE: 3000, // 3 секунды
+    RECONNECT_DELAY_BASE: 5000, // 5 секунды
     
     // Интервал авто-обновления (мс)
     // 1000 = 1 сек (для тестов), поставьте 10000 (10 сек) для продакшена
-    AUTO_REFRESH_INTERVAL_MS: 1000, 
+    AUTO_REFRESH_INTERVAL_MS: 10000, 
     
     // Fallback аватар
     DEFAULT_AVATAR: '/static/img/fav/favicon.ico',

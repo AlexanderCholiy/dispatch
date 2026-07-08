@@ -6,10 +6,11 @@ import { PRESENCE_CONFIG as MODULE_CONFIG } from './config.js';
 let currentPath = window.location.pathname;
 let refreshIntervalId = null;
 let currentUserId = null;
+// Храним текущий отрисованный список пользователей, чтобы сравнивать с новым
+let currentDisplayedUsers = []; 
 
 /**
  * Получение ID текущего пользователя из глобальной конфигурации
- * Ожидается, что в base.html установлен window.PRESENCE_CONFIG.currentUser
  */
 function getCurrentUserId() {
     if (window.PRESENCE_CONFIG && 
@@ -23,11 +24,37 @@ function getCurrentUserId() {
 
 /**
  * Фильтрация списка: убираем текущего пользователя
- * Сервер возвращает всех, а мы скрываем себя на клиенте
  */
 const filterSelf = (users) => {
     if (!currentUserId) return users;
     return users.filter(user => user.user_id !== currentUserId);
+};
+
+/**
+ * Глубокое сравнение двух массивов пользователей
+ * Сравнивает user_id и статус presence (если он есть), чтобы избежать лишних рендеров
+ */
+const hasUsersChanged = (newUsers, oldUsers) => {
+    // Если длины разные - точно изменилось
+    if (newUsers.length !== oldUsers.length) return true;
+
+    // Проходим по каждому элементу
+    for (let i = 0; i < newUsers.length; i++) {
+        const newUser = newUsers[i];
+        const oldUser = oldUsers[i];
+
+        // Если IDs разные или порядок сместился
+        if (newUser.user_id !== oldUser.user_id) return true;
+
+        // Если есть поле presence (статус), проверяем и его
+        // Если поля нет, считаем что оно одинаковое (или undefined)
+        if (newUser.presence !== oldUser.presence) return true;
+        
+        // Можно добавить проверку других полей, если они влияют на визуал (например, avatar_url обновляется)
+        // Но обычно avatar_url статичен, а presence меняется часто.
+    }
+
+    return false;
 };
 
 /**
@@ -63,27 +90,29 @@ const stopAutoRefresh = () => {
  * Основная функция инициализации
  */
 function init() {
-    // Получаем ID пользователя сразу при старте
     currentUserId = getCurrentUserId();
-    
-    // Создаем виджет
     initWidget();
 
-    // Настраиваем колбэки сокетов
     setCallbacks({
         onOpen: () => {
             console.log('[Presence] Connected');
-            // Сразу запрашиваем список пользователей на текущей странице
             fetchUsersOnPage(currentPath);
-            // Запускаем периодическое обновление
             startAutoRefresh();
         },
         onMessage: (data) => {
             if (data.type === MODULE_CONFIG.MSG_TYPES.USERS_LIST) {
-                // КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: Фильтруем себя перед отрисовкой
-                // Сервер прислал всех, мы оставляем только "других"
                 const filteredUsers = filterSelf(data.users);
-                updateUsersList(filteredUsers, data.url);
+                
+                // ПРОВЕРКА НА ИЗМЕНЕНИЯ
+                // Если список пустой (первый раз) или данные изменились - обновляем
+                if (currentDisplayedUsers.length === 0 || hasUsersChanged(filteredUsers, currentDisplayedUsers)) {
+                    updateUsersList(filteredUsers, data.url);
+                    // Обновляем хранимое состояние
+                    currentDisplayedUsers = filteredUsers;
+                } else {
+                    // Данные не изменились, пропускаем перерисовку
+                    console.debug('[Presence] No changes detected, skipping render.');
+                }
             }
         },
         onClose: () => {
@@ -92,18 +121,14 @@ function init() {
         }
     });
 
-    // Подключаемся к WebSocket
     connectSocket();
-
-    // Настраиваем слушатели навигации
     setupNavigationListeners();
 }
 
 /**
- * Настройка слушателей навигации (клики, история)
+ * Настройка слушателей навигации
  */
 function setupNavigationListeners() {
-    // 1. История браузера (Back/Forward)
     window.addEventListener('popstate', () => {
         const newPath = window.location.pathname;
         if (newPath !== currentPath) {
@@ -113,14 +138,12 @@ function setupNavigationListeners() {
         }
     });
 
-    // 2. Перехват кликов по ссылкам
     document.addEventListener('click', (e) => {
         const link = e.target.closest('a');
         if (!link) return;
 
         const href = link.getAttribute('href');
         
-        // Фильтры: внешние ссылки, якоря, админка, API, загрузки
         if (!href || 
             link.hasAttribute('target') || 
             link.hasAttribute('download') || 
@@ -140,7 +163,6 @@ function setupNavigationListeners() {
     });
 }
 
-// Запуск после загрузки DOM
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {
