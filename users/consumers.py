@@ -1,8 +1,9 @@
 import re
-from channels.generic.websocket import AsyncJsonWebsocketConsumer
-from users.models import User, Roles
-from asgiref.sync import sync_to_async
 
+from asgiref.sync import sync_to_async
+from channels.generic.websocket import AsyncJsonWebsocketConsumer
+
+from users.models import Roles, User
 from users.services.presence import PresenceService
 
 
@@ -65,17 +66,6 @@ class PresenceConsumer(AsyncJsonWebsocketConsumer):
         users_list = await sync_to_async(PresenceService.get_users_on_page)(
             url
         )
-
-        users_list = [
-            {'user_id': 1, 'user_str': 'Виталий Ступаков', 'username': 'v.stupakov', 'avatar_url': '/static/img/default_avatars/8__ninja.png', 'role_str': 'Пользователь', 'page_url': '/', 'action': 'Просмотр страницы (/)', 'last_seen': 1783498885.415822},
-            {'user_id': 2, 'user_str': 'Виталий Ступаков', 'username': 'v.stupakov', 'avatar_url': '/static/img/default_avatars/8__ninja.png', 'role_str': 'Пользователь', 'page_url': '/', 'action': 'Просмотр страницы (/)', 'last_seen': 1783498885.415822},
-            {'user_id': 3, 'user_str': 'Виталий Ступаков', 'username': 'v.stupakov', 'avatar_url': '/static/img/default_avatars/8__ninja.png', 'role_str': 'Пользователь', 'page_url': '/', 'action': 'Просмотр страницы (/)', 'last_seen': 1783498885.415822},
-            {'user_id': 4, 'user_str': 'Виталий Ступаков', 'username': 'v.stupakov', 'avatar_url': '/static/img/default_avatars/8__ninja.png', 'role_str': 'Пользователь', 'page_url': '/', 'action': 'Просмотр страницы (/)', 'last_seen': 1783498885.415822},
-            {'user_id': 5, 'user_str': 'Виталий Ступаков', 'username': 'v.stupakov', 'avatar_url': None, 'role_str': 'Пользователь', 'page_url': '/', 'action': 'Просмотр страницы (/)', 'last_seen': 1783498885.415822},
-            {'user_id': 6, 'user_str': 'Виталий Ступаков', 'username': 'v.stupakov', 'avatar_url': None, 'role_str': 'Пользователь', 'page_url': '/', 'action': 'Просмотр страницы (/)', 'last_seen': 1783498885.415822},
-        ]
-
-        # print(users_list)
 
         broadcast_data = {
             'type': 'users_list',

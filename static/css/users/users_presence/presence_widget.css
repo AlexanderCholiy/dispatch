@@ -52,10 +52,17 @@
 
 /* Изображение аватара */
 .presence-avatar-link img {
-    width: 100%;
-    height: 100%;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
     object-fit: cover;
-    display: block;
+    background: var(--gray-color);
+    color: var(--background-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-lg);
+    font-weight: 500;
 }
 
 /* --- Инициалы (если нет картинки) --- */

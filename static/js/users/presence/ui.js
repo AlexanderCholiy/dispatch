@@ -3,23 +3,41 @@ import { PRESENCE_CONFIG } from './config.js';
 
 const AVATARS_CONTAINER_ID = 'presence-avatars-list';
 const ADD_COUNT_CONTAINER_ID = 'presence-add-count';
-const MAX_VISIBLE_AVATARS = 5; // Максимальное количество видимых аватаров
+const MAX_VISIBLE_AVATARS = 7; // Максимальное количество видимых аватаров
 
 /**
  * Создает элемент аватара пользователя
  */
 function createAvatarElement(user) {
-    // 1. Создаем обертку div с классом tooltip и атрибутом data-title
     const wrapper = document.createElement('div');
     wrapper.className = 'tooltip';
     
-    // Устанавливаем заголовок для тултипа
-    const titleText = user.user_str || user.username;
+    // --- ЛОГИКА СОЗДАНИЯ ЗАГОЛОВКА ---
+    let namePart = '';
+    let rolePart = '';
+
+    // 1. Получаем имя (приоритет: user_str > username)
+    if (user.user_str) {
+        namePart = user.user_str;
+    } else if (user.username) {
+        namePart = user.username;
+    } else {
+        namePart = 'Пользователь'; // Фолбек, если нет ни того, ни другого
+    }
+
+    // 2. Получаем роль (если есть)
+    if (user.role_str) {
+        rolePart = ` (${user.role_str})`;
+    }
+
+    // 3. Собираем итоговый текст: "Иванов И (диспетчер)"
+    const titleText = namePart + rolePart;
+    // ----------------------------------
+
     wrapper.setAttribute('data-title', titleText);
 
-    // 2. Создаем ссылку a
     const link = document.createElement('a');
-    link.className = 'presence-avatar-link';
+    link.className = 'presence-avatar-link'; 
     link.href = `/users/${user.user_id}/`;
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
@@ -27,18 +45,13 @@ function createAvatarElement(user) {
     let contentHtml = '';
 
     if (user.avatar_url) {
-        // Если есть картинка
-        contentHtml = `<img src="${user.avatar_url}" alt="${user.username}">`;
+        contentHtml = `<img src="${user.avatar_url}" alt="${namePart}">`;
     } else {
-        // Если нет картинки - инициалы
-        const firstLetter = user.username ? user.username.charAt(0).toUpperCase() : '?';
+        const firstLetter = namePart ? namePart.charAt(0).toUpperCase() : '?';
         contentHtml = `<span class="initials">${firstLetter}</span>`;
     }
 
-    // Вставляем контент в ссылку
     link.innerHTML = contentHtml;
-
-    // 3. Вставляем ссылку в обертку
     wrapper.appendChild(link);
 
     return wrapper;

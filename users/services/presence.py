@@ -1,11 +1,11 @@
 from typing import Optional, TypedDict
 
-from django.utils import timezone
 from django.core.cache import cache
+from django.utils import timezone
 
-from users.constants import PRESENCE_TTL, USERS_CACHE_TTL
-from users.models import User, Roles
 from core.services.formatters import format_timedelta_readable, timedelta
+from users.constants import PRESENCE_TTL, USERS_CACHE_TTL
+from users.models import Roles, User
 
 
 class UserPresenceStatus(TypedDict):
@@ -89,6 +89,23 @@ class PresenceService:
         Использует кэш для данных профиля, обращаясь к БД только при отсутсвии.
         """
         normalized_page = page_url.split('?')[0]
+
+        allowed_prefixes = [
+            '/users/',
+            '/schedule/',
+            '/planned-work/',
+            '/incidents/',
+        ]
+
+        is_allowed = False
+        for prefix in allowed_prefixes:
+            if normalized_page.startswith(prefix):
+                is_allowed = True
+                break
+
+        if not is_allowed:
+            return []
+
         page_index_key = PresenceService._PAGE_USERS_KEY.format(
             normalized_page
         )
