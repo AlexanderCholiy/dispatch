@@ -19,7 +19,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-md);
+  gap: var(--space-xs);
   justify-content: space-between;
 }
 
@@ -69,4 +69,22 @@
   font-weight: 700;
   font-size: var(--font-xl);
   color: var(--background-color);
+}
+
+.status-badge {
+  font-size: var(--font-sm);
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  text-align: center;
+}
+
+.online-badge {
+  background-color: transparent;
+  color: var(--green-color);
+}
+
+.offline-badge {
+  background-color: transparent;
+  color: var(--add-color);
 }

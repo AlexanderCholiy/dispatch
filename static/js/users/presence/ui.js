@@ -47,7 +47,10 @@ function createAvatarElement(user) {
     if (user.avatar_url) {
         contentHtml = `<img src="${user.avatar_url}" alt="${namePart}">`;
     } else {
-        const firstLetter = namePart ? namePart.charAt(0).toUpperCase() : '?';
+        const firstLetter = user.username && user.username.length > 0 
+            ? user.username.charAt(0).toUpperCase() 
+            : '?';
+            
         contentHtml = `<span class="initials">${firstLetter}</span>`;
     }
 

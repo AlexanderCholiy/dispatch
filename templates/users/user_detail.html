@@ -54,6 +54,13 @@
                 <div class="avatar-placeholder">{{ user_info.username|first|upper }}</div>
             {% endif %}
           </div>
+
+          {% if user_info.presence_status.is_online %}
+            <span class="status-badge online-badge">{{ user_info.presence_status.status_text }}</span>
+          {% else %}
+            <span class="status-badge offline-badge">{{ user_info.presence_status.status_text }}</span>
+          {% endif %}
+
           <p class="user-role">
             {% if user_info.first_name and user_info.last_name %}
                 {{ user_info.get_role_display }} {{ user_info.first_name }} {{ user_info.last_name }}

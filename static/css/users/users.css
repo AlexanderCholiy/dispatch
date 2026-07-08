@@ -78,7 +78,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-md);
+  gap: var(--space-xs);
   justify-content: space-between;
 }
 
@@ -130,4 +130,26 @@
     width: 84px;
   }
 
+}
+
+.status-badge {
+  font-size: var(--font-xs);
+  font-weight: 500;
+  padding: var(--space-xs);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.05px;
+  width: 92px;
+  text-align: center;
+}
+
+.online-badge {
+  background-color: transparent;
+  color: var(--green-color);
+}
+
+.offline-badge {
+  background-color: transparent;
+  color: var(--gray-color);
 }

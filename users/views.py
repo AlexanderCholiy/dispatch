@@ -29,6 +29,7 @@ from django_ratelimit.decorators import ratelimit
 from core.loggers import django_logger
 from core.utils import timedelta_to_human_time
 from users.services.get_default_avatars import get_default_avatars
+from users.services.presence import PresenceService
 
 from .constants import PAGE_SIZE_USERS_CHOICES, USERS_PER_PAGE
 from .forms import (
@@ -459,6 +460,9 @@ def users_list(request: HttpRequest) -> HttpResponse:
     query_params.pop('page', None)
     page_url_base = f'?{query_params.urlencode()}&' if query_params else '?'
 
+    for user in users:
+        user.presence_status = PresenceService.get_user_status(user)
+
     context = {
         'page_obj': page_obj,
         'users': users,
@@ -484,6 +488,8 @@ def user_detail(request: HttpRequest, user_id: int):
         pk=user_id,
         is_active=True
     )
+
+    user.presence_status = PresenceService.get_user_status(user)
 
     context = {'user_info': user}
 
