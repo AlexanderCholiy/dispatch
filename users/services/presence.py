@@ -231,10 +231,17 @@ class PresenceService:
                     'last_seen': user.last_online.timestamp()
                 }
 
+            if diff > timedelta(days=7):
+                return {
+                    'is_online': False,
+                    'status_text': 'Давно не появлялся в сети',
+                    'last_seen': user.last_online.timestamp(),
+                }
+
             formatted_time = format_timedelta_readable(diff)
             return {
                 'is_online': False,
-                'status_text': f'Был в сети: {formatted_time}',
+                'status_text': f'Был в сети: {formatted_time} назад',
                 'last_seen': user.last_online.timestamp(),
             }
 
