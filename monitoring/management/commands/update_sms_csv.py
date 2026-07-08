@@ -81,9 +81,11 @@ class Command(BaseCommand):
             'rsync', '-avh', '--ignore-existing',
             '-e',
             'ssh -o StrictHostKeyChecking=no -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa',  # noqa: E501
-            f'root@{SMS_RVR_CONTROLLER_HOST}:/var/spool/sms/incoming/',
+            f'root@{SMS_RVR_CONTROLLER_HOST}:/var/spool/sms/incoming',
             str(SMS_RVR_DIR)
         ]
+
+        incoming_path = SMS_RVR_DIR / 'incoming'
 
         try:
             subprocess.run(
@@ -93,6 +95,25 @@ class Command(BaseCommand):
                 text=True,
                 check=True,
             )
+
+            if incoming_path.exists() and incoming_path.is_dir():
+                for item in incoming_path.iterdir():
+                    dest_item = SMS_RVR_DIR / item.name
+
+                    if dest_item.exists() and dest_item.is_file():
+                        dest_item.unlink()
+
+                    shutil.move(str(item), str(dest_item))
+
+                incoming_path.rmdir()
+                monitoring_rvr_sms_logger.debug(
+                    f'Папка {incoming_path} удалена.'
+                )
+            else:
+                monitoring_rvr_sms_logger.warning(
+                    'Папка /var/spool/sms/incoming пуста'
+                )
+
             monitoring_rvr_sms_logger.debug(
                 f'SMS с контроллера скопированы в: {SMS_RVR_DIR}'
             )
