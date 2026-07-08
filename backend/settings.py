@@ -273,6 +273,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'incidents.tasks.check_stale_auto_closes',
         'schedule': 900,  # каждые 15 минут
     },
+    'update-user-last-online': {
+        'task': 'users.tasks.update_user_last_online',
+        'schedule': 150,  # каждые 5 мин (cache 5 мин)
+    },
 }
 
 CACHES = {
