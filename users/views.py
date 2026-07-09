@@ -20,6 +20,7 @@ from django.db.models import Q
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
@@ -31,7 +32,7 @@ from core.utils import timedelta_to_human_time
 from users.services.get_default_avatars import get_default_avatars
 from users.services.presence import PresenceService
 
-from .constants import PAGE_SIZE_USERS_CHOICES, USERS_PER_PAGE
+from .constants import PAGE_SIZE_USERS_CHOICES, PRESENCE_TTL, USERS_PER_PAGE
 from .forms import (
     ChangeEmailForm,
     UserForm,
@@ -395,6 +396,8 @@ def profile(request: HttpRequest) -> HttpResponse:
 def users_list(request: HttpRequest) -> HttpResponse:
     query: str = request.GET.get('q', '').strip()
 
+    user: User = request.user
+
     roles = [role for role in Roles if role != Roles.GUEST]
 
     role_filter: list[str] = (
@@ -403,6 +406,16 @@ def users_list(request: HttpRequest) -> HttpResponse:
     ).split(',')
 
     role_filter = [v for v in role_filter if v in roles] or roles[:]
+
+    online: list[str] = (
+        request.GET.get('online', '').strip()
+        or request.COOKIES.get('online', '').lower().strip()
+    ).split(',')
+
+    online = (
+        [v for v in online if v in ['true', 'false']]
+        or ['true', 'false']
+    )
 
     per_page = int(
         request.GET.get('per_page')
@@ -429,6 +442,31 @@ def users_list(request: HttpRequest) -> HttpResponse:
 
     if role_filter and len(role_filter) != len(roles):
         base_qs = base_qs.filter(role__in=role_filter)
+
+    if len(online) == 1:
+        is_online_filter = online[0] == 'true'
+        pattern = 'presence:user:*'
+        keys: list[str] = cache.keys(pattern)
+
+        now = timezone.now()
+        current_timestamp = now.timestamp()
+
+        user_online_ids = [user.id]
+
+        for key in keys:
+            try:
+                user_id_str = key.split(':')[-1]
+                user_id = int(user_id_str)
+                ts = cache.get(key)
+                if ts and (current_timestamp - ts) < PRESENCE_TTL:
+                    user_online_ids.append(user_id)
+            except (ValueError, IndexError):
+                continue
+
+        base_qs = (
+            base_qs.filter(id__in=user_online_ids)
+            if is_online_filter else base_qs.exclude(id__in=user_online_ids)
+        )
 
     if query:
         words = {w.strip().lower() for w in query.split(' ') if w.strip()}
@@ -471,6 +509,7 @@ def users_list(request: HttpRequest) -> HttpResponse:
         'roles': roles,
         'selected': {
             'role': role_filter,
+            'online': online,
             'per_page': per_page,
             'sort': sort,
         },

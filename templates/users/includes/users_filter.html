@@ -30,6 +30,39 @@
         {% endfor %}
       </select>
     </div>
+
+    <div class="multiple-select-wrapper" id="online-select">
+      <div class="dropdown-trigger" data-filter-name="Статус">
+        <span class="selected-label">Статус</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="online-dropdown-menu">
+        <div class="dropdown-options">
+          <label class="option-item {% if 'true' in selected.online %}is-selected{% endif %}" 
+                 data-value="true">
+            <i class="bx bx-check"></i>
+            <span>Онлайн</span>
+          </label>
+
+          <label class="option-item {% if 'false' in selected.online %}is-selected{% endif %}" 
+                 data-value="false">
+            <i class="bx bx-check"></i>
+            <span>Офлайн</span>
+          </label>
+        </div>
+      </div>
+
+      <select name="online" id="online-select-hidden" style="display: none;" multiple>
+        <option value="true" 
+                {% if 'true' in selected.online %}selected{% endif %}>
+        </option>
+        <option value="false" 
+                {% if 'false' in selected.online %}selected{% endif %}>
+        </option>
+      </select>
+    </div>
+
   </div>
     
   <div class="right-parts">
@@ -65,6 +98,7 @@
 <script>
     const filtersConfig = [
         { id: 'role-select-hidden', cookieName: 'role', searchFieldName: 'role', type: 'multi_select' },
+        { id: 'online-select-hidden', cookieName: 'online', searchFieldName: 'online', type: 'multi_select' },
         { id: 'per-page', cookieName: 'per_page_users', searchFieldName: 'per_page', type: 'single_select', skipOnReset: true },
     ];
 </script>
