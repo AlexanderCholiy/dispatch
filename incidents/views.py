@@ -127,6 +127,7 @@ from .services.get_operator_group_map import get_operator_group_map
 from .services.get_region_responsible_manager import (
     get_region_responsible_managers,
 )
+from .services.get_regions import get_region_map
 from .services.incident_signature import get_incident_signature
 from .services.incident_similarity import incident_similarity_service
 from .services.normalize_incident_subject import normalize_incident_subject
@@ -164,6 +165,10 @@ def index(request: HttpRequest) -> HttpResponse:
     macroregions = get_macro_region_map()
     macroregions = {0: 'Отсутствует', **macroregions}  # отсутсвует в начале
     macroregion_ids = list(macroregions.keys())
+
+    regions = get_region_map()
+    regions = {0: 'Отсутствует', **regions}  # отсутсвует в начале
+    region_ids = list(regions.keys())
 
     avr_contractors = get_avr_contractor_map()
     avr_contractors = {0: 'Отсутствует', **avr_contractors}
@@ -294,6 +299,19 @@ def index(request: HttpRequest) -> HttpResponse:
             if v.isnumeric() and int(v) in macroregion_ids
         ]
         or macroregion_ids[:]
+    )
+
+    region = (
+        request.GET.get('region', '').strip()
+        or (get_raw_cookie(request, 'region') or '').strip()
+    ).split(',') if not search_only_by_code else []
+
+    region: list[int] = (
+        [
+            int(v) for v in region
+            if v.isnumeric() and int(v) in region_ids
+        ]
+        or region_ids[:]
     )
 
     avr_contractor = (
@@ -674,6 +692,18 @@ def index(request: HttpRequest) -> HttpResponse:
                 pole__region__macroregion_id__in=macroregion
             )
 
+    if region and len(region) != len(region_ids):
+        if 0 in region:
+            base_qs = base_qs.filter(
+                Q(pole__isnull=True)
+                | Q(pole__region_id__isnull=True)
+                | Q(pole__region_id__in=region)
+            )
+        else:
+            base_qs = base_qs.filter(
+                pole__region__id__in=region
+            )
+
     if (
         incident_type_filter
         and len(incident_type_filter) != len(incident_types_ids)
@@ -803,6 +833,7 @@ def index(request: HttpRequest) -> HttpResponse:
         'incident_types': incident_types,
         'incident_subtypes': incident_subtypes,
         'macroregions': macroregions,
+        'regions': regions,
         'selected': {
             'is_incident_finish': is_incident_finish,
             'was_read': was_read,
@@ -811,6 +842,7 @@ def index(request: HttpRequest) -> HttpResponse:
             'responsible_user': responsible_user_id,
             'region_responsible_manager': region_responsible_manager,
             'macroregion': macroregion,
+            'region': region,
             'avr_contractor': avr_contractor,
             'incident_type': incident_type_filter,
             'incident_subtype': incident_subtype_filter,
