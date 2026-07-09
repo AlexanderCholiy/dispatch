@@ -1,1080 +1,1514 @@
 {
-  "apiVersion": "dashboard.grafana.app/v2",
-  "kind": "Dashboard",
-  "metadata": {
-    "name": "adsg7fj",
-    "namespace": "default",
-    "uid": "75a841be-0590-4f7e-aa92-a55d68d88e02",
-    "resourceVersion": "1782429646960017",
-    "generation": 52,
-    "creationTimestamp": "2026-06-25T09:37:20Z",
-    "labels": {
-      "grafana.app/deprecatedInternalID": "2926653706502144"
+  "annotations": [
+    {
+      "kind": "AnnotationQuery",
+      "spec": {
+        "builtIn": true,
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "query": {
+          "datasource": {
+            "name": "-- Grafana --"
+          },
+          "group": "grafana",
+          "kind": "DataQuery",
+          "spec": {},
+          "version": "v0"
+        }
+      }
+    }
+  ],
+  "cursorSync": "Off",
+  "description": "Карта открытых инцидентов",
+  "editable": false,
+  "elements": {
+    "panel-1": {
+      "kind": "Panel",
+      "spec": {
+        "data": {
+          "kind": "QueryGroup",
+          "spec": {
+            "queries": [
+              {
+                "kind": "PanelQuery",
+                "spec": {
+                  "hidden": false,
+                  "query": {
+                    "datasource": {
+                      "name": "ffl50zkmfecxse"
+                    },
+                    "group": "grafana-postgresql-datasource",
+                    "kind": "DataQuery",
+                    "spec": {
+                      "dataset": "dispatch",
+                      "editorMode": "code",
+                      "format": "table",
+                      "rawQuery": true,
+                      "rawSql": "SELECT\r\n  COALESCE(i.code, 'ID: ' || i.id) || ' (' || COALESCE(last_status.name, 'Без статуса') || ')' AS \"Инцидент\",\r\n  to_char(\r\n    i.incident_date AT TIME ZONE 'Europe/Moscow',\r\n    'DD.MM.YYYY HH24:MI'\r\n  ) AS \"Зарегестрирован\",\r\n  p.pole AS \"Опора\",\r\n  COALESCE(b.bs_name, 'Отсутствует') AS \"Базовая станция\",\r\n  COALESCE(it.name, 'Отсутствует') AS \"Тип инцидента\",\r\n  COALESCE(ist.name, 'Отсутствует') AS \"Подтип инцидента\",\r\n  -- Расчет времени начала АВР (для информации)\r\n  CASE\r\n    WHEN i.avr_start_date IS NULL THEN 'Отсутствует'\r\n    ELSE to_char(\r\n      i.avr_start_date AT TIME ZONE 'Europe/Moscow',\r\n      'DD.MM.YYYY HH24:MI'\r\n    )\r\n  END AS \"Начало АВР\",\r\n  -- Расчет времени окончания АВР (если есть)\r\n  CASE\r\n    WHEN i.avr_end_date IS NULL THEN 'Отсутствует'\r\n    ELSE to_char(\r\n      i.avr_end_date AT TIME ZONE 'Europe/Moscow',\r\n      'DD.MM.YYYY HH24:MI'\r\n    )\r\n  END AS \"Конец АВР\",\r\n  CASE\r\n    WHEN (\r\n      it.sla_deadline IS NULL\r\n      or i.avr_start_date IS NULL\r\n    ) THEN 'Отсутсвтует'\r\n    ELSE to_char(\r\n      (\r\n        i.avr_start_date + (it.sla_deadline || ' minutes') :: interval\r\n      ) AT TIME ZONE 'Europe/Moscow',\r\n      'DD.MM.YYYY HH24:MI'\r\n    )\r\n  END AS \"Дедлайн АВР\",\r\n  CASE\r\n    -- 1. Нет SLA или нет старта работы\r\n    WHEN (\r\n      it.sla_deadline IS NULL\r\n      OR i.avr_start_date IS NULL\r\n    ) THEN 'EMPTY' -- 2. Инцидент закрыт вовремя\r\n    WHEN i.avr_end_date IS NOT NULL\r\n    AND i.avr_end_date <= (\r\n      i.avr_start_date + (it.sla_deadline || ' minutes') :: interval\r\n    ) THEN 'CLOSED' -- 3. Инцидент закрыт с опозданием\r\n    WHEN i.avr_end_date IS NOT NULL\r\n    AND i.avr_end_date > (\r\n      i.avr_start_date + (it.sla_deadline || ' minutes') :: interval\r\n    ) THEN 'CRITICAL' -- 4. Инцидент еще открыт\r\n    ELSE CASE\r\n      -- Дедлайн прошел\r\n      WHEN EXTRACT(\r\n        EPOCH\r\n        FROM\r\n          (\r\n            (\r\n              i.avr_start_date + (it.sla_deadline || ' minutes') :: interval\r\n            ) - NOW()\r\n          )\r\n      ) < 0 THEN 'ERROR' -- Осталось <= 1 часа\r\n      WHEN EXTRACT(\r\n        EPOCH\r\n        FROM\r\n          (\r\n            (\r\n              i.avr_start_date + (it.sla_deadline || ' minutes') :: interval\r\n            ) - NOW()\r\n          )\r\n      ) <= 3600 THEN 'WARNING' -- Осталось > 1 часа\r\n      ELSE 'NORMAL'\r\n    END\r\n  END as \"Статус SLA\",\r\n  COALESCE(p.address, 'Без адреса') AS \"Адрес\",\r\n  p.pole_latitude AS latitude,\r\n  p.pole_longtitude AS longitude,\r\n  i.id AS incident_id,\r\n  p.site_id AS pole_site_id\r\nFROM\r\n  incidents_incident AS i\r\n  LEFT JOIN (\r\n    SELECT\r\n      DISTINCT ON (sh.incident_id) sh.incident_id,\r\n      s.name\r\n    FROM\r\n      incidents_incidentstatushistory sh\r\n      JOIN incidents_incidentstatus s ON sh.status_id = s.id\r\n    ORDER BY\r\n      sh.incident_id,\r\n      sh.insert_date DESC,\r\n      sh.id DESC\r\n  ) AS last_status ON i.id = last_status.incident_id\r\n  LEFT JOIN incidents_incidenttype AS it ON i.incident_type_id = it.id\r\n  LEFT JOIN incidents_incidentsubtype AS ist ON i.incident_subtype_id = ist.id\r\n  LEFT JOIN incidents_incidentcategoryrelation AS icr ON i.id = icr.incident_id\r\n  LEFT JOIN incidents_incidentcategory AS ic ON icr.category_id = ic.id\r\n  LEFT JOIN ts_pole AS p ON i.pole_id = p.id\r\n  LEFT JOIN ts_region AS r ON p.region_id = r.id\r\n  LEFT JOIN ts_macroregion AS m ON r.macroregion_id = m.id\r\n  LEFT JOIN ts_basestation AS b ON i.base_station_id = b.id\r\n  LEFT JOIN ts_basestation_operator AS bs_op ON b.id = bs_op.basestation_id\r\n  LEFT JOIN ts_basestationoperator AS op ON bs_op.basestationoperator_id = op.id\r\nWHERE\r\n  ic.name = 'АВР'\r\n  AND ic.id IN ($categories)\r\n  AND is_incident_finish = False\r\n  AND p.pole_latitude IS NOT NULL\r\n  AND p.pole_longtitude IS NOT NULL\r\n  AND $__timeFilter(i.incident_date)\r\n  AND (\r\n    $macroregion = 0\r\n    OR m.id IN ($macroregion)\r\n  )\r\n  AND (\r\n    $avr_contractor = 0\r\n    OR p.avr_contractor_id IN ($avr_contractor)\r\n  )\r\n  AND (\r\n    '${region_manager}' = '0'\r\n    OR r.responsible_manager = '${region_manager}'\r\n  )\r\n  AND (\r\n    '${operator_group}' = '0'\r\n    OR op.operator_group = '${operator_group}'\r\n  )\r\n  AND (\r\n      ( '${min_incident_ttl}' = '0' OR \r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) >= ${min_incident_ttl} )\r\n  )\r\n  AND (\r\n      ( '${max_incident_ttl}' = '0' OR \r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) <= ${max_incident_ttl} )\r\n  )\r\n  AND (\r\n    (\r\n      -1 IN ($incident_type)\r\n      AND (\r\n        incident_type_id IS NULL\r\n        OR incident_type_id IN ($incident_type)\r\n      )\r\n    )\r\n    OR 0 IN ($incident_type)\r\n    OR incident_type_id IN ($incident_type)\r\n  )\r\n  AND (\r\n    (\r\n      -1 IN ($incident_subtype)\r\n      AND (\r\n        incident_subtype_id IS NULL\r\n        OR incident_subtype_id IN ($incident_subtype)\r\n      )\r\n    )\r\n    OR 0 IN ($incident_subtype)\r\n    OR incident_subtype_id IN ($incident_subtype)\r\n  )\r\nGROUP BY\r\n  i.id,\r\n  i.code,\r\n  last_status.name,\r\n  i.incident_date,\r\n  p.pole,\r\n  b.bs_name,\r\n  it.name,\r\n  ist.name,\r\n  p.address,\r\n  p.pole_latitude,\r\n  p.pole_longtitude,\r\n  p.site_id,\r\n  it.sla_deadline,\r\n  i.avr_start_date,\r\n  i.avr_end_date",
+                      "sql": {
+                        "columns": [
+                          {
+                            "parameters": [],
+                            "type": "function"
+                          }
+                        ],
+                        "groupBy": [
+                          {
+                            "property": {
+                              "type": "string"
+                            },
+                            "type": "groupBy"
+                          }
+                        ],
+                        "limit": 50
+                      }
+                    },
+                    "version": "v0"
+                  },
+                  "refId": "АВР"
+                }
+              },
+              {
+                "kind": "PanelQuery",
+                "spec": {
+                  "hidden": false,
+                  "query": {
+                    "datasource": {
+                      "name": "ffl50zkmfecxse"
+                    },
+                    "group": "grafana-postgresql-datasource",
+                    "kind": "DataQuery",
+                    "spec": {
+                      "dataset": "dispatch",
+                      "editorMode": "code",
+                      "format": "table",
+                      "rawQuery": true,
+                      "rawSql": "SELECT\r\n  COALESCE(i.code, 'ID: ' || i.id) || ' (' || COALESCE(last_status.name, 'Без статуса') || ')' AS \"Инцидент\",\r\n  to_char(\r\n    i.incident_date AT TIME ZONE 'Europe/Moscow',\r\n    'DD.MM.YYYY HH24:MI'\r\n  ) AS \"Зарегестрирован\",\r\n  p.pole AS \"Опора\",\r\n  COALESCE(b.bs_name, 'Отсутствует') AS \"Базовая станция\",\r\n  COALESCE(it.name, 'Отсутствует') AS \"Тип инцидента\",\r\n  COALESCE(ist.name, 'Отсутствует') AS \"Подтип инцидента\",\r\n  \r\n  -- Расчет времени начала РВР (для информации)\r\n  CASE\r\n    WHEN i.rvr_start_date IS NULL THEN 'Отсутствует'\r\n    ELSE to_char(\r\n      i.rvr_start_date AT TIME ZONE 'Europe/Moscow',\r\n      'DD.MM.YYYY HH24:MI'\r\n    )\r\n  END AS \"Начало РВР\",\r\n  \r\n  -- Расчет времени окончания РВР (если есть)\r\n  CASE\r\n    WHEN i.rvr_end_date IS NULL THEN 'Отсутствует'\r\n    ELSE to_char(\r\n      i.rvr_end_date AT TIME ZONE 'Europe/Moscow',\r\n      'DD.MM.YYYY HH24:MI'\r\n    )\r\n  END AS \"Конец РВР\",\r\n  \r\n  -- Расчет дедлайна (фиксированный +72 часа от старта РВР)\r\n  CASE\r\n    WHEN i.rvr_start_date IS NULL THEN 'Отсутсвтует'\r\n    ELSE to_char(\r\n      (i.rvr_start_date + INTERVAL '4320 minutes') AT TIME ZONE 'Europe/Moscow',\r\n      'DD.MM.YYYY HH24:MI'\r\n    )\r\n  END AS \"Дедлайн РВР\",\r\n  \r\n  -- Логика SLA для РВР (Фиксированная 72 часа)\r\n  CASE\r\n    -- Если инцидент закрыт или нет старта\r\n    WHEN i.rvr_start_date IS NULL THEN 'EMPTY'\r\n    \r\n    WHEN i.rvr_end_date IS NOT NULL THEN CASE\r\n      WHEN i.rvr_end_date > (i.rvr_start_date + INTERVAL '4320 minutes') THEN 'CRITICAL' -- Просрочен\r\n      ELSE 'CLOSED' -- Закрыто вовремя\r\n    END\r\n    \r\n    -- Если инцидент открыт\r\n    ELSE CASE\r\n      -- Проверка на просрочку (текущее время > начало + 72ч)\r\n      WHEN EXTRACT(EPOCH FROM ((i.rvr_start_date + INTERVAL '4320 minutes') - NOW())) < 0 \r\n      THEN 'ERROR' \r\n      \r\n      -- Менее часа до конца (осталось <= 1 час)\r\n      WHEN EXTRACT(EPOCH FROM ((i.rvr_start_date + INTERVAL '4320 minutes') - NOW())) <= 3600 \r\n      THEN 'WARNING' \r\n      \r\n      -- Все хорошо -> В работе\r\n      ELSE 'NORMAL'\r\n    END\r\n  END AS \"Статус SLA\",\r\n  \r\n  COALESCE(p.address, 'Без адреса') AS \"Адрес\",\r\n  p.pole_latitude AS latitude,\r\n  p.pole_longtitude AS longitude,\r\n  i.id AS incident_id,\r\n  p.site_id AS pole_site_id\r\nFROM\r\n  incidents_incident AS i\r\n  LEFT JOIN (\r\n    SELECT\r\n      DISTINCT ON (sh.incident_id) sh.incident_id,\r\n      s.name\r\n    FROM\r\n      incidents_incidentstatushistory sh\r\n      JOIN incidents_incidentstatus s ON sh.status_id = s.id\r\n    ORDER BY\r\n      sh.incident_id,\r\n      sh.insert_date DESC,\r\n      sh.id DESC\r\n  ) AS last_status ON i.id = last_status.incident_id\r\n  LEFT JOIN incidents_incidenttype AS it ON i.incident_type_id = it.id\r\n  LEFT JOIN incidents_incidentsubtype AS ist ON i.incident_subtype_id = ist.id\r\n  LEFT JOIN incidents_incidentcategoryrelation AS icr ON i.id = icr.incident_id\r\n  LEFT JOIN incidents_incidentcategory AS ic ON icr.category_id = ic.id\r\n  LEFT JOIN ts_pole AS p ON i.pole_id = p.id\r\n  LEFT JOIN ts_region AS r ON p.region_id = r.id\r\n  LEFT JOIN ts_macroregion AS m ON r.macroregion_id = m.id\r\n  LEFT JOIN ts_basestation AS b ON i.base_station_id = b.id\r\n  LEFT JOIN ts_basestation_operator AS bs_op ON b.id = bs_op.basestation_id\r\n  LEFT JOIN ts_basestationoperator AS op ON bs_op.basestationoperator_id = op.id\r\nWHERE\r\n  ic.name = 'РВР'\r\n  AND ic.id IN ($categories)\r\n  AND i.is_incident_finish = False\r\n  AND p.pole_latitude IS NOT NULL\r\n  AND p.pole_longtitude IS NOT NULL\r\n  AND $__timeFilter(i.incident_date)\r\n  AND (\r\n    $macroregion = 0\r\n    OR m.id IN ($macroregion)\r\n  )\r\n  AND (\r\n    $avr_contractor = 0\r\n    OR p.avr_contractor_id IN ($avr_contractor)\r\n  )\r\n  AND (\r\n    '${region_manager}' = '0'\r\n    OR r.responsible_manager = '${region_manager}'\r\n  )\r\n  AND (\r\n    '${operator_group}' = '0'\r\n    OR op.operator_group = '${operator_group}'\r\n  )\r\n  AND (\r\n      ( '${min_incident_ttl}' = '0' OR \r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) >= ${min_incident_ttl} )\r\n  )\r\n  AND (\r\n      ( '${max_incident_ttl}' = '0' OR \r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) <= ${max_incident_ttl} )\r\n  )\r\n  AND (\r\n      (-1 IN ($incident_type) AND (i.incident_type_id IS NULL OR i.incident_type_id IN ($incident_type)))\r\n      OR 0 IN ($incident_type)\r\n      OR i.incident_type_id IN ($incident_type)\r\n  )\r\n  AND (\r\n      (-1 IN ($incident_subtype) AND (i.incident_subtype_id IS NULL OR i.incident_subtype_id IN ($incident_subtype)))\r\n      OR 0 IN ($incident_subtype)\r\n      OR i.incident_subtype_id IN ($incident_subtype)\r\n  )\r\nGROUP BY\r\n  i.id,\r\n  i.code,\r\n  last_status.name,\r\n  i.incident_date,\r\n  p.pole,\r\n  b.bs_name,\r\n  it.name,\r\n  ist.name,\r\n  p.address,\r\n  p.pole_latitude,\r\n  p.pole_longtitude,\r\n  p.site_id,\r\n  i.rvr_start_date,\r\n  i.rvr_end_date",
+                      "sql": {
+                        "columns": [
+                          {
+                            "parameters": [],
+                            "type": "function"
+                          }
+                        ],
+                        "groupBy": [
+                          {
+                            "property": {
+                              "type": "string"
+                            },
+                            "type": "groupBy"
+                          }
+                        ],
+                        "limit": 50
+                      }
+                    },
+                    "version": "v0"
+                  },
+                  "refId": "РВР"
+                }
+              },
+              {
+                "kind": "PanelQuery",
+                "spec": {
+                  "hidden": false,
+                  "query": {
+                    "datasource": {
+                      "name": "ffl50zkmfecxse"
+                    },
+                    "group": "grafana-postgresql-datasource",
+                    "kind": "DataQuery",
+                    "spec": {
+                      "dataset": "dispatch",
+                      "editorMode": "code",
+                      "format": "table",
+                      "rawQuery": true,
+                      "rawSql": "SELECT\r\n  COALESCE(i.code, 'ID: ' || i.id) || ' (' || COALESCE(last_status.name, 'Без статуса') || ')' AS \"Инцидент\",\r\n  to_char(\r\n    i.incident_date AT TIME ZONE 'Europe/Moscow',\r\n    'DD.MM.YYYY HH24:MI'\r\n  ) AS \"Зарегестрирован\",\r\n  p.pole AS \"Опора\",\r\n  COALESCE(b.bs_name, 'Отсутствует') AS \"Базовая станция\",\r\n  COALESCE(it.name, 'Отсутствует') AS \"Тип инцидента\",\r\n  COALESCE(ist.name, 'Отсутствует') AS \"Подтип инцидента\",\r\n  \r\n  -- Расчет времени начала ДГУ (для информации)\r\n  CASE\r\n    WHEN i.dgu_start_date IS NULL THEN 'Отсутствует'\r\n    ELSE to_char(\r\n      i.dgu_start_date AT TIME ZONE 'Europe/Moscow',\r\n      'DD.MM.YYYY HH24:MI'\r\n    )\r\n  END AS \"Начало ДГУ\",\r\n  \r\n  -- Расчет времени окончания ДГУ (если есть)\r\n  CASE\r\n    WHEN i.dgu_end_date IS NULL THEN 'Отсутствует'\r\n    ELSE to_char(\r\n      i.dgu_end_date AT TIME ZONE 'Europe/Moscow',\r\n      'DD.MM.YYYY HH24:MI'\r\n    )\r\n  END AS \"Конец ДГУ\",\r\n  \r\n  -- Логика SLA для ДГУ (15 дней / 12 часов)\r\n  CASE\r\n    -- Если инцидент закрыт или нет старта\r\n    WHEN i.dgu_start_date IS NULL THEN 'EMPTY'\r\n    \r\n    WHEN i.dgu_end_date IS NOT NULL THEN CASE\r\n      -- Если закрыто, но прошло больше 15 дней с начала\r\n      WHEN i.dgu_end_date > (i.dgu_start_date + INTERVAL '15 days') THEN 'CRITICAL_1'\r\n      ELSE 'CLOSED_1'\r\n    END\r\n    \r\n    -- Если инцидент открыт\r\n    ELSE CASE\r\n      -- 1. Прошло больше 15 дней (15 * 24 * 3600 = 1296000 секунд)\r\n      WHEN EXTRACT(EPOCH FROM (NOW() - i.dgu_start_date)) > 1296000 THEN 'ERROR_1' \r\n      \r\n      -- 2. Прошло меньше 12 часов с момента старта (12 * 3600 = 43200 секунд)\r\n      WHEN EXTRACT(EPOCH FROM (NOW() - i.dgu_start_date)) <= 43200 THEN 'NORMAL_1' \r\n      \r\n      -- 3. Прошло больше 12 часов, но меньше 15 дней\r\n      ELSE 'WARNING_1'\r\n    END\r\n  END AS \"Статус SLA\",\r\n  \r\n  COALESCE(p.address, 'Без адреса') AS \"Адрес\",\r\n  p.pole_latitude AS latitude,\r\n  p.pole_longtitude AS longitude,\r\n  i.id AS incident_id,\r\n  p.site_id AS pole_site_id\r\nFROM\r\n  incidents_incident AS i\r\n  LEFT JOIN (\r\n    SELECT\r\n      DISTINCT ON (sh.incident_id) sh.incident_id,\r\n      s.name\r\n    FROM\r\n      incidents_incidentstatushistory sh\r\n      JOIN incidents_incidentstatus s ON sh.status_id = s.id\r\n    ORDER BY\r\n      sh.incident_id,\r\n      sh.insert_date DESC,\r\n      sh.id DESC\r\n  ) AS last_status ON i.id = last_status.incident_id\r\n  LEFT JOIN incidents_incidenttype AS it ON i.incident_type_id = it.id\r\n  LEFT JOIN incidents_incidentsubtype AS ist ON i.incident_subtype_id = ist.id\r\n  LEFT JOIN incidents_incidentcategoryrelation AS icr ON i.id = icr.incident_id\r\n  LEFT JOIN incidents_incidentcategory AS ic ON icr.category_id = ic.id\r\n  LEFT JOIN ts_pole AS p ON i.pole_id = p.id\r\n  LEFT JOIN ts_region AS r ON p.region_id = r.id\r\n  LEFT JOIN ts_macroregion AS m ON r.macroregion_id = m.id\r\n  LEFT JOIN ts_basestation AS b ON i.base_station_id = b.id\r\n  LEFT JOIN ts_basestation_operator AS bs_op ON b.id = bs_op.basestation_id\r\n  LEFT JOIN ts_basestationoperator AS op ON bs_op.basestationoperator_id = op.id\r\nWHERE\r\n  ic.name = 'ДГУ'\r\n  AND ic.id IN ($categories)\r\n  AND i.is_incident_finish = False\r\n  AND p.pole_latitude IS NOT NULL\r\n  AND p.pole_longtitude IS NOT NULL\r\n  AND $__timeFilter(i.incident_date)\r\n  AND (\r\n    $macroregion = 0\r\n    OR m.id IN ($macroregion)\r\n  )\r\n  AND (\r\n    $avr_contractor = 0\r\n    OR p.avr_contractor_id IN ($avr_contractor)\r\n  )\r\n  AND (\r\n    '${region_manager}' = '0'\r\n    OR r.responsible_manager = '${region_manager}'\r\n  )\r\n  AND (\r\n    '${operator_group}' = '0'\r\n    OR op.operator_group = '${operator_group}'\r\n  )\r\n  AND (\r\n      ( '${min_incident_ttl}' = '0' OR \r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) >= ${min_incident_ttl} )\r\n  )\r\n  AND (\r\n      ( '${max_incident_ttl}' = '0' OR \r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) <= ${max_incident_ttl} )\r\n  )\r\n  AND (\r\n      (-1 IN ($incident_type) AND (i.incident_type_id IS NULL OR i.incident_type_id IN ($incident_type)))\r\n      OR 0 IN ($incident_type)\r\n      OR i.incident_type_id IN ($incident_type)\r\n  )\r\n  AND (\r\n      (-1 IN ($incident_subtype) AND (i.incident_subtype_id IS NULL OR i.incident_subtype_id IN ($incident_subtype)))\r\n      OR 0 IN ($incident_subtype)\r\n      OR i.incident_subtype_id IN ($incident_subtype)\r\n  )\r\nGROUP BY\r\n  i.id,\r\n  i.code,\r\n  last_status.name,\r\n  i.incident_date,\r\n  p.pole,\r\n  b.bs_name,\r\n  it.name,\r\n  ist.name,\r\n  p.address,\r\n  p.pole_latitude,\r\n  p.pole_longtitude,\r\n  p.site_id,\r\n  i.dgu_start_date,\r\n  i.dgu_end_date",
+                      "sql": {
+                        "columns": [
+                          {
+                            "parameters": [],
+                            "type": "function"
+                          }
+                        ],
+                        "groupBy": [
+                          {
+                            "property": {
+                              "type": "string"
+                            },
+                            "type": "groupBy"
+                          }
+                        ],
+                        "limit": 50
+                      }
+                    },
+                    "version": "v0"
+                  },
+                  "refId": "ДГУ"
+                }
+              },
+              {
+                "kind": "PanelQuery",
+                "spec": {
+                  "hidden": false,
+                  "query": {
+                    "datasource": {
+                      "name": "ffl50zkmfecxse"
+                    },
+                    "group": "grafana-postgresql-datasource",
+                    "kind": "DataQuery",
+                    "spec": {
+                      "dataset": "dispatch",
+                      "editorMode": "code",
+                      "format": "table",
+                      "rawQuery": true,
+                      "rawSql": "SELECT\r\n  COALESCE(i.code, 'ID: ' || i.id) || ' (' || COALESCE(last_status.name, 'Без статуса') || ')' AS \"Инцидент\",\r\n  to_char(\r\n    i.incident_date AT TIME ZONE 'Europe/Moscow',\r\n    'DD.MM.YYYY HH24:MI'\r\n  ) AS \"Зарегестрирован\",\r\n  p.pole AS \"Опора\",\r\n  COALESCE(b.bs_name, 'Отсутствует') AS \"Базовая станция\",\r\n  COALESCE(it.name, 'Отсутствует') AS \"Тип инцидента\",\r\n  COALESCE(ist.name, 'Отсутствует') AS \"Подтип инцидента\",\r\n  \r\n  -- Расчет времени начала ЭКС (для информации)\r\n  CASE\r\n    WHEN i.eks_start_date IS NULL THEN 'Отсутствует'\r\n    ELSE to_char(\r\n      i.eks_start_date AT TIME ZONE 'Europe/Moscow',\r\n      'DD.MM.YYYY HH24:MI'\r\n    )\r\n  END AS \"Начало ЭКС\",\r\n  \r\n  -- Расчет времени окончания ЭКС (если есть)\r\n  CASE\r\n    WHEN i.eks_end_date IS NULL THEN 'Отсутствует'\r\n    ELSE to_char(\r\n      i.eks_end_date AT TIME ZONE 'Europe/Moscow',\r\n      'DD.MM.YYYY HH24:MI'\r\n    )\r\n  END AS \"Конец ЭКС\",\r\n  \r\n  -- Логика SLA для ЭКС (15 дней / 12 часов)\r\n  CASE\r\n    -- Если инцидент закрыт или нет старта\r\n    WHEN i.eks_start_date IS NULL THEN 'EMPTY'\r\n    \r\n    WHEN i.eks_end_date IS NOT NULL THEN CASE\r\n      -- Если закрыто, но прошло больше 15 дней с начала\r\n      WHEN i.eks_end_date > (i.eks_start_date + INTERVAL '15 days') THEN 'CRITICAL_1'\r\n      ELSE 'CLOSED_1'\r\n    END\r\n    \r\n    -- Если инцидент открыт\r\n    ELSE CASE\r\n      -- 1. Прошло больше 15 дней (15 * 24 * 3600 = 1296000 секунд)\r\n      WHEN EXTRACT(EPOCH FROM (NOW() - i.eks_start_date)) > 1296000 THEN 'ERROR_1' \r\n      \r\n      -- 2. Прошло меньше 12 часов с момента старта (12 * 3600 = 43200 секунд)\r\n      WHEN EXTRACT(EPOCH FROM (NOW() - i.eks_start_date)) <= 43200 THEN 'NORMAL_1' \r\n      \r\n      -- 3. Прошло больше 12 часов, но меньше 15 дней\r\n      ELSE 'WARNING_1'\r\n    END\r\n  END AS \"Статус SLA\",\r\n  \r\n  COALESCE(p.address, 'Без адреса') AS \"Адрес\",\r\n  p.pole_latitude AS latitude,\r\n  p.pole_longtitude AS longitude,\r\n  i.id AS incident_id,\r\n  p.site_id AS pole_site_id\r\nFROM\r\n  incidents_incident AS i\r\n  LEFT JOIN (\r\n    SELECT\r\n      DISTINCT ON (sh.incident_id) sh.incident_id,\r\n      s.name\r\n    FROM\r\n      incidents_incidentstatushistory sh\r\n      JOIN incidents_incidentstatus s ON sh.status_id = s.id\r\n    ORDER BY\r\n      sh.incident_id,\r\n      sh.insert_date DESC,\r\n      sh.id DESC\r\n  ) AS last_status ON i.id = last_status.incident_id\r\n  LEFT JOIN incidents_incidenttype AS it ON i.incident_type_id = it.id\r\n  LEFT JOIN incidents_incidentsubtype AS ist ON i.incident_subtype_id = ist.id\r\n  LEFT JOIN incidents_incidentcategoryrelation AS icr ON i.id = icr.incident_id\r\n  LEFT JOIN incidents_incidentcategory AS ic ON icr.category_id = ic.id\r\n  LEFT JOIN ts_pole AS p ON i.pole_id = p.id\r\n  LEFT JOIN ts_region AS r ON p.region_id = r.id\r\n  LEFT JOIN ts_macroregion AS m ON r.macroregion_id = m.id\r\n  LEFT JOIN ts_basestation AS b ON i.base_station_id = b.id\r\n  LEFT JOIN ts_basestation_operator AS bs_op ON b.id = bs_op.basestation_id\r\n  LEFT JOIN ts_basestationoperator AS op ON bs_op.basestationoperator_id = op.id\r\nWHERE\r\n  ic.name = 'ЭКС'\r\n  AND ic.id IN ($categories)\r\n  AND i.is_incident_finish = False\r\n  AND p.pole_latitude IS NOT NULL\r\n  AND p.pole_longtitude IS NOT NULL\r\n  AND $__timeFilter(i.incident_date)\r\n  AND (\r\n    $macroregion = 0\r\n    OR m.id IN ($macroregion)\r\n  )\r\n  AND (\r\n    $avr_contractor = 0\r\n    OR p.avr_contractor_id IN ($avr_contractor)\r\n  )\r\n  AND (\r\n    '${region_manager}' = '0'\r\n    OR r.responsible_manager = '${region_manager}'\r\n  )\r\n  AND (\r\n    '${operator_group}' = '0'\r\n    OR op.operator_group = '${operator_group}'\r\n  )\r\n  AND (\r\n      ( '${min_incident_ttl}' = '0' OR \r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) >= ${min_incident_ttl} )\r\n  )\r\n  AND (\r\n      ( '${max_incident_ttl}' = '0' OR \r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) <= ${max_incident_ttl} )\r\n  )\r\n  AND (\r\n      (-1 IN ($incident_type) AND (i.incident_type_id IS NULL OR i.incident_type_id IN ($incident_type)))\r\n      OR 0 IN ($incident_type)\r\n      OR i.incident_type_id IN ($incident_type)\r\n  )\r\n  AND (\r\n      (-1 IN ($incident_subtype) AND (i.incident_subtype_id IS NULL OR i.incident_subtype_id IN ($incident_subtype)))\r\n      OR 0 IN ($incident_subtype)\r\n      OR i.incident_subtype_id IN ($incident_subtype)\r\n  )\r\nGROUP BY\r\n  i.id,\r\n  i.code,\r\n  last_status.name,\r\n  i.incident_date,\r\n  p.pole,\r\n  b.bs_name,\r\n  it.name,\r\n  ist.name,\r\n  p.address,\r\n  p.pole_latitude,\r\n  p.pole_longtitude,\r\n  p.site_id,\r\n  i.eks_start_date,\r\n  i.eks_end_date",
+                      "sql": {
+                        "columns": [
+                          {
+                            "parameters": [],
+                            "type": "function"
+                          }
+                        ],
+                        "groupBy": [
+                          {
+                            "property": {
+                              "type": "string"
+                            },
+                            "type": "groupBy"
+                          }
+                        ],
+                        "limit": 50
+                      }
+                    },
+                    "version": "v0"
+                  },
+                  "refId": "ЭКС"
+                }
+              }
+            ],
+            "queryOptions": {},
+            "transformations": [
+              {
+                "group": "filterByValue",
+                "kind": "Transformation",
+                "spec": {
+                  "options": {
+                    "filters": [
+                      {
+                        "config": {
+                          "id": "substring",
+                          "options": {
+                            "value": "$is_normal"
+                          }
+                        },
+                        "fieldName": "Статус SLA"
+                      },
+                      {
+                        "config": {
+                          "id": "substring",
+                          "options": {
+                            "value": "$is_error"
+                          }
+                        },
+                        "fieldName": "Статус SLA"
+                      },
+                      {
+                        "config": {
+                          "id": "substring",
+                          "options": {
+                            "value": "$is_warning"
+                          }
+                        },
+                        "fieldName": "Статус SLA"
+                      },
+                      {
+                        "config": {
+                          "id": "substring",
+                          "options": {
+                            "value": "$is_empty"
+                          }
+                        },
+                        "fieldName": "Статус SLA"
+                      },
+                      {
+                        "config": {
+                          "id": "substring",
+                          "options": {
+                            "value": "$is_ok_closed"
+                          }
+                        },
+                        "fieldName": "Статус SLA"
+                      },
+                      {
+                        "config": {
+                          "id": "substring",
+                          "options": {
+                            "value": "$is_critical"
+                          }
+                        },
+                        "fieldName": "Статус SLA"
+                      }
+                    ],
+                    "match": "any",
+                    "type": "include"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "description": "Открытые инциденты",
+        "id": 1,
+        "links": [],
+        "title": "",
+        "vizConfig": {
+          "group": "geomap",
+          "kind": "VizConfig",
+          "spec": {
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "fixedColor": "dark-red",
+                  "mode": "fixed"
+                },
+                "custom": {
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": false
+                  }
+                },
+                "decimals": 5,
+                "links": [
+                  {
+                    "targetBlank": true,
+                    "title": "Карточка инцидента",
+                    "url": "https://disp.newtowers.ru/incidents/${__data.fields.incident_id}/"
+                  },
+                  {
+                    "targetBlank": true,
+                    "title": "Карточка опоры",
+                    "url": "https://fridge.newtowers.ru/site/passport/${__data.fields.pole_site_id}?proj=${__data.fields.pole_site_id}"
+                  }
+                ],
+                "mappings": [
+                  {
+                    "options": {
+                      "CLOSED": {
+                        "color": "green",
+                        "index": 3,
+                        "text": "Закрыт"
+                      },
+                      "CLOSED_1": {
+                        "color": "green",
+                        "index": 9,
+                        "text": "Закрыт за 15 дней"
+                      },
+                      "CRITICAL": {
+                        "color": "red",
+                        "index": 0,
+                        "text": "Просрочен (закрыт)"
+                      },
+                      "CRITICAL_1": {
+                        "color": "red",
+                        "index": 6,
+                        "text": "Более 15 дней (закрыт)"
+                      },
+                      "EMPTY": {
+                        "color": "#7d7d7d",
+                        "index": 5,
+                        "text": "Отсутствует"
+                      },
+                      "ERROR": {
+                        "color": "orange",
+                        "index": 1,
+                        "text": "Просрочен (открыт)"
+                      },
+                      "ERROR_1": {
+                        "color": "orange",
+                        "index": 7,
+                        "text": "Более 15 дней (открыт)"
+                      },
+                      "NORMAL": {
+                        "color": "blue",
+                        "index": 4,
+                        "text": "В работе"
+                      },
+                      "NORMAL_1": {
+                        "color": "blue",
+                        "index": 10,
+                        "text": "Менее 12 часов"
+                      },
+                      "WARNING": {
+                        "color": "yellow",
+                        "index": 2,
+                        "text": "Меньше часа"
+                      },
+                      "WARNING_1": {
+                        "color": "yellow",
+                        "index": 8,
+                        "text": "Менее 15 дней"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": 0
+                    }
+                  ]
+                }
+              },
+              "overrides": [
+                {
+                  "matcher": {
+                    "id": "byName",
+                    "options": "incident_id",
+                    "scope": "series"
+                  },
+                  "properties": [
+                    {
+                      "id": "decimals",
+                      "value": 0
+                    },
+                    {
+                      "id": "custom.hideFrom",
+                      "value": {
+                        "legend": true,
+                        "tooltip": true,
+                        "viz": true
+                      }
+                    }
+                  ]
+                },
+                {
+                  "matcher": {
+                    "id": "byName",
+                    "options": "pole_site_id",
+                    "scope": "series"
+                  },
+                  "properties": [
+                    {
+                      "id": "custom.hideFrom",
+                      "value": {
+                        "legend": true,
+                        "tooltip": true,
+                        "viz": true
+                      }
+                    },
+                    {
+                      "id": "decimals",
+                      "value": 0
+                    }
+                  ]
+                }
+              ]
+            },
+            "options": {
+              "basemap": {
+                "config": {
+                  "language": "ru",
+                  "server": "positron",
+                  "showLabels": true,
+                  "theme": "auto"
+                },
+                "layer-tooltip": false,
+                "name": "Слой 0",
+                "noRepeat": true,
+                "opacity": 1,
+                "type": "carto"
+              },
+              "controls": {
+                "mouseWheelZoom": true,
+                "showAttribution": false,
+                "showDebug": false,
+                "showMeasure": true,
+                "showScale": true,
+                "showZoom": true
+              },
+              "layers": [
+                {
+                  "config": {
+                    "showLegend": true,
+                    "style": {
+                      "color": {
+                        "field": "Статус SLA",
+                        "fixed": "dark-green"
+                      },
+                      "opacity": 1,
+                      "rotation": {
+                        "fixed": 0,
+                        "max": 360,
+                        "min": -360,
+                        "mode": "mod"
+                      },
+                      "size": {
+                        "fixed": 17,
+                        "max": 15,
+                        "min": 2
+                      },
+                      "symbol": {
+                        "fixed": "img/icons/unicons/info-circle.svg",
+                        "mode": "fixed"
+                      },
+                      "symbolAlign": {
+                        "horizontal": "center",
+                        "vertical": "center"
+                      },
+                      "text": {
+                        "field": "Опора",
+                        "fixed": "",
+                        "mode": "field"
+                      },
+                      "textConfig": {
+                        "fontSize": 12,
+                        "offsetX": 0,
+                        "offsetY": -16,
+                        "textAlign": "center",
+                        "textBaseline": "bottom"
+                      }
+                    }
+                  },
+                  "filterData": {
+                    "id": "byRefId",
+                    "options": "ЭКС"
+                  },
+                  "location": {
+                    "mode": "auto"
+                  },
+                  "name": "ЭКС",
+                  "tooltip": true,
+                  "type": "markers"
+                },
+                {
+                  "config": {
+                    "showLegend": true,
+                    "style": {
+                      "color": {
+                        "field": "Статус SLA",
+                        "fixed": "dark-green"
+                      },
+                      "opacity": 1,
+                      "rotation": {
+                        "fixed": 0,
+                        "max": 360,
+                        "min": -360,
+                        "mode": "mod"
+                      },
+                      "size": {
+                        "fixed": 17,
+                        "max": 15,
+                        "min": 2
+                      },
+                      "symbol": {
+                        "fixed": "img/icons/unicons/bolt-slash.svg",
+                        "mode": "fixed"
+                      },
+                      "symbolAlign": {
+                        "horizontal": "center",
+                        "vertical": "center"
+                      },
+                      "text": {
+                        "field": "Опора",
+                        "fixed": "",
+                        "mode": "field"
+                      },
+                      "textConfig": {
+                        "fontSize": 12,
+                        "offsetX": 0,
+                        "offsetY": -16,
+                        "textAlign": "center",
+                        "textBaseline": "bottom"
+                      }
+                    }
+                  },
+                  "filterData": {
+                    "id": "byRefId",
+                    "options": "ДГУ"
+                  },
+                  "layer-tooltip": true,
+                  "location": {
+                    "mode": "auto"
+                  },
+                  "name": "ДГУ",
+                  "tooltip": true,
+                  "type": "markers"
+                },
+                {
+                  "config": {
+                    "showLegend": true,
+                    "style": {
+                      "color": {
+                        "field": "Статус SLA",
+                        "fixed": "green"
+                      },
+                      "opacity": 1,
+                      "rotation": {
+                        "fixed": 0,
+                        "max": 360,
+                        "min": -360,
+                        "mode": "mod"
+                      },
+                      "size": {
+                        "fixed": 17,
+                        "max": 15,
+                        "min": 2
+                      },
+                      "symbol": {
+                        "fixed": "img/icons/unicons/cog.svg",
+                        "mode": "fixed"
+                      },
+                      "symbolAlign": {
+                        "horizontal": "center",
+                        "vertical": "center"
+                      },
+                      "text": {
+                        "field": "Опора",
+                        "fixed": "",
+                        "mode": "field"
+                      },
+                      "textConfig": {
+                        "fontSize": 12,
+                        "offsetX": 0,
+                        "offsetY": -16,
+                        "textAlign": "center",
+                        "textBaseline": "bottom"
+                      }
+                    }
+                  },
+                  "filterData": {
+                    "id": "byRefId",
+                    "options": "РВР"
+                  },
+                  "layer-tooltip": true,
+                  "location": {
+                    "mode": "auto"
+                  },
+                  "name": "РВР",
+                  "tooltip": true,
+                  "type": "markers"
+                },
+                {
+                  "config": {
+                    "showLegend": true,
+                    "style": {
+                      "color": {
+                        "field": "Статус SLA",
+                        "fixed": "blue"
+                      },
+                      "opacity": 1,
+                      "rotation": {
+                        "fixed": 0,
+                        "max": 360,
+                        "min": -360,
+                        "mode": "mod"
+                      },
+                      "size": {
+                        "fixed": 17,
+                        "max": 15,
+                        "min": 2
+                      },
+                      "symbol": {
+                        "fixed": "img/icons/unicons/location-point.svg",
+                        "mode": "fixed"
+                      },
+                      "symbolAlign": {
+                        "horizontal": "center",
+                        "vertical": "center"
+                      },
+                      "text": {
+                        "field": "Опора",
+                        "fixed": "",
+                        "mode": "field"
+                      },
+                      "textConfig": {
+                        "fontSize": 12,
+                        "offsetX": 0,
+                        "offsetY": -16,
+                        "textAlign": "center",
+                        "textBaseline": "bottom"
+                      }
+                    }
+                  },
+                  "filterData": {
+                    "id": "byRefId",
+                    "options": "АВР"
+                  },
+                  "layer-tooltip": true,
+                  "location": {
+                    "mode": "auto"
+                  },
+                  "name": "АВР",
+                  "opacity": 1,
+                  "tooltip": true,
+                  "type": "markers"
+                }
+              ],
+              "legend": {
+                "displayMode": "list",
+                "placement": "right",
+                "showLegend": true
+              },
+              "tooltip": {
+                "mode": "details"
+              },
+              "view": {
+                "allLayers": true,
+                "dashboardVariable": false,
+                "dashboardVariableName": "",
+                "id": "coords",
+                "lat": 56.955747,
+                "lon": 36.811001,
+                "noRepeat": true,
+                "shared": true,
+                "zoom": 5.51
+              }
+            }
+          },
+          "version": "13.0.1"
+        }
+      }
     },
-    "annotations": {
-      "grafana.app/createdBy": "user:efl1z88m79kowf",
-      "grafana.app/folder": "bfl50ueq6xmv4e",
-      "grafana.app/saved-from-ui": "Grafana v13.0.1 (a100054f)",
-      "grafana.app/updatedBy": "user:efl1z88m79kowf",
-      "grafana.app/updatedTimestamp": "2026-06-25T23:20:46Z",
-      "grafana.app/folderTitle": "Public Dashboards",
-      "grafana.app/folderUrl": "/grafana/dashboards/f/bfl50ueq6xmv4e/public-dashboards"
+    "panel-3": {
+      "kind": "Panel",
+      "spec": {
+        "data": {
+          "kind": "QueryGroup",
+          "spec": {
+            "queries": [
+              {
+                "kind": "PanelQuery",
+                "spec": {
+                  "hidden": false,
+                  "query": {
+                    "datasource": {
+                      "name": "ffl50zkmfecxse"
+                    },
+                    "group": "grafana-postgresql-datasource",
+                    "kind": "DataQuery",
+                    "spec": {
+                      "dataset": "dispatch",
+                      "editorMode": "code",
+                      "format": "table",
+                      "rawQuery": true,
+                      "rawSql": "SELECT\r\n  p.pole AS \"Опора\",\r\n  COALESCE(b.bs_name, 'Отсутствует') AS \"Базовая станция\",\r\n  STRING_AGG(DISTINCT COALESCE(i.code, 'ID: ' || i.id), ', ') AS \"Инциденты\",\r\n  COUNT(DISTINCT i.id) AS \"Повторы\"\r\nFROM incidents_incident AS i\r\nJOIN ts_pole AS p ON i.pole_id = p.id\r\nLEFT JOIN ts_basestation AS b ON i.base_station_id = b.id\r\nLEFT JOIN incidents_incidentcategoryrelation AS icr ON i.id = icr.incident_id\r\nLEFT JOIN incidents_incidentcategory AS ic ON icr.category_id = ic.id\r\nLEFT JOIN ts_region AS r ON p.region_id = r.id\r\nLEFT JOIN ts_macroregion AS m ON r.macroregion_id = m.id\r\nLEFT JOIN ts_basestation_operator AS bs_op ON b.id = bs_op.basestation_id\r\nLEFT JOIN ts_basestationoperator AS op ON bs_op.basestationoperator_id = op.id\r\nWHERE \r\n  ic.id IN ($categories)\r\n  -- Только открытые инциденты\r\n  AND i.is_incident_finish = False \r\n  \r\n  -- Координаты (обязательно для карты)\r\n  AND p.pole IS NOT NULL\r\n  \r\n  AND $__timeFilter(i.incident_date)\r\n  AND ($macroregion = 0 OR m.id IN ($macroregion))\r\n  AND ($avr_contractor = 0 OR p.avr_contractor_id IN ($avr_contractor))\r\n  AND ('${region_manager}' = '0' OR r.responsible_manager = '${region_manager}')\r\n  AND ('${operator_group}' = '0' OR op.operator_group = '${operator_group}')\r\n  AND (\r\n      ( '${min_incident_ttl}' = '0' OR \r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) >= ${min_incident_ttl} )\r\n  )\r\n  AND (\r\n      ( '${max_incident_ttl}' = '0' OR \r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) <= ${max_incident_ttl} )\r\n  )\r\n  AND (\r\n      (-1 IN ($incident_type) AND (incident_type_id IS NULL OR incident_type_id IN ($incident_type)))\r\n      OR 0 IN ($incident_type)\r\n      OR incident_type_id IN ($incident_type)\r\n  )\r\n  AND (\r\n      (-1 IN ($incident_subtype) AND (incident_subtype_id IS NULL OR incident_subtype_id IN ($incident_subtype)))\r\n      OR 0 IN ($incident_subtype)\r\n      OR incident_subtype_id IN ($incident_subtype)\r\n  )\r\n\r\nGROUP BY \r\n  p.pole, \r\n  b.bs_name\r\n\r\nHAVING \r\n  COUNT(DISTINCT i.id) >= 2 \r\n\r\nORDER BY \r\n  p.pole,\r\n  b.bs_name,\r\n  COUNT(DISTINCT i.id) DESC,\r\n  MAX(i.incident_date) DESC;",
+                      "sql": {
+                        "columns": [
+                          {
+                            "parameters": [],
+                            "type": "function"
+                          }
+                        ],
+                        "groupBy": [
+                          {
+                            "property": {
+                              "type": "string"
+                            },
+                            "type": "groupBy"
+                          }
+                        ],
+                        "limit": 50
+                      }
+                    },
+                    "version": "v0"
+                  },
+                  "refId": "A"
+                }
+              }
+            ],
+            "queryOptions": {},
+            "transformations": []
+          }
+        },
+        "description": "",
+        "id": 3,
+        "links": [],
+        "title": "Повторяющиеся опоры и базовые станции",
+        "transparent": true,
+        "vizConfig": {
+          "group": "table",
+          "kind": "VizConfig",
+          "spec": {
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "custom": {
+                  "align": "auto",
+                  "cellOptions": {
+                    "type": "color-text"
+                  },
+                  "filterable": true,
+                  "footer": {
+                    "reducers": [
+                      "sum"
+                    ]
+                  },
+                  "inspect": false,
+                  "wrapHeaderText": true,
+                  "wrapText": true
+                },
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": 0
+                    },
+                    {
+                      "color": "blue",
+                      "value": 2
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 3
+                    },
+                    {
+                      "color": "red",
+                      "value": 4
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "cellHeight": "sm",
+              "enablePagination": true,
+              "showHeader": true,
+              "sortBy": []
+            }
+          },
+          "version": "13.0.1"
+        }
+      }
     }
   },
-  "spec": {
-    "annotations": [
-      {
-        "kind": "AnnotationQuery",
-        "spec": {
-          "query": {
-            "kind": "DataQuery",
-            "group": "grafana",
-            "version": "v0",
-            "datasource": {
-              "name": "-- Grafana --"
-            },
-            "spec": {}
-          },
-          "enable": true,
-          "hide": true,
-          "iconColor": "rgba(0, 211, 255, 1)",
-          "name": "Annotations & Alerts",
-          "builtIn": true
-        }
-      }
-    ],
-    "cursorSync": "Off",
-    "description": "Карта открытых инцидентов",
-    "editable": true,
-    "elements": {
-      "panel-1": {
-        "kind": "Panel",
-        "spec": {
-          "id": 1,
-          "title": "",
-          "description": "Открытые инциденты",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "grafana-postgresql-datasource",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "ffl50zkmfecxse"
-                      },
-                      "spec": {
-                        "dataset": "dispatch",
-                        "editorMode": "code",
-                        "format": "table",
-                        "rawQuery": true,
-                        "rawSql": "SELECT DISTINCT\r\n  COALESCE(i.code, 'ID: ' || i.id) || ' (' || COALESCE(last_status.name, 'Без статуса') || ')' AS \"Инцидент\",\r\n  i.incident_date AT TIME ZONE 'Europe/Moscow' AS \"Зарегестрирован\",\r\n  p.pole AS \"Опора\",\r\n  COALESCE(b.bs_name, 'Отсутсвтует') AS \"Базовая станция\",\r\n  COALESCE(it.name, 'Отсутсвтует') AS \"Тип инцидента\",\r\n  COALESCE(ist.name, 'Отсутсвтует') AS \"Подтип инцидента\",\r\n  CASE \r\n      WHEN (it.sla_deadline IS NULL or i.avr_start_date IS NULL) THEN 'Отсутсвтует'\r\n      ELSE to_char(\r\n          (i.avr_start_date + (it.sla_deadline || ' minutes')::interval) AT TIME ZONE 'Europe/Moscow', \r\n          'DD.MM.YYYY HH24:MI:SS'\r\n      )\r\n  END AS \"Дедлайн АВР\",\r\n  CASE\r\n    -- Без SLA\r\n    WHEN (it.sla_deadline IS NULL OR i.avr_start_date IS NULL) THEN 'no_sla'\r\n    -- Если инцидент уже закрыт\r\n    WHEN i.avr_end_date IS NOT NULL THEN CASE\r\n      WHEN i.avr_end_date > (\r\n        i.avr_start_date + (it.sla_deadline || ' minutes') :: interval\r\n      ) THEN 'expired' -- Просрочен (можно назвать 'closed_late')\r\n      ELSE 'closed_ok' -- Закрыто вовремя\r\n    END -- Если инцидент еще открыт\r\n    ELSE CASE\r\n      -- Прошло больше времени, чем отведено по SLA -> Просрочен\r\n      WHEN EXTRACT(\r\n        EPOCH\r\n        FROM\r\n          (\r\n            (\r\n              i.avr_start_date + (it.sla_deadline || ' minutes') :: interval\r\n            ) - NOW()\r\n          )\r\n      ) < 0 THEN 'expired' -- Осталось меньше часа до дедлайна -> В ожидании (Warning)\r\n      WHEN EXTRACT(\r\n        EPOCH\r\n        FROM\r\n          (\r\n            (\r\n              i.avr_start_date + (it.sla_deadline || ' minutes') :: interval\r\n            ) - NOW()\r\n          )\r\n      ) <= 3600 THEN 'warning' -- Все хорошо -> В работе\r\n      ELSE 'in_progress'\r\n    END\r\n  END as \"SLA АВР\",\r\n  COALESCE(p.address, 'Без адреса') AS \"Адрес\",\r\n  p.pole_latitude AS latitude,\r\n  p.pole_longtitude AS longitude\r\nFROM\r\n  incidents_incident AS i\r\n  LEFT JOIN (\r\n    SELECT DISTINCT ON (sh.incident_id) \r\n      sh.incident_id,\r\n      s.name\r\n    FROM incidents_incidentstatushistory sh\r\n    JOIN incidents_incidentstatus s ON sh.status_id = s.id\r\n    ORDER BY sh.incident_id, sh.insert_date DESC, sh.id DESC\r\n  ) AS last_status ON i.id = last_status.incident_id\r\n  LEFT JOIN incidents_incidenttype AS it ON i.incident_type_id = it.id\r\n  LEFT JOIN incidents_incidentsubtype AS ist ON i.incident_subtype_id = it.id\r\n  LEFT JOIN incidents_incidentcategoryrelation AS icr ON i.id = icr.incident_id\r\n  LEFT JOIN incidents_incidentcategory AS ic ON icr.category_id = ic.id\r\n  LEFT JOIN ts_pole AS p ON i.pole_id = p.id\r\n  LEFT JOIN ts_region AS r ON p.region_id = r.id\r\n  LEFT JOIN ts_macroregion AS m ON r.macroregion_id = m.id\r\n  LEFT JOIN ts_basestation AS b ON i.base_station_id = b.id\r\n  LEFT JOIN ts_basestation_operator AS bs_op ON b.id = bs_op.basestation_id\r\n  LEFT JOIN ts_basestationoperator AS op ON bs_op.basestationoperator_id = op.id\r\nWHERE\r\n  ic.name = 'АВР' AND ic.id IN ($categories)\r\n  AND is_incident_finish = False\r\n  AND p.pole_latitude IS NOT NULL\r\n  AND p.pole_longtitude IS NOT NULL\r\n  AND $__timeFilter(i.incident_date)\r\n  AND ($macroregion = 0 OR m.id IN ($macroregion))\r\n  AND ($avr_contractor = 0 OR p.avr_contractor_id IN ($avr_contractor))\r\n  AND ('${region_manager}' = '0' OR r.responsible_manager = '${region_manager}')\r\n  AND ('${operator_group}' = '0' OR op.operator_group = '${operator_group}')\r\n  AND (\r\n    '${duration_range}' = '0'     \r\n    OR ('${duration_range}' = '0-5' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END BETWEEN 0 AND 5\r\n    )\r\n    \r\n    OR ('${duration_range}' = '5-15' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END BETWEEN 6 AND 15\r\n    )\r\n    \r\n    OR ('${duration_range}' = '15-30' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END BETWEEN 16 AND 30\r\n    )\r\n    \r\n    OR ('${duration_range}' = '30-60' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END BETWEEN 31 AND 60\r\n    )\r\n    \r\n    OR ('${duration_range}' = '>60' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END > 60\r\n    )\r\n  )",
-                        "sql": {
-                          "columns": [
-                            {
-                              "parameters": [],
-                              "type": "function"
-                            }
-                          ],
-                          "groupBy": [
-                            {
-                              "property": {
-                                "type": "string"
-                              },
-                              "type": "groupBy"
-                            }
-                          ],
-                          "limit": 50
-                        }
-                      }
-                    },
-                    "refId": "АВР",
-                    "hidden": false
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "grafana-postgresql-datasource",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "ffl50zkmfecxse"
-                      },
-                      "spec": {
-                        "dataset": "dispatch",
-                        "editorMode": "code",
-                        "format": "table",
-                        "rawQuery": true,
-                        "rawSql": "SELECT DISTINCT\r\n  COALESCE(i.code, 'ID: ' || i.id) || ' (' || COALESCE(last_status.name, 'Без статуса') || ')' AS \"Инцидент\",\r\n  i.incident_date AT TIME ZONE 'Europe/Moscow' AS \"Зарегестрирован\",\r\n  p.pole AS \"Опора\",\r\n  COALESCE(b.bs_name, 'Отсутствует') AS \"Базовая станция\",\r\n  -- Для РВР тип может быть общим, но оставим для информации\r\n  COALESCE(it.name, 'Не указан') AS \"Тип инцидента\", \r\n  COALESCE(ist.name, 'Не указан') AS \"Подтип инцидента\",\r\n  \r\n  -- Расчет дедлайна (фиксированный +72 часа от старта РВР)\r\n  CASE \r\n      WHEN i.rvr_start_date IS NULL THEN 'Отсутсвтует'\r\n      ELSE to_char(\r\n          (i.rvr_start_date + INTERVAL '4320 minutes') AT TIME ZONE 'Europe/Moscow', \r\n          'DD.MM.YYYY HH24:MI:SS'\r\n      )\r\n  END AS \"Дедлайн РВР\",\r\n\r\n  -- Логика SLA для РВР (Фиксированная 72 часа)\r\n  CASE\r\n    -- Если инцидент закрыт\r\n    WHEN i.rvr_start_date IS NULL THEN 'no_sla'\r\n    WHEN i.rvr_end_date IS NOT NULL THEN \r\n      CASE \r\n        WHEN i.rvr_end_date > (i.rvr_start_date + INTERVAL '4320 minutes') THEN 'expired' -- Просрочен\r\n        ELSE 'closed_ok' -- Закрыто вовремя\r\n      END\r\n    -- Если инцидент открыт\r\n    ELSE \r\n      CASE \r\n        -- Проверка на просрочку (текущее время > начало + 72ч)\r\n        WHEN EXTRACT(EPOCH FROM ((i.rvr_start_date + INTERVAL '4320 minutes') - NOW())) < 0 THEN 'expired'\r\n        -- Менее часа до конца (осталось <= 1 час)\r\n        WHEN EXTRACT(EPOCH FROM ((i.rvr_start_date + INTERVAL '4320 minutes') - NOW())) <= 3600 THEN 'warning'\r\n        -- Все хорошо -> В работе\r\n        ELSE 'in_progress'\r\n      END\r\n  END AS \"SLA РВР\",\r\n\r\n  COALESCE(p.address, 'Без адреса') AS \"Адрес\",\r\n  p.pole_latitude AS latitude,\r\n  p.pole_longtitude AS longitude\r\n\r\nFROM\r\n  incidents_incident AS i\r\n  LEFT JOIN (\r\n    SELECT DISTINCT ON (sh.incident_id) \r\n      sh.incident_id,\r\n      s.name\r\n    FROM incidents_incidentstatushistory sh\r\n    JOIN incidents_incidentstatus s ON sh.status_id = s.id\r\n    ORDER BY sh.incident_id, sh.insert_date DESC, sh.id DESC\r\n  ) AS last_status ON i.id = last_status.incident_id\r\n  LEFT JOIN incidents_incidenttype AS it ON i.incident_type_id = it.id\r\n  LEFT JOIN incidents_incidentsubtype AS ist ON i.incident_subtype_id = it.id\r\n  LEFT JOIN incidents_incidentcategoryrelation AS icr ON i.id = icr.incident_id\r\n  LEFT JOIN incidents_incidentcategory AS ic ON icr.category_id = ic.id\r\n  LEFT JOIN ts_pole AS p ON i.pole_id = p.id\r\n  LEFT JOIN ts_region AS r ON p.region_id = r.id\r\n  LEFT JOIN ts_macroregion AS m ON r.macroregion_id = m.id\r\n  LEFT JOIN ts_basestation AS b ON i.base_station_id = b.id\r\n  LEFT JOIN ts_basestation_operator AS bs_op ON b.id = bs_op.basestation_id\r\n  LEFT JOIN ts_basestationoperator AS op ON bs_op.basestationoperator_id = op.id\r\n\r\nWHERE\r\n  ic.name = 'РВР' AND ic.id IN ($categories)\r\n  AND i.is_incident_finish = False \r\n  AND p.pole_latitude IS NOT NULL\r\n  AND p.pole_longtitude IS NOT NULL\r\n  AND $__timeFilter(i.incident_date)\r\n  AND ($macroregion = 0 OR m.id IN ($macroregion))\r\n  AND ($avr_contractor = 0 OR p.avr_contractor_id IN ($avr_contractor))\r\n  AND ('${region_manager}' = '0' OR r.responsible_manager = '${region_manager}')\r\n  AND ('${operator_group}' = '0' OR op.operator_group = '${operator_group}')\r\n  AND (\r\n    '${duration_range}' = '0'     \r\n    OR ('${duration_range}' = '0-5' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END BETWEEN 0 AND 5\r\n    )\r\n    \r\n    OR ('${duration_range}' = '5-15' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END BETWEEN 6 AND 15\r\n    )\r\n    \r\n    OR ('${duration_range}' = '15-30' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END BETWEEN 16 AND 30\r\n    )\r\n    \r\n    OR ('${duration_range}' = '30-60' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END BETWEEN 31 AND 60\r\n    )\r\n    \r\n    OR ('${duration_range}' = '>60' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END > 60\r\n    )\r\n  )",
-                        "sql": {
-                          "columns": [
-                            {
-                              "parameters": [],
-                              "type": "function"
-                            }
-                          ],
-                          "groupBy": [
-                            {
-                              "property": {
-                                "type": "string"
-                              },
-                              "type": "groupBy"
-                            }
-                          ],
-                          "limit": 50
-                        }
-                      }
-                    },
-                    "refId": "РВР",
-                    "hidden": false
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "grafana-postgresql-datasource",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "ffl50zkmfecxse"
-                      },
-                      "spec": {
-                        "dataset": "dispatch",
-                        "editorMode": "code",
-                        "format": "table",
-                        "rawQuery": true,
-                        "rawSql": "SELECT DISTINCT\r\n  COALESCE(i.code, 'ID: ' || i.id) || ' (' || COALESCE(last_status.name, 'Без статуса') || ')' AS \"Инцидент\",\r\n  i.incident_date AT TIME ZONE 'Europe/Moscow' AS \"Зарегестрирован\",\r\n  p.pole AS \"Опора\",\r\n  COALESCE(b.bs_name, 'Отсутствует') AS \"Базовая станция\",\r\n  COALESCE(it.name, 'Не указан') AS \"Тип инцидента\", \r\n  COALESCE(ist.name, 'Не указан') AS \"Подтип инцидента\",\r\n  \r\n  -- Расчет времени начала ДГУ (для информации)\r\n  CASE \r\n      WHEN i.dgu_start_date IS NULL THEN 'Отсутствует'\r\n      ELSE to_char(i.dgu_start_date AT TIME ZONE 'Europe/Moscow', 'DD.MM.YYYY HH24:MI:SS')\r\n  END AS \"Начало ДГУ\",\r\n  \r\n  -- Расчет времени окончания ДГУ (если есть)\r\n  CASE \r\n      WHEN i.dgu_end_date IS NULL THEN 'Отсутствует'\r\n      ELSE to_char(i.dgu_end_date AT TIME ZONE 'Europe/Moscow', 'DD.MM.YYYY HH24:MI:SS')\r\n  END AS \"Конец ДГУ\",\r\n\r\n  -- Логика SLA для ДГУ (15 дней / 12 часов)\r\n  CASE\r\n    -- Если инцидент закрыт\r\n    WHEN i.dgu_start_date IS NULL THEN 'no_sla'\r\n    WHEN i.dgu_end_date IS NOT NULL THEN \r\n      CASE \r\n        -- Если закрыто, но прошло больше 15 дней с начала\r\n        WHEN i.dgu_end_date > (i.dgu_start_date + INTERVAL '15 days') THEN 'ghe_15_days'\r\n        ELSE 'closed_on_15_days'\r\n      END\r\n    -- Если инцидент открыт\r\n    ELSE \r\n      CASE \r\n        -- 1. Прошло больше 15 дней (15 * 24 * 3600 = 1296000 секунд)\r\n        WHEN EXTRACT(EPOCH FROM (NOW() - i.dgu_start_date)) > 1296000 THEN 'ghe_15_days'\r\n        \r\n        -- 2. Прошло меньше 12 часов с момента старта (12 * 3600 = 43200 секунд)\r\n        WHEN EXTRACT(EPOCH FROM (NOW() - i.dgu_start_date)) <= 43200 THEN 'lte_12_hour'\r\n        \r\n        -- 3. Прошло больше 12 часов, но меньше 15 дней\r\n        ELSE 'lte_15_days'\r\n      END\r\n  END AS \"SLA ДГУ\",\r\n\r\n  COALESCE(p.address, 'Без адреса') AS \"Адрес\",\r\n  p.pole_latitude AS latitude,\r\n  p.pole_longtitude AS longitude\r\n\r\nFROM\r\n  incidents_incident AS i\r\n  LEFT JOIN (\r\n    SELECT DISTINCT ON (sh.incident_id) \r\n      sh.incident_id,\r\n      s.name\r\n    FROM incidents_incidentstatushistory sh\r\n    JOIN incidents_incidentstatus s ON sh.status_id = s.id\r\n    ORDER BY sh.incident_id, sh.insert_date DESC, sh.id DESC\r\n  ) AS last_status ON i.id = last_status.incident_id\r\n  LEFT JOIN incidents_incidenttype AS it ON i.incident_type_id = it.id\r\n  LEFT JOIN incidents_incidentsubtype AS ist ON i.incident_subtype_id = it.id\r\n  LEFT JOIN incidents_incidentcategoryrelation AS icr ON i.id = icr.incident_id\r\n  LEFT JOIN incidents_incidentcategory AS ic ON icr.category_id = ic.id\r\n  LEFT JOIN ts_pole AS p ON i.pole_id = p.id\r\n  LEFT JOIN ts_region AS r ON p.region_id = r.id\r\n  LEFT JOIN ts_macroregion AS m ON r.macroregion_id = m.id\r\n  LEFT JOIN ts_basestation AS b ON i.base_station_id = b.id\r\n  LEFT JOIN ts_basestation_operator AS bs_op ON b.id = bs_op.basestation_id\r\n  LEFT JOIN ts_basestationoperator AS op ON bs_op.basestationoperator_id = op.id\r\n\r\nWHERE\r\n  -- Фильтр по имени категории и ID из переменной\r\n  ic.name = 'ДГУ' AND ic.id IN ($categories)\r\n  \r\n  -- Только незакрытые (или можно убрать это условие, если нужно видеть и закрытые для истории)\r\n  AND i.is_incident_finish = False \r\n  \r\n  -- Координаты\r\n  AND p.pole_latitude IS NOT NULL\r\n  AND p.pole_longtitude IS NOT NULL\r\n  \r\n  -- Время и другие фильтры\r\n  AND $__timeFilter(i.incident_date)\r\n  AND ($macroregion = 0 OR m.id IN ($macroregion))\r\n  AND ($avr_contractor = 0 OR p.avr_contractor_id IN ($avr_contractor))\r\n  AND ('${region_manager}' = '0' OR r.responsible_manager = '${region_manager}')\r\n  AND ('${operator_group}' = '0' OR op.operator_group = '${operator_group}')\r\n  AND (\r\n    '${duration_range}' = '0'     \r\n    OR ('${duration_range}' = '0-5' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END BETWEEN 0 AND 5\r\n    )\r\n    \r\n    OR ('${duration_range}' = '5-15' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END BETWEEN 6 AND 15\r\n    )\r\n    \r\n    OR ('${duration_range}' = '15-30' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END BETWEEN 16 AND 30\r\n    )\r\n    \r\n    OR ('${duration_range}' = '30-60' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END BETWEEN 31 AND 60\r\n    )\r\n    \r\n    OR ('${duration_range}' = '>60' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END > 60\r\n    )\r\n  )\r\n",
-                        "sql": {
-                          "columns": [
-                            {
-                              "parameters": [],
-                              "type": "function"
-                            }
-                          ],
-                          "groupBy": [
-                            {
-                              "property": {
-                                "type": "string"
-                              },
-                              "type": "groupBy"
-                            }
-                          ],
-                          "limit": 50
-                        }
-                      }
-                    },
-                    "refId": "ДГУ",
-                    "hidden": false
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "grafana-postgresql-datasource",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "ffl50zkmfecxse"
-                      },
-                      "spec": {
-                        "dataset": "dispatch",
-                        "editorMode": "code",
-                        "format": "table",
-                        "rawQuery": true,
-                        "rawSql": "SELECT DISTINCT\r\n  COALESCE(i.code, 'ID: ' || i.id) || ' (' || COALESCE(last_status.name, 'Без статуса') || ')' AS \"Инцидент\",\r\n  i.incident_date AT TIME ZONE 'Europe/Moscow' AS \"Зарегестрирован\",\r\n  p.pole AS \"Опора\",\r\n  COALESCE(b.bs_name, 'Отсутствует') AS \"Базовая станция\",\r\n  COALESCE(it.name, 'Не указан') AS \"Тип инцидента\", \r\n  COALESCE(ist.name, 'Не указан') AS \"Подтип инцидента\",\r\n  \r\n  -- Расчет времени начала ЭКС (для информации)\r\n  CASE \r\n      WHEN i.eks_start_date IS NULL THEN 'Отсутствует'\r\n      ELSE to_char(i.eks_start_date AT TIME ZONE 'Europe/Moscow', 'DD.MM.YYYY HH24:MI:SS')\r\n  END AS \"Начало ЭКС\",\r\n  \r\n  -- Расчет времени окончания ЭКС (если есть)\r\n  CASE \r\n      WHEN i.eks_end_date IS NULL THEN 'Отсутствует'\r\n      ELSE to_char(i.eks_end_date AT TIME ZONE 'Europe/Moscow', 'DD.MM.YYYY HH24:MI:SS')\r\n  END AS \"Конец ЭКС\",\r\n\r\n  -- Логика SLA для ЭКС (15 дней / 12 часов)\r\n  CASE\r\n    WHEN i.eks_start_date IS NULL THEN 'no_sla'\r\n    \r\n    -- Если инцидент закрыт\r\n    WHEN i.eks_end_date IS NOT NULL THEN \r\n      CASE \r\n        -- Если закрыто, но прошло больше 15 дней с начала\r\n        WHEN i.eks_end_date > (i.eks_start_date + INTERVAL '15 days') THEN 'ghe_15_days'\r\n        ELSE 'closed_on_15_days'\r\n      END\r\n    \r\n    -- Если инцидент открыт\r\n    ELSE \r\n      CASE \r\n        -- 1. Прошло больше 15 дней (15 * 24 * 3600 = 1296000 секунд)\r\n        WHEN EXTRACT(EPOCH FROM (NOW() - i.eks_start_date)) > 1296000 THEN 'ghe_15_days'\r\n        \r\n        -- 2. Прошло меньше 12 часов с момента старта (12 * 3600 = 43200 секунд)\r\n        WHEN EXTRACT(EPOCH FROM (NOW() - i.eks_start_date)) <= 43200 THEN 'lte_12_hour'\r\n        \r\n        -- 3. Прошло больше 12 часов, но меньше 15 дней\r\n        ELSE 'lte_15_days'\r\n      END\r\n  END AS \"SLA ЭКС\",\r\n\r\n  COALESCE(p.address, 'Без адреса') AS \"Адрес\",\r\n  p.pole_latitude AS latitude,\r\n  p.pole_longtitude AS longitude\r\n\r\nFROM\r\n  incidents_incident AS i\r\n  LEFT JOIN (\r\n    SELECT DISTINCT ON (sh.incident_id) \r\n      sh.incident_id,\r\n      s.name\r\n    FROM incidents_incidentstatushistory sh\r\n    JOIN incidents_incidentstatus s ON sh.status_id = s.id\r\n    ORDER BY sh.incident_id, sh.insert_date DESC, sh.id DESC\r\n  ) AS last_status ON i.id = last_status.incident_id\r\n  LEFT JOIN incidents_incidenttype AS it ON i.incident_type_id = it.id\r\n  LEFT JOIN incidents_incidentsubtype AS ist ON i.incident_subtype_id = it.id\r\n  LEFT JOIN incidents_incidentcategoryrelation AS icr ON i.id = icr.incident_id\r\n  LEFT JOIN incidents_incidentcategory AS ic ON icr.category_id = ic.id\r\n  LEFT JOIN ts_pole AS p ON i.pole_id = p.id\r\n  LEFT JOIN ts_region AS r ON p.region_id = r.id\r\n  LEFT JOIN ts_macroregion AS m ON r.macroregion_id = m.id\r\n  LEFT JOIN ts_basestation AS b ON i.base_station_id = b.id\r\n  LEFT JOIN ts_basestation_operator AS bs_op ON b.id = bs_op.basestation_id\r\n  LEFT JOIN ts_basestationoperator AS op ON bs_op.basestationoperator_id = op.id\r\n\r\nWHERE\r\n  -- Фильтр по имени категории и ID из переменной\r\n  ic.name = 'ЭКС' AND ic.id IN ($categories)\r\n  \r\n  -- Только незакрытые (можно убрать, если нужно видеть историю)\r\n  AND i.is_incident_finish = False \r\n  \r\n  -- Координаты\r\n  AND p.pole_latitude IS NOT NULL\r\n  AND p.pole_longtitude IS NOT NULL\r\n  \r\n  -- Время и другие фильтры\r\n  AND $__timeFilter(i.incident_date)\r\n  AND ($macroregion = 0 OR m.id IN ($macroregion))\r\n  AND ($avr_contractor = 0 OR p.avr_contractor_id IN ($avr_contractor))\r\n  AND ('${region_manager}' = '0' OR r.responsible_manager = '${region_manager}')\r\n  AND ('${operator_group}' = '0' OR op.operator_group = '${operator_group}')\r\n  AND (\r\n    '${duration_range}' = '0'     \r\n    OR ('${duration_range}' = '0-5' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END BETWEEN 0 AND 5\r\n    )\r\n    \r\n    OR ('${duration_range}' = '5-15' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END BETWEEN 6 AND 15\r\n    )\r\n    \r\n    OR ('${duration_range}' = '15-30' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END BETWEEN 16 AND 30\r\n    )\r\n    \r\n    OR ('${duration_range}' = '30-60' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END BETWEEN 31 AND 60\r\n    )\r\n    \r\n    OR ('${duration_range}' = '>60' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END > 60\r\n    )\r\n  )\r\n",
-                        "sql": {
-                          "columns": [
-                            {
-                              "parameters": [],
-                              "type": "function"
-                            }
-                          ],
-                          "groupBy": [
-                            {
-                              "property": {
-                                "type": "string"
-                              },
-                              "type": "groupBy"
-                            }
-                          ],
-                          "limit": 50
-                        }
-                      }
-                    },
-                    "refId": "ЭКС",
-                    "hidden": false
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "geomap",
-            "version": "13.0.1",
-            "spec": {
-              "options": {
-                "basemap": {
-                  "config": {
-                    "language": "ru",
-                    "server": "positron",
-                    "showLabels": true,
-                    "theme": "dark"
-                  },
-                  "layer-tooltip": false,
-                  "name": "Слой 0",
-                  "noRepeat": true,
-                  "opacity": 1,
-                  "type": "carto"
-                },
-                "controls": {
-                  "mouseWheelZoom": true,
-                  "showAttribution": false,
-                  "showDebug": false,
-                  "showMeasure": true,
-                  "showScale": true,
-                  "showZoom": true
-                },
-                "layers": [
+  "layout": {
+    "kind": "RowsLayout",
+    "spec": {
+      "rows": [
+        {
+          "kind": "RowsLayoutRow",
+          "spec": {
+            "collapse": false,
+            "fillScreen": false,
+            "hideHeader": false,
+            "layout": {
+              "kind": "AutoGridLayout",
+              "spec": {
+                "columnWidthMode": "wide",
+                "fillScreen": true,
+                "items": [
                   {
-                    "config": {
-                      "showLegend": true,
-                      "style": {
-                        "color": {
-                          "field": "SLA ЭКС",
-                          "fixed": "dark-green"
-                        },
-                        "opacity": 1,
-                        "rotation": {
-                          "fixed": 0,
-                          "max": 360,
-                          "min": -360,
-                          "mode": "mod"
-                        },
-                        "size": {
-                          "fixed": 17,
-                          "max": 15,
-                          "min": 2
-                        },
-                        "symbol": {
-                          "fixed": "img/icons/unicons/info-circle.svg",
-                          "mode": "fixed"
-                        },
-                        "symbolAlign": {
-                          "horizontal": "center",
-                          "vertical": "center"
-                        },
-                        "text": {
-                          "field": "Опора",
-                          "fixed": "",
-                          "mode": "field"
-                        },
-                        "textConfig": {
-                          "fontSize": 12,
-                          "offsetX": 0,
-                          "offsetY": -16,
-                          "textAlign": "center",
-                          "textBaseline": "bottom"
-                        }
+                    "kind": "AutoGridLayoutItem",
+                    "spec": {
+                      "element": {
+                        "kind": "ElementReference",
+                        "name": "panel-1"
                       }
-                    },
-                    "filterData": {
-                      "id": "byRefId",
-                      "options": "ЭКС"
-                    },
-                    "location": {
-                      "mode": "auto"
-                    },
-                    "name": "ЭКС",
-                    "tooltip": true,
-                    "type": "markers"
-                  },
-                  {
-                    "config": {
-                      "showLegend": true,
-                      "style": {
-                        "color": {
-                          "field": "SLA ДГУ",
-                          "fixed": "dark-green"
-                        },
-                        "opacity": 1,
-                        "rotation": {
-                          "fixed": 0,
-                          "max": 360,
-                          "min": -360,
-                          "mode": "mod"
-                        },
-                        "size": {
-                          "fixed": 17,
-                          "max": 15,
-                          "min": 2
-                        },
-                        "symbol": {
-                          "fixed": "img/icons/unicons/bolt-slash.svg",
-                          "mode": "fixed"
-                        },
-                        "symbolAlign": {
-                          "horizontal": "center",
-                          "vertical": "center"
-                        },
-                        "text": {
-                          "field": "Опора",
-                          "fixed": "",
-                          "mode": "field"
-                        },
-                        "textConfig": {
-                          "fontSize": 12,
-                          "offsetX": 0,
-                          "offsetY": -16,
-                          "textAlign": "center",
-                          "textBaseline": "bottom"
-                        }
-                      }
-                    },
-                    "filterData": {
-                      "id": "byRefId",
-                      "options": "ДГУ"
-                    },
-                    "layer-tooltip": true,
-                    "location": {
-                      "mode": "auto"
-                    },
-                    "name": "ДГУ",
-                    "tooltip": true,
-                    "type": "markers"
-                  },
-                  {
-                    "config": {
-                      "showLegend": true,
-                      "style": {
-                        "color": {
-                          "field": "SLA РВР",
-                          "fixed": "green"
-                        },
-                        "opacity": 1,
-                        "rotation": {
-                          "fixed": 0,
-                          "max": 360,
-                          "min": -360,
-                          "mode": "mod"
-                        },
-                        "size": {
-                          "fixed": 17,
-                          "max": 15,
-                          "min": 2
-                        },
-                        "symbol": {
-                          "fixed": "img/icons/unicons/cog.svg",
-                          "mode": "fixed"
-                        },
-                        "symbolAlign": {
-                          "horizontal": "center",
-                          "vertical": "center"
-                        },
-                        "text": {
-                          "field": "Опора",
-                          "fixed": "",
-                          "mode": "field"
-                        },
-                        "textConfig": {
-                          "fontSize": 12,
-                          "offsetX": 0,
-                          "offsetY": -16,
-                          "textAlign": "center",
-                          "textBaseline": "bottom"
-                        }
-                      }
-                    },
-                    "filterData": {
-                      "id": "byRefId",
-                      "options": "РВР"
-                    },
-                    "layer-tooltip": true,
-                    "location": {
-                      "mode": "auto"
-                    },
-                    "name": "РВР",
-                    "tooltip": true,
-                    "type": "markers"
-                  },
-                  {
-                    "config": {
-                      "showLegend": true,
-                      "style": {
-                        "color": {
-                          "field": "SLA АВР",
-                          "fixed": "blue"
-                        },
-                        "opacity": 1,
-                        "rotation": {
-                          "fixed": 0,
-                          "max": 360,
-                          "min": -360,
-                          "mode": "mod"
-                        },
-                        "size": {
-                          "fixed": 17,
-                          "max": 15,
-                          "min": 2
-                        },
-                        "symbol": {
-                          "fixed": "img/icons/unicons/location-point.svg",
-                          "mode": "fixed"
-                        },
-                        "symbolAlign": {
-                          "horizontal": "center",
-                          "vertical": "center"
-                        },
-                        "text": {
-                          "field": "Опора",
-                          "fixed": "",
-                          "mode": "field"
-                        },
-                        "textConfig": {
-                          "fontSize": 12,
-                          "offsetX": 0,
-                          "offsetY": -16,
-                          "textAlign": "center",
-                          "textBaseline": "bottom"
-                        }
-                      }
-                    },
-                    "filterData": {
-                      "id": "byRefId",
-                      "options": "АВР"
-                    },
-                    "layer-tooltip": true,
-                    "location": {
-                      "mode": "auto"
-                    },
-                    "name": "АВР",
-                    "opacity": 1,
-                    "tooltip": true,
-                    "type": "markers"
+                    }
                   }
                 ],
-                "legend": {
-                  "displayMode": "list",
-                  "placement": "right",
-                  "showLegend": true
-                },
-                "tooltip": {
-                  "mode": "details"
-                },
-                "view": {
-                  "allLayers": true,
-                  "dashboardVariable": false,
-                  "dashboardVariableName": "",
-                  "id": "coords",
-                  "lat": 56.955747,
-                  "lon": 36.811001,
-                  "noRepeat": true,
-                  "shared": true,
-                  "zoom": 5.51
-                }
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "decimals": 5,
-                  "mappings": [
-                    {
-                      "type": "value",
-                      "options": {
-                        "closed_ok": {
-                          "text": "Закрыт",
-                          "color": "green",
-                          "index": 2
-                        },
-                        "closed_on_15_days": {
-                          "text": "Закрты за 15 дней",
-                          "color": "green",
-                          "index": 8
-                        },
-                        "expired": {
-                          "text": "Просрочен",
-                          "color": "red",
-                          "index": 0
-                        },
-                        "ghe_15_days": {
-                          "text": "Более 15 дней",
-                          "color": "red",
-                          "index": 7
-                        },
-                        "in_progress": {
-                          "text": "В работе",
-                          "color": "blue",
-                          "index": 3
-                        },
-                        "lte_12_hour": {
-                          "text": "Менее 12 часов",
-                          "color": "blue",
-                          "index": 6
-                        },
-                        "lte_15_days": {
-                          "text": "Менее 15 дней",
-                          "color": "yellow",
-                          "index": 5
-                        },
-                        "no_sla": {
-                          "text": "Отсутствует",
-                          "color": "#7d7d7d",
-                          "index": 4
-                        },
-                        "warning": {
-                          "text": "Меньше часа",
-                          "color": "yellow",
-                          "index": 1
-                        }
+                "maxColumnCount": 10,
+                "rowHeight": 1024,
+                "rowHeightMode": "custom"
+              }
+            },
+            "title": "Карта"
+          }
+        },
+        {
+          "kind": "RowsLayoutRow",
+          "spec": {
+            "collapse": true,
+            "fillScreen": true,
+            "layout": {
+              "kind": "AutoGridLayout",
+              "spec": {
+                "columnWidthMode": "wide",
+                "fillScreen": true,
+                "items": [
+                  {
+                    "kind": "AutoGridLayoutItem",
+                    "spec": {
+                      "element": {
+                        "kind": "ElementReference",
+                        "name": "panel-3"
                       }
-                    }
-                  ],
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "value": 0,
-                        "color": "green"
-                      }
-                    ]
-                  },
-                  "color": {
-                    "mode": "fixed",
-                    "fixedColor": "dark-red"
-                  },
-                  "custom": {
-                    "hideFrom": {
-                      "legend": false,
-                      "tooltip": false,
-                      "viz": false
                     }
                   }
-                },
-                "overrides": []
+                ],
+                "maxColumnCount": 10,
+                "rowHeightMode": "tall"
               }
-            }
+            },
+            "title": "Дубликаты"
           }
         }
-      },
-      "panel-3": {
-        "kind": "Panel",
-        "spec": {
-          "id": 3,
-          "title": "Повторяющиеся опоры",
-          "description": "",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "grafana-postgresql-datasource",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "ffl50zkmfecxse"
-                      },
-                      "spec": {
-                        "dataset": "dispatch",
-                        "editorMode": "code",
-                        "format": "table",
-                        "rawQuery": true,
-                        "rawSql": "SELECT \r\n  p.pole AS \"Опора\",\r\n  COALESCE(b.bs_name, 'Отсутствует') AS \"Базовая станция\",\r\n  STRING_AGG(COALESCE(i.code, 'ID: ' || i.id), ', ') AS \"Инциденты\",\r\n  COUNT(i.id) AS \"Повторы\"\r\nFROM incidents_incident AS i\r\nJOIN ts_pole AS p ON i.pole_id = p.id\r\nLEFT JOIN ts_basestation AS b ON i.base_station_id = b.id\r\nLEFT JOIN incidents_incidentcategoryrelation AS icr ON i.id = icr.incident_id\r\nLEFT JOIN incidents_incidentcategory AS ic ON icr.category_id = ic.id\r\nLEFT JOIN ts_region AS r ON p.region_id = r.id\r\nLEFT JOIN ts_macroregion AS m ON r.macroregion_id = m.id\r\nLEFT JOIN ts_basestation_operator AS bs_op ON b.id = bs_op.basestation_id\r\nLEFT JOIN ts_basestationoperator AS op ON bs_op.basestationoperator_id = op.id\r\nWHERE \r\n  -- Фильтр категории\r\n  ic.id IN ($categories) \r\n  \r\n  -- Только открытые инциденты\r\n  AND i.is_incident_finish = False \r\n  \r\n  -- Координаты (обязательно для карты)\r\n  AND p.pole IS NOT NULL\r\n  \r\n  AND $__timeFilter(i.incident_date)\r\n  AND ($macroregion = 0 OR m.id IN ($macroregion))\r\n  AND ($avr_contractor = 0 OR p.avr_contractor_id IN ($avr_contractor))\r\n  AND ('${region_manager}' = '0' OR r.responsible_manager = '${region_manager}')\r\n  AND ('${operator_group}' = '0' OR op.operator_group = '${operator_group}')\r\n  AND (\r\n    '${duration_range}' = '0'     \r\n    OR ('${duration_range}' = '0-5' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END BETWEEN 0 AND 5\r\n    )\r\n    \r\n    OR ('${duration_range}' = '5-15' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END BETWEEN 6 AND 15\r\n    )\r\n    \r\n    OR ('${duration_range}' = '15-30' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END BETWEEN 16 AND 30\r\n    )\r\n    \r\n    OR ('${duration_range}' = '30-60' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END BETWEEN 31 AND 60\r\n    )\r\n    \r\n    OR ('${duration_range}' = '>60' AND \r\n        CASE \r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) / 60\r\n          ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) / 60\r\n        END > 60\r\n    )\r\n  )\r\n\r\nGROUP BY \r\n  p.pole, \r\n  b.bs_name\r\n\r\nHAVING \r\n  COUNT(i.id) >= 2 \r\n\r\nORDER BY \r\n  p.pole,\r\n  b.bs_name,\r\n  COUNT(i.id) DESC, \r\n  MAX(i.incident_date) DESC;",
-                        "sql": {
-                          "columns": [
-                            {
-                              "parameters": [],
-                              "type": "function"
-                            }
-                          ],
-                          "groupBy": [
-                            {
-                              "property": {
-                                "type": "string"
-                              },
-                              "type": "groupBy"
-                            }
-                          ],
-                          "limit": 50
-                        }
-                      }
-                    },
-                    "refId": "A",
-                    "hidden": false
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "table",
-            "version": "13.0.1",
-            "spec": {
-              "options": {
-                "cellHeight": "sm",
-                "enablePagination": true,
-                "showHeader": true,
-                "sortBy": []
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "value": 0,
-                        "color": "text"
-                      },
-                      {
-                        "value": 2,
-                        "color": "blue"
-                      },
-                      {
-                        "value": 3,
-                        "color": "yellow"
-                      },
-                      {
-                        "value": 4,
-                        "color": "red"
-                      }
-                    ]
-                  },
-                  "color": {
-                    "mode": "thresholds"
-                  },
-                  "custom": {
-                    "align": "auto",
-                    "cellOptions": {
-                      "type": "color-text"
-                    },
-                    "filterable": true,
-                    "footer": {
-                      "reducers": [
-                        "sum"
-                      ]
-                    },
-                    "inspect": false,
-                    "wrapHeaderText": true,
-                    "wrapText": true
-                  }
-                },
-                "overrides": []
-              }
-            }
-          },
-          "transparent": true
-        }
-      }
-    },
+      ]
+    }
+  },
+  "links": [],
+  "liveNow": false,
+  "preferences": {
     "layout": {
-      "kind": "AutoGridLayout",
+      "kind": "GridLayout",
       "spec": {
-        "maxColumnCount": 1,
-        "columnWidthMode": "standard",
-        "rowHeightMode": "standard",
-        "fillScreen": true,
-        "items": [
-          {
-            "kind": "AutoGridLayoutItem",
-            "spec": {
-              "element": {
-                "kind": "ElementReference",
-                "name": "panel-1"
-              }
-            }
-          },
-          {
-            "kind": "AutoGridLayoutItem",
-            "spec": {
-              "element": {
-                "kind": "ElementReference",
-                "name": "panel-3"
-              }
-            }
-          }
-        ]
-      }
-    },
-    "links": [],
-    "liveNow": false,
-    "preload": false,
-    "tags": [],
-    "timeSettings": {
-      "timezone": "Europe/Moscow",
-      "from": "now-1M/M",
-      "to": "now",
-      "autoRefresh": "",
-      "autoRefreshIntervals": [
-        "5s",
-        "10s",
-        "30s",
-        "1m",
-        "5m",
-        "15m",
-        "30m",
-        "1h",
-        "2h",
-        "1d"
-      ],
-      "hideTimepicker": false,
-      "fiscalYearStartMonth": 0
-    },
-    "title": "Карта инцидентов",
-    "variables": [
-      {
-        "kind": "QueryVariable",
-        "spec": {
-          "name": "categories",
-          "current": {
-            "text": [
-              "АВР",
-              "ДГУ",
-              "РВР",
-              "ЭКС"
-            ],
-            "value": [
-              "1",
-              "3",
-              "2",
-              "4"
-            ]
-          },
-          "label": "Категории",
-          "hide": "dontHide",
-          "refresh": "onDashboardLoad",
-          "skipUrlSync": false,
-          "query": {
-            "kind": "DataQuery",
-            "group": "grafana-postgresql-datasource",
-            "version": "v0",
-            "datasource": {
-              "name": "ffl50zkmfecxse"
-            },
-            "spec": {
-              "dataset": "dispatch",
-              "editorMode": "code",
-              "format": "table",
-              "meta": {
-                "textField": "name",
-                "valueField": "id"
-              },
-              "query": "SELECT id, name\r\nFROM incidents_incidentcategory",
-              "rawQuery": true,
-              "rawSql": "SELECT id, name\r\nFROM incidents_incidentcategory",
-              "refId": "SQLVariableQueryEditor-VariableQuery",
-              "sql": {
-                "columns": [
-                  {
-                    "parameters": [],
-                    "type": "function"
-                  }
-                ],
-                "groupBy": [
-                  {
-                    "property": {
-                      "type": "string"
-                    },
-                    "type": "groupBy"
-                  }
-                ],
-                "limit": 50
-              }
-            }
-          },
-          "regex": "",
-          "regexApplyTo": "value",
-          "sort": "alphabeticalAsc",
-          "definition": "SELECT id, name\r\nFROM incidents_incidentcategory",
-          "options": [],
-          "multi": true,
-          "includeAll": false,
-          "allowCustomValue": false
-        }
-      },
-      {
-        "kind": "CustomVariable",
-        "spec": {
-          "name": "duration_range",
-          "query": "0-5, 5-15, 15-30, 30-60, >60",
-          "current": {
-            "text": "All",
-            "value": "$__all"
-          },
-          "options": [],
-          "multi": false,
-          "includeAll": true,
-          "allValue": "0",
-          "label": "Длительности инцидента (мин.)",
-          "hide": "inControlsMenu",
-          "skipUrlSync": false,
-          "description": "Длительность инцидента от даты регистрации, до даты закрытия или текущей даты.",
-          "allowCustomValue": false,
-          "valuesFormat": "csv"
-        }
-      },
-      {
-        "kind": "QueryVariable",
-        "spec": {
-          "name": "operator_group",
-          "current": {
-            "text": "All",
-            "value": "$__all"
-          },
-          "label": "Оператор",
-          "hide": "dontHide",
-          "refresh": "onDashboardLoad",
-          "skipUrlSync": false,
-          "description": "Группа операторов",
-          "query": {
-            "kind": "DataQuery",
-            "group": "grafana-postgresql-datasource",
-            "version": "v0",
-            "datasource": {
-              "name": "ffl50zkmfecxse"
-            },
-            "spec": {
-              "dataset": "dispatch",
-              "editorMode": "code",
-              "format": "table",
-              "query": "SELECT DISTINCT\r\noperator_group\r\nFROM ts_basestationoperator\r\nWHERE operator_group != ''\r\nORDER BY operator_group",
-              "rawQuery": true,
-              "rawSql": "SELECT DISTINCT\r\noperator_group\r\nFROM ts_basestationoperator\r\nWHERE operator_group != ''\r\nORDER BY operator_group",
-              "refId": "SQLVariableQueryEditor-VariableQuery",
-              "sql": {
-                "columns": [
-                  {
-                    "parameters": [],
-                    "type": "function"
-                  }
-                ],
-                "groupBy": [
-                  {
-                    "property": {
-                      "type": "string"
-                    },
-                    "type": "groupBy"
-                  }
-                ],
-                "limit": 50
-              }
-            }
-          },
-          "regex": "",
-          "regexApplyTo": "value",
-          "sort": "disabled",
-          "definition": "SELECT DISTINCT\r\noperator_group\r\nFROM ts_basestationoperator\r\nWHERE operator_group != ''\r\nORDER BY operator_group",
-          "options": [],
-          "multi": false,
-          "includeAll": true,
-          "allValue": "0",
-          "allowCustomValue": false
-        }
-      },
-      {
-        "kind": "QueryVariable",
-        "spec": {
-          "name": "macroregion",
-          "current": {
-            "text": "All",
-            "value": "$__all"
-          },
-          "label": "МР",
-          "hide": "dontHide",
-          "refresh": "onDashboardLoad",
-          "skipUrlSync": false,
-          "description": "Макрорегион",
-          "query": {
-            "kind": "DataQuery",
-            "group": "grafana-postgresql-datasource",
-            "version": "v0",
-            "datasource": {
-              "name": "ffl50zkmfecxse"
-            },
-            "spec": {
-              "dataset": "dispatch",
-              "editorMode": "code",
-              "format": "table",
-              "meta": {
-                "textField": "Macroregion Name",
-                "valueField": "Macroregion ID"
-              },
-              "query": "SELECT\r\n\tname AS \"Macroregion Name\",\r\n\tid AS \"Macroregion ID\"\r\nFROM ts_macroregion\r\nORDER BY name, id;",
-              "rawQuery": true,
-              "rawSql": "SELECT\r\n\tname AS \"Macroregion Name\",\r\n\tid AS \"Macroregion ID\"\r\nFROM ts_macroregion\r\nORDER BY name, id;",
-              "refId": "SQLVariableQueryEditor-VariableQuery",
-              "sql": {
-                "columns": [
-                  {
-                    "parameters": [],
-                    "type": "function"
-                  }
-                ],
-                "groupBy": [
-                  {
-                    "property": {
-                      "type": "string"
-                    },
-                    "type": "groupBy"
-                  }
-                ],
-                "limit": 50
-              }
-            }
-          },
-          "regex": "",
-          "regexApplyTo": "value",
-          "sort": "disabled",
-          "definition": "SELECT\r\n\tname AS \"Macroregion Name\",\r\n\tid AS \"Macroregion ID\"\r\nFROM ts_macroregion\r\nORDER BY name, id;",
-          "options": [],
-          "multi": false,
-          "includeAll": true,
-          "allValue": "0",
-          "allowCustomValue": false
-        }
-      },
-      {
-        "kind": "QueryVariable",
-        "spec": {
-          "name": "region_manager",
-          "current": {
-            "text": "All",
-            "value": "$__all"
-          },
-          "label": "Энергетик",
-          "hide": "dontHide",
-          "refresh": "onDashboardLoad",
-          "skipUrlSync": false,
-          "query": {
-            "kind": "DataQuery",
-            "group": "grafana-postgresql-datasource",
-            "version": "v0",
-            "datasource": {
-              "name": "ffl50zkmfecxse"
-            },
-            "spec": {
-              "dataset": "dispatch",
-              "editorMode": "code",
-              "format": "table",
-              "query": "SELECT DISTINCT\r\n\tresponsible_manager \r\nFROM ts_region\r\nWHERE responsible_manager IS NOT NULL\r\nORDER BY responsible_manager",
-              "rawQuery": true,
-              "rawSql": "SELECT DISTINCT\r\n\tresponsible_manager \r\nFROM ts_region\r\nWHERE responsible_manager IS NOT NULL\r\nORDER BY responsible_manager",
-              "refId": "SQLVariableQueryEditor-VariableQuery",
-              "sql": {
-                "columns": [
-                  {
-                    "parameters": [],
-                    "type": "function"
-                  }
-                ],
-                "groupBy": [
-                  {
-                    "property": {
-                      "type": "string"
-                    },
-                    "type": "groupBy"
-                  }
-                ],
-                "limit": 50
-              }
-            }
-          },
-          "regex": "",
-          "regexApplyTo": "value",
-          "sort": "disabled",
-          "definition": "SELECT DISTINCT\r\n\tresponsible_manager \r\nFROM ts_region\r\nWHERE responsible_manager IS NOT NULL\r\nORDER BY responsible_manager",
-          "options": [],
-          "multi": false,
-          "includeAll": true,
-          "allValue": "0",
-          "allowCustomValue": false
-        }
-      },
-      {
-        "kind": "QueryVariable",
-        "spec": {
-          "name": "avr_contractor",
-          "current": {
-            "text": "All",
-            "value": "$__all"
-          },
-          "label": "Подрядчик",
-          "hide": "dontHide",
-          "refresh": "onDashboardLoad",
-          "skipUrlSync": false,
-          "description": "Подрядчик по АВР",
-          "query": {
-            "kind": "DataQuery",
-            "group": "grafana-postgresql-datasource",
-            "version": "v0",
-            "datasource": {
-              "name": "ffl50zkmfecxse"
-            },
-            "spec": {
-              "dataset": "dispatch",
-              "editorMode": "code",
-              "format": "table",
-              "meta": {
-                "textField": "Contractor Name",
-                "valueField": "Contractor ID"
-              },
-              "query": "SELECT\r\n\tcontractor_name AS \"Contractor Name\",\r\n\tid AS \"Contractor ID\"\r\nFROM ts_avrcontractor\r\nWHERE contractor_name != 'undefined'\r\nORDER BY contractor_name, id;",
-              "rawQuery": true,
-              "rawSql": "SELECT\r\n\tcontractor_name AS \"Contractor Name\",\r\n\tid AS \"Contractor ID\"\r\nFROM ts_avrcontractor\r\nWHERE contractor_name != 'undefined'\r\nORDER BY contractor_name, id;",
-              "refId": "SQLVariableQueryEditor-VariableQuery",
-              "sql": {
-                "columns": [
-                  {
-                    "parameters": [],
-                    "type": "function"
-                  }
-                ],
-                "groupBy": [
-                  {
-                    "property": {
-                      "type": "string"
-                    },
-                    "type": "groupBy"
-                  }
-                ],
-                "limit": 50
-              }
-            }
-          },
-          "regex": "",
-          "regexApplyTo": "value",
-          "sort": "disabled",
-          "definition": "SELECT\r\n\tcontractor_name AS \"Contractor Name\",\r\n\tid AS \"Contractor ID\"\r\nFROM ts_avrcontractor\r\nWHERE contractor_name != 'undefined'\r\nORDER BY contractor_name, id;",
-          "options": [],
-          "multi": false,
-          "includeAll": true,
-          "allValue": "0",
-          "allowCustomValue": false
-        }
-      }
-    ],
-    "preferences": {
-      "layout": {
-        "kind": "GridLayout",
-        "spec": {
-          "items": []
-        }
+        "items": []
       }
     }
-  }
+  },
+  "preload": false,
+  "tags": [],
+  "timeSettings": {
+    "autoRefresh": "",
+    "autoRefreshIntervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ],
+    "fiscalYearStartMonth": 0,
+    "from": "now-1M/M",
+    "hideTimepicker": false,
+    "timezone": "Europe/Moscow",
+    "to": "now"
+  },
+  "title": "Карта по инцидентам",
+  "variables": [
+    {
+      "kind": "QueryVariable",
+      "spec": {
+        "allowCustomValue": false,
+        "current": {
+          "text": [
+            "АВР"
+          ],
+          "value": [
+            "1"
+          ]
+        },
+        "definition": "SELECT id, name\r\nFROM incidents_incidentcategory",
+        "hide": "dontHide",
+        "includeAll": false,
+        "label": "Категории",
+        "multi": true,
+        "name": "categories",
+        "options": [],
+        "query": {
+          "datasource": {
+            "name": "ffl50zkmfecxse"
+          },
+          "group": "grafana-postgresql-datasource",
+          "kind": "DataQuery",
+          "spec": {
+            "dataset": "dispatch",
+            "editorMode": "code",
+            "format": "table",
+            "meta": {
+              "textField": "name",
+              "valueField": "id"
+            },
+            "query": "SELECT id, name\r\nFROM incidents_incidentcategory",
+            "rawQuery": true,
+            "rawSql": "SELECT id, name\r\nFROM incidents_incidentcategory",
+            "refId": "SQLVariableQueryEditor-VariableQuery",
+            "sql": {
+              "columns": [
+                {
+                  "parameters": [],
+                  "type": "function"
+                }
+              ],
+              "groupBy": [
+                {
+                  "property": {
+                    "type": "string"
+                  },
+                  "type": "groupBy"
+                }
+              ],
+              "limit": 50
+            }
+          },
+          "version": "v0"
+        },
+        "refresh": "onDashboardLoad",
+        "regex": "",
+        "regexApplyTo": "value",
+        "skipUrlSync": false,
+        "sort": "alphabeticalAsc"
+      }
+    },
+    {
+      "kind": "SwitchVariable",
+      "spec": {
+        "current": "EMPTY",
+        "disabledValue": "false",
+        "enabledValue": "EMPTY",
+        "hide": "dontHide",
+        "label": "SLA: Отсутсвует",
+        "name": "is_empty",
+        "skipUrlSync": false
+      }
+    },
+    {
+      "kind": "SwitchVariable",
+      "spec": {
+        "current": "false",
+        "disabledValue": "false",
+        "enabledValue": "CLOSED",
+        "hide": "dontHide",
+        "label": "SLA: Закрыт вовремя",
+        "name": "is_ok_closed",
+        "skipUrlSync": false
+      }
+    },
+    {
+      "kind": "SwitchVariable",
+      "spec": {
+        "current": "NORMAL",
+        "disabledValue": "false",
+        "enabledValue": "NORMAL",
+        "hide": "dontHide",
+        "label": "SLA: В работе",
+        "name": "is_normal",
+        "skipUrlSync": false
+      }
+    },
+    {
+      "kind": "SwitchVariable",
+      "spec": {
+        "current": "WARNING",
+        "disabledValue": "false",
+        "enabledValue": "WARNING",
+        "hide": "dontHide",
+        "label": "SLA: Истекает",
+        "name": "is_warning",
+        "skipUrlSync": false
+      }
+    },
+    {
+      "kind": "SwitchVariable",
+      "spec": {
+        "current": "ERROR",
+        "disabledValue": "false",
+        "enabledValue": "ERROR",
+        "hide": "dontHide",
+        "label": "SLA: Просрочен (открыт)",
+        "name": "is_error",
+        "skipUrlSync": false
+      }
+    },
+    {
+      "kind": "SwitchVariable",
+      "spec": {
+        "current": "false",
+        "disabledValue": "false",
+        "enabledValue": "CRITICAL",
+        "hide": "dontHide",
+        "label": "SLA: Просрочен (закрыт)",
+        "name": "is_critical",
+        "skipUrlSync": false
+      }
+    },
+    {
+      "kind": "QueryVariable",
+      "spec": {
+        "allValue": "0",
+        "allowCustomValue": false,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "definition": "SELECT DISTINCT\r\noperator_group\r\nFROM ts_basestationoperator\r\nWHERE operator_group != ''\r\nORDER BY operator_group",
+        "description": "Группа операторов",
+        "hide": "inControlsMenu",
+        "includeAll": true,
+        "label": "Оператор",
+        "multi": false,
+        "name": "operator_group",
+        "options": [],
+        "query": {
+          "datasource": {
+            "name": "ffl50zkmfecxse"
+          },
+          "group": "grafana-postgresql-datasource",
+          "kind": "DataQuery",
+          "spec": {
+            "dataset": "dispatch",
+            "editorMode": "code",
+            "format": "table",
+            "query": "SELECT DISTINCT\r\noperator_group\r\nFROM ts_basestationoperator\r\nWHERE operator_group != ''\r\nORDER BY operator_group",
+            "rawQuery": true,
+            "rawSql": "SELECT DISTINCT\r\noperator_group\r\nFROM ts_basestationoperator\r\nWHERE operator_group != ''\r\nORDER BY operator_group",
+            "refId": "SQLVariableQueryEditor-VariableQuery",
+            "sql": {
+              "columns": [
+                {
+                  "parameters": [],
+                  "type": "function"
+                }
+              ],
+              "groupBy": [
+                {
+                  "property": {
+                    "type": "string"
+                  },
+                  "type": "groupBy"
+                }
+              ],
+              "limit": 50
+            }
+          },
+          "version": "v0"
+        },
+        "refresh": "onDashboardLoad",
+        "regex": "",
+        "regexApplyTo": "value",
+        "skipUrlSync": false,
+        "sort": "disabled"
+      }
+    },
+    {
+      "kind": "QueryVariable",
+      "spec": {
+        "allValue": "0",
+        "allowCustomValue": false,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "definition": "SELECT\r\n\tname AS \"Macroregion Name\",\r\n\tid AS \"Macroregion ID\"\r\nFROM ts_macroregion\r\nORDER BY name, id;",
+        "description": "Макрорегион",
+        "hide": "inControlsMenu",
+        "includeAll": true,
+        "label": "МР",
+        "multi": false,
+        "name": "macroregion",
+        "options": [],
+        "query": {
+          "datasource": {
+            "name": "ffl50zkmfecxse"
+          },
+          "group": "grafana-postgresql-datasource",
+          "kind": "DataQuery",
+          "spec": {
+            "dataset": "dispatch",
+            "editorMode": "code",
+            "format": "table",
+            "meta": {
+              "textField": "Macroregion Name",
+              "valueField": "Macroregion ID"
+            },
+            "query": "SELECT\r\n\tname AS \"Macroregion Name\",\r\n\tid AS \"Macroregion ID\"\r\nFROM ts_macroregion\r\nORDER BY name, id;",
+            "rawQuery": true,
+            "rawSql": "SELECT\r\n\tname AS \"Macroregion Name\",\r\n\tid AS \"Macroregion ID\"\r\nFROM ts_macroregion\r\nORDER BY name, id;",
+            "refId": "SQLVariableQueryEditor-VariableQuery",
+            "sql": {
+              "columns": [
+                {
+                  "parameters": [],
+                  "type": "function"
+                }
+              ],
+              "groupBy": [
+                {
+                  "property": {
+                    "type": "string"
+                  },
+                  "type": "groupBy"
+                }
+              ],
+              "limit": 50
+            }
+          },
+          "version": "v0"
+        },
+        "refresh": "onDashboardLoad",
+        "regex": "",
+        "regexApplyTo": "value",
+        "skipUrlSync": false,
+        "sort": "disabled"
+      }
+    },
+    {
+      "kind": "QueryVariable",
+      "spec": {
+        "allValue": "0",
+        "allowCustomValue": false,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "definition": "SELECT DISTINCT\r\n\tresponsible_manager \r\nFROM ts_region\r\nWHERE responsible_manager IS NOT NULL\r\nORDER BY responsible_manager",
+        "hide": "inControlsMenu",
+        "includeAll": true,
+        "label": "Энергетик",
+        "multi": false,
+        "name": "region_manager",
+        "options": [],
+        "query": {
+          "datasource": {
+            "name": "ffl50zkmfecxse"
+          },
+          "group": "grafana-postgresql-datasource",
+          "kind": "DataQuery",
+          "spec": {
+            "dataset": "dispatch",
+            "editorMode": "code",
+            "format": "table",
+            "query": "SELECT DISTINCT\r\n\tresponsible_manager \r\nFROM ts_region\r\nWHERE responsible_manager IS NOT NULL\r\nORDER BY responsible_manager",
+            "rawQuery": true,
+            "rawSql": "SELECT DISTINCT\r\n\tresponsible_manager \r\nFROM ts_region\r\nWHERE responsible_manager IS NOT NULL\r\nORDER BY responsible_manager",
+            "refId": "SQLVariableQueryEditor-VariableQuery",
+            "sql": {
+              "columns": [
+                {
+                  "parameters": [],
+                  "type": "function"
+                }
+              ],
+              "groupBy": [
+                {
+                  "property": {
+                    "type": "string"
+                  },
+                  "type": "groupBy"
+                }
+              ],
+              "limit": 50
+            }
+          },
+          "version": "v0"
+        },
+        "refresh": "onDashboardLoad",
+        "regex": "",
+        "regexApplyTo": "value",
+        "skipUrlSync": false,
+        "sort": "disabled"
+      }
+    },
+    {
+      "kind": "QueryVariable",
+      "spec": {
+        "allValue": "0",
+        "allowCustomValue": false,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "definition": "SELECT\r\n\tcontractor_name AS \"Contractor Name\",\r\n\tid AS \"Contractor ID\"\r\nFROM ts_avrcontractor\r\nWHERE contractor_name != 'undefined'\r\nORDER BY contractor_name, id;",
+        "description": "Подрядчик по АВР",
+        "hide": "inControlsMenu",
+        "includeAll": true,
+        "label": "Подрядчик",
+        "multi": false,
+        "name": "avr_contractor",
+        "options": [],
+        "query": {
+          "datasource": {
+            "name": "ffl50zkmfecxse"
+          },
+          "group": "grafana-postgresql-datasource",
+          "kind": "DataQuery",
+          "spec": {
+            "dataset": "dispatch",
+            "editorMode": "code",
+            "format": "table",
+            "meta": {
+              "textField": "Contractor Name",
+              "valueField": "Contractor ID"
+            },
+            "query": "SELECT\r\n\tcontractor_name AS \"Contractor Name\",\r\n\tid AS \"Contractor ID\"\r\nFROM ts_avrcontractor\r\nWHERE contractor_name != 'undefined'\r\nORDER BY contractor_name, id;",
+            "rawQuery": true,
+            "rawSql": "SELECT\r\n\tcontractor_name AS \"Contractor Name\",\r\n\tid AS \"Contractor ID\"\r\nFROM ts_avrcontractor\r\nWHERE contractor_name != 'undefined'\r\nORDER BY contractor_name, id;",
+            "refId": "SQLVariableQueryEditor-VariableQuery",
+            "sql": {
+              "columns": [
+                {
+                  "parameters": [],
+                  "type": "function"
+                }
+              ],
+              "groupBy": [
+                {
+                  "property": {
+                    "type": "string"
+                  },
+                  "type": "groupBy"
+                }
+              ],
+              "limit": 50
+            }
+          },
+          "version": "v0"
+        },
+        "refresh": "onDashboardLoad",
+        "regex": "",
+        "regexApplyTo": "value",
+        "skipUrlSync": false,
+        "sort": "disabled"
+      }
+    },
+    {
+      "kind": "CustomVariable",
+      "spec": {
+        "allowCustomValue": false,
+        "current": {
+          "text": "≥ 15 мин",
+          "value": "900"
+        },
+        "description": "Минимальное время жизни инцидента (в минутах) с момента регистрации до закрытия (или до текущего момента, если инцидент еще открыт).",
+        "hide": "inControlsMenu",
+        "includeAll": false,
+        "label": "TTL (min), мин",
+        "multi": false,
+        "name": "min_incident_ttl",
+        "options": [],
+        "query": "[\n  { \"text\": \"Все\", \"value\": 0 },\n  { \"text\": \"≥ 1 мин\", \"value\": 60 },\n  { \"text\": \"≥ 5 мин\", \"value\": 300 },\n  { \"text\": \"≥ 10 мин\", \"value\": 600 },\n  { \"text\": \"≥ 15 мин\", \"value\": 900 },\n  { \"text\": \"≥ 30 мин\", \"value\": 1800 },\n  { \"text\": \"≥ 1 ч\", \"value\": 3600 },\n  { \"text\": \"≥ 2 ч\", \"value\": 7200 },\n  { \"text\": \"≥ 3 ч\", \"value\": 10800 },\n  { \"text\": \"≥ 4 ч\", \"value\": 14400 },\n  { \"text\": \"≥ 6 ч\", \"value\": 21600 },\n  { \"text\": \"≥ 8 ч\", \"value\": 28800 },\n  { \"text\": \"≥ 9 ч\", \"value\": 32400 },\n  { \"text\": \"≥ 12 ч\", \"value\": 43200 },\n  { \"text\": \"≥ 16 ч\", \"value\": 57600 },\n  { \"text\": \"≥ 18 ч\", \"value\": 64800 },\n  { \"text\": \"≥ 24 ч\", \"value\": 86400 },\n  { \"text\": \"≥ 2 дн\", \"value\": 172800 },\n  { \"text\": \"≥ 3 дн\", \"value\": 259200 },\n  { \"text\": \"≥ 7 дн\", \"value\": 604800 },\n  { \"text\": \"≥ 14 дн\", \"value\": 1209600 },\n  { \"text\": \"≥ 30 дн\", \"value\": 2592000 },\n  { \"text\": \"≥ 60 дн\", \"value\": 5184000 },\n  { \"text\": \"≥ 90 дн\", \"value\": 7776000 }\n]",
+        "skipUrlSync": false,
+        "valuesFormat": "json"
+      }
+    },
+    {
+      "kind": "CustomVariable",
+      "spec": {
+        "allowCustomValue": false,
+        "current": {
+          "text": "Все",
+          "value": "0"
+        },
+        "description": "Максимальное время жизни инцидента (в минутах) с момента регистрации до закрытия (или до текущего момента, если инцидент еще открыт).",
+        "hide": "inControlsMenu",
+        "includeAll": false,
+        "label": "TTL (max), мин",
+        "multi": false,
+        "name": "max_incident_ttl",
+        "options": [],
+        "query": "[\n  { \"text\": \"Все\", \"value\": 0 },\n  { \"text\": \"≤ 1 мин\", \"value\": 60 },\n  { \"text\": \"≤ 5 мин\", \"value\": 300 },\n  { \"text\": \"≤ 10 мин\", \"value\": 600 },\n  { \"text\": \"≤ 15 мин\", \"value\": 900 },\n  { \"text\": \"≤ 30 мин\", \"value\": 1800 },\n  { \"text\": \"≤ 1 ч\", \"value\": 3600 },\n  { \"text\": \"≤ 2 ч\", \"value\": 7200 },\n  { \"text\": \"≤ 3 ч\", \"value\": 10800 },\n  { \"text\": \"≤ 4 ч\", \"value\": 14400 },\n  { \"text\": \"≤ 6 ч\", \"value\": 21600 },\n  { \"text\": \"≤ 8 ч\", \"value\": 28800 },\n  { \"text\": \"≤ 9 ч\", \"value\": 32400 },\n  { \"text\": \"≤ 12 ч\", \"value\": 43200 },\n  { \"text\": \"≤ 16 ч\", \"value\": 57600 },\n  { \"text\": \"≤ 18 ч\", \"value\": 64800 },\n  { \"text\": \"≤ 24 ч\", \"value\": 86400 },\n  { \"text\": \"≤ 2 дн\", \"value\": 172800 },\n  { \"text\": \"≤ 3 дн\", \"value\": 259200 },\n  { \"text\": \"≤ 7 дн\", \"value\": 604800 },\n  { \"text\": \"≤ 14 дн\", \"value\": 1209600 },\n  { \"text\": \"≤ 30 дн\", \"value\": 2592000 },\n  { \"text\": \"≤ 60 дн\", \"value\": 5184000 },\n  { \"text\": \"≤ 90 дн\", \"value\": 7776000 }\n]",
+        "skipUrlSync": false,
+        "valuesFormat": "json"
+      }
+    },
+    {
+      "kind": "QueryVariable",
+      "spec": {
+        "allValue": "0",
+        "allowCustomValue": false,
+        "current": {
+          "text": [
+            "Авария ВОЛС",
+            "Авария по питанию РФ",
+            "Авария по питанию для МСК",
+            "Авария по питанию от сотрудника НБ",
+            "ЗО оператора",
+            "Запрос на организацию доступа к объекту",
+            "Инцидент / запрос гос. органов",
+            "Инцидент по конструктиву / территорией АМС",
+            "Отсутствует",
+            "Сторонняя БС",
+            "Угроза гибели / гибель объекта"
+          ],
+          "value": [
+            "6",
+            "5",
+            "4",
+            "2",
+            "10",
+            "1",
+            "7",
+            "8",
+            "-1",
+            "9",
+            "3"
+          ]
+        },
+        "definition": "SELECT id, name FROM incidents_incidenttype\r\nUNION ALL\r\nSELECT -1 as id, 'Отсутствует' as name",
+        "hide": "inControlsMenu",
+        "includeAll": false,
+        "label": "Тип",
+        "multi": true,
+        "name": "incident_type",
+        "options": [],
+        "query": {
+          "datasource": {
+            "name": "ffl50zkmfecxse"
+          },
+          "group": "grafana-postgresql-datasource",
+          "kind": "DataQuery",
+          "spec": {
+            "dataset": "dispatch",
+            "editorMode": "code",
+            "format": "table",
+            "meta": {
+              "textField": "name",
+              "valueField": "id"
+            },
+            "query": "SELECT id, name FROM incidents_incidenttype\r\nUNION ALL\r\nSELECT -1 as id, 'Отсутствует' as name",
+            "rawQuery": true,
+            "rawSql": "SELECT id, name FROM incidents_incidenttype\r\nUNION ALL\r\nSELECT -1 as id, 'Отсутствует' as name",
+            "refId": "SQLVariableQueryEditor-VariableQuery",
+            "sql": {
+              "columns": [
+                {
+                  "parameters": [],
+                  "type": "function"
+                }
+              ],
+              "groupBy": [
+                {
+                  "property": {
+                    "type": "string"
+                  },
+                  "type": "groupBy"
+                }
+              ],
+              "limit": 50
+            }
+          },
+          "version": "v0"
+        },
+        "refresh": "onDashboardLoad",
+        "regex": "",
+        "regexApplyTo": "value",
+        "skipUrlSync": false,
+        "sort": "alphabeticalAsc"
+      }
+    },
+    {
+      "kind": "QueryVariable",
+      "spec": {
+        "allValue": "0",
+        "allowCustomValue": false,
+        "current": {
+          "text": [
+            "Авария в рамках городского благоустройства",
+            "ЗО НБ. ВЛ до 1 кВ",
+            "ЗО НБ. ВЛ свыше 1 кВ",
+            "ЗО НБ. КЛ до 1 кВ",
+            "ЗО НБ. КЛ свыше 1 кВ",
+            "ЗО НБ. КТП",
+            "ЗО НБ. ПУ/АИИСКУЭ",
+            "ЗО НБ. РЩ/РУ",
+            "ЗО Оператора. Линия",
+            "ЗО Оператора. Оборудование ЭУ",
+            "ЗО Сетевой организации. Аварийные работы",
+            "ЗО Сетевой организации. Плановые работы",
+            "Отключение за неоплату",
+            "Отсутствие схемы",
+            "Отсутствует",
+            "Прочее (форс-мажор)",
+            "Самовосстановление питания",
+            "ШЭП"
+          ],
+          "value": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12",
+            "14",
+            "17",
+            "-1",
+            "13",
+            "15",
+            "16"
+          ]
+        },
+        "definition": "SELECT id, name FROM incidents_incidentsubtype\r\nUNION ALL\r\nSELECT -1 as id, 'Отсутствует' as name",
+        "hide": "inControlsMenu",
+        "includeAll": false,
+        "label": "Подтип",
+        "multi": true,
+        "name": "incident_subtype",
+        "options": [],
+        "query": {
+          "datasource": {
+            "name": "ffl50zkmfecxse"
+          },
+          "group": "grafana-postgresql-datasource",
+          "kind": "DataQuery",
+          "spec": {
+            "dataset": "dispatch",
+            "editorMode": "code",
+            "format": "table",
+            "meta": {
+              "textField": "name",
+              "valueField": "id"
+            },
+            "query": "SELECT id, name FROM incidents_incidentsubtype\r\nUNION ALL\r\nSELECT -1 as id, 'Отсутствует' as name",
+            "rawQuery": true,
+            "rawSql": "SELECT id, name FROM incidents_incidentsubtype\r\nUNION ALL\r\nSELECT -1 as id, 'Отсутствует' as name",
+            "refId": "SQLVariableQueryEditor-VariableQuery",
+            "sql": {
+              "columns": [
+                {
+                  "parameters": [],
+                  "type": "function"
+                }
+              ],
+              "groupBy": [
+                {
+                  "property": {
+                    "type": "string"
+                  },
+                  "type": "groupBy"
+                }
+              ],
+              "limit": 50
+            }
+          },
+          "version": "v0"
+        },
+        "refresh": "onDashboardLoad",
+        "regex": "",
+        "regexApplyTo": "value",
+        "skipUrlSync": false,
+        "sort": "alphabeticalAsc"
+      }
+    },
+    {
+      "kind": "CustomVariable",
+      "spec": {
+        "allValue": "0",
+        "allowCustomValue": false,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "description": "Длительность инцидента от даты регистрации, до даты закрытия или текущей даты.",
+        "hide": "hideVariable",
+        "includeAll": true,
+        "label": "Длительности инцидента (мин.)",
+        "multi": false,
+        "name": "duration_range",
+        "options": [],
+        "query": "0-5, 5-15, 15-30, 30-60, >60",
+        "skipUrlSync": false,
+        "valuesFormat": "csv"
+      }
+    }
+  ]
 }
