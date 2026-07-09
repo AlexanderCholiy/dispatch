@@ -21,6 +21,7 @@ from incidents.services.get_macroregions import get_macro_region_map
 from incidents.services.get_region_responsible_manager import (
     get_region_responsible_managers,
 )
+from incidents.services.get_regions import get_region_map
 from planned_work.annotations import annotate_plr_status
 from planned_work.constants import (
     MAX_PLR_EMAILS_LINKS,
@@ -355,6 +356,21 @@ def planned_work_list(request: HttpRequest) -> HttpResponse:
         or macroregion_ids[:]
     )
 
+    regions = get_region_map()
+    region_ids = list(regions.keys())
+    region = (
+        request.GET.get('planned_work_region', '').strip()
+        or (get_raw_cookie(request, 'planned_work_region') or '').strip()
+    ).split(',') if not search_only_by_id else []
+
+    region: list[int] = (
+        [
+            int(v) for v in region
+            if v.isnumeric() and int(v) in region_ids
+        ]
+        or region_ids[:]
+    )
+
     avr_contractors = get_avr_contractor_map()
     avr_contractors = {0: 'Отсутствует', **avr_contractors}
     avr_contractors_ids = list(avr_contractors.keys())
@@ -432,6 +448,11 @@ def planned_work_list(request: HttpRequest) -> HttpResponse:
     if macroregion and len(macroregion) != len(macroregion_ids):
         base_qs = base_qs.filter(
             pole__region__macroregion_id__in=macroregion
+        )
+
+    if region and len(region) != len(region_ids):
+        base_qs = base_qs.filter(
+            pole__region_id__in=region
         )
 
     if (
@@ -559,12 +580,14 @@ def planned_work_list(request: HttpRequest) -> HttpResponse:
         'avr_contractors': avr_contractors,
         'region_responsible_managers': region_responsible_managers,
         'macroregions': macroregions,
+        'regions': regions,
         'selected': {
             'status': status,
             'reason': reason,
             'responsible_user': responsible_user_id,
             'region_responsible_manager': region_responsible_manager,
             'macroregion': macroregion,
+            'region': region,
             'avr_contractor': avr_contractor,
             'pole': pole,
             'sort': sort,

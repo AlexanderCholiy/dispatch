@@ -118,6 +118,31 @@
       </select>
     </div>
 
+    <div class="multiple-select-wrapper" id="region-select">
+      <div class="dropdown-trigger" data-filter-name="Регион">
+        <span class="selected-label">Регион</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="region-dropdown-menu">
+        <div class="dropdown-options">
+          {% for k, v in regions.items %}
+            <label class="option-item {% if k in selected.region %}is-selected{% endif %}" 
+                   data-value="{{ k }}">
+              <i class="bx bx-check"></i>
+              <span>{{ v }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <select name="planned_work_region" id="region-select-hidden" style="display: none;" multiple>
+        {% for k in regions %}
+          <option value="{{ k }}" {% if k in selected.region %}selected{% endif %}></option>
+        {% endfor %}
+      </select>
+    </div>
+
     <div class="multiple-select-wrapper" id="region-responsible-manager-select">
       <div class="dropdown-trigger" data-filter-name="Энергетик">
         <span class="selected-label">Энергетик</span>
@@ -293,6 +318,7 @@
         { id: 'responsible-user-select-hidden', cookieName: 'planned_work_responsible_user', searchFieldName: 'planned_work_responsible_user', type: 'multi_select' },
         { id: 'reason-select-hidden', cookieName: 'planned_work_reason', searchFieldName: 'planned_work_reason', type: 'multi_select' },
         { id: 'macroregion-select-hidden', cookieName: 'planned_work_macroregion', searchFieldName: 'planned_work_macroregion', type: 'multi_select' },
+        { id: 'region-select-hidden', cookieName: 'planned_work_region', searchFieldName: 'planned_work_region', type: 'multi_select' },
         { id: 'region-responsible-manager-select-hidden', cookieName: 'planned_work_region_responsible_manager', searchFieldName: 'planned_work_region_responsible_manager', type: 'multi_select' },
         { id: 'avr-contractor-select-hidden', cookieName: 'planned_work_avr_contractor', searchFieldName: 'planned_work_avr_contractor', type: 'multi_select' },
 
