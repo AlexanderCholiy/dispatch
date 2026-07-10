@@ -1,5 +1,5 @@
 #search-bar {
-  margin-left: calc(var(--sidebar-width) + 18px);
+  margin-left: calc(var(--sidebar-width) + var(--space-md) * 2);
   transition: all var(--transition-value);
 }
 
