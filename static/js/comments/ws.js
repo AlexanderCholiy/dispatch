@@ -45,9 +45,9 @@ export class CommentWebSocket {
 
         this.socket.onerror = (error) => {
             console.error('WS Error:', error);
-            if (this.onErrorReceived) {
-                this.onErrorReceived("Ошибка соединения с сервером");
-            }
+            // if (this.onErrorReceived) {
+            //     this.onErrorReceived("Ошибка соединения с сервером");
+            // }
         };
     }
 

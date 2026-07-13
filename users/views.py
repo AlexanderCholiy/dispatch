@@ -445,7 +445,7 @@ def users_list(request: HttpRequest) -> HttpResponse:
 
     if len(online) == 1:
         is_online_filter = online[0] == 'true'
-        pattern = 'presence:user:*'
+        pattern = PresenceService._USER_ONLINE_KEY.format('*')
         keys: list[str] = cache.keys(pattern)
 
         now = timezone.now()

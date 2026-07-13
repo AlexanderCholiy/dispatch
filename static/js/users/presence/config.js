@@ -6,7 +6,7 @@ export const PRESENCE_CONFIG = {
     
     // Настройки переподключения
     MAX_RECONNECT_ATTEMPTS: 5,
-    RECONNECT_DELAY_BASE: 5000, // 5 секунды
+    RECONNECT_DELAY_BASE: 10000, // 10 секунды
     
     // Интервал авто-обновления (мс)
     // 1000 = 1 сек (для тестов), поставьте 10000 (10 сек) для продакшена

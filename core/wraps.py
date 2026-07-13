@@ -44,7 +44,12 @@ def timer(logger: Logger, is_debug: bool = True) -> Callable:
                     False if mailbox and mailbox == 'INBOX' else is_debug
                 )
 
-                logger.debug(msg) if current_log_is_debug else logger.info(msg)
+                if current_log_is_debug:
+                    logger.debug(msg)
+                elif total_seconds > 300:
+                    logger.warning(msg)
+                else:
+                    logger.debug(msg)
 
         return wrapper
     return decorator

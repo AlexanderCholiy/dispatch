@@ -4,7 +4,7 @@
 }
 
 #search-bar.collapsed {
-  margin-left: calc(var(--sidebar-collapsed-width) + 5px);
+  margin-left: calc(var(--sidebar-collapsed-width) + var(--space-md) * 2);
 }
 
 .header-search {

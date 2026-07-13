@@ -92,14 +92,18 @@ class PresenceService:
 
         allowed_prefixes = [
             '/users/',
-            '/schedule/',
             '/planned-work/',
             '/incidents/',
+            '/emails/',
+            '/energy/claims/',
+            '/energy/appeals/',
         ]
+
+        has_digit_in_path = any(c.isdigit() for c in normalized_page)
 
         is_allowed = False
         for prefix in allowed_prefixes:
-            if normalized_page.startswith(prefix):
+            if normalized_page.startswith(prefix) and has_digit_in_path:
                 is_allowed = True
                 break
 
@@ -172,7 +176,8 @@ class PresenceService:
         if not user.is_authenticated:
             return
 
-        cache.delete(PresenceService._USER_ONLINE_KEY.format(user.id))
+        # Чтобы не дергался фильтр пользователей отключаем:
+        # cache.delete(PresenceService._USER_ONLINE_KEY.format(user.id))
         cache.delete(PresenceService._USER_PAGE_KEY.format(user.id))
 
     @staticmethod
