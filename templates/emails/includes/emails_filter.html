@@ -14,21 +14,23 @@
 
       <div class="dropdown-menu" id="folder-dropdown-menu">
         <div class="dropdown-options">
-          {% for f in folders %}
-            <label class="option-item {% if f in selected.folder %}is-selected{% endif %}" 
-                   data-value="{{ f }}">
-              <i class="bx bx-check"></i>
-              <span>{{ f }}</span>
-            </label>
+          {% for folder in folders %}             
+              <label class="option-item {% if folder.name in selected.folder %}is-selected{% endif %}" 
+                     data-value="{{ folder.name }}">
+                <i class="bx bx-check"></i>
+                <span>{{ folder.description|default:folder.name }}</span>
+              </label>
           {% endfor %}
         </div>
       </div>
 
-      <select name="folder" id="folder-select-hidden" style="display: none;" multiple>
-        {% for f in folders %}
-          <option value="{{ f }}" {% if f in selected.folder %}selected{% endif %}></option>
-        {% endfor %}
-      </select>
+        <select name="folder" id="folder-select-hidden" style="display: none;" multiple>
+          {% for folder in folders %}
+            <option value="{{ folder.name }}" {% if folder.name in selected.folder %}selected{% endif %}>
+              {{ folder.description|default:folder.name }}
+            </option>
+          {% endfor %}
+        </select>
     </div>
 
     <input

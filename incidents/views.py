@@ -189,7 +189,7 @@ def index(request: HttpRequest) -> HttpResponse:
         'incident_filter_categories',
         lambda: list(
             IncidentCategory.objects.all().order_by('name')
-            .values('id', 'name')
+            .values('id', 'name', 'description')
         ),
         MAX_INCIDENTS_INFO_CACHE_SEC,
     )
@@ -2118,10 +2118,23 @@ def notify_avr_contractor(
         text_parts.append(f'  • Дата регистрации: {incident_date}')
 
         if incident.incident_type:
-            text_parts.append(
-                f'  • Тип инцидента: {incident.incident_type.name}'
-            )
-            if incident.incident_type.description:
+            incident_type = f'  • Тип инцидента: {incident.incident_type.name}'
+
+            if incident.incident_subtype:
+                incident_type += (
+                    f' ({incident.incident_subtype.name})'
+                )
+
+            text_parts.append(incident_type)
+
+            if (
+                incident.incident_subtype
+                and incident.incident_subtype.description
+            ):
+                text_parts.append(
+                    f'  • Описание: {incident.incident_subtype.description}'
+                )
+            elif incident.incident_type.description:
                 text_parts.append(
                     f'  • Описание: {incident.incident_type.description}'
                 )
@@ -2391,10 +2404,23 @@ def notify_rvr_contractor(
         text_parts.append(f'  • Дата регистрации: {incident_date}')
 
         if incident.incident_type:
-            text_parts.append(
-                f'  • Тип инцидента: {incident.incident_type.name}'
-            )
-            if incident.incident_type.description:
+            incident_type = f'  • Тип инцидента: {incident.incident_type.name}'
+
+            if incident.incident_subtype:
+                incident_type += (
+                    f' ({incident.incident_subtype.name})'
+                )
+
+            text_parts.append(incident_type)
+
+            if (
+                incident.incident_subtype
+                and incident.incident_subtype.description
+            ):
+                text_parts.append(
+                    f'  • Описание: {incident.incident_subtype.description}'
+                )
+            elif incident.incident_type.description:
                 text_parts.append(
                     f'  • Описание: {incident.incident_type.description}'
                 )

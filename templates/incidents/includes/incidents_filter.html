@@ -143,7 +143,7 @@
             <label class="option-item {% if v.id in selected.category %}is-selected{% endif %}" 
                    data-value="{{ v.id }}">
               <i class="bx bx-check"></i>
-              <span>{{ v.name }}</span>
+              <span class="tooltip" data-title="{{ v.description|default:'—' }}">{{ v.name }}</span>
             </label>
           {% endfor %}
         </div>
@@ -173,7 +173,7 @@
             <label class="option-item {% if k in selected.incident_type %}is-selected{% endif %}" 
                    data-value="{{ k }}">
               <i class="bx bx-check"></i>
-              <span>{{ v }}</span>
+              <span class="tooltip" data-title="{{ v.description|default:'—' }}">{{ v.name }}</span>
             </label>
           {% endfor %}
         </div>
@@ -206,7 +206,7 @@
             <label class="option-item {% if k in selected.incident_subtype %}is-selected{% endif %}" 
                    data-value="{{ k }}">
               <i class="bx bx-check"></i>
-              <span>{{ v }}</span>
+              <span class="tooltip" data-title="{{ v.description|default:'—' }}">{{ v.name }}</span>
             </label>
           {% endfor %}
         </div>

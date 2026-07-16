@@ -1,0 +1,7 @@
+from django.apps import AppConfig
+
+
+class MaxConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'max'
+    verbose_name = 'Мессенджер MAX'

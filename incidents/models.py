@@ -382,9 +382,29 @@ class Incident(models.Model):
             ).exists()
 
             if not exists:
-                errors['incident_subtype'] = (
-                    'Выбранный подтип не относится к данному типу инцидента.'
+                available_types_qs = TypeSubTypeRelation.objects.filter(
+                    incident_subtype=self.incident_subtype
+                ).select_related('incident_type')
+
+                available_types = sorted(
+                    [f'"{v.incident_type.name}"' for v in available_types_qs]
                 )
+
+                if available_types:
+                    error_msg = (
+                        'Выбранный подтип '
+                        'не относится к данному типу инцидента. '
+                        'Доступны следующие типы: '
+                        f'{", ".join(available_types)}.'
+                    )
+                else:
+                    error_msg = (
+                        'Выбранный подтип '
+                        'не привязан ни к одному типу инцидента.'
+                        'Проверьте корректность данных в справочнике.'
+                    )
+
+                errors['incident_subtype'] = error_msg
 
         if self.avr_start_date and self.avr_end_date:
             if self.avr_end_date < self.avr_start_date:

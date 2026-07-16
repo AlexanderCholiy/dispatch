@@ -74,6 +74,7 @@ INSTALLED_APPS = [
     'notifications.apps.NotificationsConfig',
     'mqtt.apps.MqttConfig',
     'planned_work.apps.PlannedWorkConfig',
+    'max.apps.MaxConfig',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'django_filters',

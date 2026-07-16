@@ -15,6 +15,8 @@ RUN apt-get update && apt-get install -y \
     unixodbc-dev \
     sshpass \
     rsync \
+    gdal-bin \
+    libgdal-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Добавление репозитория Microsoft для ODBC Driver 17:

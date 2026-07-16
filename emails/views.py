@@ -48,8 +48,8 @@ def emails_list(request: HttpRequest) -> HttpResponse:
     folders = cache.get_or_set(
         'email_filter_folders',
         lambda: list(
-            EmailFolder.objects.values_list('name', flat=True)
-            .distinct()
+            EmailFolder.objects
+            .values('name', 'description')
             .order_by('name')
         ),
         MAX_EMAILS_INFO_CACHE_SEC,
@@ -60,9 +60,8 @@ def emails_list(request: HttpRequest) -> HttpResponse:
         or request.COOKIES.get('folder', '').strip()
     ).split(',')
 
-    folder_name_filter = (
-        [v for v in folder_name_filter if v in folders] or folders[:]
-    )
+    valid_names = {f['name'] for f in folders}
+    folder_name_filter = [n for n in folder_name_filter if n in valid_names]
 
     email_from = (
         request.GET.get('email_from', '').strip()
