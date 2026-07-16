@@ -67,7 +67,7 @@ INSTALLED_APPS = [
     'yandex_tracker.apps.YandexTrackerConfig',
     'api.apps.ApiConfig',
     'monitoring.apps.MonitoringConfig',
-    'monitoring_2.apps.Monitoring2Config',
+    # 'monitoring_2.apps.Monitoring2Config',
     'energy.apps.EnergyConfig',
     'stats.apps.StatsConfig',
     'metrics.apps.MetricsConfig',
@@ -181,20 +181,20 @@ DATABASES = {
             'Query Timeout': 15,
         },
     },
-    'monitoring_2': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('MONITORING_2_DB_NAME', 'django'),
-        'USER': os.getenv('MONITORING_2_DB_USER', 'django'),
-        'PASSWORD': os.getenv('MONITORING_2_DB_PASSWORD', ''),
-        'HOST': os.getenv('MONITORING_2_DB_HOST', 'localhost'),
-        'PORT': int(os.getenv('MONITORING_2_DB_PORT', 5432)),
-        'CONN_MAX_AGE': 30,
-        'CONN_HEALTH_CHECKS': True,
-        'OPTIONS': {
-            'connect_timeout': 5,
-            'options': '-c statement_timeout=15000'
-        },
-    },
+    # 'monitoring_2': {
+    #     'ENGINE': 'django.db.backends.postgresql',
+    #     'NAME': os.getenv('MONITORING_2_DB_NAME', 'django'),
+    #     'USER': os.getenv('MONITORING_2_DB_USER', 'django'),
+    #     'PASSWORD': os.getenv('MONITORING_2_DB_PASSWORD', ''),
+    #     'HOST': os.getenv('MONITORING_2_DB_HOST', 'localhost'),
+    #     'PORT': int(os.getenv('MONITORING_2_DB_PORT', 5432)),
+    #     'CONN_MAX_AGE': 30,
+    #     'CONN_HEALTH_CHECKS': True,
+    #     'OPTIONS': {
+    #         'connect_timeout': 5,
+    #         'options': '-c statement_timeout=15000'
+    #     },
+    # },
     'ts': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.environ.get('TS_DB_NAME'),
