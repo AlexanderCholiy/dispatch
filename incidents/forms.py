@@ -483,7 +483,7 @@ class IncidentForm(forms.ModelForm):
 
         users_qs = User.objects.filter(
             is_active=True,
-            role=Roles.DISPATCH,
+            role__in=(Roles.DISPATCH, Roles.INTERN),
             work_schedule__isnull=False,
             **day_filter
         ).filter(
@@ -673,7 +673,10 @@ class IncidentForm(forms.ModelForm):
         if self.instance.pk and user == self.instance.responsible_user:
             return user
 
-        if not user.is_active or user.role != Roles.DISPATCH:
+        if (
+            not user.is_active
+            or user.role not in (Roles.DISPATCH, Roles.INTERN)
+        ):
             raise ValidationError('Выбранный пользователь недоступен')
 
         if not user.work_schedule:

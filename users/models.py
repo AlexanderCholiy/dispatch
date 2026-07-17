@@ -36,9 +36,10 @@ from .validators import (
 class Roles(models.TextChoices):
     GUEST = ('guest', 'Гость')
     USER = ('user', 'Пользователь')
+    INTERN = ('intern', 'Стажер')
     DISPATCH = ('dispatch', 'Диспетчер')
-    ENERGY = ('energy', 'Энергетик')
     AVR_CONTRACTOR = ('avr_contractor', 'Подрядчик')
+    ENERGY = ('energy', 'Энергетик')
 
 
 class DefaultAvatars(models.TextChoices):

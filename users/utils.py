@@ -16,7 +16,11 @@ from .tasks import send_activation_email_task, send_confirm_email_task
 
 def role_required(
     allowed_roles: list[Roles] = [
-        Roles.DISPATCH, Roles.USER, Roles.ENERGY, Roles.AVR_CONTRACTOR
+        Roles.DISPATCH,
+        Roles.USER,
+        Roles.ENERGY,
+        Roles.AVR_CONTRACTOR,
+        Roles.INTERN,
     ]
 ):
     """

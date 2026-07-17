@@ -915,7 +915,10 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
     user: User = request.user
     allowed_roles = [Roles.DISPATCH]
     can_manage = (
-        user.role in allowed_roles or user.is_superuser or user.is_staff
+        user.role in allowed_roles
+        or user.is_superuser
+        or user.is_staff
+        or (incident.responsible_user == user and user.role == Roles.INTERN)
     )
 
     incident_form = IncidentForm(
@@ -1489,7 +1492,7 @@ def create_incident(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
-@role_required(allowed_roles=[Roles.DISPATCH])
+@role_required(allowed_roles=[Roles.DISPATCH, Roles.INTERN])
 @ratelimit(key='user_or_ip', rate='60/m', block=True)
 def new_email(
     request: HttpRequest,
@@ -1498,6 +1501,15 @@ def new_email(
 ) -> HttpResponse:
     template_name = 'emails/new_email.html'
     incident = IncidentSelector.incidents_with_email_history(incident_id)
+
+    user: User = request.user
+    if user.role == Roles.INTERN and incident.responsible_user != user:
+        messages.error(
+            request,
+            'У вас нет прав для отправки сообщения по этому инциденту. '
+            'Доступно только ответственному лицу или диспетчеру.'
+        )
+        return redirect('incidents:incident_detail', incident_id=incident.id)
 
     last_status: Optional[IncidentStatus] = (
         incident.prefetched_status_history[0].status
@@ -1684,11 +1696,20 @@ def new_email(
 
 
 @login_required
-@role_required(allowed_roles=[Roles.DISPATCH])
+@role_required(allowed_roles=[Roles.DISPATCH, Roles.INTERN])
 @ratelimit(key='user_or_ip', rate='60/m', block=True)
 def notify_operator(request: HttpRequest, incident_id: int) -> HttpResponse:
     template_name = 'emails/new_email.html'
     incident = IncidentSelector.incidents_with_email_history(incident_id)
+
+    user: User = request.user
+    if user.role == Roles.INTERN and incident.responsible_user != user:
+        messages.error(
+            request,
+            'У вас нет прав для отправки сообщения по этому инциденту. '
+            'Доступно только ответственному лицу или диспетчеру.'
+        )
+        return redirect('incidents:incident_detail', incident_id=incident.id)
 
     last_status: Optional[IncidentStatus] = (
         incident.prefetched_status_history[0].status
@@ -1898,13 +1919,22 @@ def notify_operator(request: HttpRequest, incident_id: int) -> HttpResponse:
 
 
 @login_required
-@role_required(allowed_roles=[Roles.DISPATCH])
+@role_required(allowed_roles=[Roles.DISPATCH, Roles.INTERN])
 @ratelimit(key='user_or_ip', rate='60/m', block=True)
 def notify_avr_contractor(
     request: HttpRequest, incident_id: int
 ) -> HttpResponse:
     template_name = 'emails/new_email.html'
     incident = IncidentSelector.incidents_with_email_history(incident_id)
+
+    user: User = request.user
+    if user.role == Roles.INTERN and incident.responsible_user != user:
+        messages.error(
+            request,
+            'У вас нет прав для отправки сообщения по этому инциденту. '
+            'Доступно только ответственному лицу или диспетчеру.'
+        )
+        return redirect('incidents:incident_detail', incident_id=incident.id)
 
     last_status: Optional[IncidentStatus] = (
         incident.prefetched_status_history[0].status
@@ -2181,13 +2211,22 @@ def notify_avr_contractor(
 
 
 @login_required
-@role_required(allowed_roles=[Roles.DISPATCH])
+@role_required(allowed_roles=[Roles.DISPATCH, Roles.INTERN])
 @ratelimit(key='user_or_ip', rate='60/m', block=True)
 def notify_rvr_contractor(
     request: HttpRequest, incident_id: int
 ) -> HttpResponse:
     template_name = 'emails/new_email.html'
     incident = IncidentSelector.incidents_with_email_history(incident_id)
+
+    user: User = request.user
+    if user.role == Roles.INTERN and incident.responsible_user != user:
+        messages.error(
+            request,
+            'У вас нет прав для отправки сообщения по этому инциденту. '
+            'Доступно только ответственному лицу или диспетчеру.'
+        )
+        return redirect('incidents:incident_detail', incident_id=incident.id)
 
     last_status: Optional[IncidentStatus] = (
         incident.prefetched_status_history[0].status
@@ -2465,13 +2504,22 @@ def notify_rvr_contractor(
 
 
 @login_required
-@role_required(allowed_roles=[Roles.DISPATCH])
+@role_required(allowed_roles=[Roles.DISPATCH, Roles.INTERN])
 @ratelimit(key='user_or_ip', rate='60/m', block=True)
 def notify_incident_closed(
     request: HttpRequest, incident_id: int
 ) -> HttpResponse:
     template_name = 'emails/new_email.html'
     incident = IncidentSelector.incidents_with_email_history(incident_id)
+
+    user: User = request.user
+    if user.role == Roles.INTERN and incident.responsible_user != user:
+        messages.error(
+            request,
+            'У вас нет прав для отправки сообщения по этому инциденту. '
+            'Доступно только ответственному лицу или диспетчеру.'
+        )
+        return redirect('incidents:incident_detail', incident_id=incident.id)
 
     last_status: Optional[IncidentStatus] = (
         incident.prefetched_status_history[0].status

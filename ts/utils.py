@@ -439,8 +439,11 @@ class TSManager(SocialValidators):
         # Удаляем не актуальные записи
         new_contractors: set[str] = set(avr['Подрядчик'].dropna())
         existing_contractors: set[str] = set(contractors_cache.keys())
+
         contractors_to_delete = (
-            existing_contractors - new_contractors - {UNDEFINED_CASE}
+            existing_contractors
+            - new_contractors
+            - {UNDEFINED_CASE}
         )
 
         if len(contractors_to_delete) > RAISE_TS_AVR_DEL_LIMIT:
@@ -474,15 +477,9 @@ class TSManager(SocialValidators):
                 default_pole.avr_contractor = default_contractor
                 default_pole.save(update_fields=['avr_contractor'])
 
-            # Дефолтные email для дефолтной опоры
+            # Дефолтные email:
             for email in UNDEFINED_EMAILS:
-                obj, _ = ContractorEmail.objects.get_or_create(email=email)
-
-                PoleContractorEmail.objects.get_or_create(
-                    contractor=default_contractor,
-                    pole=default_pole,
-                    email=obj
-                )
+                ContractorEmail.objects.get_or_create(email=email)
 
         # Кеш всех опор
         poles_cache: dict[str, Pole] = {p.pole: p for p in Pole.objects.all()}
@@ -679,16 +676,18 @@ class TSManager(SocialValidators):
                 )
             )
             q = Q()
+
             for pole_id, contractor_id in batch:
                 q |= Q(pole_id=pole_id) & ~Q(contractor_id=contractor_id)
 
             PoleContractorEmail.objects.filter(q).delete()
             PoleContractorPhone.objects.filter(q).delete()
 
-        # Удаление связей опора - подрядчик, когда опора отсутсвует в выгрузке:
+        # Удаление связей опора - подрядчик, когда опора отсутсвует в выгрузке
+        # (для тестовой опоры исключение):
         poles_to_reset = Pole.objects.filter(
             pole__in=set(poles_cache.keys()) - poles_in_avr
-        )
+        ).exclude(pole=UNDEFINED_CASE)
 
         if poles_to_reset:
             poles_to_reset.update(avr_contractor=default_contractor)
