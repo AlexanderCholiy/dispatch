@@ -21,6 +21,7 @@ from .constants import (
     TS_LOG_ROTATING_FILE,
     YANDEX_TRACKER_AUTO_EMAILS_ROTATING_FILE,
     YANDEX_TRACKER_ROTATING_FILE,
+    MAX_API_LOG_ROTATING_FILE,
 )
 from .exceptions import LoggerError
 
@@ -179,4 +180,8 @@ mqtt_logger = LoggerFactory(
 
 mqtt_parser_logger = LoggerFactory(
     'mqtt_parser', MQTT_PARSER_LOG_ROTATING_FILE
+).get_logger()
+
+max_api_logger = LoggerFactory(
+    'max_api', MAX_API_LOG_ROTATING_FILE
 ).get_logger()
