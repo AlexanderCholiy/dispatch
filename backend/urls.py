@@ -116,6 +116,7 @@ app_urls = [
     path('ts/', include('ts.urls')),
     path('notifications/', include('notifications.urls')),
     path('planned-work/', include('planned_work.urls')),
+    path('max-notifications/', include('max.urls')),
 ]
 
 urlpatterns = swagger_urls + auth_urlpatterns + app_urls
