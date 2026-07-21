@@ -84,9 +84,8 @@ def annotate_sla_avr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
                     incident_type__sla_deadline__isnull=False,
                     avr_start_date__isnull=False,
                     then=F('avr_start_date') + ExpressionWrapper(
-                        (
-                            timedelta(minutes=1)
-                            * F('incident_type__sla_deadline')
+                        timedelta(minutes=1) * F(
+                            'incident_type__sla_deadline'
                         ),
                         output_field=DurationField()
                     )
@@ -97,6 +96,7 @@ def annotate_sla_avr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
             output_field=DateTimeField()
         ),
         sla_avr_expired=Case(
+            # Случай 1: Закрыт и просрочен
             When(
                 incident_type__sla_deadline__isnull=False,
                 avr_start_date__isnull=False,
@@ -104,6 +104,7 @@ def annotate_sla_avr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
                 avr_end_date__gt=F('avr_deadline'),
                 then=Value(True)
             ),
+            # Случай 2: Открыт и просрочен (текущее время > дедлайна)
             When(
                 incident_type__sla_deadline__isnull=False,
                 avr_start_date__isnull=False,
@@ -112,7 +113,29 @@ def annotate_sla_avr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
                 then=Value(True)
             ),
             default=Value(False),
-            output_field=BooleanField()
+            output_field=BooleanField(),
+        ),
+        sla_avr_expired_closed=Case(
+            When(
+                incident_type__sla_deadline__isnull=False,
+                avr_start_date__isnull=False,
+                avr_end_date__isnull=False,
+                avr_end_date__gt=F('avr_deadline'),
+                then=Value(True)
+            ),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+        sla_avr_expired_open=Case(
+            When(
+                incident_type__sla_deadline__isnull=False,
+                avr_start_date__isnull=False,
+                avr_end_date__isnull=True,
+                avr_deadline__lt=now,
+                then=Value(True)
+            ),
+            default=Value(False),
+            output_field=BooleanField(),
         ),
         sla_avr_waiting=Case(
             When(
@@ -124,7 +147,7 @@ def annotate_sla_avr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
                 then=Value(True)
             ),
             default=Value(False),
-            output_field=BooleanField()
+            output_field=BooleanField(),
         ),
         sla_avr_in_progress=Case(
             When(
@@ -135,7 +158,7 @@ def annotate_sla_avr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
                 then=Value(True)
             ),
             default=Value(False),
-            output_field=BooleanField()
+            output_field=BooleanField(),
         ),
         sla_avr_closed_on_time=Case(
             When(
@@ -146,7 +169,7 @@ def annotate_sla_avr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
                 then=Value(True)
             ),
             default=Value(False),
-            output_field=BooleanField()
+            output_field=BooleanField(),
         )
     )
 
@@ -188,7 +211,27 @@ def annotate_sla_rvr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
                 then=Value(True)
             ),
             default=Value(False),
-            output_field=BooleanField()
+            output_field=BooleanField(),
+        ),
+        sla_rvr_expired_closed=Case(
+            When(
+                rvr_start_date__isnull=False,
+                rvr_end_date__isnull=False,
+                rvr_end_date__gt=F('rvr_deadline'),
+                then=Value(True)
+            ),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+        sla_rvr_expired_open=Case(
+            When(
+                rvr_start_date__isnull=False,
+                rvr_end_date__isnull=True,
+                rvr_deadline__lt=now,
+                then=Value(True)
+            ),
+            default=Value(False),
+            output_field=BooleanField(),
         ),
         sla_rvr_waiting=Case(
             When(
@@ -199,7 +242,7 @@ def annotate_sla_rvr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
                 then=Value(True)
             ),
             default=Value(False),
-            output_field=BooleanField()
+            output_field=BooleanField(),
         ),
         sla_rvr_in_progress=Case(
             When(
@@ -209,7 +252,7 @@ def annotate_sla_rvr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
                 then=Value(True)
             ),
             default=Value(False),
-            output_field=BooleanField()
+            output_field=BooleanField(),
         ),
         sla_rvr_closed_on_time=Case(
             When(
@@ -219,13 +262,13 @@ def annotate_sla_rvr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
                 then=Value(True)
             ),
             default=Value(False),
-            output_field=BooleanField()
+            output_field=BooleanField(),
         ),
     )
 
 
 def annotate_sla_dgu(qs: QuerySet[Incident]) -> QuerySet[Incident]:
-    """Аннотация SLA для ДГУ"""
+    """Аннотация SLA для ДГУ с расширенными статусами просрочки."""
     now = timezone.now()
 
     in_progress_delta = timedelta(
@@ -258,11 +301,26 @@ def annotate_sla_dgu(qs: QuerySet[Incident]) -> QuerySet[Incident]:
             ),
             output_field=DurationField(),
         ),
-
-        # Просрочен (> 15 суток)
         sla_dgu_expired=Case(
             When(
                 dgu_start_date__isnull=False,
+                dgu_end_date__isnull=False,
+                dgu_elapsed__gt=waiting_delta,
+                then=Value(True),
+            ),
+            When(
+                dgu_start_date__isnull=False,
+                dgu_end_date__isnull=True,
+                dgu_elapsed__gt=waiting_delta,
+                then=Value(True),
+            ),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+        sla_dgu_expired_closed=Case(
+            When(
+                dgu_start_date__isnull=False,
+                dgu_end_date__isnull=False,
                 dgu_elapsed__gt=waiting_delta,
                 then=Value(True),
             ),
@@ -270,7 +328,16 @@ def annotate_sla_dgu(qs: QuerySet[Incident]) -> QuerySet[Incident]:
             output_field=BooleanField(),
         ),
 
-        # In progress (< 12 часов)
+        sla_dgu_expired_open=Case(
+            When(
+                dgu_start_date__isnull=False,
+                dgu_end_date__isnull=True,
+                dgu_elapsed__gt=waiting_delta,
+                then=Value(True),
+            ),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
         sla_dgu_in_progress=Case(
             When(
                 dgu_start_date__isnull=False,
@@ -281,8 +348,6 @@ def annotate_sla_dgu(qs: QuerySet[Incident]) -> QuerySet[Incident]:
             default=Value(False),
             output_field=BooleanField(),
         ),
-
-        # Waiting (≥ 12 часов и < 15 суток)
         sla_dgu_waiting=Case(
             When(
                 dgu_start_date__isnull=False,
@@ -294,8 +359,6 @@ def annotate_sla_dgu(qs: QuerySet[Incident]) -> QuerySet[Incident]:
             default=Value(False),
             output_field=BooleanField(),
         ),
-
-        # Закрыт вовремя (≤ 15 суток)
         sla_dgu_closed_on_time=Case(
             When(
                 dgu_start_date__isnull=False,
@@ -310,7 +373,7 @@ def annotate_sla_dgu(qs: QuerySet[Incident]) -> QuerySet[Incident]:
 
 
 def annotate_sla_eks(qs: QuerySet[Incident]) -> QuerySet[Incident]:
-    """Аннотация SLA для ЭКС"""
+    """Аннотация SLA для ЭКС с расширенными статусами просрочки."""
     now = timezone.now()
 
     in_progress_delta = timedelta(
@@ -343,19 +406,42 @@ def annotate_sla_eks(qs: QuerySet[Incident]) -> QuerySet[Incident]:
             ),
             output_field=DurationField(),
         ),
-
-        # Просрочен (> 15 суток)
         sla_eks_expired=Case(
             When(
                 eks_start_date__isnull=False,
+                eks_end_date__isnull=False,
+                eks_elapsed__gt=waiting_delta,
+                then=Value(True),
+            ),
+            When(
+                eks_start_date__isnull=False,
+                eks_end_date__isnull=True,
                 eks_elapsed__gt=waiting_delta,
                 then=Value(True),
             ),
             default=Value(False),
             output_field=BooleanField(),
         ),
-
-        # In progress (< 12 часов)
+        sla_eks_expired_closed=Case(
+            When(
+                eks_start_date__isnull=False,
+                eks_end_date__isnull=False,
+                eks_elapsed__gt=waiting_delta,
+                then=Value(True),
+            ),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+        sla_eks_expired_open=Case(
+            When(
+                eks_start_date__isnull=False,
+                eks_end_date__isnull=True,
+                eks_elapsed__gt=waiting_delta,
+                then=Value(True),
+            ),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
         sla_eks_in_progress=Case(
             When(
                 eks_start_date__isnull=False,
@@ -366,8 +452,6 @@ def annotate_sla_eks(qs: QuerySet[Incident]) -> QuerySet[Incident]:
             default=Value(False),
             output_field=BooleanField(),
         ),
-
-        # Waiting (≥ 12 часов и < 15 суток)
         sla_eks_waiting=Case(
             When(
                 eks_start_date__isnull=False,
@@ -379,8 +463,6 @@ def annotate_sla_eks(qs: QuerySet[Incident]) -> QuerySet[Incident]:
             default=Value(False),
             output_field=BooleanField(),
         ),
-
-        # Закрыт вовремя (≤ 15 суток)
         sla_eks_closed_on_time=Case(
             When(
                 eks_start_date__isnull=False,

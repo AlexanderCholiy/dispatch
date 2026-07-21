@@ -47,7 +47,8 @@ class SLAStatus(models.TextChoices):
     EMPTY = ('empty', 'Отсутсвует')
     IN_PROGRESS = ('in-progress', 'В работе')
     WAITING = ('waiting', 'Меньше часа')
-    EXPIRED = ('canceled', 'Просрочен')
+    EXPIRED_OPEN = ('expired-open', 'Просрочен (открыт)')
+    EXPIRED_CLOSED = ('expired-closed', 'Просрочен (закрыт)')
     CLOSED_ON_TIME = ('closed', 'Закрыт')
 
 
@@ -57,7 +58,8 @@ class TimeStatus(models.TextChoices):
         'in-progress', f'Менее {DGU_SLA_IN_PROGRESS_DEADLINE_IN_HOURS} ч'
     )
     WAITING = ('waiting', 'Менее 15 дн')
-    EXPIRED = ('canceled', 'Более 15 дн')
+    EXPIRED_OPEN = ('expired-open', 'Более 15 дн (открыт)')
+    EXPIRED_CLOSED = ('expired-closed', 'Более 15 дн (закрыт)')
     CLOSED_ON_TIME = ('closed', 'Закрыт за 15 дн')
 
 
@@ -690,21 +692,17 @@ class Incident(models.Model):
 
             sla_delta = timedelta(minutes=self.incident_type.sla_deadline)
             deadline = start + sla_delta
-            check_date = end or now
-            remaining = (deadline - check_date).total_seconds()
 
             if end:
-                return (
-                    SLAStatus.EXPIRED
-                    if self.is_sla_avr_expired
-                    else SLAStatus.CLOSED_ON_TIME
-                )
+                if self.is_sla_avr_expired:
+                    return SLAStatus.EXPIRED_CLOSED
+                return SLAStatus.CLOSED_ON_TIME
 
+            remaining = (deadline - now).total_seconds()
             if remaining < 0:
-                return SLAStatus.EXPIRED
+                return SLAStatus.EXPIRED_OPEN
             if remaining <= 3600:
                 return SLAStatus.WAITING
-
             return SLAStatus.IN_PROGRESS
 
         # ---------- RVR ----------
@@ -717,21 +715,17 @@ class Incident(models.Model):
 
             sla_delta = timedelta(hours=RVR_SLA_DEADLINE_IN_HOURS)
             deadline = start + sla_delta
-            check_date = end or now
-            remaining = (deadline - check_date).total_seconds()
 
             if end:
-                return (
-                    SLAStatus.EXPIRED
-                    if self.is_sla_rvr_expired
-                    else SLAStatus.CLOSED_ON_TIME
-                )
+                if self.is_sla_rvr_expired:
+                    return SLAStatus.EXPIRED_CLOSED
+                return SLAStatus.CLOSED_ON_TIME
 
+            remaining = (deadline - now).total_seconds()
             if remaining < 0:
-                return SLAStatus.EXPIRED
+                return SLAStatus.EXPIRED_OPEN
             if remaining <= 3600:
                 return SLAStatus.WAITING
-
             return SLAStatus.IN_PROGRESS
 
         # ---------- DGU ----------
@@ -748,28 +742,18 @@ class Incident(models.Model):
             in_progress_limit = timedelta(
                 hours=DGU_SLA_IN_PROGRESS_DEADLINE_IN_HOURS
             )
-            waiting_limit = timedelta(
-                hours=DGU_SLA_WAITING_DEADLINE_IN_HOURS
-            )
+            waiting_limit = timedelta(hours=DGU_SLA_WAITING_DEADLINE_IN_HOURS)
 
-            # Закрыт
             if end:
-                return (
-                    TimeStatus.EXPIRED
-                    if elapsed > waiting_limit
-                    else TimeStatus.CLOSED_ON_TIME
-                )
+                if elapsed > waiting_limit:
+                    return TimeStatus.EXPIRED_CLOSED
+                return TimeStatus.CLOSED_ON_TIME
 
-            # В работе (< 12 часов)
             if elapsed < in_progress_limit:
                 return TimeStatus.IN_PROGRESS
-
-            # Ожидание (< 15 суток)
             if elapsed < waiting_limit:
                 return TimeStatus.WAITING
-
-            # Просрочен
-            return TimeStatus.EXPIRED
+            return TimeStatus.EXPIRED_OPEN
 
         # ---------- EKS ----------
         if category == 'eks':
@@ -785,28 +769,20 @@ class Incident(models.Model):
             in_progress_limit = timedelta(
                 hours=EKS_SLA_IN_PROGRESS_DEADLINE_IN_HOURS
             )
-            waiting_limit = timedelta(
-                hours=EKS_SLA_WAITING_DEADLINE_IN_HOURS
-            )
+            waiting_limit = timedelta(hours=EKS_SLA_WAITING_DEADLINE_IN_HOURS)
 
             # Закрыт
             if end:
-                return (
-                    TimeStatus.EXPIRED
-                    if elapsed > waiting_limit
-                    else TimeStatus.CLOSED_ON_TIME
-                )
+                if elapsed > waiting_limit:
+                    return TimeStatus.EXPIRED_CLOSED
+                return TimeStatus.CLOSED_ON_TIME
 
-            # В работе (< 12 часов)
+            # Открыт
             if elapsed < in_progress_limit:
                 return TimeStatus.IN_PROGRESS
-
-            # Ожидание (< 15 суток)
             if elapsed < waiting_limit:
                 return TimeStatus.WAITING
-
-            # Просрочен
-            return TimeStatus.EXPIRED
+            return TimeStatus.EXPIRED_OPEN
 
         return None
 

@@ -20,6 +20,16 @@
   letter-spacing: 0.05em;
 }
 
+.expired-open {
+  background-color: var(--orange-color);
+  letter-spacing: 0.05em;
+}
+
+.expired-closed {
+  background-color: var(--red-color);
+  letter-spacing: 0.05em;
+}
+
 .canceled {
   background-color: var(--red-color);
   letter-spacing: 0.05em;

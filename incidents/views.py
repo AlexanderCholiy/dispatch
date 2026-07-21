@@ -480,8 +480,10 @@ def index(request: HttpRequest) -> HttpResponse:
         q_filter = Q()
 
         for status_val in sla_avr_status:
-            if status_val == SLAStatus.EXPIRED.value:
-                q_filter |= Q(sla_avr_expired=True)
+            if status_val == SLAStatus.EXPIRED_OPEN.value:
+                q_filter |= Q(sla_avr_expired_open=True)
+            elif status_val == SLAStatus.EXPIRED_CLOSED.value:
+                q_filter |= Q(sla_avr_expired_closed=True)
             elif status_val == SLAStatus.WAITING.value:
                 q_filter |= Q(sla_avr_waiting=True)
             elif status_val == SLAStatus.IN_PROGRESS.value:
@@ -494,6 +496,8 @@ def index(request: HttpRequest) -> HttpResponse:
                     sla_avr_waiting=False,
                     sla_avr_in_progress=False,
                     sla_avr_closed_on_time=False,
+                    sla_avr_expired_open=False,
+                    sla_avr_expired_closed=False,
                 )
 
         base_qs = base_qs.filter(q_filter)
@@ -502,8 +506,10 @@ def index(request: HttpRequest) -> HttpResponse:
         q_filter = Q()
 
         for status_val in sla_rvr_status:
-            if status_val == SLAStatus.EXPIRED.value:
-                q_filter |= Q(sla_rvr_expired=True)
+            if status_val == SLAStatus.EXPIRED_OPEN.value:
+                q_filter |= Q(sla_rvr_expired_open=True)
+            elif status_val == SLAStatus.EXPIRED_CLOSED.value:
+                q_filter |= Q(sla_rvr_expired_closed=True)
             elif status_val == SLAStatus.WAITING.value:
                 q_filter |= Q(sla_rvr_waiting=True)
             elif status_val == SLAStatus.IN_PROGRESS.value:
@@ -516,6 +522,8 @@ def index(request: HttpRequest) -> HttpResponse:
                     sla_rvr_waiting=False,
                     sla_rvr_in_progress=False,
                     sla_rvr_closed_on_time=False,
+                    sla_rvr_expired_open=False,
+                    sla_rvr_expired_closed=False,
                 )
 
         base_qs = base_qs.filter(q_filter)
@@ -524,13 +532,15 @@ def index(request: HttpRequest) -> HttpResponse:
         q_filter = Q()
 
         for status_val in sla_dgu_status:
-            if status_val == SLAStatus.EXPIRED.value:
-                q_filter |= Q(sla_dgu_expired=True)
-            elif status_val == SLAStatus.WAITING.value:
+            if status_val == TimeStatus.EXPIRED_OPEN.value:
+                q_filter |= Q(sla_dgu_expired_open=True)
+            elif status_val == TimeStatus.EXPIRED_CLOSED.value:
+                q_filter |= Q(sla_dgu_expired_closed=True)
+            elif status_val == TimeStatus.WAITING.value:
                 q_filter |= Q(sla_dgu_waiting=True)
-            elif status_val == SLAStatus.IN_PROGRESS.value:
+            elif status_val == TimeStatus.IN_PROGRESS.value:
                 q_filter |= Q(sla_dgu_in_progress=True)
-            elif status_val == SLAStatus.CLOSED_ON_TIME.value:
+            elif status_val == TimeStatus.CLOSED_ON_TIME.value:
                 q_filter |= Q(sla_dgu_closed_on_time=True)
             else:
                 q_filter |= Q(
@@ -538,6 +548,8 @@ def index(request: HttpRequest) -> HttpResponse:
                     sla_dgu_waiting=False,
                     sla_dgu_in_progress=False,
                     sla_dgu_closed_on_time=False,
+                    sla_dgu_expired_open=False,
+                    sla_dgu_expired_closed=False,
                 )
 
         base_qs = base_qs.filter(q_filter)
@@ -546,13 +558,15 @@ def index(request: HttpRequest) -> HttpResponse:
         q_filter = Q()
 
         for status_val in sla_eks_status:
-            if status_val == SLAStatus.EXPIRED.value:
-                q_filter |= Q(sla_eks_expired=True)
-            elif status_val == SLAStatus.WAITING.value:
+            if status_val == TimeStatus.EXPIRED_OPEN.value:
+                q_filter |= Q(sla_eks_expired_open=True)
+            elif status_val == TimeStatus.EXPIRED_CLOSED.value:
+                q_filter |= Q(sla_eks_expired_closed=True)
+            elif status_val == TimeStatus.WAITING.value:
                 q_filter |= Q(sla_eks_waiting=True)
-            elif status_val == SLAStatus.IN_PROGRESS.value:
+            elif status_val == TimeStatus.IN_PROGRESS.value:
                 q_filter |= Q(sla_eks_in_progress=True)
-            elif status_val == SLAStatus.CLOSED_ON_TIME.value:
+            elif status_val == TimeStatus.CLOSED_ON_TIME.value:
                 q_filter |= Q(sla_eks_closed_on_time=True)
             else:
                 q_filter |= Q(
@@ -560,6 +574,8 @@ def index(request: HttpRequest) -> HttpResponse:
                     sla_eks_waiting=False,
                     sla_eks_in_progress=False,
                     sla_eks_closed_on_time=False,
+                    sla_eks_expired_open=False,
+                    sla_eks_expired_closed=False,
                 )
 
         base_qs = base_qs.filter(q_filter)
