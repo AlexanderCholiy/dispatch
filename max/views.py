@@ -1,11 +1,12 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponseRedirect
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django_ratelimit.decorators import ratelimit
 
 from incidents.models import Incident
-from max.constants import MaxNotificationStatus
+from max.constants import ALLOWED_INCIDENT_TYPES, MaxNotificationStatus
+from max.services.format_incident_message import format_incident_message
 from max.services.get_wait_message import (
     get_wait_message,
     save_notification_status,
@@ -24,9 +25,10 @@ def notify_max_incident(
     incident = get_object_or_404(
         Incident.objects.select_related(
             'pole',
+            'base_station',
             'incident_type',
             'incident_subtype'
-        ),
+        ).prefetch_related('base_station__operator',),
         id=incident_id
     )
 
@@ -46,6 +48,25 @@ def notify_max_incident(
             'тип проблемы.'
         )
 
+    if (
+        incident.incident_type
+        and incident.incident_type.name not in ALLOWED_INCIDENT_TYPES
+    ):
+        type_name = incident.incident_type.name
+
+        allowed_names = ', '.join([t for t in ALLOWED_INCIDENT_TYPES])
+
+        errors.append(
+            f'Тип "{type_name}" не поддерживается для отправки в MAX. '
+            f'Доступные типы: {allowed_names}.'
+        )
+
+    if not incident.incident_subtype:
+        errors.append(
+            'Прежде чем отправлять уведомление, '
+            'необходимо указать подтип проблемы.'
+        )
+
     if errors:
         for error_msg in errors:
             messages.error(request, error_msg)
@@ -59,15 +80,23 @@ def notify_max_incident(
         messages.warning(request, wait_msg)
         return redirect('incidents:incident_detail', incident_id=incident.id)
 
-    save_notification_status(incident_id, MaxNotificationStatus.PENDING)
+    markdown_text, plain_text = format_incident_message(incident)
 
-    messages.info(request, 'Уведомление формируется и отправляется в MAX.')
+    if request.method == 'GET':
+        return render(request, 'max/confirm_incident_notification.html', {
+            'incident': incident,
+            'preview_text': plain_text,
+        })
+    elif request.method == 'POST':
+        save_notification_status(incident_id, MaxNotificationStatus.PENDING)
 
-    send_max_incident_notification.delay(
-        incident_id=incident.id,
-        sender_user_id=user.id,
-        text='Hello',
-    )
+        messages.info(request, 'Уведомление формируется и отправляется в MAX.')
+
+        send_max_incident_notification.delay(
+            incident_id=incident.id,
+            sender_user_id=user.id,
+            text=markdown_text,
+        )
 
     return redirect(
         'incidents:incident_detail', incident_id=incident.id

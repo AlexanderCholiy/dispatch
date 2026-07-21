@@ -1,8 +1,14 @@
 from celery import shared_task
+from django.core.cache import cache
 
 from core.loggers import celery_logger, max_api_logger
 from incidents.models import Incident, IncidentHistory
-from max.constants import MAX_CHAT_ID, MaxNotificationStatus
+from max.constants import (
+    MAX_CHAT_ID,
+    MAX_INCIDENT_SPAM_KEY_PREFIX,
+    MaxNotificationData,
+    MaxNotificationStatus,
+)
 from max.max_api import max_api
 from max.services.get_wait_message import save_notification_status
 
@@ -23,6 +29,19 @@ def send_max_incident_notification(
     text: str,
 ):
     """Задача для отправки уведомлений в MAX."""
+    key = f'{MAX_INCIDENT_SPAM_KEY_PREFIX}{incident_id}'
+    cached_data: None | MaxNotificationData = cache.get(key)
+
+    if cached_data:
+        current_status = cached_data['status']
+
+        if current_status == MaxNotificationStatus.SENT.value:
+            celery_logger.warning(
+                f'Пропуск отправки для инцидента {incident_id}. '
+                f'Текущий статус: {current_status}.'
+            )
+            return
+
     try:
         incident = Incident.objects.get(id=incident_id)
     except Incident.DoesNotExist:
@@ -41,7 +60,7 @@ def send_max_incident_notification(
         try:
             IncidentHistory.objects.create(
                 incident=incident,
-                action='Уведомление отправлено в MAX',
+                action='Отправлено уведомление в MAX',
                 performed_by_id=sender_user_id,
             )
         except Exception as history_error:

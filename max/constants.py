@@ -27,3 +27,8 @@ class MaxNotificationStatus(models.TextChoices):
 class MaxNotificationData(TypedDict):
     timestamp: str
     status: str
+
+
+ALLOWED_INCIDENT_TYPES = {
+    'Угроза гибели / гибель объекта': '🔴',
+}

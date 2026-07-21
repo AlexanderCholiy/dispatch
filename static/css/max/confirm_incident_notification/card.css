@@ -1,0 +1,21 @@
+.max-word {
+  color: var(--blue-color);
+  font-weight: 700;
+}
+
+.preview-box {
+  color: var(--add-color);
+  font-size: var(--font-sm);
+  line-height: 1.6;
+  word-wrap: break-word;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+}

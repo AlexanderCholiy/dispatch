@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/max/confirm_incident_notification/card.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-sm">
+
+  <div class="card">
+    <div class="card-header">Подтверждение отправки уведомления в <span class="max-word">MAX</span> по инциденту <span class="copy-text" data-text="{{ incident }}" style="cursor: pointer;">{{ incident }}</span></div>
+
+    <div class="card-body">
+
+      <form method="post" novalidate>
+        {% csrf_token %}
+
+        <input type="hidden" name="action" value="confirm">
+  
+        <div class="preview-box">
+            {{ preview_text|linebreaksbr }}
+        </div>
+
+        <div class="action-buttons">
+            <a href="{% url 'incidents:incident_detail' incident.id %}" class="btn btn-secondary btn-cancel">
+                Отмена
+            </a>
+
+            <button type="submit" class="btn btn-warning btn-confirm">
+                Подтвердить
+            </button>
+        </div>
+
+      </form>
+    </div>
+
+
+
+  </div>
+</div>
+{% endblock %}
