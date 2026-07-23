@@ -485,7 +485,7 @@ class EmailManager:
         if abs(forced_local - now_local) <= threshold:
             email_parser_logger.warning(
                 f'Письмо {msg_id}: дата после преобразования '
-                f'({email_local}) оказалась в будущем. '
+                f'({email_date}) оказалась в будущем. '
                 f'Исправлено на {forced_local} '
                 f'путём замены TZ на {settings.TIME_ZONE}.'
             )

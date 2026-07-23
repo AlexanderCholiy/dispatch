@@ -2,6 +2,7 @@ from django.utils import timezone
 
 from incidents.models import Incident
 from max.constants import ALLOWED_INCIDENT_TYPES
+from ts.constants import UNDEFINED_CASE
 
 
 def format_incident_message(incident: Incident) -> tuple[str, str]:
@@ -25,6 +26,9 @@ def format_incident_message(incident: Incident) -> tuple[str, str]:
         if lat is not None and lon is not None else 'Нет координат'
     )
     address = incident.pole.address or 'Нет адреса'
+    avr_contractor = incident.pole.avr_contractor.contractor_name
+    if avr_contractor == UNDEFINED_CASE:
+        avr_contractor = 'Отсутствует'
 
     # Тип и подтип
     type_name = incident.incident_type.name
@@ -70,9 +74,11 @@ def format_incident_message(incident: Incident) -> tuple[str, str]:
     if bs_name:
         md_lines.append(f'БС: **{bs_name}**')
         md_lines.append(f'Опора: **{pole_code}**')
+        md_lines.append(f'Подрядчик АВР: **{avr_contractor}**')
         md_lines.append(f'Операторы: **{operators_str}**')
     else:
         md_lines.append(f'Опора: **{pole_code}**')
+        md_lines.append(f'Подрядчик АВР: **{avr_contractor}**')
 
     md_lines.append('')
     md_lines.append(f'Координаты: _{coords_str}_')
@@ -95,9 +101,11 @@ def format_incident_message(incident: Incident) -> tuple[str, str]:
     if bs_name:
         pt_lines.append(f'БС: {bs_name}')
         pt_lines.append(f'Опора: {pole_code}')
+        pt_lines.append(f'Подрядчик АВР: {avr_contractor}')
         pt_lines.append(f'Операторы: {operators_str}')
     else:
         pt_lines.append(f'Опора: {pole_code}')
+        pt_lines.append(f'Подрядчик АВР: {avr_contractor}')
 
     pt_lines.append('')
     pt_lines.append(f'Координаты: {coords_str}')

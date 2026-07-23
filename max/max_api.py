@@ -26,6 +26,7 @@ class LastUpdate(TypedDict):
     text: str
     sender_name: str
     timestamp: datetime
+    last_update: dict
 
 
 class MessageInfo(TypedDict):
@@ -192,6 +193,7 @@ class MaxApi:
             'text': text,
             'sender_name': sender_name,
             'timestamp': timestamp,
+            'last_update': last_update,
         }
 
     def get_chats_info(self) -> dict:

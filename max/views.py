@@ -27,7 +27,8 @@ def notify_max_incident(
             'pole',
             'base_station',
             'incident_type',
-            'incident_subtype'
+            'incident_subtype',
+            'pole__avr_contractor'
         ).prefetch_related('base_station__operator',),
         id=incident_id
     )

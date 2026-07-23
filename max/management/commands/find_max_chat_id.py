@@ -11,7 +11,12 @@ class Command(BaseCommand):
 
     @timer(max_api_logger)
     def handle(self, *args, **options):
-        # chat_id = max_api.get_last_update()['chat_id']
-        # chat_id = max_api.get_chats_info()
+        # last_chat_info = max_api.get_last_update()
+        # print(last_chat_info['last_update'])
+
+        # chats_info = max_api.get_chats_info()
+
+        # for chat in chats_info['chats']:
+        #     print(chat)
 
         max_api.send_message(text='Hello world!', chat_id=MAX_CHAT_ID)
