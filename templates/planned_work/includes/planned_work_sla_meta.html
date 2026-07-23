@@ -44,8 +44,7 @@
 
     <div class="sla-wrapper">
       <span
-        class="status-tag {{ status.value|default:'unknown' }} {% if deadline %}tooltip{% endif %}"
-        data-title="{{ start|date:'d.m.Y H:i' }} — {{ deadline|date:'d.m.Y H:i' }}"
+        class="status-tag {{ status.value|default:'unknown' }}"
       >
         {{ status.label|default:'Отсутствует' }}
       </span>

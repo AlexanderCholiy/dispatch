@@ -24,12 +24,13 @@ def get_responsible_users() -> list[ResponsibleUsers]:
             for user in (
                 User.objects.filter(
                     Q(role=Roles.DISPATCH, is_active=True)
+                    | Q(role=Roles.INTERN, is_active=True)
                     | Q(id__in=Incident.objects.values_list(
                         'responsible_user_id', flat=True
                     ))
                 )
                 .distinct()
-                .order_by('username')
+                .order_by('role', 'username')
             )
         ],
         USERS_CACHE_TTL,

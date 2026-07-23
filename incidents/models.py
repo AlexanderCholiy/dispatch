@@ -46,10 +46,10 @@ class SLAStatus(models.TextChoices):
     # Используй value такой же как у классов IncidentStatus
     EMPTY = ('empty', 'Отсутсвует')
     IN_PROGRESS = ('in-progress', 'В работе')
-    WAITING = ('waiting', 'Меньше часа')
+    WAITING = ('waiting', 'Менее часа')
     EXPIRED_OPEN = ('expired-open', 'Просрочен (открыт)')
     EXPIRED_CLOSED = ('expired-closed', 'Просрочен (закрыт)')
-    CLOSED_ON_TIME = ('closed', 'Закрыт')
+    CLOSED_ON_TIME = ('closed', 'Закрыт вовремя')
 
 
 class TimeStatus(models.TextChoices):

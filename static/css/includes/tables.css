@@ -63,18 +63,21 @@
 }
 
 .status-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   padding: var(--space-xs) var(--space-sm);
   font-size: var(--font-sm);
   font-weight: 500;
   border-radius: var(--radius-sm);
   color: var(--background-color);
-  text-align: center;
-  align-items: center;
   min-width: 160px;
   max-width: 160px;
+  min-height: 30px;
   transition: background-color var(--transition-value), color var(--transition-value);
 }
+
 
 .custom-table td.empty {
     padding: var(--space-md) 0;
