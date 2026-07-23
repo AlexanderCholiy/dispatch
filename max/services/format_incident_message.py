@@ -32,7 +32,9 @@ def format_incident_message(incident: Incident) -> tuple[str, str]:
 
     # Тип и подтип
     type_name = incident.incident_type.name
-    subtype_name = incident.incident_subtype.name
+    subtype_name = (
+        incident.incident_subtype.name if incident.incident_subtype else None
+    )
 
     # Эмодзи
     emoji = ALLOWED_INCIDENT_TYPES[type_name]
@@ -66,7 +68,10 @@ def format_incident_message(incident: Incident) -> tuple[str, str]:
     md_lines = [
         summary_line,
         '',
-        f'{emoji} **{type_name} ({subtype_name})**.',
+        (
+            f'{emoji} **{type_name} ({subtype_name})**'
+            if subtype_name else f'{emoji} **{type_name}**'
+        ),
     ]
 
     md_lines.append('')
@@ -93,7 +98,10 @@ def format_incident_message(incident: Incident) -> tuple[str, str]:
     pt_lines = [
         summary_line,
         '',
-        f'{emoji} {type_name} ({subtype_name})',
+        (
+            f'{emoji} {type_name} ({subtype_name})'
+            if subtype_name else f'{emoji} {type_name}'
+        ),
     ]
 
     pt_lines.append('')

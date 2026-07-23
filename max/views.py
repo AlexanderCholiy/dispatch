@@ -62,12 +62,6 @@ def notify_max_incident(
             f'Доступные типы: {allowed_names}.'
         )
 
-    if not incident.incident_subtype:
-        errors.append(
-            'Прежде чем отправлять уведомление, '
-            'необходимо указать подтип проблемы.'
-        )
-
     if errors:
         for error_msg in errors:
             messages.error(request, error_msg)
