@@ -635,6 +635,25 @@ class IncidentForm(forms.ModelForm):
                 f'Сначала выберите {auto_close_statuses_str}.'
             )
 
+        if new_status.name in FINISHED_STATUS_NAMES or auto_close:
+            field_labels = {
+                'avr_start_date': 'avr_end_date',
+                'rvr_start_date': 'rvr_end_date',
+                'dgu_start_date': 'dgu_end_date',
+                'eks_start_date': 'eks_end_date',
+            }
+
+            for start_field, end_field in field_labels.items():
+                new_start_val = cleaned_data.get(start_field)
+                new_end_val = cleaned_data.get(end_field)
+
+                if new_start_val and not new_end_val:
+                    self.add_error(
+                        end_field,
+                        'Инцидент не может быть закрыт, '
+                        'если указана дата начала работ и нет даты закрытия.'
+                    )
+
         return cleaned_data
 
     def clean_categories(self):
