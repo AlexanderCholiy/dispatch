@@ -55,7 +55,7 @@ class Command(BaseCommand):
         self.compress_old_remote_backups()
 
         # self.restore_database(
-        #     '/home/a.choliy/dispatch/data/remote_backup_db/backup_dispatch_2026-06-16_12-55.sql',
+        #     '/home/a.choliy/dispatch/data/remote_backup_db/backup_dispatch_2026-07-24_09-55.sql',
         #     f'dump_{self.db_name}' if (
         #         not self.db_name.startswith('dump_')
         #     ) else self.db_name
