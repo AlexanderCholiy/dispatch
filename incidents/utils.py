@@ -82,6 +82,7 @@ class EmailNode(TypedDict):
 
 
 class IncidentSelectionStrategy:
+    was_created = 'was_created'
     by_subject_with_thread = 'by_subject_with_thread'
     by_actual_in_thread = 'by_actual_in_thread'
     by_similar_email = 'by_similar_email'
@@ -591,6 +592,54 @@ class IncidentManager(IncidentValidator):
         )
         incident.statuses.add(status)
 
+    def get_incident_from_email_thread(
+        self, email_msg: EmailMessage
+    ) -> Optional[Incident]:
+        actual_email_incident = None
+
+        emails_thread = self.get_email_thread(email_msg.email_msg_id)
+
+        thread_incidents = [
+            e.email_incident
+            for e in emails_thread
+            if (
+                e.email_incident
+                and not e.email_incident.disable_thread_auto_link
+            )
+        ]
+
+        thread_incidents = list({i.pk: i for i in thread_incidents}.values())
+
+        if thread_incidents:
+            # Открытые инциденты имеют приоритет над закрытыми.
+            actual_email_incident = max(
+                thread_incidents,
+                key=lambda i: (
+                    int(not i.is_incident_finish),
+                    i.incident_date,
+                    i.pk
+                ),
+                default=None
+            )
+
+        if len(thread_incidents) > 1:
+            selection_strategy = (
+                IncidentSelectionStrategy.by_actual_in_thread
+            )
+
+            incident_logger.warning(
+                (
+                    f'Email id={email_msg.pk} '
+                    f'(msg_id={email_msg.email_msg_id}) связан с несколькими '
+                    f'инцидентами {thread_incidents}. '
+                    f'Выбран инцидент id={actual_email_incident.pk} '
+                    f'(code={actual_email_incident.code}). '
+                    f'Алгоритм выбора: {selection_strategy}.'
+                )
+            )
+
+        return actual_email_incident
+
     def add_incident_from_email(
         self,
         email_msg: EmailMessage,
@@ -630,41 +679,30 @@ class IncidentManager(IncidentValidator):
             - tuple[None, None], если инцидент не зарегестрирован.
         """
         selection_strategy: Optional[str] = None
-
-        # 1. Поиск по коду в теме письма:
-        actual_email_incident = self.get_incident_by_code_in_subject(
-            email_msg, yt_manager
-        )
-        if actual_email_incident:
-            selection_strategy = (
-                IncidentSelectionStrategy.by_subject_only
-            )
-
-        # Все письма относящиеся к переписке:
-        emails_thread = self.get_email_thread(email_msg.email_msg_id)
-
-        email_ids = [email.pk for email in emails_thread]
-
         new_incident: Optional[bool] = None
 
-        # Все инциденты, уже связанные с письмами в цепочке:
-        thread_incidents = [
-            e.email_incident
-            for e in emails_thread
-            if (
-                e.email_incident
-                and not e.email_incident.disable_thread_auto_link
+        actual_email_incident = email_msg.email_incident
+        if actual_email_incident:
+            selection_strategy = (
+                IncidentSelectionStrategy.was_created
             )
-        ]
-        # Убираем дубликаты:
-        thread_incidents = list({i.pk: i for i in thread_incidents}.values())
+
+        # 1. Поиск по коду в теме письма:
+        if not actual_email_incident:
+            actual_email_incident = self.get_incident_by_code_in_subject(
+                email_msg, yt_manager
+            )
+
+            if actual_email_incident:
+                selection_strategy = (
+                    IncidentSelectionStrategy.by_subject_only
+                )
 
         # 2. Если по теме не нашли — берём самый актуальный инцидент:
-        if not actual_email_incident and thread_incidents:
-            actual_email_incident = max(
-                thread_incidents,
-                key=lambda i: (i.incident_date, i.pk),
-                default=None
+        if not actual_email_incident:
+            # Открытые инциденты имеют приоритет над закрытыми.
+            actual_email_incident = self.get_incident_from_email_thread(
+                email_msg
             )
             if actual_email_incident:
                 selection_strategy = (
@@ -693,19 +731,13 @@ class IncidentManager(IncidentValidator):
                 email_msg.was_added_2_yandex_tracker = False
                 email_msg.save()
 
-        # Поиск опоры и БС по всей переписке:
+        # Поиск опоры и БС:
         if (
             not actual_email_incident
             or (actual_email_incident and not actual_email_incident.pole)
         ):
-            pole, base_station = next(
-                (
-                    self.find_pole_and_base_station_in_msg(msg)
-                    for msg in emails_thread
-                    if (
-                        pole := self.find_pole_and_base_station_in_msg(msg)[0]
-                    ) is not None
-                ), (None, None)
+            pole, base_station = self.find_pole_and_base_station_in_msg(
+                email_msg
             )
         else:
             pole, base_station = (
@@ -764,7 +796,7 @@ class IncidentManager(IncidentValidator):
                     is_yt_tracker_controlled = False
 
                 actual_email_incident = Incident.objects.create(
-                    incident_date=emails_thread[0].email_date,
+                    incident_date=email_msg.email_date,
                     pole=pole,
                     base_station=base_station,
                     responsible_user=(
@@ -778,53 +810,14 @@ class IncidentManager(IncidentValidator):
         if not actual_email_incident:
             return None, None
 
-        # Финальная привязка и обработка конфликтов:
-        thread_incident_ids: list[int] = list(
-            EmailMessage.objects
-            .filter(id__in=email_ids, email_incident__isnull=False)
-            .values_list('email_incident_id', flat=True)
-            .order_by('-email_incident_id')
-            .distinct()
-        )
-
-        if len(thread_incident_ids) > 1:
-            incident_logger.warning(
-                (
-                    f'Email id={email_msg.pk} '
-                    f'(msg_id={email_msg.email_msg_id}) связан с несколькими '
-                    f'инцидентами {thread_incident_ids}. '
-                    f'Выбран инцидент id={actual_email_incident.pk} '
-                    f'(code={actual_email_incident.code}). '
-                    f'Алгоритм выбора: {selection_strategy}.'
-                )
-            )
-
-            old_incidents = Incident.objects.filter(
-                pk__in=[
-                    i for i in thread_incident_ids
-                    if i != actual_email_incident.pk
-                ],
-                is_incident_finish=True,
-                disable_thread_auto_link=False,
-            )
-
-            if old_incidents.exists():
-                incident_data = list(old_incidents.values_list('id', 'code'))
-                updated = old_incidents.update(disable_thread_auto_link=True)
-                if updated > 0:
-                    log_message = ', '.join(
-                        [f'[ID: {idx}, Code: {c}]' for idx, c in incident_data]
-                    )
-                    incident_logger.info(
-                        f'Выставлен disable_thread_auto_link=True для '
-                        f'инцидентов: {log_message}'
-                    )
-
         # Обновляем только письма без инцидента:
-        EmailMessage.objects.filter(
-            id__in=email_ids,
-            email_incident__isnull=True
-        ).update(email_incident=actual_email_incident)
+        email_msg.email_incident = actual_email_incident
+        email_msg.save()
+
+        incident_logger.debug(
+            f'Письмо по инциденту {actual_email_incident}. '
+            f'Алгоритм: {selection_strategy}'
+        )
 
         # У инцидента обновляем поле с шифром опоры и БС, если там пусто:
         if actual_email_incident.pole is None and pole is not None:

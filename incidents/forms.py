@@ -688,6 +688,27 @@ class IncidentForm(forms.ModelForm):
                     'Невозможно закрыть инцидент без указания его подтипа.'
                 )
 
+        # if new_status.name in FINISHED_STATUS_NAMES or auto_close:
+        #     # Все ПОДЗАДАЧИ должны быть закрыты.
+        #     subtasks_qs = IncidentLink.objects.filter(
+        #         source_incident=self.instance,
+        #         link_type=IncidentLinkType.SUBTASK
+        #     ).select_related('target_incident')
+
+        #     print(subtasks_qs)
+
+        #     open_subtasks = []
+        #     for link in subtasks_qs:
+        #         if not link.target_incident.is_incident_finish:
+        #             open_subtasks.append(str(link.target_incident))
+
+        #     if open_subtasks:
+        #         raise forms.ValidationError(
+        #             f'Нельзя закрыть родительский инцидент, '
+        #             'так как не выполнены подзадачи: '
+        #             f'{", ".join(open_subtasks)}.'
+        #         )
+
         return cleaned_data
 
     def clean_categories(self):
