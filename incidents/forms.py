@@ -44,6 +44,9 @@ from .models import (
     IncidentLinkType,
     IncidentStatus,
     IncidentStatusHistory,
+    IncidentSubType,
+    IncidentType,
+    TypeSubTypeRelation,
 )
 from .services.notify_responsible_user_on_reassign import (
     notify_responsible_user_on_reassign
@@ -653,6 +656,37 @@ class IncidentForm(forms.ModelForm):
                         'Инцидент не может быть закрыт, '
                         'если указана дата начала работ и нет даты закрытия.'
                     )
+
+        new_incident_type: Optional[IncidentType] = cleaned_data.get(
+            'incident_type'
+        )
+
+        if (
+            (new_status.name in FINISHED_STATUS_NAMES or auto_close)
+            and not new_incident_type
+        ):
+            self.add_error(
+                'incident_type',
+                'Невозможно закрыть инцидент без указания его типа.'
+            )
+
+        new_incident_subtype: Optional[IncidentSubType] = cleaned_data.get(
+            'incident_subtype'
+        )
+
+        if (
+            (new_status.name in FINISHED_STATUS_NAMES or auto_close)
+            and new_incident_type and not new_incident_subtype
+        ):
+            has_available_subtypes = TypeSubTypeRelation.objects.filter(
+                incident_type=new_incident_type
+            ).exists()
+
+            if has_available_subtypes:
+                self.add_error(
+                    'incident_subtype',
+                    'Невозможно закрыть инцидент без указания его подтипа.'
+                )
 
         return cleaned_data
 
