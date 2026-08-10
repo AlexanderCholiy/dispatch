@@ -601,11 +601,9 @@ class IncidentManager(IncidentValidator):
         сообщением.
 
         Приоритет выбора инцидента:
-            1. Инцидент, найденный по теме письма если письмо относится к
-            нескольким цепочкам инцидентов
-            2. Самый актуальный инцидент в цепочке инцидентов
-            3. Дубликаты писем для самого актуального инцидента
-            4. Поиск без цепочки, только по теме
+            1. Поиск только по теме.
+            2. Самый актуальный инцидент в цепочке инцидентов.
+            3. Дубликаты писем для самого актуального инцидента.
 
         Особенности:
             - Новое сообщение от noc.rostov@info.t2.ru имеющее в теме
@@ -633,11 +631,20 @@ class IncidentManager(IncidentValidator):
         """
         selection_strategy: Optional[str] = None
 
+        # 1. Поиск по коду в теме письма:
+        actual_email_incident = self.get_incident_by_code_in_subject(
+            email_msg, yt_manager
+        )
+        if actual_email_incident:
+            selection_strategy = (
+                IncidentSelectionStrategy.by_subject_only
+            )
+
         # Все письма относящиеся к переписке:
         emails_thread = self.get_email_thread(email_msg.email_msg_id)
+
         email_ids = [email.pk for email in emails_thread]
 
-        actual_email_incident: Optional[Incident] = None
         new_incident: Optional[bool] = None
 
         # Все инциденты, уже связанные с письмами в цепочке:
@@ -651,16 +658,6 @@ class IncidentManager(IncidentValidator):
         ]
         # Убираем дубликаты:
         thread_incidents = list({i.pk: i for i in thread_incidents}.values())
-
-        # 1. Если инцидентов несколько — приоритет по теме письма:
-        if len(thread_incidents) > 1:
-            actual_email_incident = self.get_incident_by_code_in_subject(
-                email_msg, yt_manager
-            )
-            if actual_email_incident:
-                selection_strategy = (
-                    IncidentSelectionStrategy.by_subject_with_thread
-                )
 
         # 2. Если по теме не нашли — берём самый актуальный инцидент:
         if not actual_email_incident and thread_incidents:
@@ -695,14 +692,6 @@ class IncidentManager(IncidentValidator):
                 # Пусть дубликат письма всё равно будет добавлен:
                 email_msg.was_added_2_yandex_tracker = False
                 email_msg.save()
-
-        # 5. Резервный поиск по коду инцидента в теме письма:
-        if not actual_email_incident:
-            actual_email_incident = self.get_incident_by_code_in_subject(
-                email_msg, yt_manager
-            )
-            if actual_email_incident:
-                selection_strategy = IncidentSelectionStrategy.by_subject_only
 
         # Поиск опоры и БС по всей переписке:
         if (
