@@ -2116,15 +2116,12 @@ def notify_avr_contractor(
 
         pole = incident.pole
 
-        pole_region = (
-            pole.region.region_ru or pole.region.region_en
-        ) if pole.region else None
-
         text_parts.append('\nИНФОРМАЦИЯ ОБ ОПОРЕ:')
         text_parts.append(f'  • Шифр опоры: {pole.pole}')
 
-        if pole_region:
-            text_parts.append(f'  • Регион: {pole_region}')
+        region = pole.region.region_ru or pole.region.region_en
+        if not pole.address:
+            text_parts.append(f'  • Регион: {region}')
 
         if pole.address:
             text_parts.append(f'  • Адрес: {pole.address}')
@@ -2406,15 +2403,12 @@ def notify_rvr_contractor(
 
         pole = incident.pole
 
-        pole_region = (
-            pole.region.region_ru or pole.region.region_en
-        ) if pole.region else None
-
         text_parts.append('\nИНФОРМАЦИЯ ОБ ОПОРЕ:')
         text_parts.append(f'  • Шифр опоры: {pole.pole}')
 
-        if pole_region:
-            text_parts.append(f'  • Регион: {pole_region}')
+        region = pole.region.region_ru or pole.region.region_en
+        if not pole.address:
+            text_parts.append(f'  • Регион: {region}')
 
         if pole.address:
             text_parts.append(f'  • Адрес: {pole.address}')
@@ -2766,16 +2760,7 @@ def notify_incident_closed(
 
             initial_data['cc'] = ', '.join(initial_data_cc)
 
-        if incident.code:
-            incident_label = (
-                f'{incident.code} ({incident.incident_type})'
-                if incident.incident_type else f'{incident.code}'
-            )
-        else:
-            incident_label = (
-                f'{incident.incident_type}'
-                if incident.incident_type else ''
-            )
+        incident_label = incident.code or ''
 
         signature = get_incident_signature(incident)
 

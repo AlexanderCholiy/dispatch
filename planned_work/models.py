@@ -157,7 +157,7 @@ class PlannedWork(models.Model):
             return self.reason
 
     def __str__(self):
-        return f'ID: {self.pk}' if self.pk else 'Новый ПЛР'
+        return f'PLR-{self.pk}' if self.pk else 'Новый ПЛР'
 
     def clean(self):
         errors = {}
