@@ -1200,6 +1200,71 @@ class IncidentLink(models.Model):
                 'Нельзя установить связь инцидента с самим собой.'
             )
 
+        src = None
+        if self.source_incident_id:
+            try:
+                src = self.source_incident
+            except IncidentLink.source_incident.RelatedObjectDoesNotExist:
+                src = Incident.objects.filter(
+                    pk=self.source_incident_id
+                ).first()
+
+        tgt = None
+        if self.target_incident_id:
+            try:
+                tgt = self.target_incident
+            except IncidentLink.target_incident.RelatedObjectDoesNotExist:
+                tgt = Incident.objects.filter(
+                    pk=self.target_incident_id
+                ).first()
+
+        if not src or not tgt:
+            return
+
+        l_type = self.link_type
+        src_finished = src.is_incident_finish or bool(src.auto_close_date)
+        tgt_finished = tgt.is_incident_finish or bool(tgt.auto_close_date)
+
+        # Все ПОДЗАДАЧИ должны быть закрыты.
+        if (
+            l_type == IncidentLinkType.PARENT
+            and src_finished and not tgt_finished
+        ) or (
+            l_type == IncidentLinkType.SUBTASK
+            and tgt_finished and not src_finished
+        ):
+            parent_incident = src if l_type == IncidentLinkType.PARENT else tgt
+            subtask_incident = (
+                tgt if l_type == IncidentLinkType.PARENT else src
+            )
+
+            raise ValidationError(
+                'Нельзя установить связь, '
+                f'так как родительский инцидент {parent_incident} '
+                f'уже завершен, а подзадача {subtask_incident} еще открыта.'
+            )
+
+        # Все Блокирующие задачи должны быть закрыты:
+        if (
+            l_type == IncidentLinkType.DEPENDS_ON
+            and src_finished and not tgt_finished
+        ) or (
+            l_type == IncidentLinkType.BLOCKS
+            and tgt_finished and not src_finished
+        ):
+            dependent_incident = (
+                src if l_type == IncidentLinkType.DEPENDS_ON else tgt
+            )
+            blocking_incident = (
+                tgt if l_type == IncidentLinkType.DEPENDS_ON else src
+            )
+
+            raise ValidationError(
+                'Нельзя установить связь, '
+                f'так как инцидент {dependent_incident} уже завершен, но он '
+                f'зависит от незавершенного {blocking_incident}.'
+            )
+
     @staticmethod
     def get_inverse_type(link_type: str) -> str:
         """Возвращает обратный тип связи"""

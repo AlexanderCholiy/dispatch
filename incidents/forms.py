@@ -4,6 +4,7 @@ from typing import Optional
 
 from dal import autocomplete
 from django import forms
+from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db.models import F, Prefetch, Q
@@ -410,6 +411,8 @@ class IncidentForm(forms.ModelForm):
     ):
         self.can_edit = can_edit
         self.author = author
+        self.request = kwargs.pop('request', None)
+
         super().__init__(*args, **kwargs)
 
         if self.instance.pk:
@@ -688,26 +691,65 @@ class IncidentForm(forms.ModelForm):
                     'Невозможно закрыть инцидент без указания его подтипа.'
                 )
 
-        # if new_status.name in FINISHED_STATUS_NAMES or auto_close:
-        #     # Все ПОДЗАДАЧИ должны быть закрыты.
-        #     subtasks_qs = IncidentLink.objects.filter(
-        #         source_incident=self.instance,
-        #         link_type=IncidentLinkType.SUBTASK
-        #     ).select_related('target_incident')
+        if new_status.name in FINISHED_STATUS_NAMES or auto_close:
+            link_errors = []
 
-        #     print(subtasks_qs)
+            # Все ПОДЗАДАЧИ должны быть закрыты.
+            open_subtasks_qs = IncidentLink.objects.filter(
+                source_incident=self.instance,
+                link_type=IncidentLinkType.PARENT,
+                target_incident__is_incident_finish=False,
+                target_incident__auto_close_date__isnull=True
+            ).select_related('target_incident')
 
-        #     open_subtasks = []
-        #     for link in subtasks_qs:
-        #         if not link.target_incident.is_incident_finish:
-        #             open_subtasks.append(str(link.target_incident))
+            open_subtasks = [
+                str(link.target_incident) for link in open_subtasks_qs
+            ]
 
-        #     if open_subtasks:
-        #         raise forms.ValidationError(
-        #             f'Нельзя закрыть родительский инцидент, '
-        #             'так как не выполнены подзадачи: '
-        #             f'{", ".join(open_subtasks)}.'
-        #         )
+            if open_subtasks:
+                link_errors.append(
+                    f'Нельзя закрыть родительский инцидент, '
+                    'т.к. не выполнены подзадачи: '
+                    f'{", ".join(open_subtasks)}.'
+                )
+
+            # Все Блокирующие задачи должны быть закрыты:
+            open_dependencies_qs = IncidentLink.objects.filter(
+                source_incident=self.instance,
+                link_type=IncidentLinkType.DEPENDS_ON,
+                target_incident__is_incident_finish=False,
+                target_incident__auto_close_date__isnull=True
+            ).select_related('target_incident')
+
+            open_dependencies = [
+                str(link.target_incident) for link in open_dependencies_qs
+            ]
+
+            if open_dependencies:
+                link_errors.append(
+                    'Нельзя закрыть инцидент, '
+                    'т.к. он зависит от незавершенных: '
+                    f'{", ".join(open_dependencies)}.'
+                )
+
+            if link_errors:
+                raise ValidationError(link_errors)
+
+            # Предупреждений для открытых ДУБЛИКАТОВ:
+            open_duplicates_qs = IncidentLink.objects.filter(
+                source_incident=self.instance,
+                link_type=IncidentLinkType.DUPLICATE,
+                target_incident__is_incident_finish=False,
+                target_incident__auto_close_date__isnull=True
+            ).select_related('target_incident')
+
+            for link in open_duplicates_qs:
+                if self.request:
+                    msg = (
+                        f'Дубликат {link.target_incident} остался открыт. '
+                        'Не забудьте закрыть его.'
+                    )
+                    messages.warning(self.request, msg)
 
         return cleaned_data
 
@@ -1050,12 +1092,67 @@ class IncidentLinkInlineForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
 
         self.fields['link_type'].required = True
+
+        allowed_types = [
+            IncidentLinkType.RELATED,
+            IncidentLinkType.DUPLICATE,
+            IncidentLinkType.BLOCKS,
+            IncidentLinkType.DEPENDS_ON,
+        ]
+
         self.fields['link_type'].choices = [
-            x for x in self.fields['link_type'].choices if x[0]
+            (choice_val, choice_label)
+            for choice_val, choice_label in IncidentLinkType.choices
+            if choice_val in allowed_types
         ]
 
         if not self.instance or not self.instance.pk:
             self.fields['link_type'].initial = IncidentLinkType.RELATED
+
+    def clean(self):
+        cleaned_data = super().clean()
+        link_type = cleaned_data.get('link_type')
+        target_incident = cleaned_data.get('target_incident')
+
+        source_incident = None
+        try:
+            source_incident = self.instance.source_incident
+        except IncidentLink.source_incident.RelatedObjectDoesNotExist:
+            source_incident = Incident.objects.filter(
+                pk=self.instance.source_incident_id
+            ).first()
+
+        if not target_incident or not link_type or not source_incident:
+            return cleaned_data
+
+        # Предупреждений для открытых ДУБЛИКАТОВ:
+        if link_type == IncidentLinkType.DUPLICATE:
+            src_finished = (
+                source_incident.is_incident_finish
+                or bool(source_incident.auto_close_date)
+            )
+            tgt_finished = (
+                target_incident.is_incident_finish
+                or bool(target_incident.auto_close_date)
+            )
+
+            if src_finished != tgt_finished:
+                if self.request:
+                    if src_finished and not tgt_finished:
+                        msg = (
+                            f'Дубликат {target_incident} остался открыт. '
+                            'Не забудьте закрыть его.'
+                        )
+                    else:
+                        msg = (
+                            f'Дубликат {target_incident} уже закрыт. '
+                            'Убедитесь, нужно ли закрыть ТЕКУЩИЙ инцидент'
+                        )
+
+                    messages.warning(self.request, msg)
+
+        return cleaned_data

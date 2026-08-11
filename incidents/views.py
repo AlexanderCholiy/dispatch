@@ -941,6 +941,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         instance=incident,
         can_edit=can_manage,
         author=user,
+        request=request,
     )
 
     if request.method == 'POST':
@@ -972,6 +973,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
             instance=incident,
             can_edit=can_manage,
             author=user,
+            request=request,
         )
         if incident_form.is_valid():
             incident_form.save()
@@ -1218,7 +1220,8 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         incident_links_formset = IncidentLinkFormSet(
             request.POST,
             prefix='incident_links',
-            queryset=incident_links_queryset
+            queryset=incident_links_queryset,
+            form_kwargs={'request': request}
         )
 
         if incident_links_formset.is_valid():
