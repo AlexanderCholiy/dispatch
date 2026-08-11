@@ -600,8 +600,24 @@ class IncidentManager(IncidentValidator):
         а при равенстве — тому, кто последний появился в таблице.
         """
         actual_email_incident = None
+        emails_thread = None
 
-        emails_thread = self.get_email_thread(email_msg.email_msg_id)
+        # Ищем прямой ответ:
+        if email_msg.email_msg_reply_id:
+            emails_thread = (
+                EmailMessage.objects.filter(
+                    email_msg_id=email_msg.email_msg_reply_id,
+                    email_incident__isnull=False
+                )
+                .select_related('email_incident', 'folder')
+                .order_by(
+                    'email_incident_id', 'email_date', '-is_first_email', 'id'
+                )
+            )
+
+        # Ищем всю переписку:
+        if not emails_thread or not emails_thread.exists():
+            emails_thread = self.get_email_thread(email_msg.email_msg_id)
 
         thread_incidents = [
             e.email_incident
