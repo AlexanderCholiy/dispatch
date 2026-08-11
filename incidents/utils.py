@@ -595,6 +595,10 @@ class IncidentManager(IncidentValidator):
     def get_incident_from_email_thread(
         self, email_msg: EmailMessage
     ) -> Optional[Incident]:
+        """
+        Предпочтение самому "свежему" открытому инциденту по времени создания,
+        а при равенстве — тому, кто последний появился в таблице.
+        """
         actual_email_incident = None
 
         emails_thread = self.get_email_thread(email_msg.email_msg_id)
@@ -698,7 +702,8 @@ class IncidentManager(IncidentValidator):
                     IncidentSelectionStrategy.by_subject_only
                 )
 
-        # 2. Если по теме не нашли — берём самый актуальный инцидент:
+        # 2. Если по теме не нашли — берём самый актуальный инцидент в цепочке
+        # писем:
         if not actual_email_incident:
             # Открытые инциденты имеют приоритет над закрытыми.
             actual_email_incident = self.get_incident_from_email_thread(
