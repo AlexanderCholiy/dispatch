@@ -7,8 +7,6 @@ from django.core.cache import cache
 from django.db.models import Max, Q, QuerySet
 from django.utils import timezone
 
-from core.loggers import default_logger
-from core.wraps import timer
 from emails.models import EmailMessage
 from incidents.constants import (
     CACHE_SIMILAR_INCIDENTS_PREFIX,
@@ -173,7 +171,6 @@ class IncidentSimilarityService:
 
         return updated_results
 
-    @timer(default_logger)
     def find_similar(self, incident: Incident) -> list[IncidentSimilarity]:
         cache_key = f'{CACHE_SIMILAR_INCIDENTS_PREFIX}_{incident.id}'
 
