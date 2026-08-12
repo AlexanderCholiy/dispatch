@@ -2,6 +2,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 
 from .constants import (
+    ASSETS_LOG_ROTATING_FILE,
     CELLERY_LOG_ROTATING_FILE,
     DEFAULT_LOG_FILE,
     DEFAULT_LOG_LEVEL,
@@ -184,4 +185,8 @@ mqtt_parser_logger = LoggerFactory(
 
 max_api_logger = LoggerFactory(
     'max_api', MAX_API_LOG_ROTATING_FILE
+).get_logger()
+
+assets_logger = LoggerFactory(
+    'assets', ASSETS_LOG_ROTATING_FILE
 ).get_logger()

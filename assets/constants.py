@@ -1,3 +1,6 @@
 MODEM_MAC_MAX_LEN = 17
 
 MAX_EXUIPMENT_PER_PAGE = 30
+
+MAX_CHECK_ASSETS_TTL = 300
+CACHE_KEY_CHECK_ASSETS_RUN = 'assets:last_check_assets_run_time'

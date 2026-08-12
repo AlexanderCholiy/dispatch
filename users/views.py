@@ -32,7 +32,12 @@ from core.utils import timedelta_to_human_time
 from users.services.get_default_avatars import get_default_avatars
 from users.services.presence import PresenceService
 
-from .constants import PAGE_SIZE_USERS_CHOICES, PRESENCE_TTL, USERS_PER_PAGE
+from .constants import (
+    BOT_USERNAME,
+    PAGE_SIZE_USERS_CHOICES,
+    PRESENCE_TTL,
+    USERS_PER_PAGE
+)
 from .forms import (
     ChangeEmailForm,
     UserForm,
@@ -434,7 +439,12 @@ def users_list(request: HttpRequest) -> HttpResponse:
         params['per_page'] = USERS_PER_PAGE
         return redirect(f"{request.path}?{params.urlencode()}")
 
-    base_qs = User.objects.exclude(role=Roles.GUEST).exclude(is_active=False)
+    base_qs = (
+        User.objects
+        .exclude(role=Roles.GUEST)
+        .exclude(is_active=False)
+        .exclude(username=BOT_USERNAME)
+    )
     if sort == 'asc':
         base_qs = base_qs.order_by('last_name', 'first_name', 'email', 'id')
     else:

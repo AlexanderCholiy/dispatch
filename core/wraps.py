@@ -2,17 +2,20 @@ import functools
 import inspect
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from http import HTTPStatus
 from logging import Logger
 from typing import Callable, Optional
 
 import requests
+from django.core.cache import cache
+from django.utils import timezone
 
 from .constants import API_STATUS_EXCEPTIONS, FUNC_TIMEOUT
 from .exceptions import (
     ApiServerError,
     ApiTooManyRequests,
+    RateLimitExceeded,
 )
 from .utils import format_seconds
 
@@ -253,4 +256,39 @@ def func_timeout(seconds: Optional[int] = None):
 
         return wrapper
 
+    return decorator
+
+
+def rate_limit_cache(
+    logger: Logger, cache_key: str, ttl_seconds: int
+):
+    """Декоратор для ограничения частоты вызова функций через кэш Django."""
+    def decorator(func: Callable):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            last_run_time = cache.get(cache_key)
+
+            if last_run_time:
+                now = timezone.now()
+                elapsed = now - last_run_time
+
+                if elapsed < timedelta(seconds=ttl_seconds):
+                    remaining = int(
+                        (last_run_time + timedelta(seconds=ttl_seconds) - now)
+                        .total_seconds()
+                    )
+
+                    logger.warning(
+                        f"[Rate Limit] Пропуск вызова {func.__name__}. "
+                        f"Осталось ждать: {remaining} сек."
+                    )
+                    raise RateLimitExceeded(func.__name__, remaining)
+
+            result = func(*args, **kwargs)
+
+            cache.set(cache_key, timezone.now(), timeout=None)
+
+            return result
+
+        return wrapper
     return decorator

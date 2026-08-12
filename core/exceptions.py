@@ -40,3 +40,18 @@ class ConfigEnvError(Exception):
             'Ошибка конфигурации. Отсутствуют переменные '
             f'{missing_vars_str} в .env файле.'
         )
+
+
+class RateLimitExceeded(Exception):
+    """
+    Исключение, которое выбрасывается, если функция была вызвана слишком рано
+    (меньше прошло времени TTL с последнего успешного запуска).
+    """
+    def __init__(self, func_name: str, remaining_seconds: int):
+        self.func_name = func_name
+        self.remaining_seconds = remaining_seconds
+        message = (
+            f'[Rate Limit] Запуск функции "{func_name}" отменен. '
+            f'Слишком частый вызов. Осталось ждать: {remaining_seconds} сек.'
+        )
+        super().__init__(message)

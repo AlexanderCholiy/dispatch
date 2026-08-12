@@ -4,7 +4,7 @@ from django.core.cache import cache
 from django.utils import timezone
 
 from core.services.formatters import format_timedelta_readable, timedelta
-from users.constants import PRESENCE_TTL, USERS_CACHE_TTL
+from users.constants import BOT_USERNAME, PRESENCE_TTL, USERS_CACHE_TTL
 from users.models import Roles, User
 
 
@@ -219,6 +219,13 @@ class PresenceService:
 
         user_key = PresenceService._USER_ONLINE_KEY.format(user.id)
         last_seen_ts: Optional[float] = cache.get(user_key)
+
+        if user.username == BOT_USERNAME:
+            return {
+                'is_online': True,
+                'status_text': 'Онлайн',
+                'last_seen': timezone.now().timestamp(),
+            }
 
         if last_seen_ts:
             return {
