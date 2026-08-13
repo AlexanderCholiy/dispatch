@@ -128,7 +128,8 @@ def get_problem_assets_without_incidents(
 
         if pole not in active_err_assets:
             active_err_assets[pole] = []
-        active_err_assets[pole].append(mon_obj)
+        problem_devices_list = list(devices_with_errors)
+        active_err_assets[pole].extend(problem_devices_list)
 
         cache.set(cache_key, msg, timeout=CACHE_ASSETS_STATUS_TTL)
 
