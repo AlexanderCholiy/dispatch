@@ -2,6 +2,7 @@ from typing import Optional
 
 from django.db import transaction
 from django.utils import timezone
+from django.core.cache import cache
 
 from core.loggers import assets_logger
 from incidents.models import Comment, Incident
@@ -15,17 +16,48 @@ from notifications.constants import (
 from notifications.models import Notification, NotificationLevel
 from ts.models import Pole
 from users.models import Roles, User
+from assets.constants import (
+    CACHE_ASSETS_CANDIDATE_TTL,
+    CACHE_KEY_ASSETS_CANDIDATE_PREFIX,
+)
 
 
 def make_incident_from_asset(
     pole: Pole, err_devices: list[MSysModem], bot_user: Optional[User]
-) -> Incident:
+) -> Optional[Incident]:
     """
-    Создает новый инцидент для указанной опоры на основе списка
-    проблемных устройств,
+    Создает новый инцидент, если проблема держится долго
+    для указанной опоры на основе списка проблемных устройств,
     формирует комментарий с деталями нарушений и рассылает уведомления
     ответственным лицам.
     """
+    # Защита от «щелканья» статусов в мониторинге:
+    pole_code = str(pole.pole)
+    candidate_key = f'{CACHE_KEY_ASSETS_CANDIDATE_PREFIX}{pole_code}'
+
+    candidate_data = cache.get(candidate_key)
+
+    if not candidate_data:
+        # --- Сценарий 1: Первый раз видим проблему ---
+        # Сохраняем в кэш информацию о времени начала проблемы
+        cache.set(
+            candidate_key,
+            {'start_time': timezone.now().isoformat()},
+            timeout=CACHE_ASSETS_CANDIDATE_TTL
+        )
+
+        log_msg = (
+            f'Кандидат на инцидент: Опора {pole_code}. '
+            f'Проблема зафиксирована. '
+            f'Ожидание {CACHE_ASSETS_CANDIDATE_TTL // 60} мин'
+        )
+        assets_logger.debug(log_msg)
+        return None
+
+    # --- Сценарий 2: Проблема держится дольше TTL (запись в кэше есть) ---
+    # Удаляем запись-кандидат, чтобы следующий цикл мог начать отсчет заново,
+    # если проблема исчезнет:
+    cache.delete(candidate_key)
 
     status_groups: list[str] = []
 

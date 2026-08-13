@@ -37,7 +37,7 @@ CRON_TZ=Europe/Moscow
 */5 * * * * sleep 7 && nice -n 19 ionice -c 3 /usr/local/bin/python /app/manage.py notify_pole_up >> /app/logs/cron/cron.log 2>&1
 
 # Проверка активного оборудования (есть блокировка на 5 минут):
-*/15 * * * * sleep 5 && nice -n 19 ionice -c 3 /usr/local/bin/python /app/manage.py check_assets >> /app/logs/cron/cron.log 2>&1
+*/10 * * * * sleep 5 && nice -n 19 ionice -c 3 /usr/local/bin/python /app/manage.py check_assets >> /app/logs/cron/cron.log 2>&1
 
 # Резервное копирование:
 # Сдвигаем на 45-ю минуту, чтобы не пересекаться с началом часа, когда срабатывают многие скрипты
