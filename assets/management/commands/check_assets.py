@@ -20,9 +20,17 @@ class Command(BaseCommand):
     )
     @timer(assets_logger)
     def handle(self, *args, **options):
-        unactive_err_assets = get_problem_assets_without_incidents()
-
         bot_user = User.objects.filter(username=BOT_USERNAME).first()
+
+        unactive_err_assets = get_problem_assets_without_incidents(
+            bot_user=bot_user
+        )
+
+        if not unactive_err_assets:
+            assets_logger.debug(
+                'Эскалация по активному оборудованию не требуется.'
+            )
+            return
 
         for pole, err_devices in unactive_err_assets.items():
             try:

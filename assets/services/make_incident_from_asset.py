@@ -3,6 +3,7 @@ from typing import Optional
 from django.db import transaction
 from django.utils import timezone
 
+from core.loggers import assets_logger
 from incidents.models import Comment, Incident
 from incidents.services.send_auto_reply import AutoReply
 from incidents.utils import IncidentManager
@@ -124,3 +125,5 @@ def make_incident_from_asset(
                 level=level,
                 data={'incident_id': incident.id}
             )
+
+    assets_logger.debug(comment_txt.replace('\n', ' '))
