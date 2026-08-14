@@ -914,14 +914,24 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         if incident.pole else None
     ) or []
 
-    monitoring_data = {
-        eq['modem_ip']: {
+    monitoring_data = {}
+    for eq in monitiring_equipment:
+        try:
+            level_obj = DeviceType(eq['level'])
+            level_label = level_obj.label
+        except (ValueError, KeyError):
+            level_label = f'№{eq['level']}'
+        try:
+            status_obj = DeviceStatus(eq['status'])
+            status_label = status_obj.label
+        except (ValueError, KeyError):
+            status_label = f'№{eq['status']}'
+
+        monitoring_data[eq['modem_ip']] = {
             **eq,
-            'level_val': DeviceType(eq['level']).label,
-            'status_val': DeviceStatus(eq['status']).label,
+            'level_val': level_label,
+            'status_val': status_label,
         }
-        for eq in monitiring_equipment
-    }
 
     sorted_monitoring = sorted(
         monitoring_data.items(),
