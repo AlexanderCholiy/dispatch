@@ -712,6 +712,16 @@ class IncidentForm(forms.ModelForm):
                 'указать приоритет РВР.'
             )
 
+        if (
+            (new_status.name in FINISHED_STATUS_NAMES or auto_close)
+            and not new_rvr_start_date and new_rvr_priority
+        ):
+            self.add_error(
+                'rvr_start_date',
+                'Для закрытия инцидента с выбранным приоритетом РВР '
+                'необходимо заполнить дату передачи на РВР.'
+            )
+
         if new_status.name in FINISHED_STATUS_NAMES or auto_close:
             link_errors = []
 
