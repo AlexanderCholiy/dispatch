@@ -295,6 +295,7 @@ class IncidentForm(forms.ModelForm):
             'responsible_user',
             'incident_type',
             'incident_subtype',
+            'rvr_priority',
             'avr_start_date',
             'avr_end_date',
             'rvr_start_date',
@@ -311,6 +312,7 @@ class IncidentForm(forms.ModelForm):
             'responsible_user': 'Диспетчер',
             'incident_type': 'Тип инцидента',
             'incident_subtype': 'Подтип инцидента',
+            'rvr_priority': 'Приоритет РВР',
             'statuses': 'Статус',
             'categories': 'Категории инцидента',
             'avr_start_date': 'Передача на АВР',
@@ -560,6 +562,7 @@ class IncidentForm(forms.ModelForm):
         self.fields['responsible_user'].empty_label = 'Не назначен'
         self.fields['incident_type'].empty_label = 'Не выбрано'
         self.fields['incident_subtype'].empty_label = 'Не выбрано'
+        self.fields['rvr_priority'].empty_label = 'Не выбрано'
 
     def clean(self):
         cleaned_data = super().clean()

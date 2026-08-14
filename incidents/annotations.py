@@ -46,7 +46,6 @@ from .constants import (
     REQUEST_FOR_ADD_DATA_STATUS_NAME,
     RUSSIA_EMPTY_MACRO_ID,
     RVR_CATEGORY,
-    RVR_SLA_DEADLINE_IN_HOURS,
 )
 from .models import Incident, IncidentCategoryRelation, IncidentStatusHistory
 
@@ -186,10 +185,13 @@ def annotate_sla_rvr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
         rvr_deadline=ExpressionWrapper(
             Case(
                 When(
+                    rvr_priority__sla_deadline__isnull=False,
                     rvr_start_date__isnull=False,
-                    then=(
-                        F('rvr_start_date')
-                        + timedelta(hours=RVR_SLA_DEADLINE_IN_HOURS)
+                    then=F('rvr_start_date') + ExpressionWrapper(
+                        timedelta(minutes=1) * F(
+                            'rvr_priority__sla_deadline'
+                        ),
+                        output_field=DurationField()
                     )
                 ),
                 default=None,
@@ -198,13 +200,17 @@ def annotate_sla_rvr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
             output_field=DateTimeField()
         ),
         sla_rvr_expired=Case(
+            # Случай 1: Закрыт и просрочен
             When(
+                rvr_priority__sla_deadline__isnull=False,
                 rvr_start_date__isnull=False,
                 rvr_end_date__isnull=False,
                 rvr_end_date__gt=F('rvr_deadline'),
                 then=Value(True)
             ),
+            # Случай 2: Открыт и просрочен (текущее время > дедлайна)
             When(
+                rvr_priority__sla_deadline__isnull=False,
                 rvr_start_date__isnull=False,
                 rvr_end_date__isnull=True,
                 rvr_deadline__lt=now,
@@ -215,6 +221,7 @@ def annotate_sla_rvr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
         ),
         sla_rvr_expired_closed=Case(
             When(
+                rvr_priority__sla_deadline__isnull=False,
                 rvr_start_date__isnull=False,
                 rvr_end_date__isnull=False,
                 rvr_end_date__gt=F('rvr_deadline'),
@@ -225,6 +232,7 @@ def annotate_sla_rvr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
         ),
         sla_rvr_expired_open=Case(
             When(
+                rvr_priority__sla_deadline__isnull=False,
                 rvr_start_date__isnull=False,
                 rvr_end_date__isnull=True,
                 rvr_deadline__lt=now,
@@ -235,6 +243,7 @@ def annotate_sla_rvr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
         ),
         sla_rvr_waiting=Case(
             When(
+                rvr_priority__sla_deadline__isnull=False,
                 rvr_start_date__isnull=False,
                 rvr_end_date__isnull=True,
                 rvr_deadline__gt=now,
@@ -246,6 +255,7 @@ def annotate_sla_rvr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
         ),
         sla_rvr_in_progress=Case(
             When(
+                rvr_priority__sla_deadline__isnull=False,
                 rvr_start_date__isnull=False,
                 rvr_end_date__isnull=True,
                 rvr_deadline__gt=now + timedelta(hours=1),
@@ -256,6 +266,7 @@ def annotate_sla_rvr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
         ),
         sla_rvr_closed_on_time=Case(
             When(
+                rvr_priority__sla_deadline__isnull=False,
                 rvr_start_date__isnull=False,
                 rvr_end_date__isnull=False,
                 rvr_end_date__lte=F('rvr_deadline'),
@@ -263,7 +274,7 @@ def annotate_sla_rvr(qs: QuerySet[Incident]) -> QuerySet[Incident]:
             ),
             default=Value(False),
             output_field=BooleanField(),
-        ),
+        )
     )
 
 

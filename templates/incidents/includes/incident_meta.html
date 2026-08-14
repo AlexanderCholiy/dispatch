@@ -226,7 +226,7 @@
       </div>
 
       {% for field in incident_form %}
-        {% if field.name == "responsible_user" or field.name == "incident_type" or field.name == "incident_subtype" %}
+        {% if field.name == "responsible_user" %}
           <div class="select-wrapper status-select incident-form-select {% if field.errors %}has-error{% endif %}">
             <label for="{{ field.id_for_label }}">{{ field.label }}</label>
 
@@ -236,9 +236,7 @@
               {% if field.name == "categories" %}multiple{% endif %}
             >
 
-              {% if field.name == "incident_type" or field.name == "incident_subtype" %}
-                <option value="" {% if not field.value %}selected{% endif %}>Не выбрано</option>
-              {% elif field.name == "responsible_user" %}
+              {% if field.name == "responsible_user" %}
                 <option value="" {% if not field.value %}selected{% endif %}>Не назначен</option>
               {% endif %}
 
@@ -250,6 +248,42 @@
                     {% else %}
                       {% if field.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}
                     {% endif %}
+                  >
+                    {{ label }}
+                  </option>
+                {% endif %}
+              {% endfor %}
+
+            </select>
+
+            {% for error in field.errors %}
+              <div class="form-error">{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <div class="incident-meta-row incident-meta-row-2">
+      {% for field in incident_form %}
+        {% if field.name == "incident_type" or field.name == "incident_subtype" or field.name == "rvr_priority" %}
+          <div class="select-wrapper status-select incident-form-select {% if field.errors %}has-error{% endif %}">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+
+            <select 
+              name="{{ field.name }}" 
+              id="{{ field.id_for_label }}"
+              {% if field.name == "categories" %}multiple{% endif %}
+            >
+
+              {% if field.name == "incident_type" or field.name == "incident_subtype" or field.name == "rvr_priority" %}
+                <option value="" {% if not field.value %}selected{% endif %}>Не выбрано</option>
+              {% endif %}
+
+              {% for value, label in field.field.choices %}
+                {% if value %}
+                  <option value="{{ value }}"
+                    {% if field.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}
                   >
                     {{ label }}
                   </option>

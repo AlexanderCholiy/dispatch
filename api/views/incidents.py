@@ -35,6 +35,7 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
     - last_status: Последний статус инцидента.
     - incident_type: Тип инцидента.
     - incident_subtype: Подтип инцидента.
+    - rvr_priority: Приоритет РВР.
     - categories: Категории инцидента.
 
     - incident_datetime: Дата и время возникновения инцидента (UTC, ISO).
@@ -106,6 +107,7 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Incident.objects.select_related(
         'incident_type',
         'incident_subtype',
+        'rvr_priority',
         'pole',
         'pole__avr_contractor',
         'base_station',

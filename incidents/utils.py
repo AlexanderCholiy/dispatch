@@ -1277,6 +1277,7 @@ class IncidentManager(IncidentValidator):
             .select_related(
                 'incident_type',
                 'incident_subtype',
+                'rvr_priority',
                 'responsible_user',
                 'pole',
                 'pole__region',

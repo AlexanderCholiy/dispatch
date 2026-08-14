@@ -30,7 +30,6 @@ from .constants import (
     MAX_COMMENT_TEXT_LEN,
     MAX_FUTURE_END_DELTA,
     MAX_STATUS_COMMENT_LEN,
-    RVR_SLA_DEADLINE_IN_HOURS,
 )
 
 
@@ -144,6 +143,15 @@ class Incident(models.Model):
         blank=True,
         related_name='incidents',
         verbose_name='Подтип инцидента',
+        db_index=True
+    )
+    rvr_priority = models.ForeignKey(
+        'RVRPriority',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='incidents',
+        verbose_name='Приоритет РВР',
         db_index=True
     )
     statuses = models.ManyToManyField(
@@ -502,10 +510,14 @@ class Incident(models.Model):
     @property
     def is_sla_rvr_expired(self) -> Optional[bool]:
         is_expired = None
-        if self.rvr_start_date:
+        if (
+            self.rvr_priority
+            and self.rvr_priority.sla_deadline
+            and self.rvr_start_date
+        ):
             check_date = self.rvr_end_date or timezone.now()
             sla_deadline = self.rvr_start_date + timedelta(
-                hours=RVR_SLA_DEADLINE_IN_HOURS
+                minutes=self.rvr_priority.sla_deadline
             )
             is_expired = sla_deadline < check_date
         return is_expired
@@ -557,9 +569,13 @@ class Incident(models.Model):
 
     @property
     def sla_rvr_deadline(self) -> Optional[datetime]:
-        if self.rvr_start_date:
+        if (
+            self.rvr_priority
+            and self.rvr_priority.sla_deadline
+            and self.rvr_start_date
+        ):
             return self.rvr_start_date + timedelta(
-                hours=RVR_SLA_DEADLINE_IN_HOURS
+                minutes=self.rvr_priority.sla_deadline
             )
         return None
     sla_rvr_deadline.fget.short_description = 'Срок устранения РВР'
@@ -710,10 +726,14 @@ class Incident(models.Model):
             start = self.rvr_start_date
             end = self.rvr_end_date
 
-            if not start:
+            if (
+                not start
+                or not self.rvr_priority
+                or not self.rvr_priority.sla_deadline
+            ):
                 return None
 
-            sla_delta = timedelta(hours=RVR_SLA_DEADLINE_IN_HOURS)
+            sla_delta = timedelta(minutes=self.rvr_priority.sla_deadline)
             deadline = start + sla_delta
 
             if end:
@@ -918,6 +938,29 @@ class IncidentType(Detail):
     class Meta:
         verbose_name = 'тип инцидента'
         verbose_name_plural = 'Типы инцидентов'
+        ordering = ['name']
+
+    def clean(self):
+        super().clean()
+        if self.sla_deadline is not None and self.sla_deadline <= 0:
+            raise ValidationError('SLA должен быть больше 0')
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+
+class RVRPriority(Detail):
+    """Приоритет инцидентов РВР"""
+    sla_deadline = models.IntegerField(
+        'Срок устранения аварии (мин)',
+        null=True,
+        blank=True
+    )
+
+    class Meta:
+        verbose_name = 'ПР'
+        verbose_name_plural = 'Приоритет РВР'
         ordering = ['name']
 
     def clean(self):

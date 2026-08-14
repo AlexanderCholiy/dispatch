@@ -27,6 +27,7 @@ from .models import (
     IncidentStatusHistory,
     IncidentSubType,
     IncidentType,
+    RVRPriority,
     StatusType,
     TypeSubTypeRelation,
 )
@@ -171,6 +172,7 @@ class IncidentAdmin(admin.ModelAdmin):
                 'base_station',
                 'incident_type',
                 'incident_subtype',
+                'rvr_priority',
                 'responsible_user',
                 'avr_contractor',
                 'sla_avr_deadline',
@@ -340,3 +342,11 @@ class IncidentChangeLogAdmin(admin.ModelAdmin):
         )
 
     incident_link.short_description = ('Инцидент')
+
+
+@admin.register(RVRPriority)
+class RVRPriorityAdmin(admin.ModelAdmin):
+    list_per_page = INCIDENT_TYPES_PER_PAGE
+    list_display = ('name', 'sla_deadline')
+    list_editable = ('sla_deadline',)
+    search_fields = ('name',)

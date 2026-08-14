@@ -382,6 +382,18 @@ def validate_notify_rvr(
             f'на РВР необходимо добавить категорию «{RVR_CATEGORY}».'
         )
 
+    if not incident.rvr_priority:
+        return (
+            'Необходимо выбрать приоритет РВР прежде чем '
+            'отправить заявку на РВР.'
+        )
+
+    if not incident.rvr_priority.sla_deadline:
+        return (
+            'Необходимо выбрать приоритет РВР с установленным дедлайном SLA '
+            'перед отправкой заявки на РВР.'
+        )
+
     transition_error = validate_status_transition(
         last_status,
         NOTIFIED_CONTRACTOR_STATUS_NAME,

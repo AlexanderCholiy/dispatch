@@ -6,6 +6,10 @@
   border-bottom: 1px dashed var(--extra-color);
 }
 
+.incident-meta-row-2 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
 .incident-meta-row .form-group {
   flex: 1 1 200px;
   display: flex;

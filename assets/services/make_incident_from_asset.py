@@ -1,9 +1,13 @@
 from typing import Optional
 
+from django.core.cache import cache
 from django.db import transaction
 from django.utils import timezone
-from django.core.cache import cache
 
+from assets.constants import (
+    CACHE_ASSETS_CANDIDATE_TTL,
+    CACHE_KEY_ASSETS_CANDIDATE_PREFIX,
+)
 from core.loggers import assets_logger
 from incidents.models import Comment, Incident
 from incidents.services.send_auto_reply import AutoReply
@@ -16,10 +20,6 @@ from notifications.constants import (
 from notifications.models import Notification, NotificationLevel
 from ts.models import Pole
 from users.models import Roles, User
-from assets.constants import (
-    CACHE_ASSETS_CANDIDATE_TTL,
-    CACHE_KEY_ASSETS_CANDIDATE_PREFIX,
-)
 
 
 def make_incident_from_asset(

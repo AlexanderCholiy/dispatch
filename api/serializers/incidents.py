@@ -22,6 +22,9 @@ class IncidentReportSerializer(serializers.ModelSerializer):
     incident_subtype = serializers.CharField(
         source='incident_subtype.name', read_only=True
     )
+    rvr_priority = serializers.CharField(
+        source='rvr_priority.name', read_only=True
+    )
     region_ru = serializers.CharField(
         source='pole.region.region_ru', read_only=True
     )
@@ -89,6 +92,7 @@ class IncidentReportSerializer(serializers.ModelSerializer):
             'last_status',
             'incident_type',
             'incident_subtype',
+            'rvr_priority',
             'categories',
             'incident_datetime',
             'incident_update_datetime',

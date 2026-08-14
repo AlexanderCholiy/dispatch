@@ -128,6 +128,7 @@ from .services.get_region_responsible_manager import (
     get_region_responsible_managers,
 )
 from .services.get_regions import get_region_map
+from .services.get_rvr_priority import get_rvr_priority_map
 from .services.incident_signature import get_incident_signature
 from .services.incident_similarity import incident_similarity_service
 from .services.normalize_incident_subject import normalize_incident_subject
@@ -161,6 +162,7 @@ def index(request: HttpRequest) -> HttpResponse:
 
     incident_types = get_incident_type_map()
     incident_subtypes = get_incident_subtype_map()
+    rvr_priority = get_rvr_priority_map()
 
     macroregions = get_macro_region_map()
     macroregions = {0: 'Отсутствует', **macroregions}  # отсутсвует в начале
@@ -201,6 +203,9 @@ def index(request: HttpRequest) -> HttpResponse:
 
     incident_subtypes_ids = list(incident_subtypes.keys())
     incident_subtypes_ids.append(0)  # отсутсвует
+
+    rvr_priority_ids = list(rvr_priority.keys())
+    rvr_priority_ids.append(0)  # отсутсвует
 
     statuses_ids = []
     finished_status_ids = []
@@ -286,6 +291,19 @@ def index(request: HttpRequest) -> HttpResponse:
             if v.isnumeric() and int(v) in incident_subtypes_ids
         ]
         or incident_subtypes_ids[:]
+    )
+
+    rvr_priority_filter = (
+        request.GET.get('rvr_priority', '').strip()
+        or (get_raw_cookie(request, 'rvr_priority') or '').strip()
+    ).split(',') if not search_only_by_code else []
+
+    rvr_priority_filter: list[int] = (
+        [
+            int(v) for v in rvr_priority_filter
+            if v.isnumeric() and int(v) in rvr_priority_ids
+        ]
+        or rvr_priority_ids[:]
     )
 
     macroregion = (
@@ -452,6 +470,7 @@ def index(request: HttpRequest) -> HttpResponse:
         .select_related(
             'incident_type',
             'incident_subtype',
+            'rvr_priority',
             'responsible_user',
             'pole',
             'pole__region',
@@ -750,6 +769,21 @@ def index(request: HttpRequest) -> HttpResponse:
                 incident_subtype_id__in=incident_subtype_filter
             )
 
+    if (
+        rvr_priority_filter
+        and len(rvr_priority_filter) != len(rvr_priority_ids)
+    ):
+        has_not_rvr_priority = 0 in rvr_priority_filter
+        if has_not_rvr_priority:
+            base_qs = base_qs.filter(
+                Q(rvr_priority_id__isnull=True)
+                | Q(rvr_priority_id__in=rvr_priority_filter)
+            )
+        else:
+            base_qs = base_qs.filter(
+                rvr_priority_id__in=rvr_priority_filter
+            )
+
     if avr_contractor and len(avr_contractor) != len(avr_contractors_ids):
         if 0 in avr_contractor:
             base_qs = base_qs.filter(
@@ -785,6 +819,7 @@ def index(request: HttpRequest) -> HttpResponse:
     incidents_qs = Incident.objects.filter(id__in=page_ids).select_related(
         'incident_type',
         'incident_subtype',
+        'rvr_priority',
         'responsible_user',
         'pole',
         'pole__region',
@@ -848,6 +883,7 @@ def index(request: HttpRequest) -> HttpResponse:
         'region_responsible_managers': region_responsible_managers,
         'incident_types': incident_types,
         'incident_subtypes': incident_subtypes,
+        'rvr_priority': rvr_priority,
         'macroregions': macroregions,
         'regions': regions,
         'selected': {
@@ -862,6 +898,7 @@ def index(request: HttpRequest) -> HttpResponse:
             'avr_contractor': avr_contractor,
             'incident_type': incident_type_filter,
             'incident_subtype': incident_subtype_filter,
+            'rvr_priority': rvr_priority_filter,
             'operator_group': operator_group,
             'pole': pole,
             'base_station': base_station,

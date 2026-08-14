@@ -222,6 +222,39 @@
       </select>
     </div>
 
+    <div class="multiple-select-wrapper" id="rvr-priority-select">
+      <div class="dropdown-trigger" data-filter-name="ПР РВР">
+        <span class="selected-label">Приоритет РВР</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="rvr-priority-dropdown-menu">
+        <div class="dropdown-options">
+          <label class="option-item {% if 0 in selected.rvr_priority %}is-selected{% endif %}" 
+                 data-value="0">
+            <i class="bx bx-check"></i>
+            <span>Отсутствует</span>
+          </label>
+          {% for k, v in rvr_priority.items %}
+            <label class="option-item {% if k in selected.rvr_priority %}is-selected{% endif %}" 
+                   data-value="{{ k }}">
+              <i class="bx bx-check"></i>
+              <span class="tooltip" data-title="{{ v.description|default:'—' }}">{{ v.name }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <select name="rvr_priority" id="rvr-priority-select-hidden" style="display: none;" multiple>
+        <option value="0" {% if 0 in selected.rvr_priority %}selected{% endif %}>
+          Отсутствует
+        </option>
+        {% for k in rvr_priority %}
+          <option value="{{ k }}" {% if k in selected.rvr_priority %}selected{% endif %}></option>
+        {% endfor %}
+      </select>
+    </div>
+
     <div class="multiple-select-wrapper" id="sla-avr-select">
       <div class="dropdown-trigger" data-filter-name="SLA АВР">
         <span class="selected-label">SLA АВР</span>
@@ -637,6 +670,7 @@
         { id: 'category-select-hidden', cookieName: 'category', searchFieldName: 'category', type: 'multi_select' },
         { id: 'incident-type-select-hidden', cookieName: 'incident_type', searchFieldName: 'incident_type', type: 'multi_select' },
         { id: 'incident-subtype-select-hidden', cookieName: 'incident_subtype', searchFieldName: 'incident_subtype', type: 'multi_select' },
+        { id: 'rvr-priority-select-hidden', cookieName: 'rvr_priority', searchFieldName: 'rvr_priority', type: 'multi_select' },
         { id: 'sla-avr-select-hidden', cookieName: 'sla_avr', searchFieldName: 'sla_avr', type: 'multi_select' },
         { id: 'sla-rvr-select-hidden', cookieName: 'sla_rvr', searchFieldName: 'sla_rvr', type: 'multi_select' },
         { id: 'sla-dgu-select-hidden', cookieName: 'sla_dgu', searchFieldName: 'sla_dgu', type: 'multi_select' },
