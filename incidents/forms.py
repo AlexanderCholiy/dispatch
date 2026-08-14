@@ -48,6 +48,7 @@ from .models import (
     IncidentSubType,
     IncidentType,
     TypeSubTypeRelation,
+    RVRPriority,
 )
 from .services.notify_responsible_user_on_reassign import (
     notify_responsible_user_on_reassign
@@ -693,6 +694,23 @@ class IncidentForm(forms.ModelForm):
                     'incident_subtype',
                     'Невозможно закрыть инцидент без указания его подтипа.'
                 )
+
+        new_rvr_priority: Optional[RVRPriority] = cleaned_data.get(
+            'rvr_priority'
+        )
+        new_rvr_start_date: Optional[datetime] = cleaned_data.get(
+            'rvr_start_date'
+        )
+
+        if (
+            (new_status.name in FINISHED_STATUS_NAMES or auto_close)
+            and new_rvr_start_date and not new_rvr_priority
+        ):
+            self.add_error(
+                'rvr_priority',
+                'Для закрытия инцидента с датой передачи на РВР необходимо '
+                'указать приоритет РВР.'
+            )
 
         if new_status.name in FINISHED_STATUS_NAMES or auto_close:
             link_errors = []
