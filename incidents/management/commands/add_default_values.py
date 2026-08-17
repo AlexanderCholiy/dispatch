@@ -35,6 +35,8 @@ from incidents.constants import (
     NOTIFY_OP_END_STATUS_NAME,
     NOTIFY_OP_IN_WORK_STATUS_DESC,
     NOTIFY_OP_IN_WORK_STATUS_NAME,
+    ON_HOLD_STATUS_DESC,
+    ON_HOLD_STATUS_NAME,
     REQUEST_FOR_ADD_DATA_STATUS_DESC,
     REQUEST_FOR_ADD_DATA_STATUS_NAME,
     RVR_CATEGORY,
@@ -110,6 +112,7 @@ class Command(BaseCommand):
                 REQUEST_FOR_ADD_DATA_STATUS_NAME,
                 REQUEST_FOR_ADD_DATA_STATUS_DESC,
             ),
+            (ON_HOLD_STATUS_NAME, ON_HOLD_STATUS_DESC),
         ]
 
         total = len(default_statuses)
