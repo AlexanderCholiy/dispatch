@@ -1,0 +1,9 @@
+.comment-section {
+  margin-top: var(--space-md);
+}
+
+.form-error {
+  margin-left: var(--space-sm);
+  color: var(--red-color);
+  font-size: var(--font-xs);
+}

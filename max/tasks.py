@@ -1,3 +1,5 @@
+from typing import Optional
+
 from celery import shared_task
 from django.core.cache import cache
 
@@ -27,6 +29,7 @@ def send_max_incident_notification(
     incident_id: int,
     sender_user_id: int,
     text: str,
+    comment: Optional[str] = None,
 ):
     """Задача для отправки уведомлений в MAX."""
     key = f'{MAX_INCIDENT_SPAM_KEY_PREFIX}{incident_id}'
@@ -51,7 +54,15 @@ def send_max_incident_notification(
         return
 
     try:
-        max_api.send_message(text, chat_id=MAX_CHAT_ID)
+        msg = max_api.send_message(text, chat_id=MAX_CHAT_ID)
+        if comment:
+            try:
+                max_api.add_comment_to_msg(comment, msg, chat_id=MAX_CHAT_ID)
+            except Exception as e:
+                max_api_logger.exception(
+                    f'Ошибка при добавлении комментария к посту MAX: {e}'
+                )
+
         save_notification_status(
             incident_id,
             MaxNotificationStatus.SENT,

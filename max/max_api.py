@@ -247,5 +247,51 @@ class MaxApi:
             'timestamp': timestamp,
         }
 
+    def add_comment_to_msg(
+        self,
+        text: str,
+        msg: MessageInfo,
+        chat_id: int | None = None,
+        user_id: int | None = None,
+    ) -> MessageInfo:
+        """Комментарий на конкретное сообщение в чате/канале."""
+        payload = {
+            'text': text,
+            'format': 'markdown',
+        }
+
+        params = {}
+        if chat_id:
+            params['chat_id'] = chat_id
+        elif user_id:
+            params['user_id'] = user_id
+        else:
+            raise ValueError('Нужно указать chat_id или user_id')
+
+        comments_url = f'{self.MESSAGES_URL}/{msg['mid']}/comments'
+
+        response = self.session.post(
+            comments_url,
+            json=payload,
+            params=params,
+            headers=self.headers,
+            verify=self.cert_path,
+            timeout=self.request_timeout,
+        )
+
+        result: dict = self._prepare_response(response)
+
+        mid = result['message']['body']['mid']
+        chat_id = result['message']['recipient']['chat_id']
+        text = result['message']['body']['text']
+        timestamp = self.timestamp_to_datetime(result['message']['timestamp'])
+
+        return {
+            'mid': mid,
+            'chat_id': chat_id,
+            'text': text,
+            'timestamp': timestamp,
+        }
+
 
 max_api = MaxApi(token=MAX_TOKEN)

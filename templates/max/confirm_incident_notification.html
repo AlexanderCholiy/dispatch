@@ -4,6 +4,9 @@
 
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/max/confirm_incident_notification/card.css' %}">
+    <link rel="stylesheet" href="{% static 'css/emails/new_email/new_email.css' %}">
+    <link rel="stylesheet" href="{% static 'css/emails/new_email/text_area.css' %}">
+    <link rel="stylesheet" href="{% static 'css/max/confirm_incident_notification/comment_section.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -21,6 +24,13 @@
   
         <div class="preview-box">
             {{ preview_text|linebreaksbr }}
+        </div>
+
+        <div class="form-group comment-section textarea">
+            {{ form.text }}
+            {% for error in form.text.errors %}
+              <div class="form-error">{{ error }}</div>
+            {% endfor %}
         </div>
 
         <div class="action-buttons">

@@ -4,8 +4,11 @@ from django.http import HttpRequest, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django_ratelimit.decorators import ratelimit
 
+from core.services.formatters import truncate_text
+from emails.models import EmailMessage
 from incidents.models import Incident
 from max.constants import ALLOWED_INCIDENT_TYPES, MaxNotificationStatus
+from max.forms import MaxConfirmNotificationForm
 from max.services.format_incident_message import format_incident_message
 from max.services.get_wait_message import (
     get_wait_message,
@@ -14,6 +17,8 @@ from max.services.get_wait_message import (
 from max.tasks import send_max_incident_notification
 from users.models import Roles, User
 from users.utils import role_required
+
+from .constants import MAX_COMMENT_LEN
 
 
 @login_required
@@ -32,6 +37,8 @@ def notify_max_incident(
         ).prefetch_related('base_station__operator',),
         id=incident_id
     )
+
+    template_name = 'max/confirm_incident_notification.html'
 
     errors = []
 
@@ -78,20 +85,50 @@ def notify_max_incident(
     markdown_text, plain_text = format_incident_message(incident)
 
     if request.method == 'GET':
-        return render(request, 'max/confirm_incident_notification.html', {
+        preview_comment = EmailMessage.objects.filter(
+            email_incident=incident,
+        ).order_by('email_date', 'id').first()
+
+        initial_data = {}
+        if preview_comment and preview_comment.email_body:
+            initial_data['text'] = truncate_text(
+                preview_comment.email_body, MAX_COMMENT_LEN
+            )
+
+        form = MaxConfirmNotificationForm(initial=initial_data)
+
+        return render(request, template_name, {
             'incident': incident,
             'preview_text': plain_text,
+            'form': form,
         })
     elif request.method == 'POST':
-        save_notification_status(incident_id, MaxNotificationStatus.PENDING)
+        form = MaxConfirmNotificationForm(request.POST)
+        if form.is_valid():
+            user_comment = form.cleaned_data['text']
+            save_notification_status(
+                incident_id, MaxNotificationStatus.PENDING
+            )
 
-        messages.info(request, 'Уведомление формируется и отправляется в MAX.')
+            messages.info(
+                request, 'Уведомление формируется и отправляется в MAX.'
+            )
 
-        send_max_incident_notification.delay(
-            incident_id=incident.id,
-            sender_user_id=user.id,
-            text=markdown_text,
-        )
+            send_max_incident_notification.delay(
+                incident_id=incident.id,
+                sender_user_id=user.id,
+                text=markdown_text,
+                comment=user_comment,
+            )
+
+        else:
+            return render(
+                request, template_name, {
+                    'incident': incident,
+                    'preview_text': plain_text,
+                    'form': form,
+                }
+            )
 
     return redirect(
         'incidents:incident_detail', incident_id=incident.id

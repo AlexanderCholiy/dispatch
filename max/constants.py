@@ -16,6 +16,8 @@ MAX_CERT_DIR = Path(TMP_DATA_DIR) / 'max' / 'cert'
 MAX_MSG_TTL = 900
 MAX_INCIDENT_SPAM_KEY_PREFIX = 'incident:'
 
+MAX_COMMENT_LEN = 4000
+
 
 class MaxNotificationStatus(models.TextChoices):
     """Статусы отправки уведомления в MAX."""
