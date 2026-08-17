@@ -57,6 +57,7 @@ class IncidentSimilarityService:
         if seconds_passed <= 0:
             return 1.0
 
+        # Обязательно >= 1
         # 1.0 — очень плавный спад (вес долго держится высоким).
         # 3.0 — быстрый спад (важны только очень свежие инциденты).
         decay_factor = 1.5
@@ -84,14 +85,20 @@ class IncidentSimilarityService:
             closed_filter = Q(
                 is_incident_finish=True,
                 incident_finish_date__gte=ref_date - window_delta,
-                incident_finish_date__lte=ref_date + window_delta
+                incident_finish_date__lte=ref_date + window_delta,
             )
             open_filter = Q(
-                is_incident_finish=False, incident_date__lte=ref_date
+                is_incident_finish=False,
+                incident_date__gte=ref_date - window_delta,
+                incident_date__lte=ref_date + window_delta,
             )
             final_q = closed_filter | open_filter
         else:
-            open_filter = Q(is_incident_finish=False, incident_date__lte=now)
+            open_filter = Q(
+                is_incident_finish=False,
+                incident_date__gte=now - window_delta,
+                incident_date__lte=now + window_delta,
+            )
             closed_filter = Q(
                 is_incident_finish=True,
                 incident_finish_date__gte=(
@@ -175,10 +182,12 @@ class IncidentSimilarityService:
         cache_key = f'{CACHE_SIMILAR_INCIDENTS_PREFIX}_{incident.id}'
 
         cached_result = cache.get(cache_key)
+
         if cached_result is not None:
             return self._refresh_data(cached_result)
 
         now = timezone.now()
+
         candidates_qs = self._build_query_filters(incident, now)
 
         candidate_ids = list(candidates_qs.values_list('id', flat=True))
@@ -215,6 +224,7 @@ class IncidentSimilarityService:
             'base_station',
             'incident_type',
             'incident_subtype',
+            'rvr_priority',
         ).prefetch_related(
             'categories',
         )
@@ -326,6 +336,14 @@ class IncidentSimilarityService:
                 total_score += SimilarFactor.incident_sub_type * time_weight
                 reasons.append('Одинаковый подтип проблемы')
 
+            if (
+                incident.rvr_priority
+                and candidate.rvr_priority
+                and incident.rvr_priority == candidate.rvr_priority
+            ):
+                total_score += SimilarFactor.rvr_priority * time_weight
+                reasons.append('Одинаковый приоритет РВР')
+
             candidate_cat_ids = {cat.id for cat in candidate.categories.all()}
             if incident_categories_ids and candidate_cat_ids:
                 intersection_count = len(
@@ -389,7 +407,7 @@ class IncidentSimilarityService:
                 'status_type_css': status_type_css,
                 'status_date': status_date,
                 'cat_names': cat_names,
-                'probability': round(total_score, 2),
+                'probability': round(max(total_score, 1), 2),
                 'reasons': reasons,
                 'seconds_diff': seconds_diff,
             })

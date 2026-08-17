@@ -249,6 +249,7 @@ class SimilarFactor:
     bs = 0.4
     incident_type = 0.05
     incident_sub_type = 0.1
-    categories = 0.1
-    incident_email_subject = 0.13
-    incident_email_from = 0.02
+    rvr_priority = 0.05
+    categories = 0.05
+    incident_email_subject = 0.2
+    incident_email_from = 0.05
