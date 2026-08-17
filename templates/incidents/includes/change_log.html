@@ -12,9 +12,9 @@
             <div class="user-journal-icon">{{ log.changed_by.username|first|upper }}</div>
           {% endif %}
             <span class="user-name">{{ log.changed_by }}</span>
-          {% else %}
-            <img src="/static/img/default_avatars/1__robot.png" class="user-journal-icon" alt="Система">
-            <span class="system-user">Система</span>
+        {% else %}
+          <img src="/static/img/default_avatars/1__robot.png" class="user-journal-icon" alt="Система">
+          <span class="system-user">Система</span>
         {% endif %}
       </div>
       <div class="change-meta">
@@ -22,7 +22,7 @@
         <span class="change-field">{{ log.field_name }}</span>
       </div>
     </div>
-    
+
     <div class="change-body">
       <div class="change-row">
         <span class="change-label">Было:</span>

@@ -52,13 +52,25 @@
 
                 <td class="tooltip"
                     data-title="{{ planned_work.author.email|default:'' }}">
-                  {% if planned_work.author %}
-                    <a href="{% url 'users:user_detail' planned_work.author.id %}" class="link">
-                      {{ planned_work.author }}
-                    </a>
-                  {% else %}
-                    —
-                  {% endif %}
+                  <div class="user-table-info">
+                    {% if planned_work.author %}
+                      {% if planned_work.author.get_avatar_url %}
+                        <a href="{% url 'users:user_detail' planned_work.author.id %}">
+                          <img src="{{ planned_work.author.get_avatar_url }}" class="user-table-info-icon" alt="{{ planned_work.author.get_full_name }}">
+                        </a>
+                      {% else %}
+                        <a href="{% url 'users:user_detail' planned_work.author.id %}">
+                          <div class="user-table-info-icon">{{ planned_work.author.username|first|upper }}</div>
+                        </a>
+                      {% endif %}
+  
+                      <a href="{% url 'users:user_detail' planned_work.author.id %}" class="link">
+                        {{ planned_work.author }}
+                      </a>
+                    {% else %}
+                      —
+                    {% endif %}
+                  </div>
                 </td>
 
                 <td>

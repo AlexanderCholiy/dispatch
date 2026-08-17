@@ -60,13 +60,25 @@
                 </td>
                 <td class="tooltip"
                     data-title="{{ incident.responsible_user.email|default:'' }}">
-                  {% if incident.responsible_user %}
-                    <a href="{% url 'users:user_detail' incident.responsible_user.id %}" class="link">
-                      {{ incident.responsible_user }}
-                    </a>
-                  {% else %}
-                    —
-                  {% endif %}
+                  <div class="user-table-info">
+                    {% if incident.responsible_user %}
+                      {% if incident.responsible_user.get_avatar_url %}
+                        <a href="{% url 'users:user_detail' incident.responsible_user.id %}">
+                          <img src="{{ incident.responsible_user.get_avatar_url }}" class="user-table-info-icon" alt="{{ incident.responsible_user.get_full_name }}">
+                        </a>
+                      {% else %}
+                        <a href="{% url 'users:user_detail' incident.responsible_user.id %}">
+                          <div class="user-table-info-icon">{{ incident.responsible_user.username|first|upper }}</div>
+                        </a>
+                      {% endif %}
+  
+                      <a href="{% url 'users:user_detail' incident.responsible_user.id %}" class="link">
+                        {{ incident.responsible_user }}
+                      </a>
+                    {% else %}
+                      —
+                    {% endif %}
+                  </div>
                 </td>
                 <td>
                   {% if incident.was_read %}
