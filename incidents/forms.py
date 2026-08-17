@@ -47,8 +47,8 @@ from .models import (
     IncidentStatusHistory,
     IncidentSubType,
     IncidentType,
-    TypeSubTypeRelation,
     RVRPriority,
+    TypeSubTypeRelation,
 )
 from .services.notify_responsible_user_on_reassign import (
     notify_responsible_user_on_reassign

@@ -89,6 +89,7 @@ def make_incident_from_asset(
         incident = Incident.objects.create(
             incident_date=timezone.now(),
             pole=pole,
+            is_auto_incident=True,
             responsible_user=(
                 IncidentManager.choice_dispatch_for_incident(None)
             ),
