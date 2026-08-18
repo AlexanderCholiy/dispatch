@@ -253,6 +253,7 @@ def planned_work_detail(request: HttpRequest, pk: int):
         'incidents': incidents,
         'incidents_total': incidents_total,
         'related_emails_data': related_emails_data,
+        'related_emails_data_total': len(related_emails_data),
         'can_manage': can_manage,
     }
 

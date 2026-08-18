@@ -22,12 +22,23 @@ def get_default_avatars():
             f for f in files if f.lower().endswith(('.png', '.jpg', '.jpeg'))
         ]
 
-        sorted_files = sorted(image_files, key=natural_sort_key)
+        hash_pattern = re.compile(
+            r'\.([a-f0-9]{8,16})\.(png|jpg|jpeg)$', re.IGNORECASE
+        )
 
-        for filename in sorted_files:
-            name_without_ext = os.path.splitext(filename)[0]
-            if name_without_ext == '0__new_account':
+        seen_basenames = set()
+
+        for filename in sorted(image_files, key=natural_sort_key):
+            if hash_pattern.search(filename):
                 continue
-            choices.append((filename, f'{name_without_ext} ({filename})'))
+
+            name_without_ext = os.path.splitext(filename)[0]
+
+            if name_without_ext.startswith('0__new_account'):
+                continue
+
+            if name_without_ext not in seen_basenames:
+                seen_basenames.add(name_without_ext)
+                choices.append((filename, f'{name_without_ext} ({filename})'))
 
     return choices
