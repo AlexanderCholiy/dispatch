@@ -2,6 +2,7 @@ import bisect
 
 from dal import autocomplete
 from django.core.cache import cache
+from django.db.models import Q
 
 from users.models import Roles, User
 
@@ -102,6 +103,7 @@ class PoleAutocomplete(autocomplete.Select2QuerySetView):
 class BaseStationAutocomplete(autocomplete.Select2QuerySetView):
 
     def get_queryset(self):
+        """Поиск БС по номеру БС или шифру опоры."""
         user: User = self.request.user
         if (
             not user.is_authenticated
@@ -126,7 +128,10 @@ class BaseStationAutocomplete(autocomplete.Select2QuerySetView):
             results = []
             while (
                 i < len(candidates)
-                and candidates[i].bs_name.lower().startswith(q)
+                and (
+                    candidates[i].bs_name.lower().startswith(q)
+                    or candidates[i].pole.pole.lower().startswith(q)
+                )
             ):
                 results.append(candidates[i])
                 if len(results) >= BASE_STATIONS_PER_PAGE:
@@ -139,15 +144,18 @@ class BaseStationAutocomplete(autocomplete.Select2QuerySetView):
                     results = list(
                         BaseStation.objects
                         .filter(
-                            bs_name__istartswith=q,
-                            pole__pole__istartswith=pole_id,
+                            Q(bs_name__istartswith=q)
+                            | Q(pole__pole__istartswith=pole_id)
                         )
                         [:BASE_STATIONS_PER_PAGE]
                     )
                 else:
                     results = list(
                         BaseStation.objects
-                        .filter(bs_name__istartswith=q)
+                        .filter(
+                            Q(bs_name__istartswith=q)
+                            | Q(pole__pole__istartswith=q)
+                        )
                         [:BASE_STATIONS_PER_PAGE]
                     )
 
