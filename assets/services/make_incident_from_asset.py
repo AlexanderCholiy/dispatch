@@ -83,7 +83,7 @@ def make_incident_from_asset(
     comment_txt = (
         f'На опоре {pole} с активным оборудованием зафиксированы '
         f'нарушения:\n{"\n".join(status_groups)}'
-    )
+    ).strip()
 
     with transaction.atomic():
         incident = Incident.objects.create(
