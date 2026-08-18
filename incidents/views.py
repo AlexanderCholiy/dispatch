@@ -1240,6 +1240,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         )
         .select_related(
             'target_incident',
+            'target_incident__incident_type',
         )
         .prefetch_related(
             'target_incident__categories'

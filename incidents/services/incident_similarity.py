@@ -7,6 +7,7 @@ from django.core.cache import cache
 from django.db.models import Max, Q, QuerySet
 from django.utils import timezone
 
+from core.loggers import default_logger
 from emails.models import EmailMessage
 from incidents.constants import (
     CACHE_SIMILAR_INCIDENTS_PREFIX,
@@ -28,6 +29,7 @@ class IncidentSimilarity(TypedDict):
     status_type_css: Optional[str]
     status_date: Optional[datetime]
     cat_names: list[str]
+    incident_type_str: Optional[str]
     probability: float
     reasons: list[str]
     seconds_diff: float
@@ -61,9 +63,12 @@ class IncidentSimilarityService:
         # 1.0 — очень плавный спад (вес долго держится высоким).
         # 3.0 — быстрый спад (важны только очень свежие инциденты).
         decay_factor = 1.5
+
         ratio = seconds_passed / MAX_SIMILAR_INCIDENTS_WINDOW_TTL
 
         weight = math.exp(-decay_factor * ratio)
+        if weight > 1:
+            default_logger.warning(f'Вес {weight} > 1')
 
         return weight
 
@@ -125,7 +130,11 @@ class IncidentSimilarityService:
         candidates_qs = (
             Incident.objects.filter(id__in=candidate_ids)
             .select_related(
-                'pole', 'base_station', 'incident_type', 'incident_subtype'
+                'pole',
+                'base_station',
+                'incident_type',
+                'incident_subtype',
+                'rvr_priority',
             ).prefetch_related('categories')
         )
 
@@ -166,6 +175,11 @@ class IncidentSimilarityService:
                 [cat.name for cat in categories_list], key=str.lower
             )
 
+            incident_type_str = (
+                candidate.incident_type.name
+                if candidate.incident_type else None
+            )
+
             updated_item = {
                 **item,
                 'candidate_str': str(candidate),
@@ -173,6 +187,7 @@ class IncidentSimilarityService:
                 'status_type_css': status_type_css,
                 'status_date': status_date,
                 'cat_names': cat_names,
+                'incident_type_str': incident_type_str
             }
             updated_results.append(updated_item)
 
@@ -400,14 +415,20 @@ class IncidentSimilarityService:
             ):
                 continue
 
+            incident_type_str = (
+                candidate.incident_type.name
+                if candidate.incident_type else None
+            )
+
             results.append({
                 'candidate_str': str(candidate),
                 'candidate_id': candidate.id,
+                'incident_type_str': incident_type_str,
                 'status_name': status_name,
                 'status_type_css': status_type_css,
                 'status_date': status_date,
                 'cat_names': cat_names,
-                'probability': round(max(total_score, 1), 2),
+                'probability': round(min(total_score, 1), 2),
                 'reasons': reasons,
                 'seconds_diff': seconds_diff,
             })

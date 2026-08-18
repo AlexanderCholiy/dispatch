@@ -13,6 +13,7 @@
               <th>Инцидент</th>
               <th>Статус</th>
               <th>Категория</th>
+              <th>Тип</th>
               <th>Причины</th>
               <th class="tooltip" data-title="Вероятность, что инциденты связаны">P, %</th>
             </tr>
@@ -51,6 +52,10 @@
                 {% endfor %}
               </td>
 
+              <td class="incident-type">
+                {{ candidate.incident_type_str|default:"—" }}
+              </td>
+
               <td class="reasons-cell">
                 {% if candidate.reasons %}
                   <ul class="reasons-list">
@@ -74,7 +79,7 @@
 
             </tr>
             {% empty %}
-            <tr><td colspan="5" class="empty">Нет возможных связей</td></tr>
+            <tr><td colspan="6" class="empty">Нет возможных связей</td></tr>
             {% endfor %}
         </tbody>
     </table>

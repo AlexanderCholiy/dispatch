@@ -33,6 +33,7 @@
                     <th>Целевой инцидент</th>
                     <th>Статус</th>
                     <th>Категория</th>
+                    <th>Тип</th>
                     <th>Ссылка</th>
                     <th>Удалить</th>
                   </tr>
@@ -91,6 +92,10 @@
                           {% endif %}
                       </td>
 
+                      <td class="incident-type">
+                        {{ target.incident_type|default:"—" }}
+                      </td>
+
                       <td>
                         {% if form.instance.pk and form.instance.target_incident_id %}
                           <a class="link" href="{% url 'incidents:incident_detail' incident_id=form.instance.target_incident_id %}">
@@ -111,7 +116,7 @@
                   </tr>
                   {% endwith %}
                   {% empty %}
-                  <tr><td colspan="6" class="empty">Нет связанных инцидентов</td></tr>
+                  <tr><td colspan="7" class="empty">Нет связанных инцидентов</td></tr>
                   {% endfor %}
               </tbody>
           </table>
