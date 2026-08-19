@@ -27,7 +27,8 @@
   <img 
     src=".github/images/dispatch/incident_detail/incident_form.png" 
     alt="Карточка инцидента" 
-    style="max-height: 600px; width: auto; max-width: 95%; object-fit: contain;"
+    width="95%" 
+    max-height="600"
   >
   <br>
   <em>Рис. 2 — Основная форма карточки инцидента</em>
