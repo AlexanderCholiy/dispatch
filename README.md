@@ -60,8 +60,8 @@
 - **Обработка закрытых инцидентов**: При поступлении письма на закрытый инцидент система отправляет автоответ. При повторных обращениях (после N-го сообщения) инцидент автоматически открывается, и формируется уведомление об эскалации.
 - **Архивация**: Скачиваются вложения и оригиналы писем (HTML-разметка сохраняется для удобного просмотра).
 <p align="center">
-  <img src=".github/images/dispatch/emails/email_detail.png" alt="Исходящее письмо по инциденту" width="45%">
-  <img src=".github/images/dispatch/incident_detail/incident_notification.png" alt="Уведомление по инциденту" width="45%">
+  <img src=".github/images/dispatch/emails/email_detail.png" alt="Исходящее письмо по инциденту" width="50%">
+  <img src=".github/images/dispatch/incident_detail/incident_notification.png" alt="Уведомление по инциденту" width="50%">
   <br>
   <em>Рис. 3-4 — Интерфейс коммуникаций: слева — карточка письма, справа — уведомление по инциденту</em>
 </p>
