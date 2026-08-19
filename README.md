@@ -2,7 +2,8 @@
 
 **DISPATCH** — это полностью автономная платформа для управления инцидентами компании ООО «Новые Башни». Система автоматизирует процессы мониторинга, распределения задач и коммуникации с подрядчиками и заявителями, обеспечивая прозрачность и контроль сроков (SLA).
 <p align="center">
-  <img src=".github/images/dispatch/incidents_list/incidents_list.png" alt="Web интерфейс системы" width="900">
+  <img src=".github/images/dispatch/incidents_list/incidents_list.png" alt="Web интерфейс системы" width="1100">
+  <br>
   <em>Рис. 1 — Ваша красивая подпись к изображению</em>
 </p>
 
