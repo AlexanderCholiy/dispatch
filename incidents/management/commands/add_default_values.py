@@ -156,15 +156,15 @@ class Command(BaseCommand):
         valid_status_ids = set(
             IncidentStatus.objects.values_list('id', flat=True)
         )
-        incident_history = IncidentStatusHistory.objects.all()
-        total = len(incident_history)
-        for index, history in enumerate(incident_history):
-            PrettyPrint.progress_bar_error(
-                index, total,
-                'Удаление не актуальных связей в IncidentStatusHistory:'
+        unvalid_incident_history = IncidentStatusHistory.objects.exclude(
+            status_id__in=valid_status_ids
+        )
+        total = len(unvalid_incident_history)
+        if total:
+            incident_logger.warning(
+                f'Удалено {total} не актуальных связей в '
+                'IncidentStatusHistory'
             )
-            if history.status_id not in valid_status_ids:
-                history.delete()
 
     @timer(incident_logger)
     @transaction.atomic()
@@ -212,12 +212,12 @@ class Command(BaseCommand):
         valid_category_ids = set(
             IncidentCategory.objects.values_list('id', flat=True)
         )
-        incident_history = IncidentCategoryRelation.objects.all()
-        total = len(incident_history)
-        for index, history in enumerate(incident_history):
-            PrettyPrint.progress_bar_warning(
-                index, total,
-                'Удаление не актуальных связей в IncidentCategoryRelation:'
+        unvalid_incident_history = IncidentCategoryRelation.objects.exclude(
+            category_id__in=valid_category_ids
+        ).delete()
+        total = len(unvalid_incident_history)
+        if total:
+            incident_logger.warning(
+                f'Удалено {total} не актуальных связей в '
+                'IncidentCategoryRelation'
             )
-            if history.category_id not in valid_category_ids:
-                history.delete()
