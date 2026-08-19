@@ -108,7 +108,7 @@
 <div align="center">
   <img src=".github/images/dispatch/incident_detail/incident_links.png" alt="Связанные инциденты" width="95%">
   <br>
-  <em>Рис. 5 — Связанные инциденты</em>
+  <em>Рис. 8 — Связанные инциденты</em>
 </div>
 
 > [!NOTE]
@@ -119,7 +119,11 @@
 - **Атрибуты**: Срок начала/окончания, привязка к опоре, автор, причина проведения.
 - **Документация**: Привязка писем, по которым были согласованы работы.
 - **Аудит**: Журнал событий изменений карточки ПЛР.
-
+<div align="center">
+  <img src=".github/images/dispatch/planned_works/planned_work_form.png" alt="Карточка плановой работы" width="95%">
+  <br>
+  <em>Рис. 9 — Карточка плановой работы</em>
+</div>
 
 
 
