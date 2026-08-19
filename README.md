@@ -71,6 +71,12 @@
     <br>
     <em>Рис. 4 — Уведомление по инциденту</em>
   </div>
+  <br>
+  <div align="center">
+    <img src=".github/images/dispatch/notifications/notifications_list.png" alt="Список уведомлени" width="95%">
+    <br>
+    <em>Рис. 5 — Список уведомлений</em>
+  </div>
 </div>
 
 ### Инструменты коммуникации
@@ -84,19 +90,19 @@
   <div align="center">
     <img src=".github/images/dispatch/incident_detail/incident_emails.png" alt="Переписка по инциденту" width="95%">
     <br>
-    <em>Рис. 5 — Переписка по инциденту</em>
+    <em>Рис. 6 — Переписка по инциденту</em>
   </div>
   <br>
   <div align="center">
     <img src=".github/images/dispatch/incident_detail/incident_comments.png" alt="Комментарии по инциденту" width="95%">
     <br>
-    <em>Рис. 6 — Комментарии к инциденту</em>
+    <em>Рис. 7 — Комментарии к инциденту</em>
   </div>
   <br>
   <div align="center">
     <img src=".github/images/dispatch/incident_detail/max_notification.png" alt="Уведомление в MAX" width="95%">
     <br>
-    <em>Рис. 7 — Эскалация в MAX по инциденту</em>
+    <em>Рис. 8 — Эскалация в MAX по инциденту</em>
   </div>
 </div>
 
@@ -108,7 +114,7 @@
 <div align="center">
   <img src=".github/images/dispatch/incident_detail/incident_links.png" alt="Связанные инциденты" width="95%">
   <br>
-  <em>Рис. 8 — Связанные инциденты</em>
+  <em>Рис. 9 — Связанные инциденты</em>
 </div>
 
 > [!NOTE]
@@ -122,7 +128,7 @@
 <div align="center">
   <img src=".github/images/dispatch/planned_works/planned_work_form.png" alt="Карточка плановой работы" width="95%">
   <br>
-  <em>Рис. 9 — Карточка плановой работы</em>
+  <em>Рис. 10 — Карточка плановой работы</em>
 </div>
 
 
