@@ -60,12 +60,12 @@
 - **Обработка закрытых инцидентов**: При поступлении письма на закрытый инцидент система отправляет автоответ. При повторных обращениях (после N-го сообщения) инцидент автоматически открывается, и формируется уведомление об эскалации.
 - **Архивация**: Скачиваются вложения и оригиналы писем (HTML-разметка сохраняется для удобного просмотра).
 <p align="center">
-  <img src=".github/images/dispatch/emails/email_detail.png" alt="Исходящее письмо по инциденту" width="50%">
+  <img src=".github/images/dispatch/emails/email_detail.png" alt="Исходящее письмо по инциденту" width="95%">
   <br>
   <em>Рис. 3 — Карточка исходящего письма</em>
 </p>
 <p align="center">
-  <img src=".github/images/dispatch/incident_detail/incident_notification.png" alt="Уведомление по инциденту" width="50%">
+  <img src=".github/images/dispatch/incident_detail/incident_notification.png" alt="Уведомление по инциденту" width="95%">
   <br>
   <em>Рис. 4 — Уведомление по инциденту</em>
 </p>
@@ -78,17 +78,17 @@
 - **Комментарии**: Возможность обсуждения инцидента в режиме реального времени.
 - **Отправка уведомлений в MAX**: Отправка критических уведомлений в мессенджер MAX при возникновении проблем высокого приоритета.
 <p align="center">
-  <img src=".github/images/dispatch/incident_detail/incident_emails.png" alt="Переписка по инциденту" width="30%">
+  <img src=".github/images/dispatch/incident_detail/incident_emails.png" alt="Переписка по инциденту" width="95%">
   <br>
   <em>Рис. 5 — Переписка по инциденту</em>
 </p>
 <p align="center">
-  <img src=".github/images/dispatch/incident_detail/incident_comments.png" alt="Комментарии по инциденту" width="30%">
+  <img src=".github/images/dispatch/incident_detail/incident_comments.png" alt="Комментарии по инциденту" width="95%">
   <br>
   <em>Рис. 6 — Комментарии к инциденту</em>
 </p>
 <p align="center">
-  <img src=".github/images/dispatch/incident_detail/max_notification.png" alt="Уведомление в MAX" width="30%">
+  <img src=".github/images/dispatch/incident_detail/max_notification.png" alt="Уведомление в MAX" width="95%">
   <br>
   <em>Рис. 7 — Эскалация в MAX по инциденту</em>
 </p>
@@ -97,7 +97,7 @@
 Система позволяет связывать инциденты, задавая тип связи:
 - **Связано с**: Общая информационная связь без ограничений.
 - **Дубликат**: При закрытии основного инцидента система напомнит о необходимости закрыть дубликат.
-- ** Блокирует / Зависит от**: Запрет на закрытие инцидента, пока не закрыт связанный с ним (логика блокировки/зависимости).
+- **Блокирует / Зависит от**: Запрет на закрытие инцидента, пока не закрыт связанный с ним (логика блокировки/зависимости).
 <p align="center">
   <img src=".github/images/dispatch/incident_detail/incident_links.png" alt="Связанные инциденты" width="95%">
   <br>
