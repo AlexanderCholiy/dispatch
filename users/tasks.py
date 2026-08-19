@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
 
-from core.loggers import celery_logger
+from core.loggers import celery_logger, default_logger
 from core.services.email import EmailService
 from core.utils import timedelta_to_human_time
 from users.constants import PRESENCE_TTL
@@ -29,22 +29,26 @@ def send_activation_email_task(
         )
         return
 
-    valid_period = timedelta_to_human_time(
-        settings.REGISTRATION_ACCESS_TOKEN_LIFETIME
-    )
+    try:
+        valid_period = timedelta_to_human_time(
+            settings.REGISTRATION_ACCESS_TOKEN_LIFETIME
+        )
 
-    email = EmailService(
-        template='services/activation_email.html',
-        subject=f'Подтверждение регистрации на {domain}',
-        domain=domain,
-        context={
-            'username': user.username,
-            'domain': domain,
-            'activation_link': activation_link,
-            'valid_period': valid_period,
-            'logo_cid': 'logo',
-        },
-    ).build_html_email(user)
+        email = EmailService(
+            template='services/activation_email.html',
+            subject=f'Подтверждение регистрации на {domain}',
+            domain=domain,
+            context={
+                'username': user.username,
+                'domain': domain,
+                'activation_link': activation_link,
+                'valid_period': valid_period,
+                'logo_cid': 'logo',
+            },
+        ).build_html_email(user)
+    except Exception as e:
+        default_logger.exception(e)
+        raise e
 
     try:
         email.send()
@@ -77,22 +81,28 @@ def send_confirm_email_task(
         )
         return
 
-    valid_period = timedelta_to_human_time(
-        settings.REGISTRATION_ACCESS_TOKEN_LIFETIME
-    )
+    try:
+        valid_period = timedelta_to_human_time(
+            settings.REGISTRATION_ACCESS_TOKEN_LIFETIME
+        )
 
-    email = EmailService(
-        template='services/confirm_email.html',
-        subject=f'Подтверждение смены email на {domain}',
-        domain=domain,
-        context={
-            'username': user.original_username,
-            'domain': domain,
-            'confirm_email_link': confirm_email_link,
-            'valid_period': valid_period,
-            'logo_cid': 'logo',
-        },
-    ).build_html_email(user)
+        email = EmailService(
+            template='services/confirm_email.html',
+            subject=f'Подтверждение смены email на {domain}',
+            domain=domain,
+            context={
+                'username': user.original_username,
+                'domain': domain,
+                'confirm_email_link': confirm_email_link,
+                'valid_period': valid_period,
+                'logo_cid': 'logo',
+            },
+        ).build_html_email(user)
+    except Exception as e:
+        celery_logger.exception(e)
+        raise e
+
+    default_logger.info(f'Сброс email {user} URL: {confirm_email_link}')
 
     try:
         email.send()
@@ -122,22 +132,26 @@ def send_password_reset_email_task(
     except User.DoesNotExist:
         return
 
-    valid_period = timedelta_to_human_time(
-        settings.REGISTRATION_ACCESS_TOKEN_LIFETIME
-    )
+    try:
+        valid_period = timedelta_to_human_time(
+            settings.REGISTRATION_ACCESS_TOKEN_LIFETIME
+        )
 
-    email = EmailService(
-        template='services/password_reset_email.html',
-        subject=f'Сброс пароля на {domain}',
-        domain=domain,
-        context={
-            'username': user.username,
-            'domain': domain,
-            'reset_password_link': reset_password_link,
-            'valid_period': valid_period,
-            'logo_cid': 'logo',
-        },
-    ).build_html_email(user)
+        email = EmailService(
+            template='services/password_reset_email.html',
+            subject=f'Сброс пароля на {domain}',
+            domain=domain,
+            context={
+                'username': user.username,
+                'domain': domain,
+                'reset_password_link': reset_password_link,
+                'valid_period': valid_period,
+                'logo_cid': 'logo',
+            },
+        ).build_html_email(user)
+    except Exception as e:
+        default_logger.exception(e)
+        raise e
 
     try:
         email.send()

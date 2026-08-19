@@ -79,6 +79,7 @@ services:
     env_file: .env
     volumes:
       - dispatch_media:/app/media
+      - dispatch_static:/app/collected_static
       - ./logs:/app/logs        # bind mount для логов
       - ./data:/app/data        # bind mount для data
     depends_on:
@@ -104,6 +105,7 @@ services:
     env_file: .env
     volumes:
       - dispatch_media:/app/media
+      - dispatch_static:/app/collected_static
       - ./logs:/app/logs        # bind mount для логов
       - ./data:/app/data        # bind mount для data
     depends_on:
@@ -127,6 +129,7 @@ services:
     env_file: .env
     volumes:
       - dispatch_media:/app/media
+      - dispatch_static:/app/collected_static
       - ./logs:/app/logs        # bind mount для логов
       - ./data:/app/data        # bind mount для data
     depends_on:
@@ -148,8 +151,8 @@ services:
       context: .
     env_file: .env
     volumes:
-      - dispatch_static:/app/collected_static
       - dispatch_media:/app/media
+      - dispatch_static:/app/collected_static
       - ./logs:/app/logs        # bind mount для логов
       - ./data:/app/data        # bind mount для data
       - ./.env:/app/.env:ro   # монтируем .env внутрь контейнера (для cron)
