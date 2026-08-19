@@ -49,6 +49,7 @@ def send_activation_email_task(
     try:
         email.send()
     except Exception as e:
+        celery_logger.exception(e)
         try:
             raise self.retry(exc=e)
         except MaxRetriesExceededError:
@@ -96,6 +97,7 @@ def send_confirm_email_task(
     try:
         email.send()
     except Exception as e:
+        celery_logger.exception(e)
         try:
             raise self.retry(exc=e)
         except MaxRetriesExceededError:
@@ -140,6 +142,7 @@ def send_password_reset_email_task(
     try:
         email.send()
     except Exception as e:
+        celery_logger.exception(e)
         raise self.retry(exc=e)
 
 
