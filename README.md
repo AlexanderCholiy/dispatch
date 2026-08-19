@@ -24,7 +24,7 @@
 Инцидент — ключевой объект системы, привязанный к конкретной опоре и базовой станции (БС).
 
 <p align="center">
-  <img src=".github/images/dispatch/incident_detail/incident_form.png" alt="Карточка инцидента" width="50%">
+  <img src=".github/images/dispatch/incident_detail/incident_form.png" alt="Карточка инцидента" width="95%">
   <br>
   <em>Рис. 2 — Основная форма карточки инцидента</em>
 </p>
