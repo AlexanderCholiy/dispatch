@@ -17,6 +17,7 @@
    - [Инструменты коммуникации](#инструменты-коммуникации)
    - [Связи между инцидентами](#связи-между-инцидентами)
    - [Плановые работы](#плановые-работы)
+2. [Как всё устроено под капотом](#-как-всё-устроено-под-капотом)
 
 ---
 
@@ -131,13 +132,23 @@
   <em>Рис. 10 — Карточка плановой работы</em>
 </div>
 
-
+### ⚙️ Как всё устроено под капотом
+Система построена на **Django** с использованием микросервисной архитектуры. Все компоненты запускаются в изолированных Docker-контейнерах и общаются друг с другом через внутреннюю сеть.
 ```mermaid
-graph TD;
-    A-->B;
-    A-->C;
-    B-->D;
-    C-->D;
+graph TD
+    User[Пользователь] --> ExternalNginx[Внешний Nginx<br>HTTPS]
+    ExternalNginx --> Gateway[dispatch_gateway<br>Внутренний Nginx]
+    
+    Gateway --> Backend[dispatch_backend<br>Django]
+    Gateway --> Grafana[dispatch_grafana<br>Мониторинг]
+    
+    Backend --> DB[dispatch_db<br>PostgreSQL]
+    Backend --> Redis[dispatch_redis<br>Кэш]
+    Backend --> RabbitMQ[dispatch_rabbitmq<br>Брокер задач]
+    
+    RabbitMQ --> Worker[dispatch_celery_worker<br>Фоновые задачи]
+    RabbitMQ --> HeavyWorker[dispatch_celery_heavy_worker<br>Тяжелые задачи]
+    RabbitMQ --> Beat[dispatch_celery_beat<br>Планировщик]
 ```
 
 ---
