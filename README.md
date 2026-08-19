@@ -65,13 +65,12 @@
     <br>
     <em>Рис. 3 — Карточка исходящего письма</em>
   </p>
-  
-  <p>
-    <img src=".github/images/dispatch/incident_detail/incident_notification.png" alt="Уведомление по инциденту">
-    <br>
-    <em>Рис. 4 — Уведомление по инциденту</em>
-  </p>
 </div>
+<p>
+  <img src=".github/images/dispatch/incident_detail/incident_notification.png" alt="Уведомление по инциденту">
+  <br>
+  <em>Рис. 4 — Уведомление по инциденту</em>
+</p>
 
 ### Инструменты коммуникации
 - **Отправка писем**: Возможность писать новые письма или отвечать на существующие прямо из интерфейса системы.
