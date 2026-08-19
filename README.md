@@ -133,36 +133,11 @@
 
 
 ```mermaid
-graph TD
-    User[Пользователь] --> Nginx[dispatch_gateway<br>Nginx:8000]
-    
-    Nginx --> Backend[dispatch_backend<br>Django API/Web]
-    Nginx --> Grafana[dispatch_grafana<br>Grafana:3000]
-    
-    Backend --> DB[dispatch_db<br>PostgreSQL]
-    Backend --> Redis[dispatch_redis<br>Redis Кэш]
-    Backend --> RabbitMQ[dispatch_rabbitmq<br>RabbitMQ Брокер]
-    
-    RabbitMQ --> Worker[dispatch_celery_worker<br>Обычные задачи]
-    RabbitMQ --> HeavyWorker[dispatch_celery_heavy_worker<br>Тяжелые задачи]
-    RabbitMQ --> Beat[dispatch_celery_beat<br>Планировщик]
-    
-    Worker --> DB
-    HeavyWorker --> DB
-    Beat --> DB
-    
-    Grafana --> DB
-    
-    classDef db fill:#e1f5fe,stroke:#01579b,stroke-width:2px;
-    classDef app fill:#f3e5f5,stroke:#4a148c,stroke-width:2px;
-    classDef gateway fill:#fff3e0,stroke:#e65100,stroke-width:2px;
-    classDef worker fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px;
-    classDef cache fill:#fff9c4,stroke:#f57f17,stroke-width:2px;
-    
-    class DB,Redis,RabbitMQ db;
-    class Backend,Grafana app;
-    class Nginx gateway;
-    class Worker,HeavyWorker,Beat worker;
+graph TD;
+    A-->B;
+    A-->C;
+    B-->D;
+    C-->D;
 ```
 
 ---
