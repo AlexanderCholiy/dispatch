@@ -81,19 +81,23 @@
 - **Комментарии**: Возможность обсуждения инцидента в режиме реального времени.
 - **Отправка уведомлений в MAX**: Отправка критических уведомлений в мессенджер MAX при возникновении проблем высокого приоритета.
 <div align="center">
-  <img src=".github/images/dispatch/incident_detail/incident_emails.png" alt="Переписка по инциденту" width="95%">
+  <div align="center">
+    <img src=".github/images/dispatch/incident_detail/incident_emails.png" alt="Переписка по инциденту" width="95%">
+    <br>
+    <em>Рис. 5 — Переписка по инциденту</em>
+  </div>
   <br>
-  <em>Рис. 5 — Переписка по инциденту</em>
-</div>
-<div align="center">
-  <img src=".github/images/dispatch/incident_detail/incident_comments.png" alt="Комментарии по инциденту" width="95%">
+  <div align="center">
+    <img src=".github/images/dispatch/incident_detail/incident_comments.png" alt="Комментарии по инциденту" width="95%">
+    <br>
+    <em>Рис. 6 — Комментарии к инциденту</em>
+  </div>
   <br>
-  <em>Рис. 6 — Комментарии к инциденту</em>
-</div>
-<div align="center">
-  <img src=".github/images/dispatch/incident_detail/max_notification.png" alt="Уведомление в MAX" width="95%">
-  <br>
-  <em>Рис. 7 — Эскалация в MAX по инциденту</em>
+  <div align="center">
+    <img src=".github/images/dispatch/incident_detail/max_notification.png" alt="Уведомление в MAX" width="95%">
+    <br>
+    <em>Рис. 7 — Эскалация в MAX по инциденту</em>
+  </div>
 </div>
 
 ### Связи между инцидентами
