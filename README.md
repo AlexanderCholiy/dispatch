@@ -132,7 +132,7 @@
 </div>
 
 
-
+```mermaid
 graph TD
     User[Пользователь] --> Nginx[dispatch_gateway<br>Nginx:8000]
     
@@ -163,7 +163,7 @@ graph TD
     class Backend,Grafana app;
     class Nginx gateway;
     class Worker,HeavyWorker,Beat worker;
-
+```
 
 ---
 ---
