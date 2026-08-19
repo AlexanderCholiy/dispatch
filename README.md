@@ -22,13 +22,11 @@
 
 ## 🗂 Модель инцидента
 Инцидент — ключевой объект системы, привязанный к конкретной опоре и базовой станции (БС).
-<figure>
-  <div align="center">
-    <img src=".github/images/dispatch/incident_detail/incident_form.png" alt="Карточка инцидента" width="95%">
-    <br>
-    <figcaption><em>Рис. 2 — Основная форма карточки инцидента</em></figcaption>
-  </div>
-</figure>
+<div align="center">
+  <img src=".github/images/dispatch/incident_detail/incident_form.png" alt="Карточка инцидента" width="95%">
+  <br>
+  <em>Рис. 2 — Основная форма карточки инцидента</em>
+</div>
 
 ### Атрибуты инцидента
 - **Классификация**: Тип и подтип инцидента.
