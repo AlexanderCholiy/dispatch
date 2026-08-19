@@ -157,8 +157,30 @@ def get_problem_assets_without_incidents(
         incident.was_read = False
         incidents_to_bulk_update.append(incident)
 
+        status_groups: list[str] = []
+        err_devices = active_err_assets[incident.pole]
+
+        for eq in err_devices:
+            try:
+                level_label = DeviceType(eq.level).label
+            except ValueError:
+                level_label = eq.level
+
+            try:
+                status_label = DeviceStatus(eq.status.id).label
+            except (ValueError, AttributeError):
+                status_label = (
+                    f'Статус {eq.status.id}'
+                    if eq.status else 'UNKNOWN'
+                )
+
+        status_groups.append(
+            f'- {level_label}: {eq.modem_ip.strip()} '
+            f'[{status_label}]'
+        )
         comment_text = (
-            'Автозакрытие отменено: проблема с оборудованием сохраняется.'
+            'Автозакрытие отменено. Проблема с оборудованием сохраняется:'
+            f'\n{"\n".join(status_groups)}'
         )
 
         if bot_user:
