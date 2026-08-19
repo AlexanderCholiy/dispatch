@@ -61,9 +61,13 @@
 - **Архивация**: Скачиваются вложения и оригиналы писем (HTML-разметка сохраняется для удобного просмотра).
 <p align="center">
   <img src=".github/images/dispatch/emails/email_detail.png" alt="Исходящее письмо по инциденту" width="50%">
+  <br>
+  <em>Рис. 3 — Карточка исходящего письма</em>
+</p>
+<p align="center">
   <img src=".github/images/dispatch/incident_detail/incident_notification.png" alt="Уведомление по инциденту" width="50%">
   <br>
-  <em>Рис. 3-4 — Интерфейс коммуникаций: слева — карточка письма, справа — уведомление по инциденту</em>
+  <em>Рис. 4 — Уведомление по инциденту</em>
 </p>
 
 ### Инструменты коммуникации
@@ -75,10 +79,18 @@
 - **Отправка уведомлений в MAX**: Отправка критических уведомлений в мессенджер MAX при возникновении проблем высокого приоритета.
 <p align="center">
   <img src=".github/images/dispatch/incident_detail/incident_emails.png" alt="Переписка по инциденту" width="30%">
+  <br>
+  <em>Рис. 5 — Переписка по инциденту</em>
+</p>
+<p align="center">
   <img src=".github/images/dispatch/incident_detail/incident_comments.png" alt="Комментарии по инциденту" width="30%">
+  <br>
+  <em>Рис. 6 — Комментарии к инциденту</em>
+</p>
+<p align="center">
   <img src=".github/images/dispatch/incident_detail/max_notification.png" alt="Уведомление в MAX" width="30%">
   <br>
-  <em>Рис. 5-7 — Коммуникации по инциденту: переписка (слева), комментарии (в центре) и уведомление в MAX (справа)</em>
+  <em>Рис. 7 — Эскалация в MAX по инциденту</em>
 </p>
 
 ### Связи между инцидентами
