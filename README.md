@@ -63,8 +63,6 @@
   <img src=".github/images/dispatch/emails/email_detail.png" alt="Исходящее письмо по инциденту" width="95%">
   <br>
   <em>Рис. 3 — Карточка исходящего письма</em>
-</div>
-<div align="center">
   <img src=".github/images/dispatch/incident_detail/incident_notification.png" alt="Уведомление по инциденту" width="95%">
   <br>
   <em>Рис. 4 — Уведомление по инциденту</em>
