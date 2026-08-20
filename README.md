@@ -41,7 +41,8 @@
     - [Уведомления и отчеты](#уведомления-и-отчеты)
     - [Задачи Celery Beat](#задачи-celery-beat)
 7. [Файл окружения `.env`](#-файл-окружения-env)
-10. [Автор](#-автор)
+8. [Полезные команды](#-полезные-команды)
+9. [Автор](#-автор)
 
 ---
 
@@ -660,352 +661,125 @@ graph TD
 
 ---
 
+## ⚡ Полезные команды
 
-
-
-## 🚀 Установка и запуск проекта в Docker
-
-### 1. Подготовка окружения
-1. Клонируйте репозиторий на сервер:
+#### Установка Docker и Docker Compose (Ubuntu)
 ```bash
-git clone https://github.com/AlexanderCholiy/dispatch.git
-cd dispatch
-```
-2. Создайте файл `.env` со следующими переменными окружения:
-```
-# Django
-SECRET_KEY=ключ_для_django
-DJANGO_ALLOWED_HOSTS=ip_сервера, 127.0.0.1, доменное_имя
-CSRF_TRUSTED_ORIGINS=https://доменное_имя, https://ip_сервера
-DEBUG=False
-EMAIL_HOST=SMTP_хост
-EMAIL_HOST_USER=email_для_приложения
-EMAIL_HOST_PASSWORD=пароль_почты
-EMAIL_PORT=587
-EMAIL_USE_TLS=True
-
-# Default User
-ADMIN_USERNAME=админ_логин
-ADMIN_EMAIL=админ_email
-ADMIN_PASSWORD=админ_пароль
-
-# Database
-DB_HOST=dispatch_db
-DB_PORT=5432
-POSTGRES_DB=XXXX
-POSTGRES_USER=XXXX
-POSTGRES_PASSWORD=XXXX
-
-# База данных мониторинга (только для чтения)
-MONITORING_DB_NAME=XXXX
-MONITORING_DB_USER=XXXX
-MONITORING_DB_PASSWORD=XXXX
-MONITORING_DB_HOST=XXXX
-MONITORING_DB_PORT=XXXX
-
-# API TowerStore
-TS_POLES_TL_URL=url_с_данными_по_опоры
-TS_AVR_REPORT_URL=url_с_данными_по_подрядчика_подрядчика
-TS_BS_REPORT_URL=url_с_данными_по_базовым_станциям_и_операторам
-
-# Default Contractors
-DEFAULT_CONTRACTOR_EMAILS=список_почт_через_запятую
-
-# Email для инцидентов
-PARSING_EMAIL_LOGIN=email_для_парсинга
-PARSING_EMAIL_PSWD=пароль
-PARSING_EMAIL_SERVER=imap.хост
-PARSING_EMAIL_PORT=993
-# Имя папки ВХОДЯЩИЕ:
-PARSING_EMAIL_SENT_FOLDER_NAME=&BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1
-
-# YandexTracker (доступы)
-YT_CLIENT_ID=...
-YT_CLIENT_SECRET=...
-YT_ORGANIZATION_ID=...
-YT_ACCESS_TOKEN=...
-YT_REFRESH_TOKEN=...
-
-# YandexTracker (очередь и поля)
-YT_QUEUE=имя_очереди
-YT_DATABASE_ID_GLOBAL_FIELD_ID=...
-YT_EMAILS_IDS_GLOBAL_FIELD_ID=...
-YT_POLE_NUMBER_GLOBAL_FIELD_ID=...
-YT_BASE_STATION_GLOBAL_FIELD_ID=...
-YT_EMAIL_DATETIME_GLOBAL_FIELD_ID=...
-YT_IS_NEW_MSG_GLOBAL_FIELD_ID=...
-YT_SLA_DEADLINE_GLOBAL_FIELD_ID=...
-YT_IS_SLA_EXPIRED_GLOBAL_FIELD_ID=...
-YT_OPERATOR_NAME_GLOBAL_FIELD_NAME=...
-YT_AVR_NAME_GLOBAL_FIELD_ID=...
-YT_MONITORING_GLOBAL_FIELD_ID=...
-YT_TYPE_OF_INCIDENT_LOCAL_FIELD_ID=...
-
-# YandexTracker (кастомные статусы)
-YT_ON_GENERATION_STATUS_KEY=...
-YT_NOTIFY_OPERATOR_ISSUE_IN_WORK_STATUS_KEY=...
-YT_NOTIFIED_OPERATOR_ISSUE_IN_WORK_STATUS_KEY=...
-YT_NOTIFY_OPERATOR_ISSUE_CLOSED_STATUS_KEY=...
-YT_NOTIFIED_OPERATOR_ISSUE_CLOSED_STATUS_KEY=...
-YT_NOTIFY_AVR_CONTRACTOR_IN_WORK_STATUS_KEY=...
-YT_NOTIFIED_AVR_CONTRACTOR_IN_WORK_STATUS_KEY=...
-
-# Telegram
-TG_TOKEN=...
-TG_DEFAULT_USER_ID=...
-```
-
-### 2. Установка Docker и Docker Compose (Ubuntu)
-1. Обновите пакеты и установите зависимости:
-```bash
+# Обновление пакетов и установка зависимостей:
 sudo apt update && sudo apt install ca-certificates curl
-```
-2. Добавьте GPG-ключ и репозиторий Docker:
-```bash
+
+# Добавление GPG-ключа и репозитория Docker:
 sudo install -m 0755 -d /etc/apt/keyrings
-```
-```bash
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
   sudo tee /etc/apt/keyrings/docker.asc > /dev/null
 sudo chmod a+r /etc/apt/keyrings/docker.asc
-```
-```bash
+
 echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
   https://download.docker.com/linux/ubuntu \
   $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
   sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-```
-3. Установите Docker:
-```bash
+
+# Установка Docker и плагинов:
 sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-```
-4. Проверьте работу Docker:
-```bash
-sudo systemctl status docker 
+
+# Проверка работы Docker:
+sudo systemctl status docker
 ```
 
-⚠️ Обратите внимание:
-- логи пишутся в папку ./logs, которой нужно выдать права:
+#### Запуск и управление контейнерами
 ```bash
+# Загрузка/обновление образов из Docker Hub:
+sudo docker compose -f docker-compose.production.yml pull
+
+# Остановка всех контейнеров:
+sudo docker compose -f docker-compose.production.yml down
+
+# Перезапуск конкретных сервисов:
+sudo docker compose restart dispatch_celery_worker dispatch_celery_beat
+
+# Вход в контейнер backend:
+sudo docker exec -it dispatch_backend bash
+
+# Очистка неиспользуемых ресурсов:
+sudo docker system prune -a
+
+# Просмотр запущенных контейнеров:
+sudo docker ps -a
+
+# Локально пересобрать и запустить докер образы:
+sudo docker compose stop && sudo docker compose up --build -d
+
+# Локально пересобрать и перезапустить докер образ Nginx:
+sudo docker compose build dispatch_gateway && sudo docker compose up -d dispatch_gateway
+```
+
+#### Права на папки
+```bash
+# Логи:
 sudo chmod -R 777 ./logs
-```
 
-- данные (папка ./data) также требуют прав:
-```bash
+# Данные:
 sudo chmod -R 777 ./data
 ```
 
-- .env примонтирован внутрь контейнера.
-
-- база данных и media файлы хранятся в Docker volumes.
-
-### 3. Сборка и запуск контейнеров
-1. Загрузите/обновите образы из Docker Hub:
+#### Режим разработки
 ```bash
-sudo docker compose -f docker-compose.production.yml pull
+# Запуск только необходимых контейнеров:
+sudo docker compose up -d --build --force-recreate \
+  dispatch_db \
+  dispatch_redis \
+  dispatch_rabbitmq \
+  dispatch_grafana \
+  dispatch_celery_heavy_worker \
+  dispatch_celery_worker \
+  dispatch_celery_beat
+
+# Перезапуск Celery-воркеров после изменений в коде:
+sudo docker compose restart \
+  dispatch_celery_heavy_worker \
+  dispatch_celery_worker \
+  dispatch_celery_beat
 ```
-2. Перезапустите сервисы:
+
+#### Установка ODBC 17 Driver для MSSQL (Ubuntu 22.04)
 ```bash
-sudo docker compose -f docker-compose.production.yml down
+# Установка curl:
+sudo apt-get install -y curl
+
+# Удаление возможных некорректных файлов:
+sudo rm -f /etc/apt/sources.list.d/mssql-release.list
+
+# Импорт ключа Microsoft:
+curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg
+sudo mv microsoft.gpg /etc/apt/trusted.gpg.d/microsoft.gpg
+
+# Добавление репозитория Microsoft (Ubuntu 22.04):
+sudo curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list \
+  -o /etc/apt/sources.list.d/mssql-release.list
+
+# Обновление пакетов:
+sudo apt-get update --allow-unauthenticated
+
+# Установка драйвера ODBC 17:
+sudo ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc unixodbc-dev
 ```
+
+
+#### Настройка Nginx
 ```bash
-sudo docker compose -f docker-compose.production.yml up -d
-```
-
-
-### 4. Настройка Nginx
-1. Отредактируйте файл `/etc/nginx/sites-enabled/default`, добавив минимально необходимую конфигурацию:
-```
-server {
-        listen 80;
-        server_name _;
-
-        client_max_body_size 50M;
-
-        location / {
-            proxy_set_header Host $http_host;
-            proxy_pass http://<ваш_ip_адрес>:8000;
-  
-            # WebSocket:
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection "upgrade";
-
-            proxy_read_timeout 3600s;
-            proxy_send_timeout 3600s;
-        }
-
-}
-```
-2. Проверьте и примените конфигурацию:
-```bash
+# Проверка конфигурации Nginx:
 sudo nginx -t
-```
-```bash
+
+# Перезагрузка Nginx:
 sudo service nginx reload
 ```
 
-✅ Готово!
-Приложение будет доступно по адресу: `http(s)://<хост_сервера>/`
-
----
-
-## ⚙️ Запуск в режиме разработки
-1. Запустите необходимые контейнеры через Docker Compose: базу данных PostgreSQL, Redis, брокер сообщений RabbitMQ, воркеры Celery для фоновой обработки задач и Grafana для дашбордов:
+#### Переустановить подключение через Visual Studio Code
 ```bash
-sudo docker compose up -d --build --force-recreate dispatch_db dispatch_redis dispatch_rabbitmq dispatch_grafana dispatch_celery_heavy_worker dispatch_celery_worker dispatch_celery_beat
-```
-```bash
-sudo docker compose restart dispatch_celery_heavy_worker dispatch_celery_worker dispatch_celery_beat
-```
-> Если вы изменяете код задач Celery, обязательно перезапускайте соответствующие сервисы, чтобы новые изменения вступили в силу.
-
-2. В файле .env установите флаг отладки `DEBUG=True`.
-
-3. Создайте и активируйте виртуальное окружение, затем установите зависимости:
-```bash
-python3.12 -m venv venv
-```
-> Установка виртуального окружения (версия python 3.12).
-```bash
-. .\venv\Scripts\activate
-```
-> Активация виртуального окружения для Windows.
-```bash
-. ./venv/bin/activate
-```
-> Активация виртуального окружения для Linux или MacOS.
-```bash
-pip install -r requirements.txt
-```
-> Установка зависимостей.
-sudo apt-get install -y curl
-
-4. Установите Microsoft ODBC 17 Driver for SQL Server (Linux):
-```bash
-sudo apt-get install -y curl
-```
-> Установка утилиты для передачи данных по различным сетевым протоколам
-```bash
-sudo rm -f /etc/apt/sources.list.d/mssql-release.list
-```
-> Удаляем возможные некорректные файлы
-```bash
-curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg
-sudo mv microsoft.gpg /etc/apt/trusted.gpg.d/microsoft.gpg
-```
-> Импорт ключа Microsoft
-```bash
-sudo curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list -o /etc/apt/sources.list.d/mssql-release.list
-```
-> Добавление репозитория Microsoft (замени '22.04' на твою версию Ubuntu)
-> 
-> Microsoft пока не выпускает полноценную поддержку Ubuntu 24.04 (noble). Если выше не работает, проще перейти на Ubuntu 22.04
-```bash
-sudo apt-get update --allow-unauthenticated
-```
-> Обновляем пакеты
-```bash
-sudo ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc unixodbc-dev
-```
-> Установка драйвера ODBC 17 и unixODBC
-> 
-> В Linux 24.04 ODBC Driver 18 иногда вызывает проблемы с SSL-соединением, особенно при работе с серверами MSSQL, использующими самоподписанные сертификаты.
-
-5. Проверка работы WebSocke:
-```bash
-uvicorn backend.asgi:application --reload
-```
-> Запуск приложения с автоматической перезагрузкой, но без раздачи статики.
-
----
-
-## 🛠️ Полезные команды
-### 1. Работа с базой данных
-```
-ALTER SEQUENCE public.emails_emailmessage_id_seq RESTART WITH 10000;
-ALTER SEQUENCE public.incidents_incident_id_seq RESTART WITH 10000;
-```
-> Сброс автоинкремента ID в таблицах emails_emailmessage и incidents_incident (например, при пересоздании базы).
-
-### 2. Работа с Docker
-```bash
-sudo docker ps -a
-```
-> Просмотр всех контейнеров (включая остановленные).
-```bash
-sudo docker compose stop
-```
-> Остановка всех контейнеров, указанных в docker-compose.yml.
-```bash
-sudo docker container prune -f
-```
-> Удалить все остановленные контейнеры.
-```bash
-sudo docker image prune -f
-```
-> Удалить все неиспользуемые образы.
-```bash
-sudo docker compose exec dispatch_backend bash
-```
-> Открыть терминал контейнера с приложением.
-```bash
-sudo docker compose stop && sudo docker compose up --build -d
-```
-> Локально пересобрать и запустить докер образы.
-```bash
-sudo docker compose build dispatch_gateway && sudo docker compose up -d dispatch_gateway
-```
-> Локально пересобрать и перезапустить докер образ nginx.
-
-### 3. Настройка Gunicorn
-1. Определение ресурсов сервера:
-```bash
-lscpu | grep "^CPU(s):"
-```
-> Количество ядер процессора.
-```bash
-lscpu | grep "Thread(s) per core"
-```
-> Количество потоков на ядро.
-```bash
-free -h
-```
-> Проверка объёма оперативной памяти.
-```bash
-lsb_release -a
-```
-> Узнать версию Ubuntu.
-Формула расчёта числа воркеров: `workers = 2 * CPU + 1`
-
-### 4. Проверка стиля кода
-```bash
-python -m flake8
-```
-> Проверка соответствия кода стандартам PEP8.
-```bash
-isort .
-```
-> Автоматическая сортировка импортов
-
-### 5. Управление зависимостями
-```bash
-pip install <имя_библиотеки> --no-deps
-```
-> Используйте флаг --no-deps, чтобы избежать автоматической установки зависимостей, которые могут конфликтовать с текущими версиями библиотек, особенно с Django.
-
-### 6. Запуск ASGI приложения в режиме разработки
-```bash
-daphne backend.asgi:application
-```
-> Необходимо для работы Web Socket, однако статика не подключается и тестировать не удобно.
-
-### 7. Переустановить подключение через VS Code
-```bash
+# Полное удаление директории .vscode-server из домашней папки (помогает при проблемах с подключением):
 cd ~ && rm -rf ~/.vscode-server
 ```
-> Полное удаление директории .vscode-server из домашней папки (помогает при проблемах с подключением).
 
 ---
 
