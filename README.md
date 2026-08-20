@@ -40,6 +40,7 @@
     - [Синхронизация и импорт](#синхронизация-и-импорт)
     - [Уведомления и отчеты](#уведомления-и-отчеты)
     - [Задачи Celery Beat](#задачи-celery-beat)
+10. [Автор](#-автор)
 
 ---
 
@@ -199,7 +200,7 @@ graph TD
 > Автоперезапуск — `restart: unless-stopped` восстанавливает контейнеры после перезагрузки сервера или падения контейнера
 
 ### Управление процессами (Supervisor)
-Бэкенд-платформа построена на базе **Python 3.12** и включает все необходимые системные зависимости (`PostgreSQL Client`, `ODBC Drivers`, `GDAL` и др.). 
+Бэкенд-платформа построена на базе **🐍 Python 3.12** и включает все необходимые системные зависимости (`PostgreSQL Client`, `ODBC Drivers`, `GDAL` и др.). 
 Точкой входа служит скрипт `entrypoint.sh`. Он подготавливает окружение, после чего передает управление **Supervisor**. Этот инструмент изолированно запускает, контролирует и автоматически перезапускает ключевые сервисы внутри контейнера **dispatch_backend**:
 | Процесс | Назначение | Режим работы |
 | :--- | :--- | :--- |
@@ -504,299 +505,162 @@ graph TD
 
 ---
 
+## 🔐 Файл окружения `.env`
+Все конфигурационные параметры и секреты хранятся в файле **`.env`** в корне проекта. Этот файл подключается ко всем контейнерам через `env_file` и содержит настройки для всех сервисов.
 
+> [!WARNING]
+> Файл `.env` содержит чувствительные данные и **не должен** попадать в репозиторий!
 
+#### Django
+| Переменная | Описание |
+|------------|----------|
+| **`SECRET_KEY`** | Секретный ключ Django. Используется для криптографических подписей |
+| **`DJANGO_ALLOWED_HOSTS`** | Список хостов/доменов, которым разрешено обслуживать приложение |
+| **`CSRF_TRUSTED_ORIGINS`** | Доверенные источники для CSRF-защиты |
+| **`DEBUG`** | Режим отладки (`True` — для разработки, `False` — для продакшена) |
+| **`EMAIL_HOST`** | SMTP-сервер для отправки почты |
+| **`EMAIL_HOST_USER`** | Логин для SMTP-авторизации |
+| **`EMAIL_HOST_PASSWORD`** | Пароль для SMTP-авторизации |
+| **`EMAIL_PORT`** | Порт SMTP-сервера (обычно 587 для TLS) |
+| **`EMAIL_USE_TLS`** | Использовать TLS для шифрования почтовых соединений |
 
----
----
----
----
----
----
----
----
----
----
----
----
----
----
----
----
----
----
----
----
----
----
----
----
----
----
----
----
----
----
+#### Redis (Кэш)
+| Переменная | Описание |
+|------------|----------|
+| **`REDIS_HOST`** | Хост Redis (для разработки — `<SERVER_IP>`, для продакшена — имя контейнера `dispatch_redis`) |
+| **`REDIS_PORT`** | Порт Redis (по умолчанию 6379) |
+| **`REDIS_PASSWORD`** | Пароль для доступа к Redis |
+| **`REDIS_USER`** | Пользователь Redis (обычно `default`) |
 
+#### RabbitMQ (Брокер задач)
+| Переменная | Описание |
+|------------|----------|
+| **`RABBITMQ_USER`** | Имя пользователя для RabbitMQ (для разработки — `<SERVER_IP>`, для продакшена — имя контейнера `dispatch_rabbitmq`) |
+| **`RABBITMQ_PASSWORD`** | Пароль для RabbitMQ |
+| **`RABBITMQ_HOST`** | Хост RabbitMQ |
+| **`RABBITMQ_PORT`** | Порт AMQP-соединения (5672) |
+| **`RABBITMQ_MANAGEMENT_PORT`** | Порт веб-интерфейса управления (15672) |
 
+#### Celery (Фоновые задачи)
+| Переменная | Описание |
+|------------|----------|
+| **`CELERY_CONCURRENCY`** | Количество параллельных воркеров (по числу ядер) |
+| **`CELERY_DEFAULT_QUEUE`** | Очередь по умолчанию для задач (`default`) |
+| **`CELERY_RESULT_BACKEND`** | Бэкенд для хранения результатов (`django-db`) |
+| **`CELERY_BROKER_URL`** | URL для подключения к брокеру RabbitMQ (amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/) |
 
+#### Пользователи по умолчанию
+| Переменная | Описание |
+|------------|----------|
+| **`ADMIN_USERNAME`** | Имя суперпользователя |
+| **`ADMIN_EMAIL`** | Email суперпользователя |
+| **`ADMIN_PASSWORD`** | Пароль суперпользователя |
+| **`BOT_USERNAME`** | Имя пользователя для системного бота |
+| **`BOT_EMAIL`** | Email системного бота (`EMAIL_HOST`) |
+| **`BOT_PASSWORD`** | Пароль системного бота |
 
+#### PostgreSQL (База данных)
+| Переменная | Описание |
+|------------|----------|
+| **`DB_HOST`** | Хост PostgreSQL (для разработки — `<SERVER_IP>`, для продакшена — имя контейнера `dispatch_rabbitmq`) |
+| **`DB_PORT`** | Порт PostgreSQL (5432) |
+| **`POSTGRES_DB`** | Имя базы данных |
+| **`POSTGRES_USER`** | Пользователь базы данных |
+| **`POSTGRES_PASSWORD`** | Пароль базы данных |
+| **`READONLY_DB_USER`** | Пользователь с правами только на чтение |
+| **`READONLY_DB_PASSWORD`** | Пароль для readonly-пользователя |
 
+#### Grafana (Мониторинг)
+| Переменная | Описание |
+|------------|----------|
+| **`GRAFANA_ADMIN_USER`** | Имя администратора Grafana |
+| **`GRAFANA_ADMIN_PASSWORD`** | Пароль администратора Grafana |
+| **`GRAFANA_DB_USER`** | Пользователь БД для Grafana |
+| **`GRAFANA_DB_PSWD`** | Пароль для Grafana в БД |
+| **`GRAFANA_PUBLIC_URL`** | Публичный URL для доступа к Grafana (`http://<SERVER_IP>/grafana`) |
+| **`GENERAL_DISPATCH_STATISTICS_UID`** | UID дашборда статистики |
+| **`GENERAL_DISPATCH_MAP_UID`** | UID дашборда карты |
 
+#### Резервное копирование
+| Переменная | Описание |
+|------------|----------|
+| **`RESERVE_SERVER_HOST`** | Хост резервного сервера |
+| **`RESERVE_SERVER_PORT`** | Порт SSH (22) |
+| **`RESERVE_SERVER_USERNAME`** | Имя пользователя для SSH |
+| **`RESERVE_SERVER_PASSWORD`** | Пароль для SSH |
+| **`REMOTE_DB_BACK_FOLDER_DIR`** | Путь для хранения резервных копий БД |
 
+##### Мониторинг 1.0
+| Переменная | Описание |
+|------------|----------|
+| **`MONITORING_DB_NAME`** | Имя БД мониторинга |
+| **`MONITORING_DB_USER`** | Пользователь БД мониторинга |
+| **`MONITORING_DB_PASSWORD`** | Пароль для БД мониторинга |
+| **`MONITORING_DB_HOST`** | Хост БД мониторинга |
+| **`MONITORING_DB_PORT`** | Порт БД мониторинга (1433 — MSSQL) |
 
+##### Мониторинг 2.0
+| Переменная | Описание |
+|------------|----------|
+| **`MONITORING_2_DB_NAME`** | Имя БД мониторинга 2.0 |
+| **`MONITORING_2_DB_USER`** | Пользователь БД мониторинга 2.0 |
+| **`MONITORING_2_DB_PASSWORD`** | Пароль для БД мониторинга 2.0 |
+| **`MONITORING_2_DB_HOST`** | Хост БД мониторинга 2.0 |
+| **`MONITORING_2_DB_PORT`** | Порт БД мониторинга 2.0 (5432 — PostgreSQL) |
 
+##### TowerStore
+| Переменная | Описание |
+|------------|----------|
+| **`TS_DB_NAME`** | Имя БД TowerStore |
+| **`TS_DB_USER`** | Пользователь БД TowerStore |
+| **`TS_DB_PASSWORD`** | Пароль для БД TowerStore |
+| **`TS_DB_HOST`** | Хост БД TowerStore |
+| **`TS_DB_PORT`** | Порт БД TowerStore |
 
+##### Энергетические компании
+| Переменная | Описание |
+|------------|----------|
+| **`ENERGY_DB_NAME`** | Имя БД энергетических компаний |
+| **`ENERGY_DB_USER`** | Пользователь БД энергетиков |
+| **`ENERGY_DB_PASSWORD`** | Пароль для БД энергетиков |
+| **`ENERGY_DB_HOST`** | Хост БД энергетиков |
+| **`ENERGY_DB_PORT`** | Порт БД энергетиков |
 
+#### Парсинг почты
+| Переменная | Описание |
+|------------|----------|
+| **`PARSING_EMAIL_LOGIN`** | Логин для парсинга почтового ящика |
+| **`PARSING_EMAIL_PSWD`** | Пароль для парсинга почты |
+| **`PARSING_EMAIL_SERVER`** | IMAP-сервер для парсинга |
+| **`PARSING_EMAIL_PORT`** | Порт IMAP (993) |
+| **`PARSING_EMAIL_SENT_FOLDER_NAME`** | Имя папки с отправленными письмами |
 
+#### Уведомления
+| Переменная | Описание |
+|------------|----------|
+| **`NOTIFY_NEW_POLE_EMAILS`** | Список email для уведомлений о включении опор |
+| **`DEFAULT_CONTRACTOR_EMAILS`** | Email по умолчанию для подрядчиков |
+| **`SEND_AUTO_EMAIL_ON_CLOSED_INCIDENT`** | Отправлять автоуведомления при закрытии инцидента (`True` — да, `False` — нет) |
 
+#### MAX
+| Переменная | Описание |
+|------------|----------|
+| **`MAX_TOKEN`** | Токен для интеграции с MAX |
+| **`MAX_CHAT_ID`** | ID чата в MAX для отправки уведомлений |
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-**DISPATCH** — это микросервис для диспетчерской службы, интегрированный с электронной почтой и сервисом Yandex Tracker.
-В дальнейшем его можно расширить до полноценной самостоятельной системы управления инцидентами.
-
-<p align="center">
-  <img src=".github/images/yandex_tracker/interface/issues_list.png" alt="Список задач" width="500">
-  <img src=".github/images/yandex_tracker/interface/issue_detail.png" alt="Пример задачи" width="500">
-</p>
-
----
-
-## 📑 Оглавление
-
-1. [Основные возможности](#-основные-возможности)
-   1. [Синхронизация с Yandex Tracker](#-синхронизация-с-yandex-tracker)
-   2. [Автоответы](#autoanswers)
-   3. [SLA-контроль](#-sla-контроль)
-   4. [Работа с почтой](#-работа-с-почтой)
-3. [API](#-api)  
-4. [Архитектура и контейнеры](#-архитектура-и-контейнеры)  
-5. [Стек технологий](#-стек-технологий)  
-6. [Интеграция с API YandexTracker](#-интеграция-с-api-yandextracker)  
-   1. [Регистрация и доступы](#1-регистрация-и-доступы)  
-   2. [Настройка очереди](#2-настройка-очереди)  
-   3. [Интеграция с почтой](#3-интеграция-с-почтой)  
-   4. [Глобальные поля](#4-глобальные-поля)  
-   5. [Локальные поля](#5-локальные-поля)  
-7. [Установка и запуск проекта в Docker](#-установка-и-запуск-проекта-в-docker)  
-8. [Запуск в режиме разработки](#-запуск-в-режиме-разработки)  
-9. [Полезные команды](#-полезные-команды)  
-   1. [Работа с базой данных](#1-работа-с-базой-данных)  
-   2. [Работа с Docker](#2-работа-с-docker)  
-   3. [Настройка Gunicorn](#3-настройка-gunicorn)  
-   4. [Проверка стиля кода](#4-проверка-стиля-кода)  
-   5. [Управление зависимостями](#5-управление-зависимостями)  
-   6. [Переустановить подключение через VS Code](#6-переустановить-подключение-через-vs-code)  
-10. [Автор](#-автор)
-
----
-
-### 📡 API
-Проект предоставляет REST API для работы с инцидентами.
-1. Эндпоинт:
-   ```
-   GET /api/v1/report/incidents/
-   ```
-   > Возвращает подробную информацию по инцидентам с пагинацией.
-   ```
-   GET /api/v1/report/incidents/?all=true
-   ```
-   > Возвращает подробную информацию по инцидентам без пагинации.
-  **Особенности**:
-   - Доступна фильтрация по дате инцидента:
-    ```
-    GET /api/v1/report/incidents/?incident_date_after=2025-10-12&incident_date_before=2025-10-15
-    ```
-    > Получить инциденты за определенный период
-    ```
-    GET /api/v1/report/incidents/?last_month=true
-    ```
-    > Получить инциденты с первого числа предыдущего месяца по текущее число.    
-   - Чтение доступно всем пользователям.
-  **Возвращаемые поля**:
-    - `id` — ID инцидента
-    - `code` — код инцидента, который добавляется в тему ответных писем 
-    - `last_status` — последний статус инцидента
-    - `incident_type` — тип инцидента
-    - `categories` - категории инцидента
-    - `is_auto_incident` — способ регистрации (автоматически через почту или вручную через диспетчера)
-    - `is_incident_finish` — завершен ли инцидент
-    - `incident_datetime` — дата и время регистрации
-    - `incident_finish_datetime` — дата и время завершения
-    - `is_transfer_to_avr` — передано ли в АВР
-    - `avr_start_datetime' — дата и время передачи АВР
-    - `avr_end_datetime` — дата и время завершения АВР
-    - `is_vendor_sla_avr_expired` — просрочен ли SLA АВР
-    - `vendor_avr_deadline` — дедлайн АВР
-    - `avr_vendor` — имя подрядчика по АВР
-    - `avr_vendor_emails` — email подрядичика по АВР
-    - `is_transfer_to_rvr` — передано ли в РВР
-    - `rvr_start_datetime` — дата и время передачи РВР
-    - `rvr_end_datetime` — дата и время завершения РВР
-    - `is_vendor_sla_rvr_expired` — просрочен ли SLA РВР
-    - `vendor_rvr_deadline` — дата и время завершения РВР
-    - `pole` — шифр опоры
-    - `region_ru` — регион
-    - `address` — адрес
-    - `pole_latitude` — широта опоры
-    - `pole_longtitude` — долгота опоры
-    - `base_station` — номер базовой станции
-    - `operator_group` — группа операторов
-    - `operators` — операторы
+#### Внешние сервисы
+| Переменная | Описание |
+|------------|----------|
+| **`MQTT_MONGO_DB_URL`** | URL для подключения к MongoDB (Run Sharing) |
+| **`MQTT_PAAS_HOST`** | Хост MQTT-брокера PaaS |
+| **`MQTT_PAAS_PORT`** | Порт MQTT (1883) |
+| **`SMS_RVR_CONTROLLER_HOST`** | Хост контроллера SMS-оповещений |
+| **`SMS_RVR_CONTROLLER_PSWD`** | Пароль для доступа к SMS-контроллеру |
 
 ---
 
-## ⚙️ Архитектура и контейнеры
-
-Проект запускается в Docker и состоит из трёх контейнеров:
-
-- **dispatch_db** — PostgreSQL.
-
-- **dispatch_gateway** — Nginx (конфиг: gateway/nginx.conf).
-
-- **dispatch_backend** — Django-приложение (запуск через Supervisor).
-
-Supervisor управляет запуском:
-
-- инициализации Django (миграции, создание администратора, сбор статики, загрузка дефолтных данных);
-
-- cron-задач:
-  - резервное копирование базы данных,
-
-  - синхронизация данных с TowerStore,
-
-  - очистка неактуальных записей в БД;
-
-- парсинга входящих и исходящих писем;
-
-- синхронизации с Yandex Tracker (открытие/закрытие задач, SLA-контроль, автодействия);
-
-- Gunicorn (по умолчанию: 9 workers × 2 threads) для запуска веб-интерфейса.
 
 
----
-
-## 🧩 Стек технологий
-
-| Категория          | Технологии                                                   |
-|--------------------|--------------------------------------------------------------|
-| **Backend**        | Python 3.12, Django 4.2, YandexTracker API, Celery, RabbitMQ |
-| **Frontend**       | Веб-интерфейс через Django Templates, Yandex Tracker         |
-| **База данных**    | PostgreSQL, Redis                                            |
-| **Инфраструктура** | Docker, Docker Compose, Nginx                                |
-| **CI/CD**          | GitHub Actions                                               |
-
----
-
-## 🔗 Интеграция с API YandexTracker
-
-### 1. Регистрация и доступы
-1. Зарегистрируйтесь в [Yandex Tracker](https://tracker.yandex.ru/hi-there/create).  
-2. Создайте приложение в **OAuth Яндекс** и получите **Client ID** и **Client Secret**.  
-3. Сгенерируйте **OAuth-токен** для работы с API.  
-4. В интерфейсе Tracker откройте: *Администрирование → Организации* и сохраните **идентификатор организации**.  
-
-### 2. Настройка очереди
-Перейдите: *Очереди → Имя вашей очереди → Настройки очереди*.  
-
-1. Создайте и настройте **рабочий процесс**, как на примере:  
-   <p align="center">
-     <img src=".github/images/yandex_tracker/work_process/incident_work_process.png" alt="Рабочий процесс инцидента" width="800">
-     <img src=".github/images/yandex_tracker/work_process/detail_work_process.png" alt="Переходы в рабочем процессе" width="800">
-   </p>
-
-   > Рабочий процесс должен начинаться со статуса **Новый**.  
-
-2. Добавьте дополнительные статусы (ключи понадобятся в дальнейшем):  
-   <p align="center">
-     <img src=".github/images/yandex_tracker/statuses/statuses_part_1.png" alt="Автодействия" width="500">
-   </p>
-   <p align="center">
-     <img src=".github/images/yandex_tracker/statuses/statuses_part_2.png" alt="На генерации" width="500">
-   </p>
-
-### 3. Интеграция с почтой
-По умолчанию Yandex Tracker использует папку *INBOX*, после чего письма помечаются как прочитанные и перемещаются в архив. Это поведение нежелательно.  
-
-Чтобы сохранить возможность отправки писем из интерфейса Tracker:  
-- создайте в почте папки:  
-  - `YandexTrackerInbox`  
-  - `YandexTrackerArchive`  
-- укажите их в настройках очереди:  
-  *Очереди → Имя очереди → Настройки очереди → Интеграции*  
-
-Пример настроек:  
-<p align="center">
-  <img src=".github/images/yandex_tracker/email_setup/default_settings.png" alt="Интеграция с почтой" width="500">
-</p>  
-<p align="center">
-  <img src=".github/images/yandex_tracker/email_setup/integrations_part_1.png" alt="Получение писем" width="500">
-</p>
-<p align="center">
-  <img src=".github/images/yandex_tracker/email_setup/integrations_part_2.png" alt="Параметры задач" width="500">
-</p>
-<p align="center">
-  <img src=".github/images/yandex_tracker/email_setup/integrations_part_3.png" alt="Отправка ответов" width="500">
-</p>  
-
----
-
-### 4. Глобальные поля
-В разделе *Администрирование → Поля* создайте следующие глобальные поля (ключи понадобятся в дальнейшем):  
-<p align="center">
-  <img src=".github/images/yandex_tracker/fields/global/avr_name.png" alt="Имя подрядчика" width="300">
-  <img src=".github/images/yandex_tracker/fields/global/base_station_number.png" alt="Номер базовой станции" width="300">
-  <img src=".github/images/yandex_tracker/fields/global/email_comments_ids.png" alt="ID писем, добавленных в комментарии" width="300">
-  <img src=".github/images/yandex_tracker/fields/global/incident_date.png" alt="Дата регистрации инцидента" width="300">
-  <img src=".github/images/yandex_tracker/fields/global/incident_id.png" alt="ID инцидента" width="300">
-  <img src=".github/images/yandex_tracker/fields/global/is_new_msg.png" alt="Флаг нового письма" width="300">
-  <img src=".github/images/yandex_tracker/fields/global/operator.png" alt="Оператор базовой станции" width="300">
-  <img src=".github/images/yandex_tracker/fields/global/pole_number.png" alt="Шифр опоры" width="300">
-  <img src=".github/images/yandex_tracker/fields/global/sla_deadline.png" alt="Дедлайн SLA" width="300">
-  <img src=".github/images/yandex_tracker/fields/global/sla_status.png" alt="Статус SLA" width="300">
-  <img src=".github/images/yandex_tracker/fields/global/monitoring.png" alt="Мониторинг" width="300">
-</p>  
-
-### 5. Локальные поля
-Перейдите: *Очереди → Имя очереди → Настройки очереди → Локальные поля* и создайте новые (ключи понадобятся в дальнейшем):  
-<p align="center">
-  <img src=".github/images/yandex_tracker/fields/local/type_of_problem.png" alt="Тип проблемы" width="300">
-</p>  
-
-> Убедитесь, что значения поля *Тип проблемы* совпадают с используемыми в вашей системе.  
-
-Поздравляю, минимальная настройка **Yandex Tracker** завершена.
-
----
 
 ## 🚀 Установка и запуск проекта в Docker
 
