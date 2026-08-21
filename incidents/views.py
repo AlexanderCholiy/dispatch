@@ -85,6 +85,7 @@ from .constants import (
     AVR_CATEGORY,
     DGU_CATEGORY,
     EKS_CATEGORY,
+    FAV_EMPTY,
     FINISHED_STATUS_NAMES,
     INCIDENTS_PER_PAGE,
     MAX_INCIDENT_LINKS,
@@ -430,6 +431,17 @@ def index(request: HttpRequest) -> HttpResponse:
         [v for v in sla_eks_status if v in time_statuses] or time_statuses[:]
     )
 
+    fav_statuses = [FAV_EMPTY] + [st for st in FavoritePriority]
+
+    fav_status = (
+        request.GET.get('fav_status', '').strip()
+        or (get_raw_cookie(request, 'fav_status') or '').strip()
+    ).split(',') if not search_only_by_code else []
+
+    fav_status = (
+        [v for v in fav_status if v in fav_statuses] or fav_statuses[:]
+    )
+
     date_from = (
         request.GET.get('incident_date_from', '').strip()
         or (get_raw_cookie(request, 'incident_date_from') or '').strip()
@@ -617,6 +629,19 @@ def index(request: HttpRequest) -> HttpResponse:
                 )
 
         base_qs = base_qs.filter(q_filter)
+
+    if fav_status and len(fav_status) != len(fav_statuses):
+        q_fav = Q()
+        for status_val in fav_status:
+            if status_val == FAV_EMPTY:
+                q_fav |= ~Q(favorited_by__user=user)
+            else:
+                q_fav |= Q(
+                    favorited_by__user=user,
+                    favorited_by__priority=status_val,
+                )
+
+        base_qs = base_qs.filter(q_fav)
 
     if len(is_incident_finish) == 1:
         is_incident_finish_filter = is_incident_finish[0] == 'true'
@@ -913,6 +938,7 @@ def index(request: HttpRequest) -> HttpResponse:
         'operator_groups': operator_groups,
         'sla_statuses': SLAStatus,
         'time_statuses': TimeStatus,
+        'fav_statuses': FavoritePriority,
         'region_responsible_managers': region_responsible_managers,
         'incident_types': incident_types,
         'incident_subtypes': incident_subtypes,
@@ -941,6 +967,7 @@ def index(request: HttpRequest) -> HttpResponse:
             'sla_rvr_status': sla_rvr_status,
             'sla_dgu_status': sla_dgu_status,
             'sla_eks_status': sla_eks_status,
+            'fav_status': fav_status,
             'date_from': (
                 date_from.strftime(DATETIME_LOCAL_FORMAT) if date_from else ''
             ),

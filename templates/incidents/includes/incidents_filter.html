@@ -543,6 +543,40 @@
         class="tooltip" 
         data-title="Дата регистрации ДО">
     </div>
+  
+    <div class="multiple-select-wrapper" id="fav-status-select">
+      <div class="dropdown-trigger" data-filter-name="Избранное">
+        <span class="selected-label">Избранное</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="sla-avr-dropdown-menu">
+        <div class="dropdown-options">
+          <label class="option-item {% if 'empty' in selected.fav_status %}is-selected{% endif %}" 
+                 data-value="empty">
+            <i class="bx bx-check"></i>
+            <span>Отсутствует</span>
+          </label>
+          {% for v in fav_statuses %}
+            <label class="option-item {% if v in selected.fav_status %}is-selected{% endif %}" 
+                   data-value="{{ v }}">
+              <i class="bx bx-check"></i>
+              <span>{{ v.label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <select name="fav_status" id="fav-status-select-hidden" style="display: none;" multiple>
+        <option value="empty" {% if 'empty' in selected.fav_status %}selected{% endif %}>
+          Отсутствует
+        </option>
+        {% for v in fav_statuses %}
+          <option value="{{ v }}" {% if v in selected.fav_status %}selected{% endif %}></option>
+        {% endfor %}
+      </select>
+    </div>
+
   </div>
     
   <div class="right-parts">
@@ -690,6 +724,8 @@
         { id: 'base-station-input', cookieName: 'base_station', searchFieldName: 'base_station', type: 'text' },
         { id: 'incident-date-from', cookieName: 'incident_date_from', searchFieldName: 'incident_date_from', type: 'datetime-local' },
         { id: 'incident-date-to', cookieName: 'incident_date_to', searchFieldName: 'incident_date_to', type: 'datetime-local' },
+
+        { id: 'fav-status-select-hidden', cookieName: 'fav_status', searchFieldName: 'fav_status', type: 'multi_select' },
 
         { id: 'per-page', cookieName: 'per_page_root', searchFieldName: 'per_page', type: 'single_select', skipOnReset: true },
     ];
