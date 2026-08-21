@@ -123,15 +123,19 @@ def get_problem_assets_without_incidents(
                 f'🟠 {level_label} [{status_label}], '
                 f'но есть проблемы у других устройств (опора {pole.pole})'
             ) if has_problems_on_pole else (
-                f'✅ {level_label} [{status_label}]'
+                f'✅ {level_label} [{status_label}] (опора {pole.pole})'
             )
+
+        cache.set(cache_key, msg, timeout=CACHE_ASSETS_STATUS_TTL)
+
+        if not has_problems_on_pole:
+            continue
 
         if pole not in active_err_assets:
             active_err_assets[pole] = []
+
         problem_devices_list = list(devices_with_errors)
         active_err_assets[pole].extend(problem_devices_list)
-
-        cache.set(cache_key, msg, timeout=CACHE_ASSETS_STATUS_TTL)
 
     err_poles = list(active_err_assets.keys())
 
@@ -153,14 +157,20 @@ def get_problem_assets_without_incidents(
         auto_close_date__isnull=False,
     ).select_related('pole')
     for incident in incidents_to_update:
+        err_devices = active_err_assets[incident.pole]
+        if not err_devices:
+            continue
+
         incident.auto_close_date = None
         incident.was_read = False
         incidents_to_bulk_update.append(incident)
 
         status_groups: list[str] = []
-        err_devices = active_err_assets[incident.pole]
 
         for eq in err_devices:
+            if eq.status and eq.status.id == DeviceStatus.MODEM_NORMAL:
+                continue
+
             try:
                 level_label = DeviceType(eq.level).label
             except ValueError:
@@ -174,14 +184,15 @@ def get_problem_assets_without_incidents(
                     if eq.status else 'UNKNOWN'
                 )
 
-        status_groups.append(
-            f'- {level_label}: {eq.modem_ip.strip()} '
-            f'[{status_label}]'
-        )
+            status_groups.append(
+                f'- {level_label}: {eq.modem_ip.strip()} '
+                f'[{status_label}]'
+            )
+
         comment_text = (
             'Автозакрытие отменено. Проблема с оборудованием сохраняется:'
             f'\n{"\n".join(status_groups)}'
-        )
+        ).strip()
 
         if bot_user:
             comments_to_add.append({
