@@ -1,5 +1,5 @@
-# incidents/consumers.py
 import json
+from typing import Optional
 
 from asgiref.sync import sync_to_async
 from channels.db import database_sync_to_async
@@ -328,7 +328,8 @@ class IncidentFavoriteConsumer(AsyncJsonWebsocketConsumer):
                 self.channel_name,
             )
 
-    async def receive_json(self, content=None, **kwargs):
+    async def receive_json(self, content: Optional[dict] = None, **kwargs):
+        print(content)
         if not content:
             return
 
@@ -371,7 +372,7 @@ class IncidentFavoriteConsumer(AsyncJsonWebsocketConsumer):
 
         await self._broadcast(True, priority)
 
-    async def favorite_state_update(self, event):
+    async def favorite_state_update(self, event: dict):
         await self.send_json({
             'type': 'state_update',
             'incident_id': str(event['incident_id']),
@@ -403,7 +404,7 @@ class IncidentFavoriteConsumer(AsyncJsonWebsocketConsumer):
             incident_id=self.incident_id,
         ).update(priority=priority)
 
-    async def _broadcast(self, is_favorite, priority):
+    async def _broadcast(self, is_favorite: bool, priority: str):
         await self.channel_layer.group_send(
             self.group_name,
             {
