@@ -329,7 +329,6 @@ class IncidentFavoriteConsumer(AsyncJsonWebsocketConsumer):
             )
 
     async def receive_json(self, content: Optional[dict] = None, **kwargs):
-        print(content)
         if not content:
             return
 
@@ -348,7 +347,7 @@ class IncidentFavoriteConsumer(AsyncJsonWebsocketConsumer):
                 await self._create_favorite()
                 priority = FavoritePriority.NORMAL
             else:
-                await self._delete_favorite()
+                is_favorite = await self._delete_favorite()
                 priority = FavoritePriority.NORMAL
 
         except Exception as e:
@@ -391,10 +390,16 @@ class IncidentFavoriteConsumer(AsyncJsonWebsocketConsumer):
     @sync_to_async
     def _delete_favorite(self):
         """Удалить запись избранного (в отдельном потоке)."""
-        IncidentFavorite.objects.filter(
+        favorite, created = IncidentFavorite.objects.get_or_create(
             user=self.user,
             incident_id=self.incident_id,
-        ).delete()
+        )
+
+        if not created:
+            favorite.delete()
+            return False
+
+        return True
 
     @sync_to_async
     def _update_priority(self, priority: str) -> int:
