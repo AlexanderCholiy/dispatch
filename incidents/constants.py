@@ -17,6 +17,8 @@ INCIDENT_CHANGE_LOG_PER_PAGE = 100  # то же и на странице кар�
 MAX_STATUS_COMMENT_LEN = 512
 MAX_CODE_LEN = 32
 
+MAX_INCIDENT_FAVORITE_PRIORITY = 16
+
 INCIDENTS_DATA_DIR = os.path.join(settings.BASE_DIR, 'data', 'incidents')
 INCIDENT_TYPES_FILE = os.path.join(INCIDENTS_DATA_DIR, 'types.xlsx')
 INCIDENT_STATUSES_FILE = os.path.join(INCIDENTS_DATA_DIR, 'statuses.xlsx')

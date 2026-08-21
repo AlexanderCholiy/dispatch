@@ -106,7 +106,7 @@
 }
 
 .incident-open {
-  color: var(--priority-color);
+  color: var(--color);
 }
 
 .incident-closed {

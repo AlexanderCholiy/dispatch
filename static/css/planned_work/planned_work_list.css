@@ -1,0 +1,7 @@
+.plr-code {
+  color: var(--color); 
+}
+
+.plr-code.status-closed {
+  color: var(--gray-color);
+}

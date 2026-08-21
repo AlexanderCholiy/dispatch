@@ -36,7 +36,7 @@
               <tr>
                 <td class="tooltip"
                     data-title="{{ incident.incident_type.name|default:'' }}">
-                  <a href="{% url 'incidents:incident_detail' incident.id %}" class="link">
+                  <a href="{% url 'incidents:incident_detail' incident.id %}" class="link incident-code {% if incident.is_incident_finish %}is_finish{% else %}is_not_finish{% endif %}">
                     {{ incident }}
                   </a>
                 </td>

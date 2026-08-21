@@ -3,7 +3,11 @@
   padding: var(--space-sm) var(--space-md);
   font-size: var(--font-md);
   font-weight: 500;
-  color: var(--add-color);
+  color: var(--color);
+}
+
+.planned-work-id.status-closed {
+  color: var(--gray-color);
 }
 
 .planned-work-new {

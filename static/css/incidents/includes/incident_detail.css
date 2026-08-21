@@ -86,5 +86,9 @@
   padding: var(--space-sm) var(--space-md);
   font-size: var(--font-md);
   font-weight: 500;
-  color: var(--add-color);
+  color: var(--color);
+}
+
+.incident-code.is_finish {
+  color: var(--gray-color);
 }

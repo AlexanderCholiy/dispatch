@@ -3,6 +3,7 @@
 
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/includes/tables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/planned_work/planned_work_list.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -27,7 +28,7 @@
             {% for planned_work in planned_works %}
               <tr>
                 <td>
-                  <a href="{% url 'planned_work:planned_work_detail' planned_work.id %}" class="link">
+                  <a href="{% url 'planned_work:planned_work_detail' planned_work.id %}" class="link plr-code status-{{ planned_work.status }}">
                     {{ planned_work }}
                   </a>
                 </td>

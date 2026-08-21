@@ -29,6 +29,7 @@ from .constants import (
     MAX_CODE_LEN,
     MAX_COMMENT_TEXT_LEN,
     MAX_FUTURE_END_DELTA,
+    MAX_INCIDENT_FAVORITE_PRIORITY,
     MAX_STATUS_COMMENT_LEN,
 )
 
@@ -60,6 +61,13 @@ class TimeStatus(models.TextChoices):
     EXPIRED_OPEN = ('expired-open', 'Более 15 дн (открыт)')
     EXPIRED_CLOSED = ('expired-closed', 'Более 15 дн (закрыт)')
     CLOSED_ON_TIME = ('closed', 'Закрыт за 15 дн')
+
+
+class FavoritePriority(models.TextChoices):
+    LOW = ('low', 'Низкий')
+    NORMAL = ('normal', 'Обычный')
+    IMPORTANT = ('important', 'Важный')
+    CRITICAL = ('critical', 'Критичный')
 
 
 class IncidentLinkType(models.TextChoices):
@@ -1505,3 +1513,41 @@ class IncidentLink(models.Model):
 
         # Удаляем текущую связь стандартным способом:
         super().delete(*args, **kwargs)
+
+
+class IncidentFavorite(models.Model):
+    """Избранные инциденты пользователей."""
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='favorite_incidents',
+        verbose_name='Пользователь',
+        db_index=True,
+    )
+    incident = models.ForeignKey(
+        Incident,
+        on_delete=models.CASCADE,
+        related_name='favorited_by',
+        verbose_name='Инцидент',
+        db_index=True,
+    )
+    priority = models.CharField(
+        max_length=MAX_INCIDENT_FAVORITE_PRIORITY,
+        choices=FavoritePriority.choices,
+        default=FavoritePriority.NORMAL,
+        verbose_name='Важность',
+        db_index=True,
+    )
+
+    class Meta:
+        verbose_name = 'Избранный инцидент'
+        verbose_name_plural = 'Избранные инциденты'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'incident'],
+                name='uniq_user_incident_favorite',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.user}: {self.incident}'
