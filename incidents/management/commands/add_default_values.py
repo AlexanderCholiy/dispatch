@@ -212,10 +212,10 @@ class Command(BaseCommand):
         valid_category_ids = set(
             IncidentCategory.objects.values_list('id', flat=True)
         )
-        unvalid_incident_history = IncidentCategoryRelation.objects.exclude(
+        total, _ = IncidentCategoryRelation.objects.exclude(
             category_id__in=valid_category_ids
         ).delete()
-        total = len(unvalid_incident_history)
+
         if total:
             incident_logger.warning(
                 f'Удалено {total} не актуальных связей в '
