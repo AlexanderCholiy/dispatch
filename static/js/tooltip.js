@@ -27,6 +27,11 @@ function createAndShowTooltip(targetEl) {
   let showTimeout = null;
 
   function showTooltip() {
+    const currentTitle = targetEl.getAttribute('data-title');
+    if (currentTitle) {
+      tooltip.textContent = currentTitle;
+    }
+
     tooltip.style.display = 'block';
     tooltip.style.opacity = '0';
     tooltip.style.pointerEvents = 'none';

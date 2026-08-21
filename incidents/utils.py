@@ -67,6 +67,7 @@ from .models import (
     Incident,
     IncidentCategory,
     IncidentChangeLog,
+    IncidentFavorite,
     IncidentStatus,
     IncidentStatusHistory,
 )
@@ -1268,10 +1269,22 @@ class IncidentManager(IncidentValidator):
 
         return result
 
-    def prepare_incident_info(self, incident_id: int) -> Optional[Incident]:
+    def prepare_incident_info(
+        self, incident_id: int, user: Optional[User] = None
+    ) -> Optional[Incident]:
         """
         Запрос для подготовки информации об инциденте со всей перепиской.
         """
+        favorite_prefetches = []
+        if user and user.is_authenticated:
+            favorite_prefetches.append(
+                Prefetch(
+                    'favorited_by',
+                    queryset=IncidentFavorite.objects.filter(user=user),
+                    to_attr='my_favorites',
+                )
+            )
+
         incident = (
             Incident.objects
             .select_related(
@@ -1343,6 +1356,7 @@ class IncidentManager(IncidentValidator):
                     ),
                     to_attr='prefetched_bs_operators'
                 ),
+                *favorite_prefetches,
             )
             .annotate(
                 sla_avr_status_val=Value('', output_field=CharField()),
@@ -1361,6 +1375,17 @@ class IncidentManager(IncidentValidator):
         incident.sla_rvr_status_val = incident.sla_rvr_status
         incident.sla_dgu_status_val = incident.sla_dgu_status
         incident.sla_eks_status_val = incident.sla_eks_status
+
+        if user and user.is_authenticated:
+            incident.is_favorite = bool(incident.my_favorites)
+            incident.favorite_priority = (
+                incident.my_favorites[0].priority
+                if incident.my_favorites
+                else ''
+            )
+        else:
+            incident.is_favorite = False
+            incident.favorite_priority = ''
 
         if not incident.prefetched_status_history:
             default_status, _ = IncidentStatus.objects.get_or_create(

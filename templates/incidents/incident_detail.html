@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="{% static 'css/incidents/includes/incident_statuses.css' %}">
 <link rel="stylesheet" href="{% static 'css/incidents/includes/incident_history.css' %}">
 <link rel="stylesheet" href="{% static 'css/incidents/includes/incident_journal.css' %}">
+<link rel="stylesheet" href="{% static 'css/incidents/favorite/incident_favorite.css' %}">
 {% endblock %}
 
 {% block title %}{{ incident }}{% endblock %}
@@ -55,6 +56,9 @@
           <strong class="incident-code copy-text {% if incident.is_incident_finish %}is_finish{% else %}is_not_finish{% endif %}" data-text="{{ incident.code|default:incident.id }}">
             {{ incident }}
           </strong>
+
+          {% include "incidents/includes/favorite_button.html" with incident=incident %}
+
         </div>
       </div>
 
@@ -106,4 +110,5 @@
 <script src="{% static 'js/incidents/has_scroll.js' %}"></script>
 <script src="{% static 'js/incidents/attachment_btn.js' %}"></script>
 <script src="{% static 'js/protected_image_viewer.js' %}"></script>
+<script type="module" src="{% static 'js/incident_favorite/favorite.js' %}"></script>
 {% endblock %}

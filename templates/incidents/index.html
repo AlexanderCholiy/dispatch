@@ -4,6 +4,7 @@
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/includes/tables.css' %}">
   <link rel="stylesheet" href="{% static 'css/incidents/index.css' %}">
+  <link rel="stylesheet" href="{% static 'css/incidents/favorite/incident_favorite.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -19,7 +20,7 @@
               <th data-col="subject">Инцидент</th>
               <th data-col="status">Статус</th>
               <th data-col="user">Ответственный</th>
-              <th data-col="was_read">Прочитано</th>
+              <th data-col="was_read" style="text-align: center;">Прочитано</th>
               <th data-col="updated">Обновлено</th>
               <th data-col="category">Категория</th>
               <th data-col="sla_avr">SLA АВР</th>
@@ -29,6 +30,7 @@
               <th data-col="pole">Шифр опоры</th>
               <th data-col="bs">Номер БС</th>
               <th data-col="created">Дата регистрации</th>
+              <th data-col="is_favorite" style="text-align: center;">Избранное</th>
             </tr>
           </thead>
           <tbody>
@@ -80,7 +82,7 @@
                     {% endif %}
                   </div>
                 </td>
-                <td>
+                <td style="text-align: center;">
                   {% if incident.was_read %}
                     <span class="badge badge-read"><i class="bx check-icon bx-check" style="font-weight: bold"></i></span>
                   {% else %}
@@ -151,9 +153,12 @@
                   {% endif %}
                 </td>
                 <td>{{ incident.incident_date|date:"d.m.Y H:i" }}</td>
+                <td style="text-align: center;">
+                  {% include "incidents/includes/favorite_button.html" with incident=incident %}
+                </td>
               </tr>
             {% empty %}
-              <tr><td colspan="14" class="empty">Нет данных...</td></tr>
+              <tr><td colspan="15" class="empty">Нет данных...</td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -168,4 +173,5 @@
 
 {% block extra_js %}
 <script src="{% static 'js/incidents/update_incident_links.js' %}"></script>
+<script type="module" src="{% static 'js/incident_favorite/favorite.js' %}"></script>
 {% endblock %}

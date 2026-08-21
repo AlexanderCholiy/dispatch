@@ -106,9 +106,11 @@ from .forms import (
     NewEmailForm,
 )
 from .models import (
+    FavoritePriority,
     Incident,
     IncidentCategory,
     IncidentChangeLog,
+    IncidentFavorite,
     IncidentHistory,
     IncidentLink,
     IncidentLinkType,
@@ -147,6 +149,7 @@ from .validators import (
 @ratelimit(key='user_or_ip', rate='200/m', block=True)
 def index(request: HttpRequest) -> HttpResponse:
     query = request.GET.get('q', '').strip()
+    user: User = request.user
 
     responsible_users = get_responsible_users()
     responsible_users_ids = [v['id'] for v in responsible_users]
@@ -465,6 +468,15 @@ def index(request: HttpRequest) -> HttpResponse:
         incident=OuterRef('pk')
     ).order_by('-insert_date', '-id')
 
+    favorite_prefetches = []
+    favorite_prefetches.append(
+        Prefetch(
+            'favorited_by',
+            queryset=IncidentFavorite.objects.filter(user=user),
+            to_attr='my_favorites',
+        )
+    )
+
     base_qs = (
         Incident.objects
         .select_related(
@@ -476,7 +488,15 @@ def index(request: HttpRequest) -> HttpResponse:
             'pole__region',
             'base_station',
         )
-        .prefetch_related('categories', 'related_incidents')
+        .prefetch_related(
+            'categories',
+            'related_incidents',
+            Prefetch(
+                'favorited_by',
+                queryset=IncidentFavorite.objects.filter(user=user),
+                to_attr='my_favorites',
+            )
+        )
         .annotate(
             latest_status_id=Subquery(
                 latest_status_subquery.values('status__id')[:1]
@@ -484,7 +504,6 @@ def index(request: HttpRequest) -> HttpResponse:
         )
     )
 
-    user: User = request.user
     if user.role == Roles.AVR_CONTRACTOR:
         base_qs = base_qs.filter(
             pole__avr_contractor=user.avr_contractor
@@ -824,7 +843,14 @@ def index(request: HttpRequest) -> HttpResponse:
         'pole',
         'pole__region',
         'base_station',
-    ).prefetch_related('categories').annotate(
+    ).prefetch_related(
+        'categories',
+        Prefetch(
+            'favorited_by',
+            queryset=IncidentFavorite.objects.filter(user=user),
+            to_attr='my_favorites',
+        )
+    ).annotate(
         latest_status_name=Subquery(
             latest_status_subquery.values('status__name')[:1]
         ),
@@ -856,6 +882,13 @@ def index(request: HttpRequest) -> HttpResponse:
         incident.sla_eks_status_val = incident.sla_eks_status
 
         incident.updated_human = humanize_datetime(incident.update_date)
+
+        incident.is_favorite = bool(incident.my_favorites)
+        incident.favorite_priority = (
+            incident.my_favorites[0].priority
+            if incident.my_favorites
+            else ''
+        )
 
     query_params = request.GET.copy()
     query_params.pop('page', None)
@@ -928,12 +961,12 @@ def index(request: HttpRequest) -> HttpResponse:
 @ratelimit(key='user_or_ip', rate='200/m', block=True)
 def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
     template_name = 'incidents/incident_detail.html'
-    incident = IncidentManager().prepare_incident_info(incident_id)
+    user: User = request.user
+    incident = IncidentManager().prepare_incident_info(incident_id, user)
 
     if not incident:
         raise Http404(f'Инцидент с ID: {incident_id} не найден')
 
-    user: User = request.user
     if (
         user.role == Roles.AVR_CONTRACTOR
         and not is_valid_contractor_match(user, incident)
@@ -1111,7 +1144,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
             )
 
             target_incident = IncidentManager().prepare_incident_info(
-                target_incident.id
+                target_incident.id, user
             )
 
             email_ids_groups = move_email_form.cleaned_data['email_ids']

@@ -1,0 +1,49 @@
+.incident-favorite-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background-color var(--transition-value);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.incident-favorite-icon {
+  font-size: var(--font-lg);
+  color: var(--extra-color);
+  font-weight: bold;
+  transition: color var(--transition-value), transform var(--transition-value);
+}
+
+.incident-favorite-btn:hover .incident-favorite-icon {
+  transform: scale(1.1);
+}
+
+.incident-favorite-btn[data-priority="normal"] .incident-favorite-icon {
+  color: var(--green-color);
+}
+
+.incident-favorite-btn[data-priority="important"] .incident-favorite-icon {
+  color: var(--red-color);
+}
+
+.incident-favorite-btn.is-animating .incident-favorite-icon {
+  animation: favorite-soft 0.3s ease-in-out;
+}
+
+@keyframes favorite-soft {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.incident-favorite-btn.is-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.incident-favorite-btn .tooltip {
+  display: inline-flex;
+}

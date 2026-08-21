@@ -1,8 +1,12 @@
 # incidents/consumers.py
 import json
 
+from asgiref.sync import sync_to_async
 from channels.db import database_sync_to_async
-from channels.generic.websocket import AsyncWebsocketConsumer
+from channels.generic.websocket import (
+    AsyncJsonWebsocketConsumer,
+    AsyncWebsocketConsumer,
+)
 from django.core.exceptions import ValidationError
 
 from api.serializers.comment import CommentSerializer
@@ -15,7 +19,21 @@ from .constants import (
     MAX_COMMENT_TEXT_LEN,
     MAX_INCIDENT_COMMENTS_PER_PAGE,
 )
-from .models import Comment, Incident
+from .models import (
+    Comment,
+    FavoritePriority,
+    Incident,
+    IncidentFavorite,
+)
+
+
+class WSCloseCode:
+    """Коды закрытия WebSocket-соединения."""
+    NORMAL = 1000
+    AUTH_REQUIRED = 4001
+    FORBIDDEN = 4003
+    BAD_REQUEST = 4000
+    INTERNAL_ERROR = 1011
 
 
 class CommentConsumer(AsyncWebsocketConsumer):
@@ -269,3 +287,135 @@ class CommentConsumer(AsyncWebsocketConsumer):
             'action': action,
             'payload': payload
         }))
+
+
+class IncidentFavoriteConsumer(AsyncJsonWebsocketConsumer):
+    """
+    WebSocket для real-time управления избранным инцидентом.
+
+    URL: /ws/incidents/incident-favorite/<int:incident_id>/
+    Аутентификация: Django session (AuthMiddlewareStack).
+    """
+
+    user = None
+    incident_id = None
+    group_name = None
+
+    async def connect(self):
+        self.user = self.scope.get('user')
+
+        if (
+            self.user is None
+            or not self.user.is_authenticated
+            or getattr(self.user, 'role', None) == 'guest'
+        ):
+            await self.close(code=WSCloseCode.AUTH_REQUIRED)
+            return
+
+        self.incident_id = self.scope['url_route']['kwargs']['incident_id']
+        self.group_name = f'incident_fav_{self.incident_id}'
+
+        await self.channel_layer.group_add(
+            self.group_name,
+            self.channel_name,
+        )
+        await self.accept()
+
+    async def disconnect(self, close_code: int):
+        if self.group_name:
+            await self.channel_layer.group_discard(
+                self.group_name,
+                self.channel_name,
+            )
+
+    async def receive_json(self, content=None, **kwargs):
+        if not content:
+            return
+
+        msg_type = content.get('type')
+
+        if msg_type == 'toggle_favorite':
+            await self._handle_toggle(content.get('is_favorite', True))
+        elif msg_type == 'set_priority':
+            await self._handle_set_priority(content.get('priority'))
+        else:
+            await self._send_error(f'Unknown type: {msg_type}')
+
+    async def _handle_toggle(self, is_favorite: bool):
+        try:
+            if is_favorite:
+                await self._create_favorite()
+                priority = FavoritePriority.NORMAL
+            else:
+                await self._delete_favorite()
+                priority = FavoritePriority.NORMAL
+
+        except Exception as e:
+            django_logger.exception(e)
+            await self._send_error('500: Server Error')
+            return
+
+        await self._broadcast(is_favorite, priority)
+
+    async def _handle_set_priority(self, priority: str):
+        valid = [c[0] for c in FavoritePriority.choices]
+        if priority not in valid:
+            await self._send_error(f'Invalid priority. Valid: {valid}')
+            return
+
+        updated = await self._update_priority(priority)
+
+        if not updated:
+            await self._send_error('Not in favorites. Add first.')
+            return
+
+        await self._broadcast(True, priority)
+
+    async def favorite_state_update(self, event):
+        await self.send_json({
+            'type': 'state_update',
+            'incident_id': str(event['incident_id']),
+            'is_favorite': event['is_favorite'],
+            'priority': event['priority'],
+        })
+
+    @sync_to_async
+    def _create_favorite(self):
+        """Создать запись избранного (в отдельном потоке)."""
+        IncidentFavorite.objects.get_or_create(
+            user=self.user,
+            incident_id=self.incident_id,
+        )
+
+    @sync_to_async
+    def _delete_favorite(self):
+        """Удалить запись избранного (в отдельном потоке)."""
+        IncidentFavorite.objects.filter(
+            user=self.user,
+            incident_id=self.incident_id,
+        ).delete()
+
+    @sync_to_async
+    def _update_priority(self, priority: str) -> int:
+        """Обновить приоритет. Возвращает количество изменённых строк."""
+        return IncidentFavorite.objects.filter(
+            user=self.user,
+            incident_id=self.incident_id,
+        ).update(priority=priority)
+
+    async def _broadcast(self, is_favorite, priority):
+        await self.channel_layer.group_send(
+            self.group_name,
+            {
+                'type': 'favorite.state_update',
+                'incident_id': self.incident_id,
+                'is_favorite': is_favorite,
+                'priority': priority,
+            },
+        )
+
+    async def _send_error(self, message: str):
+        await self.send_json({
+            'type': 'error',
+            'message': message,
+        })

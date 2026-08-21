@@ -1,0 +1,12 @@
+<button
+  type="button"
+  class="incident-favorite-btn"
+  data-incident-id="{{ incident.id }}"
+  data-priority="{% if incident.is_favorite %}{{ incident.favorite_priority }}{% else %}''{% endif %}"
+  data-is-favorite="{{ incident.is_favorite|yesno:'true,false' }}"
+  aria-label="Добавить в избранное"
+>
+  <span class="tooltip" data-title="">
+    <i class="bx bx-bookmark incident-favorite-icon"></i>
+  </span>
+</button>

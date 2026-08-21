@@ -64,10 +64,8 @@ class TimeStatus(models.TextChoices):
 
 
 class FavoritePriority(models.TextChoices):
-    LOW = ('low', 'Низкий')
     NORMAL = ('normal', 'Обычный')
     IMPORTANT = ('important', 'Важный')
-    CRITICAL = ('critical', 'Критичный')
 
 
 class IncidentLinkType(models.TextChoices):
