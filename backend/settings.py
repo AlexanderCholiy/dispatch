@@ -194,7 +194,7 @@ DATABASES = {
         },
     },
     'monitoring_2': {
-        'ENGINE': 'django.db.backends.postgresql',
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
         'NAME': os.getenv('MONITORING_2_DB_NAME', 'django'),
         'USER': os.getenv('MONITORING_2_DB_USER', 'django'),
         'PASSWORD': os.getenv('MONITORING_2_DB_PASSWORD', ''),

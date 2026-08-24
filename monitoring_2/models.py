@@ -21,8 +21,7 @@ class ModemLevel(models.Model):
         managed = False
 
     def __str__(self):
-        description = self.description or 'Unknown'
-        return f'{description} (ID: {self.id})'
+        return self.description or f'Unknown (№{self.id})'
 
 
 class Status(models.Model):
@@ -59,8 +58,7 @@ class Status(models.Model):
         abstract = True
 
     def __str__(self):
-        description = self.level_description or 'Unknown'
-        return f'{description} (ID: {self.id})'
+        return self.level_description or f'Unknown (№{self.id})'
 
 
 class ModemStatus(Status):
@@ -169,14 +167,13 @@ class Modem(models.Model):
         verbose_name_plural = 'Оборудование мониторинга'
 
     def __str__(self):
-        cabinet = self.cabinet or 'Unknown'
-        return f'{self.ip} ({cabinet})'
+        return self.ip
 
 
 class Pole(models.Model):
     id = models.BigIntegerField(
         primary_key=True,
-        db_column='id',
+        db_column='Id',
     )
     site_id = models.BigIntegerField(
         'ID опоры в TS',
@@ -225,15 +222,15 @@ class Pole(models.Model):
 class ModemPoleRealtion(models.Model):
     id = models.BigIntegerField(
         primary_key=True,
-        db_column='id',
+        db_column='Id',
     )
-    modem_id = models.ForeignKey(
+    modem = models.ForeignKey(
         Modem,
         on_delete=models.CASCADE,
         verbose_name='Устройство',
         db_column='ModemId',
     )
-    pole_id = models.ForeignKey(
+    pole = models.ForeignKey(
         Pole,
         on_delete=models.CASCADE,
         verbose_name='Опора',
@@ -263,7 +260,7 @@ class ModemPoleRealtion(models.Model):
 class ModemNotification(models.Model):
     id = models.BigIntegerField(
         primary_key=True,
-        db_column='id',
+        db_column='Id',
     )
     modem = models.ForeignKey(
         Modem,
