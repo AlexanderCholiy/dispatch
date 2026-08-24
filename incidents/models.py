@@ -133,6 +133,15 @@ class Incident(models.Model):
         verbose_name='Ответственный пользователь',
         db_index=True
     )
+    region_responsible_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='region_responsible_incidents',
+        verbose_name='Ответственный по региону',
+        db_index=True
+    )
     incident_type = models.ForeignKey(
         'IncidentType',
         on_delete=models.SET_NULL,
@@ -421,6 +430,29 @@ class Incident(models.Model):
                     )
 
                 errors['incident_subtype'] = error_msg
+
+        if self.region_responsible_user and self.pole and self.pole.region:
+            available_users = list(
+                User.objects
+                .filter(
+                    is_incident_responsible=True,
+                    incident_regions__id=self.pole.region_id,
+                )
+                .order_by('last_name', 'first_name')
+            )
+
+            user_strs = [str(u) for u in available_users]
+
+            if str(self.region_responsible_user) not in user_strs:
+                available_list = ', '.join(
+                    f'"{u}"' for u in user_strs
+                ) or 'нет доступных пользователей'
+
+                errors['region_responsible_user'] = (
+                    f'Ответсвенный не назначен в регион '
+                    f'"{self.pole.region}". '
+                    f'Доступны: {available_list}.'
+                )
 
         if self.avr_start_date and self.avr_end_date:
             if self.avr_end_date < self.avr_start_date:

@@ -74,7 +74,23 @@ class BaseUserAdmin(UserAdmin):
                 )
             }
         ),
+        (
+            'Инциденты',
+            {
+                'fields': (
+                    'is_incident_responsible',
+                    'incident_regions',
+                ),
+                'description': 'Настройки ответственности по инцидентам.'
+            }
+        ),
         ('Важные даты', {'fields': ('last_login', 'date_joined')}),
+    )
+
+    filter_horizontal = (
+        'groups',
+        'user_permissions',
+        'incident_regions',
     )
 
     add_fieldsets = (

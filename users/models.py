@@ -9,7 +9,7 @@ from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils import timezone
 
-from ts.models import AVRContractor
+from ts.models import AVRContractor, Region
 
 from .constants import (
     ALLOWED_IMAGE_EXTENSIONS,
@@ -118,6 +118,19 @@ class User(AbstractUser):
         blank=True,
         db_index=True,
         help_text='Дата и время последнего посещения сайта.',
+    )
+    is_incident_responsible = models.BooleanField(
+        'Ответственный по инцидентам',
+        default=False,
+        db_index=True,
+        help_text='Пользователь является ответственным по инцидентам.',
+    )
+    incident_regions = models.ManyToManyField(
+        Region,
+        blank=True,
+        related_name='users',
+        verbose_name='Регионы инцидентов',
+        help_text='Регионы, за которые отвечает пользователь по инцидентам.',
     )
 
     USERNAME_FIELD = 'email'

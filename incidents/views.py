@@ -1047,12 +1047,13 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
     incident_form = IncidentForm(
         instance=incident,
         can_edit=can_manage,
+        can_edit_region_responsible=user.is_incident_responsible,
         author=user,
         request=request,
     )
 
     if request.method == 'POST':
-        if not can_manage:
+        if not can_manage and not user.is_incident_responsible:
             roles = [f'"{role.label}"' for role in allowed_roles]
             messages.error(
                 request, f'Данная операция доступна только: {', '.join(roles)}'
@@ -1079,6 +1080,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
             data=request.POST,
             instance=incident,
             can_edit=can_manage,
+            can_edit_region_responsible=user.is_incident_responsible,
             author=user,
             request=request,
         )
@@ -2502,7 +2504,14 @@ def notify_rvr_contractor(
             and incident.pole.region
             and incident.pole.region.rvr_email
         ):
-            initial_data['to'] = incident.pole.region.rvr_email.email
+            initial_data['to'] = (
+                incident.pole.region.rvr_email.email
+                if (
+                    not incident.region_responsible_user
+                    or not incident.region_responsible_user.is_active
+                )
+                else incident.region_responsible_user.email
+            )
 
         text_parts = []
 

@@ -284,6 +284,12 @@ class IncidentForm(forms.ModelForm):
         label='Диспетчер',
         empty_label='Не назначен'
     )
+    region_responsible_user = forms.ModelChoiceField(
+        queryset=User.objects.none(),
+        required=False,
+        label='Ответственный',
+        empty_label='Не назначен'
+    )
 
     class Meta:
         model = Incident
@@ -294,6 +300,7 @@ class IncidentForm(forms.ModelForm):
             'base_station',
             'categories',
             'responsible_user',
+            'region_responsible_user',
             'incident_type',
             'incident_subtype',
             'rvr_priority',
@@ -311,6 +318,7 @@ class IncidentForm(forms.ModelForm):
             'pole': 'Опора',
             'base_station': 'Базовая станция',
             'responsible_user': 'Диспетчер',
+            'region_responsible_user': 'Ответственный',
             'incident_type': 'Тип инцидента',
             'incident_subtype': 'Подтип инцидента',
             'rvr_priority': 'Приоритет РВР',
@@ -408,11 +416,13 @@ class IncidentForm(forms.ModelForm):
     def __init__(
         self,
         can_edit: bool = False,
+        can_edit_region_responsible: bool = False,
         author: Optional[User] = None,
         *args,
         **kwargs
     ):
         self.can_edit = can_edit
+        self.can_edit_region_responsible = can_edit_region_responsible
         self.author = author
         self.request = kwargs.pop('request', None)
 
@@ -471,6 +481,9 @@ class IncidentForm(forms.ModelForm):
             for field in self.fields.values():
                 field.disabled = True
 
+        if can_edit_region_responsible:
+            self.fields['region_responsible_user'].disabled = False
+
         self.fields['pole'].widget.attrs['title'] = ''
         self.fields['base_station'].widget.attrs['title'] = ''
 
@@ -510,6 +523,22 @@ class IncidentForm(forms.ModelForm):
 
         self.fields['responsible_user'].queryset = (
             users_qs.distinct().order_by('first_name', 'last_name', 'id')
+        )
+
+        region_filter = Q(is_active=True, is_incident_responsible=True)
+
+        pole = self.instance.pole
+        if pole and pole.region:
+            region_filter &= Q(incident_regions__id=pole.region_id)
+
+        if self.instance.region_responsible_user:
+            region_filter |= Q(pk=self.instance.region_responsible_user.pk)
+
+        self.fields['region_responsible_user'].queryset = (
+            User.objects
+            .filter(region_filter)
+            .distinct()
+            .order_by('first_name', 'last_name', 'id')
         )
 
         min_date = min(
@@ -559,6 +588,18 @@ class IncidentForm(forms.ModelForm):
         self.status_classes = {
             s.pk: s.status_type.css_class for s in allowed_statuses
         }
+
+        incident_type = self.instance.incident_type
+        if incident_type and not self.instance.is_incident_finish:
+            self.fields['incident_subtype'].queryset = (
+                IncidentSubType.objects.filter(
+                    type_subtype_links__incident_type=incident_type
+                ).distinct().order_by('name')
+            )
+        else:
+            self.fields['incident_subtype'].queryset = (
+                IncidentSubType.objects.all().order_by('name')
+            )
 
         self.fields['responsible_user'].empty_label = 'Не назначен'
         self.fields['incident_type'].empty_label = 'Не выбрано'

@@ -1292,6 +1292,7 @@ class IncidentManager(IncidentValidator):
                 'incident_subtype',
                 'rvr_priority',
                 'responsible_user',
+                'region_responsible_user',
                 'pole',
                 'pole__region',
                 'base_station',

@@ -46,7 +46,7 @@
         <button type="submit" 
                 name="incident_submit" 
                 class="btn btn-primary submit-incident-button" 
-                {% if not can_manage %}disabled{% endif %}>
+                {% if not can_manage and not request.user.is_incident_responsible %}disabled{% endif %}>
           Сохранить
         </button>
 
@@ -202,7 +202,7 @@
       </div>
     </div>
 
-    <div class="incident-meta-row">
+    <div class="incident-meta-row incident-meta-row-1">
       <div class="multi-select-wrapper" data-required="true">
         <label for="id_categories">{{ incident_form.categories.label }}</label>
 
@@ -226,9 +226,22 @@
       </div>
 
       {% for field in incident_form %}
-        {% if field.name == "responsible_user" %}
+        {% if field.name == "responsible_user" or field.name == "region_responsible_user" %}
           <div class="select-wrapper status-select incident-form-select {% if field.errors %}has-error{% endif %}">
-            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {% if field.name == "region_responsible_user" %}
+              <label for="{{ incident_form.region_responsible_user.id_for_label }}" class="field-label region-responsible-user-label">
+                <div class="region-responsible-user-label-left">{{ incident_form.region_responsible_user.label }}:</div>
+                <div class="region-responsible-user-label-right">
+                  {% if incident.region_responsible_user %}
+                    <span class="copy-text region-responsible-user-email" data-text="{{ incident.region_responsible_user.email|default:'' }}">{{ incident.region_responsible_user.email }}</span>
+                  {% else %}
+                    —
+                  {% endif %}
+                </div>
+              </label>
+            {% else %}
+              <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {% endif %}
 
             <select 
               name="{{ field.name }}{% if field.name == 'categories' %}[]{% endif %}" 
@@ -236,9 +249,7 @@
               {% if field.name == "categories" %}multiple{% endif %}
             >
 
-              {% if field.name == "responsible_user" %}
-                <option value="" {% if not field.value %}selected{% endif %}>Не назначен</option>
-              {% endif %}
+              <option value="" {% if not field.value %}selected{% endif %}>Не назначен</option>
 
               {% for value, label in field.field.choices %}
                 {% if value %}
@@ -268,7 +279,27 @@
       {% for field in incident_form %}
         {% if field.name == "incident_type" or field.name == "incident_subtype" or field.name == "rvr_priority" %}
           <div class="select-wrapper status-select incident-form-select {% if field.errors %}has-error{% endif %}">
-            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            <label for="{{ field.id_for_label }}" class="field-label incident-meta-label">
+              <div class="incident-meta-label-left">{{ field.label }}</div>
+              <div class="incident-meta-label-right">
+                {% if field.name == "incident_type" %}
+                  <span class="tooltip incident-meta-info" 
+                        data-title="{{ incident.incident_type.description|default:'Выберите тип для подсказки' }}">
+                    <i class="bx bx-info-circle" style="font-weight: bold"></i>
+                  </span>
+                {% elif field.name == "incident_subtype" %}
+                  <span class="tooltip incident-meta-info" 
+                        data-title="{{ incident.incident_subtype.description|default:'Выберите подтип для подсказки' }}">
+                    <i class="bx bx-info-circle" style="font-weight: bold"></i>
+                  </span>
+                {% elif field.name == "rvr_priority" %}
+                  <span class="tooltip incident-meta-info" 
+                        data-title="{{ incident.rvr_priority.description|default:'Выберите приоритет для подсказки' }}">
+                    <i class="bx bx-info-circle" style="font-weight: bold"></i>
+                  </span>
+                {% endif %}
+              </div>
+            </label>
 
             <select 
               name="{{ field.name }}" 

@@ -4,7 +4,7 @@ from difflib import SequenceMatcher
 from typing import Optional, TypedDict
 
 from django.core.cache import cache
-from django.db.models import Case, DateTimeField, F, Max, QuerySet, When, Q
+from django.db.models import Case, DateTimeField, F, Max, Q, QuerySet, When
 from django.utils import timezone
 
 from core.loggers import default_logger

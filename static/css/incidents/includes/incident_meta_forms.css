@@ -6,6 +6,7 @@
   border-bottom: 1px dashed var(--extra-color);
 }
 
+.incident-meta-row-1,
 .incident-meta-row-2 {
   grid-template-columns: repeat(3, 1fr);
 }
@@ -74,8 +75,10 @@
   top: var(--space-lg);
 }
 
+.incident-meta-label,
+.region-responsible-user-label,
 .pole-label {
-  display: flex;
+  display: flex !important;
   justify-content: space-between;
   align-items: center;
   width: 100%;
@@ -89,6 +92,8 @@
   align-items: center;
 }
 
+.incident-meta-info,
+.region-responsible-user-email,
 .pole-link {
   color: var(--gray-color);
   transition: color var(--transition-value);
