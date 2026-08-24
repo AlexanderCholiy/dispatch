@@ -30,7 +30,29 @@ def get_responsible_users() -> list[ResponsibleUsers]:
                     ))
                 )
                 .distinct()
-                .order_by('role', 'username')
+                .order_by('first_name', 'last_name', 'id')
+            )
+        ],
+        USERS_CACHE_TTL,
+    )
+
+    return responsible_users
+
+
+def get_region_responsible_users() -> list[ResponsibleUsers]:
+    responsible_users = cache.get_or_set(
+        'incident_filter_region_responsible_users',
+        lambda: [
+            {
+                'id': user.id,
+                'full_name': user.get_full_name() or 'Новый пользователь'
+            }
+            for user in (
+                User.objects.filter(
+                    is_incident_responsible=True, is_active=True
+                )
+                .distinct()
+                .order_by('first_name', 'last_name', 'id')
             )
         ],
         USERS_CACHE_TTL,

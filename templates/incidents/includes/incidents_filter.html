@@ -467,6 +467,39 @@
       </select>
     </div>
 
+    <div class="multiple-select-wrapper" id="region-responsible-user-select">
+      <div class="dropdown-trigger" data-filter-name="Ответственный">
+        <span class="selected-label">Ответственный</span>
+        <span class="arrow-icon">▼</span>
+      </div>
+
+      <div class="dropdown-menu" id="region-responsible-user-dropdown-menu">
+        <div class="dropdown-options">
+          <label class="option-item {% if 0 in selected.region_responsible_user %}is-selected{% endif %}" 
+                 data-value="0">
+            <i class="bx bx-check"></i>
+            <span>Отсутствует</span>
+          </label>
+          {% for v in region_responsible_users %}
+            <label class="option-item {% if v.id in selected.region_responsible_user %}is-selected{% endif %}" 
+                   data-value="{{ v.id }}">
+              <i class="bx bx-check"></i>
+              <span>{{ v.full_name }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <select name="region_responsible_user" id="region-responsible-user-select-hidden" style="display: none;" multiple>
+        <option value="0" {% if 0 in selected.region_responsible_user %}selected{% endif %}>
+          Отсутствует
+        </option>
+        {% for v in region_responsible_users %}
+          <option value="{{ v.id }}" {% if v.id in selected.region_responsible_user %}selected{% endif %}></option>
+        {% endfor %}
+      </select>
+    </div>
+
     <div class="multiple-select-wrapper" id="avr-contractor-select">
       <div class="dropdown-trigger" data-filter-name="Подрядчик">
         <span class="selected-label">Подрядчик</span>
@@ -705,6 +738,7 @@
         { id: 'finish-select-hidden', cookieName: 'finish', searchFieldName: 'finish', type: 'multi_select' },
         { id: 'status-select-hidden', cookieName: 'status', searchFieldName: 'status', type: 'multi_select' },
         { id: 'responsible-user-select-hidden', cookieName: 'responsible_user', searchFieldName: 'responsible_user', type: 'multi_select' },
+        { id: 'region-responsible-user-select-hidden', cookieName: 'region_responsible_user', searchFieldName: 'region_responsible_user', type: 'multi_select' },
         { id: 'was-read-select-hidden', cookieName: 'was_read', searchFieldName: 'was_read', type: 'multi_select' },
         { id: 'category-select-hidden', cookieName: 'category', searchFieldName: 'category', type: 'multi_select' },
         { id: 'incident-type-select-hidden', cookieName: 'incident_type', searchFieldName: 'incident_type', type: 'multi_select' },

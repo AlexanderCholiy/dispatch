@@ -122,7 +122,10 @@ from .models import (
 )
 from .selectors.incidents import IncidentSelector
 from .services.get_avr_contractor_map import get_avr_contractor_map
-from .services.get_incident_responsible_users import get_responsible_users
+from .services.get_incident_responsible_users import (
+    get_region_responsible_users,
+    get_responsible_users,
+)
 from .services.get_incident_subtype import get_incident_subtype_map
 from .services.get_incident_type import get_incident_type_map
 from .services.get_macroregions import get_macro_region_map
@@ -155,6 +158,10 @@ def index(request: HttpRequest) -> HttpResponse:
     responsible_users = get_responsible_users()
     responsible_users_ids = [v['id'] for v in responsible_users]
     responsible_users_ids.append(0)  # отсутсвует
+
+    region_responsible_users = get_region_responsible_users()
+    region_responsible_users_ids = [v['id'] for v in region_responsible_users]
+    region_responsible_users_ids.append(0)  # отсутсвует
 
     region_responsible_managers = get_region_responsible_managers()
     region_responsible_managers = {
@@ -372,6 +379,16 @@ def index(request: HttpRequest) -> HttpResponse:
         if u.isnumeric() and int(u) in responsible_users_ids
     ] or responsible_users_ids
 
+    region_responsible_user_id = (
+        request.GET.get('region_responsible_user', '')
+        or (get_raw_cookie(request, 'region_responsible_user') or '').strip()
+    ).split(',') if not search_only_by_code else []
+
+    region_responsible_user_id = [
+        int(u) for u in region_responsible_user_id
+        if u.isnumeric() and int(u) in region_responsible_users_ids
+    ] or region_responsible_users_ids
+
     is_incident_finish: list[str] = (
         request.GET.get('finish', '').strip()
         or (get_raw_cookie(request, 'finish') or '').strip()
@@ -496,6 +513,7 @@ def index(request: HttpRequest) -> HttpResponse:
             'incident_subtype',
             'rvr_priority',
             'responsible_user',
+            'region_responsible_user',
             'pole',
             'pole__region',
             'base_station',
@@ -724,6 +742,24 @@ def index(request: HttpRequest) -> HttpResponse:
             )
 
     if (
+        region_responsible_user_id
+        and len(region_responsible_user_id) != len(
+            region_responsible_users_ids
+        )
+    ):
+        not_region_responsioble_user = 0 in region_responsible_user_id
+
+        if not_region_responsioble_user:
+            base_qs = base_qs.filter(
+                Q(region_responsible_user__isnull=True)
+                | Q(region_responsible_user__id__in=region_responsible_user_id)
+            )
+        else:
+            base_qs = base_qs.filter(
+                region_responsible_user__id__in=region_responsible_user_id
+            )
+
+    if (
         region_responsible_manager
         and len(region_responsible_manager) != len(
             region_responsible_managers_keys
@@ -934,6 +970,7 @@ def index(request: HttpRequest) -> HttpResponse:
         'statuses': statuses,
         'categories': categories,
         'responsible_users': responsible_users,
+        'region_responsible_users': region_responsible_users,
         'avr_contractors': avr_contractors,
         'operator_groups': operator_groups,
         'sla_statuses': SLAStatus,
@@ -951,6 +988,7 @@ def index(request: HttpRequest) -> HttpResponse:
             'status_filter': status_filter,
             'category': category_id_filter,
             'responsible_user': responsible_user_id,
+            'region_responsible_user': region_responsible_user_id,
             'region_responsible_manager': region_responsible_manager,
             'macroregion': macroregion,
             'region': region,
