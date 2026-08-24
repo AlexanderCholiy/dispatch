@@ -76,8 +76,11 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
     - base_station: Базовая станция.
     - operator_group: Группа операторов базовой станции.
 
-    - responsible_user_id: Идентификатор ответственного пользователя.
-    - responsible_user_name: Имя ответственного пользователя в системе.
+    - region_responsible_user_id: Идентификатор ответственного пользователя.
+    - region_responsible_user_name: Имя ответственного пользователя в системе.
+
+    - responsible_user_id: Идентификатор диспетчера.
+    - responsible_user_name: Имя диспетчера в системе.
     - is_sla_dispatch_expired: Просрочен ли SLA диспетчера.
     - dispatch_sla_duration: Текущая длительность обработки заявки по SLA.
 
@@ -112,6 +115,7 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
         'pole__avr_contractor',
         'base_station',
         'responsible_user',
+        'region_responsible_user',
         'pole__region',
         'pole__region__macroregion',
     ).prefetch_related(

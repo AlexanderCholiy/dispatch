@@ -76,6 +76,9 @@ class IncidentReportSerializer(serializers.ModelSerializer):
     categories = serializers.SerializerMethodField()
     macroregion = serializers.SerializerMethodField()
 
+    region_responsible_user_id = serializers.IntegerField()
+    region_responsible_user_name = serializers.SerializerMethodField()
+
     responsible_user_id = serializers.IntegerField()
     responsible_user_name = serializers.SerializerMethodField()
     is_sla_dispatch_expired = serializers.SerializerMethodField()
@@ -132,6 +135,9 @@ class IncidentReportSerializer(serializers.ModelSerializer):
             'macroregion',
             'base_station',
             'operator_group',
+
+            'region_responsible_user_id',
+            'region_responsible_user_name',
 
             'responsible_user_id',
             'responsible_user_name',
@@ -282,6 +288,12 @@ class IncidentReportSerializer(serializers.ModelSerializer):
 
     def get_responsible_user_name(self, obj: Incident):
         return str(obj.responsible_user) if obj.responsible_user else None
+
+    def get_region_responsible_user_name(self, obj: Incident):
+        return (
+            str(obj.region_responsible_user)
+            if obj.region_responsible_user else None
+        )
 
     def get_dispatch_sla_duration(self, obj: Incident):
         return (
