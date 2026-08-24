@@ -260,14 +260,14 @@ MAX_SIMILAR_INCIDENTS_CANDIDATES = 1000
 
 class SimilarFactor:
     """Константы весов для расчета схожести инцидентов."""
-    pole = 0.2
-    bs = 0.3
-    incident_type = 0.05
-    incident_sub_type = 0.1
+    pole = 0.4
+    bs = 0.2
+    incident_type = 0.1
+    incident_sub_type = 0.2
     rvr_priority = 0.05
     categories = 0.1  # сколько могут дать max все пересекающиеся категории
-    incident_email_subject = 0.1
-    incident_email_from = 0.1
+    incident_email_subject = 0.15
+    incident_email_from = 0.2
 
 
 FAV_EMPTY = 'empty'

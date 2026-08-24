@@ -4,7 +4,7 @@ from difflib import SequenceMatcher
 from typing import Optional, TypedDict
 
 from django.core.cache import cache
-from django.db.models import Max, Q, QuerySet
+from django.db.models import Case, DateTimeField, F, Max, QuerySet, When
 from django.utils import timezone
 
 from core.loggers import default_logger
@@ -75,48 +75,83 @@ class IncidentSimilarityService:
     def _build_query_filters(
         self, incident: Incident, now: datetime
     ) -> QuerySet[Incident]:
+        """
+        Формирует выборку ближайших похожих инцидентов ("соседей") с обеих
+        сторон (из прошлого и из будущего) относительно целевого инцидента.
+
+        Логика определения временной оси (target_date):
+        - Для открытых инцидентов: используется дата начала (`incident_date`).
+        - Для закрытых инцидентов: используется дата закрытия
+        (`incident_finish_date`).
+        - Защита от багов: если инцидент закрыт, но дата закрытия отсутствует
+        (None), в качестве защитного механизма используется дата начала
+        (`incident_date`).
+
+        Опорная точка (ref_date) текущего инцидента:
+        - Если текущий инцидент закрыт (и есть дата финиша) ->
+        `incident_finish_date`.
+        - Если текущий инцидент открыт (или данные повреждены) ->
+        переданное время `now`.
+
+        Структура и состав возвращаемой выборки (QuerySet):
+        Результат состоит из двух непересекающихся частей (плеч),
+        объединенных через UNION ALL:
+        """
+        base_candidates = Incident.objects.exclude(
+            id=incident.id
+        ).select_related(
+            'pole',
+            'base_station',
+            'incident_type',
+            'incident_subtype',
+            'rvr_priority',
+        ).prefetch_related(
+            'categories',
+        )
+
         is_closed = incident.is_incident_finish
+        window_delta = timedelta(seconds=MAX_SIMILAR_INCIDENTS_WINDOW_TTL)
+        half_limit = MAX_SIMILAR_INCIDENTS_CANDIDATES // 2
+
+        # Опорная точка:
         ref_date = (
             incident.incident_finish_date
-            if is_closed else incident.incident_date
-        )
-        window_delta = timedelta(seconds=MAX_SIMILAR_INCIDENTS_WINDOW_TTL)
-
-        candidates = Incident.objects.exclude(
-            Q(id=incident.id) | Q(pole__isnull=True)
+            if is_closed and incident.incident_finish_date
+            else now
         )
 
-        if is_closed:
-            closed_filter = Q(
-                is_incident_finish=True,
-                incident_finish_date__gte=ref_date - window_delta,
-                incident_finish_date__lte=ref_date + window_delta,
-            )
-            open_filter = Q(
-                is_incident_finish=False,
-                incident_date__gte=ref_date - window_delta,
-                incident_date__lte=ref_date + window_delta,
-            )
-            final_q = closed_filter | open_filter
-        else:
-            open_filter = Q(
-                is_incident_finish=False,
-                incident_date__gte=now - window_delta,
-                incident_date__lte=now + window_delta,
-            )
-            closed_filter = Q(
-                is_incident_finish=True,
-                incident_finish_date__gte=(
-                    incident.incident_date - window_delta
+        base_candidates = base_candidates.annotate(
+            target_date=Case(
+                When(
+                    is_incident_finish=True,
+                    incident_finish_date__isnull=False,
+                    then=F('incident_finish_date'),
                 ),
-                incident_finish_date__lte=incident.incident_date + window_delta
+                default=F('incident_date'),
+                output_field=DateTimeField(),
             )
-            final_q = open_filter | closed_filter
-
-        return (
-            candidates.filter(final_q).order_by('-incident_date', '-id')
-            [:MAX_SIMILAR_INCIDENTS_CANDIDATES]
         )
+        base_candidates = base_candidates.exclude(target_date__isnull=True)
+
+        min_date = ref_date - window_delta
+        max_date = ref_date + window_delta
+
+        # ПЛЕЧО «В ПРОШЛОЕ» (ближайшие, которые <= ref_date):
+        past_candidates = (
+            base_candidates
+            .filter(target_date__gte=min_date, target_date__lte=ref_date)
+            .order_by('-target_date', '-id')[:half_limit]
+        )
+
+        # ПЛЕЧО «В БУДУЩЕЕ» (ближайшие, которые > ref_date):
+        future_candidates = (
+            base_candidates
+            .filter(target_date__gt=ref_date, target_date__lte=max_date)
+            .order_by('target_date', 'id')[:half_limit]
+        )
+
+        # Объединение через UNION (дубликатов в выборке уже нет):
+        return past_candidates.union(future_candidates, all=True)
 
     def _refresh_data(
         self, results: list[IncidentSimilarity]
@@ -203,9 +238,9 @@ class IncidentSimilarityService:
 
         now = timezone.now()
 
-        candidates_qs = self._build_query_filters(incident, now)
+        candidates = self._build_query_filters(incident, now)
 
-        candidate_ids = list(candidates_qs.values_list('id', flat=True))
+        candidate_ids = list(candidates.values_list('id', flat=True))
 
         if not candidate_ids:
             return []
@@ -233,16 +268,6 @@ class IncidentSimilarityService:
 
             if len(processed_incidents) == len(candidate_ids):
                 break
-
-        candidates = candidates_qs.select_related(
-            'pole',
-            'base_station',
-            'incident_type',
-            'incident_subtype',
-            'rvr_priority',
-        ).prefetch_related(
-            'categories',
-        )
 
         incident_categories_ids = set(
             incident.categories.values_list('id', flat=True)
