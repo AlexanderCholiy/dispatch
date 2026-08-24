@@ -4,7 +4,7 @@ from difflib import SequenceMatcher
 from typing import Optional, TypedDict
 
 from django.core.cache import cache
-from django.db.models import Case, DateTimeField, F, Max, QuerySet, When
+from django.db.models import Case, DateTimeField, F, Max, QuerySet, When, Q
 from django.utils import timezone
 
 from core.loggers import default_logger
@@ -97,7 +97,10 @@ class IncidentSimilarityService:
         Результат состоит из двух непересекающихся частей (плеч),
         объединенных через UNION ALL:
         """
-        base_candidates = Incident.objects.exclude(
+        base_candidates = Incident.objects.filter(
+            Q(is_incident_finish=False)
+            | Q(is_incident_finish=True, pole__isnull=False)
+        ).exclude(
             id=incident.id
         ).select_related(
             'pole',
