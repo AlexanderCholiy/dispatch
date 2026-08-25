@@ -71,6 +71,7 @@ from monitoring.services.monitoring_equipment import (
 )
 from planned_work.models import PlannedWork
 from ts.constants import UNDEFINED_CASE
+from ts.models import BaseStationOperator
 from users.models import Roles, User
 from users.utils import role_required
 from yandex_tracker.utils import yt_manager
@@ -525,7 +526,7 @@ def index(request: HttpRequest) -> HttpResponse:
                 'favorited_by',
                 queryset=IncidentFavorite.objects.filter(user=user),
                 to_attr='my_favorites',
-            )
+            ),
         )
         .annotate(
             latest_status_id=Subquery(
@@ -910,7 +911,14 @@ def index(request: HttpRequest) -> HttpResponse:
             'favorited_by',
             queryset=IncidentFavorite.objects.filter(user=user),
             to_attr='my_favorites',
-        )
+        ),
+        Prefetch(
+            'base_station__operator',
+            queryset=BaseStationOperator.objects.order_by(
+                'operator_group', 'operator_name'
+            ),
+            to_attr='prefetched_bs_operators'
+        ),
     ).annotate(
         latest_status_name=Subquery(
             latest_status_subquery.values('status__name')[:1]

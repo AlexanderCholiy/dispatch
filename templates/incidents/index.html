@@ -145,13 +145,16 @@
                     —
                   {% endif %}
                 </td>
-                <td>
-                  {% if incident.base_station %}
-                    <span class="copy-text" data-text="{{ incident.base_station.bs_name }}">{{ incident.base_station.bs_name|default:"—" }}</span>
-                  {% else %}
-                    —
-                  {% endif %}
-                </td>
+                {% with operators=incident.base_station.prefetched_bs_operators %}
+                  <td class="{% if operators.0 %}tooltip{% endif %}" 
+                        data-title="{% for op in operators %}{{ op.operator_name }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                    {% if incident.base_station %}
+                      <span class="copy-text" data-text="{{ incident.base_station.bs_name }}">{{ incident.base_station.bs_name|default:"—" }}</span>
+                    {% else %}
+                      —
+                    {% endif %}
+                  </td>
+                {% endwith %}
                 <td>{{ incident.incident_date|date:"d.m.Y H:i" }}</td>
                 <td style="text-align: center;">
                   {% include "incidents/includes/favorite_button.html" with incident=incident %}
