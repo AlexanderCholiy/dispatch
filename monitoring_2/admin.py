@@ -16,6 +16,7 @@ from .models import (
     ModemPoleRealtion,
     ModemStatus,
     PoleStatus,
+    Counter,
 )
 
 admin.site.empty_value_display = EMPTY_VALUE
@@ -90,6 +91,14 @@ class ModemNotificationInline(admin.TabularInline):
     verbose_name_plural = 'Уведомления'
 
 
+class CounterInline(admin.TabularInline):
+    model = Counter
+    extra = 0
+    can_delete = False
+    fields = ('counter_number',)
+    show_change_link = False
+
+
 @admin.register(Modem)
 class ModemAdmin(ReadOnlyAdmin):
     list_per_page = MODEMS_PER_PAGE
@@ -161,5 +170,6 @@ class ModemAdmin(ReadOnlyAdmin):
     inlines = (
         ModemPoleRealtionInline,
         ModemNotificationInline,
+        CounterInline,
     )
     ordering = ('-id',)

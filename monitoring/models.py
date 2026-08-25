@@ -1,7 +1,7 @@
 from django.db import models
 
 from core.models_readonly import ReadOnlyModel
-from monitoring.constants import MAX_MODEM_IP_LEN
+from monitoring.constants import MAX_MODEM_IP_LEN, MAX_COUNTER_NUMBER_LEN
 
 
 class DeviceType(models.IntegerChoices):
@@ -111,8 +111,8 @@ class MSysPoles(ReadOnlyModel):
 
     class Meta:
         db_table = 'MSys_Poles'
-        verbose_name = 'опора мониторинга'
-        verbose_name_plural = 'Опоры Мониторинга'
+        verbose_name = 'опора'
+        verbose_name_plural = 'Опоры'
 
     def __str__(self):
         return self.pole
@@ -222,8 +222,32 @@ class MSysModem(ReadOnlyModel):
 
     class Meta:
         db_table = 'MSys_Modems'
-        verbose_name = 'оборудование мониторинга'
-        verbose_name_plural = 'Оборудование Мониторинга'
+        verbose_name = 'оборудование'
+        verbose_name_plural = 'Оборудование'
 
     def __str__(self):
         return self.modem_ip
+
+
+class MSysCounter(ReadOnlyModel):
+    counter_number = models.CharField(
+        'Номер счетчика',
+        primary_key=True,
+        db_column='CounterID',
+        max_length=MAX_COUNTER_NUMBER_LEN
+    )
+    modem_ip = models.ForeignKey(
+        MSysModem,
+        on_delete=models.DO_NOTHING,
+        verbose_name='Контроллер',
+        related_name='counters',
+        db_column='CounterModem'
+    )
+
+    class Meta:
+        db_table = 'MSys_Counters'
+        verbose_name = 'счетчик'
+        verbose_name_plural = 'Счетчики'
+
+    def __str__(self):
+        return self.counter_number

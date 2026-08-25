@@ -8,9 +8,17 @@ from .constants import (
     MSYS_POLES_PER_PAGE,
     MSYS_STATUSES_PER_PAGE,
 )
-from .models import MSysModem, MSysPoles, MSysStatus
+from .models import MSysModem, MSysPoles, MSysStatus, MSysCounter
 
 admin.site.empty_value_display = EMPTY_VALUE
+
+
+class MSysCounterInline(admin.TabularInline):
+    model = MSysCounter
+    extra = 0
+    can_delete = False
+    fields = ('counter_number',)
+    show_change_link = False
 
 
 @admin.register(MSysModem)
@@ -28,6 +36,8 @@ class MSysModemAdmin(ReadOnlyAdmin):
     )
     autocomplete_fields = ('pole_1', 'pole_2', 'pole_3', 'status',)
     ordering = ('updated_at', 'modem_ip',)
+
+    inlines = (MSysCounterInline,)
 
 
 @admin.register(MSysPoles)

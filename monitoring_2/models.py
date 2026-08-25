@@ -285,3 +285,24 @@ class ModemNotification(models.Model):
     def __str__(self):
         sent_at = self.sent_at.strftime('%d.%m.%Y %H:%M:%S')
         return f'{self.modem} - {self.action} ({sent_at})'
+
+
+class Counter(models.Model):
+    counter_number = models.TextField(
+        primary_key=True,
+        db_column='CounterId',
+    )
+    modem = models.ForeignKey(
+        Modem,
+        on_delete=models.CASCADE,
+        verbose_name='Устройство',
+        db_column='ModemId',
+    )
+
+    class Meta:
+        db_table = 'Counters'
+        verbose_name = 'счетчик'
+        verbose_name_plural = 'Счетчики'
+
+    def __str__(self):
+        return self.counter_number
