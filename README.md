@@ -710,6 +710,9 @@ sudo docker ps -a
 # Локально пересобрать и запустить докер образы:
 sudo docker compose stop && sudo docker compose up --build -d
 
+# Безопасное обновление: пересобирает образы, затем плавно пересоздаёт контейнеры (старые работают до успешного запуска новых):
+sudo docker compose build && sudo docker compose up -d --force-recreate
+
 # Локально пересобрать и перезапустить докер образ Nginx:
 sudo docker compose build dispatch_gateway && sudo docker compose up -d dispatch_gateway
 ```
