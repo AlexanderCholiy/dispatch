@@ -27,6 +27,7 @@ from planned_work.constants import (
     MAX_PLR_EMAILS_LINKS,
     MAX_PLR_PER_PAGE,
     PAGE_SIZE_PLR_CHOICES,
+    PLANNED_WORK_REASON_DESCRIPTIONS,
     PLR_CHANGE_LOG_PER_PAGE,
 )
 from planned_work.forms import (
@@ -246,6 +247,10 @@ def planned_work_detail(request: HttpRequest, pk: int):
 
         messages.error(request, 'Исправьте ошибки в форме связей с письмами')
 
+    planned_work_description = PLANNED_WORK_REASON_DESCRIPTIONS.get(
+        planned_work.reason
+    )
+
     context = {
         'main_form': main_form,
         'email_formset': email_formset,
@@ -255,6 +260,7 @@ def planned_work_detail(request: HttpRequest, pk: int):
         'related_emails_data': related_emails_data,
         'related_emails_data_total': len(related_emails_data),
         'can_manage': can_manage,
+        'planned_work_description': planned_work_description,
     }
 
     return render(request, 'planned_work/planned_work_detail.html', context)

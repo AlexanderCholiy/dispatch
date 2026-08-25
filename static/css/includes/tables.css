@@ -104,6 +104,17 @@
   flex-shrink: 0;
 }
 
+.user-table-info-icon:not(img) {
+  background-color: var(--gray-color);
+  color: var(--background-color);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.user-table-info a {
+  text-decoration: none;
+}
+
 @media (max-width: 768px) {
   .status-badge {
     min-width: 100px;

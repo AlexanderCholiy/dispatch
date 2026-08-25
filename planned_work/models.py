@@ -4,29 +4,13 @@ from django.utils import timezone
 
 from core.constants import MAX_LG_DESCRIPTION, MAX_ST_DESCRIPTION
 from emails.models import EmailMessage
-from planned_work.constants import MAX_PLR_REASON_LEN
+from planned_work.constants import (
+    MAX_PLR_REASON_LEN,
+    PlannedWorkReason,
+    PlannedWorkStatus,
+)
 from ts.models import Pole
 from users.models import User
-
-
-class PlannedWorkReason(models.TextChoices):
-    """Причины проведения плановых работ"""
-    POWER_OFF = ('power_off', 'Отключение питания')
-    PREVENTIVE_MAINTENANCE = (
-        'preventive_maintenance', 'Плановое обслуживание'
-    )
-    EQUIPMENT_UPGRADE = ('equipment_upgrade', 'Модернизация оборудования')
-    CABLE_REPLACEMENT = ('cable_replacement', 'Замена кабельной линии')
-    INSTALLATION = ('installation', 'Установка нового оборудования')
-    INSPECTION = ('inspection', 'Инспекция / Обследование')
-    OTHER = ('other', 'Иное')
-
-
-class PlannedWorkStatus(models.TextChoices):
-    """Статусы плановой работы"""
-    PLANNED = 'planned', 'В планах'
-    IN_PROGRESS = 'in-progress', 'В работе'
-    COMPLETED = 'closed', 'Завершена'
 
 
 class PlannedWorkEmailLink(models.Model):

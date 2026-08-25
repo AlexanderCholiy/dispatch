@@ -88,7 +88,15 @@
 
     <div class="incident-meta-row">
       <div class="select-wrapper status-select incident-form-select {% if main_form.errors %}has-error{% endif %}">
-        <label for="{{ main_form.reason.id_for_label }}">{{ main_form.reason.label }}</label>
+        <label ffor="{{ main_form.reason.id_for_label }}" class="field-label incident-meta-label">
+          <div class="incident-meta-label-left">{{ main_form.reason.label }}</div>
+          <div class="incident-meta-label-right">
+            <span class="tooltip incident-meta-info" 
+                  data-title="{{ planned_work_description|default:'Выберите причину для подсказки' }}">
+              <i class="bx bx-info-circle" style="font-weight: bold"></i>
+            </span>
+          </div>
+        </label>
 
         <select 
           name="{{ main_form.reason.name }}" 
