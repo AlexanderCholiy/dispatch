@@ -8,7 +8,7 @@ from .constants import (
     MSYS_POLES_PER_PAGE,
     MSYS_STATUSES_PER_PAGE,
 )
-from .models import MSysModem, MSysPoles, MSysStatus, MSysCounter
+from .models import MSysCounter, MSysModem, MSysPoles, MSysStatus
 
 admin.site.empty_value_display = EMPTY_VALUE
 

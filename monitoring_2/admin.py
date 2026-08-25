@@ -10,13 +10,13 @@ from .constants import (
     POLE_STATUSES_PER_PAGE,
 )
 from .models import (
+    Counter,
     Modem,
     ModemLevel,
     ModemNotification,
     ModemPoleRealtion,
     ModemStatus,
     PoleStatus,
-    Counter,
 )
 
 admin.site.empty_value_display = EMPTY_VALUE

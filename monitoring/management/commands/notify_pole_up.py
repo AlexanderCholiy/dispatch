@@ -7,7 +7,7 @@ from django.core.cache import cache
 from django.core.mail import send_mail
 from django.core.management.base import BaseCommand
 from django.db import connections
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 from tqdm import tqdm
 
 from core.constants import DEBUG_MODE
@@ -27,7 +27,7 @@ from monitoring.constants import (
     TOP_N_NEAREST_POLES,
     TRETHHOLD_RATIO_BETWEEN_MODEM_AND_POLE,
 )
-from monitoring.models import DeviceStatus, DeviceType, MSysModem
+from monitoring.models import DeviceStatus, DeviceType, MSysCounter, MSysModem
 from ts.models import Pole
 
 
@@ -265,6 +265,11 @@ class Command(BaseCommand):
 
                 serial = device.modem_serial
                 cabinet = device.cabinet
+                counters: QuerySet[MSysCounter] = device.counters.all()
+                counters_numbers = (
+                    [c.counter_number.strip() for c in counters]
+                    if counters else None
+                )
 
                 if serial:
                     msg_lines.append(
@@ -280,6 +285,11 @@ class Command(BaseCommand):
                             '*Контроллер выдавался для ремонта/замены '
                             'оборудования мониторинга.'
                         )
+
+                if counters_numbers:
+                    msg_lines.append(
+                        f'• Счётчики: {", ".join(counters_numbers)}'
+                    )
 
                 dist_main = round(nearest_pole['distance'])
                 msg_lines.append(
@@ -390,5 +400,7 @@ class Command(BaseCommand):
                 | Q(modem_longtitude__in=bad_gps)
                 | Q(modem_latitude__in=bad_gps)
             )
+            .select_related('pole_1')
+            .prefetch_related('counters')
             .order_by('updated_at', 'modem_ip')
         )

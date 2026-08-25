@@ -1,7 +1,7 @@
 from django.db import models
 
 from core.models_readonly import ReadOnlyModel
-from monitoring.constants import MAX_MODEM_IP_LEN, MAX_COUNTER_NUMBER_LEN
+from monitoring.constants import MAX_COUNTER_NUMBER_LEN, MAX_MODEM_IP_LEN
 
 
 class DeviceType(models.IntegerChoices):
