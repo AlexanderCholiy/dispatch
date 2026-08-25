@@ -20,8 +20,10 @@ from users.models import User
 from .constants import (
     AVR_CATEGORY,
     DEFAULT_IS_YT_TRACKER_CONTROLLED,
+    DGU_CATEGORY,
     DGU_SLA_IN_PROGRESS_DEADLINE_IN_HOURS,
     DGU_SLA_WAITING_DEADLINE_IN_HOURS,
+    EKS_CATEGORY,
     EKS_SLA_IN_PROGRESS_DEADLINE_IN_HOURS,
     EKS_SLA_WAITING_DEADLINE_IN_HOURS,
     INCIDENT_CODE_PREFIX,
@@ -31,6 +33,7 @@ from .constants import (
     MAX_FUTURE_END_DELTA,
     MAX_INCIDENT_FAVORITE_PRIORITY,
     MAX_STATUS_COMMENT_LEN,
+    RVR_CATEGORY,
 )
 
 
@@ -1067,6 +1070,14 @@ class IncidentStatusHistory(models.Model):
         verbose_name='Дата и время добавления',
         db_index=True
     )
+    author = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        related_name='status_history',
+        on_delete=models.SET_NULL,
+        verbose_name='Автор'
+    )
     comments = models.CharField(
         verbose_name='Комментарий',
         null=True,
@@ -1097,6 +1108,19 @@ class IncidentStatusHistory(models.Model):
 
     def __str__(self):
         return f'{self.status.name} [{self.insert_date}]'
+
+    def get_categories_list(self):
+        """Возвращает список категорий на момент смены статуса."""
+        cats = []
+        if self.is_avr_category:
+            cats.append(AVR_CATEGORY)
+        if self.is_rvr_category:
+            cats.append(RVR_CATEGORY)
+        if self.is_dgu_category:
+            cats.append(DGU_CATEGORY)
+        if self.is_eks_category:
+            cats.append(EKS_CATEGORY)
+        return cats
 
 
 class Comment(models.Model):

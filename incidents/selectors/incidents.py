@@ -41,7 +41,7 @@ class IncidentSelector:
 
         status_history_qs = (
             IncidentStatusHistory.objects
-            .select_related('status', 'status__status_type')
+            .select_related('status', 'status__status_type', 'author')
             .order_by('-insert_date', '-id')
         )
 

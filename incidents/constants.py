@@ -266,8 +266,8 @@ class SimilarFactor:
     incident_sub_type = 0.2
     rvr_priority = 0.05
     categories = 0.1  # сколько могут дать max все пересекающиеся категории
-    incident_email_subject = 0.15
-    incident_email_from = 0.2
+    incident_email_subject = 0.1
+    incident_email_from = 0.1
 
 
 FAV_EMPTY = 'empty'

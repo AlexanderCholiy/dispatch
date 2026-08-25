@@ -1313,7 +1313,8 @@ class IncidentManager(IncidentValidator):
                 Prefetch(
                     'status_history',
                     queryset=IncidentStatusHistory.objects.select_related(
-                        'status__status_type'
+                        'status__status_type',
+                        'author',
                     ).order_by('-insert_date', '-id'),
                     to_attr='prefetched_status_history'
                 ),
@@ -1395,6 +1396,7 @@ class IncidentManager(IncidentValidator):
             hist = IncidentStatusHistory.objects.create(
                 incident=incident,
                 status=default_status,
+                author=user,
                 is_avr_category=False,
                 is_rvr_category=False,
                 is_dgu_category=False,

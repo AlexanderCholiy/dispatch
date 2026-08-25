@@ -949,17 +949,12 @@ class IncidentForm(forms.ModelForm):
                     IncidentStatus.objects
                     .get_or_create(name=DEFAULT_STATUS_NAME)
                 )
-            # Создаём историю с актуальными категориями из формы
-
-            comments = (
-                f'Автор {self.author.get_full_name()} '
-                f'[ID: {self.author.id}]'
-            ) if self.author else None
-
+            # Создаём историю с актуальными категориями из формы:
             IncidentStatusHistory.objects.create(
                 incident=instance,
                 status=new_status,
-                comments=comments,
+                comments=None,
+                author=self.author,
                 is_avr_category=AVR_CATEGORY in category_names,
                 is_rvr_category=RVR_CATEGORY in category_names,
                 is_dgu_category=DGU_CATEGORY in category_names,

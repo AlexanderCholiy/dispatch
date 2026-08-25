@@ -3,16 +3,49 @@
 <ul class="status-history">
   {% for history in incident.prefetched_status_history %}
     <li class="status-item">
-      {% if history.comments %}
-        <span 
-          class="status-name {{ history.status.status_type.css_class }} tooltip"
-          data-title="{{ history.comments|default:'—' }}">
+      <div class="status-history-left-part">
+        <div class="user-info history-user">
+          {% if history.author %}
+            {% if history.author.get_avatar_url %}
+              <img
+                src="{{ history.author.get_avatar_url }}"
+                class="user-journal-icon tooltip"
+                alt="{{ history.author }}"
+                data-title="{{ history.author }}">
+            {% else %}
+              <div
+                class="user-journal-icon tooltip"
+                data-title="{{ history.author }}">
+                {{ history.author.username|first|upper }}
+              </div>
+            {% endif %}
+          {% else %}
+            <img
+              src="/static/img/default_avatars/1__robot.png"
+              class="user-journal-icon tooltip"
+              alt="Система"
+              data-title="Система">
+          {% endif %}
+        </div>
+  
+        {% with cats=history.get_categories_list %}
+        <span
+          class="status-name {{ history.status.status_type.css_class }}{% if cats %} tooltip{% endif %}"
+          {% if cats %}data-title="Категории на момент смены статуса: {{ cats|join:', ' }}"{% endif %}
+        >
           {{ history.status.name }}
         </span>
-      {% else %}
-        <span class="status-name {{ history.status.status_type.css_class }}">{{ history.status.name }}</span>
-      {% endif %}
-      <span class="status-date">{{ history.insert_date|date:"d.m.Y H:i" }}</span>
+        {% endwith %}
+
+      </div>
+
+      <div class="status-history-right-part">
+        {% if history.comments %}
+          <span class="status-date tooltip" data-title="{{ history.comments }}">{{ history.insert_date|date:"d.m.Y H:i" }}</span>
+        {% else %}
+          <span class="status-date">{{ history.insert_date|date:"d.m.Y H:i" }}</span>
+        {% endif %}
+      </div>
     </li>
   {% empty %}
     <p class="empty">История отсутствует</p>

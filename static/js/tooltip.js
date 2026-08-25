@@ -3,24 +3,22 @@ function createAndShowTooltip(targetEl) {
   const title = targetEl.getAttribute('data-title');
   if (!title) return null;
 
-  // Проверяем, не создан ли уже тултип для этого элемента (чтобы не дублировать)
-  let tooltip = document.querySelector(`.tooltip-text[data-target-id="${targetEl.dataset.id || 'default'}"]`);
-  
-  // Если тултип еще не создан или элемент новый, создаем его
+  if (!targetEl.dataset.id) {
+    targetEl.dataset.id = Date.now() + Math.random().toString(36).substr(2, 9);
+  }
+
+  let tooltip = document.querySelector(`.tooltip-text[data-target-id="${targetEl.dataset.id}"]`);
+
   if (!tooltip) {
     tooltip = document.createElement('div');
     tooltip.className = 'tooltip-text';
-    tooltip.textContent = title;
-    tooltip.style.display = 'none'; // Скрыт по умолчанию
-    tooltip.style.position = 'absolute';
+    tooltip.style.position = 'fixed';
     tooltip.style.zIndex = '1000';
-    
-    // Добавляем уникальный ID для отслеживания (если нужно)
-    if (!targetEl.dataset.id) {
-      targetEl.dataset.id = Date.now() + Math.random().toString(36).substr(2, 9);
-    }
+    tooltip.style.display = 'none';
+    tooltip.style.opacity = '0';
+    tooltip.style.pointerEvents = 'none';
+    tooltip.style.transition = 'opacity 0.2s ease-in-out';
     tooltip.setAttribute('data-target-id', targetEl.dataset.id);
-    
     document.body.appendChild(tooltip);
   }
 
@@ -28,48 +26,54 @@ function createAndShowTooltip(targetEl) {
 
   function showTooltip() {
     const currentTitle = targetEl.getAttribute('data-title');
-    if (currentTitle) {
-      tooltip.textContent = currentTitle;
-    }
+    if (!currentTitle) return;
 
+    tooltip.textContent = currentTitle;
+
+    // Сначала показываем невидимо, чтобы браузер отрисовал и мы могли измерить
     tooltip.style.display = 'block';
     tooltip.style.opacity = '0';
-    tooltip.style.pointerEvents = 'none';
-    tooltip.style.transition = 'none';
-    tooltip.style.transform = 'translateX(-50%) translateY(0)';
+    tooltip.style.visibility = 'hidden';
 
-    const elRect = targetEl.getBoundingClientRect();
-    const tooltipRect = tooltip.getBoundingClientRect();
+    // Ждём следующий кадр, чтобы браузер гарантированно отрисовал
+    requestAnimationFrame(() => {
+      const elRect = targetEl.getBoundingClientRect();
+      const tooltipRect = tooltip.getBoundingClientRect();
 
-    const spaceBelow = window.innerHeight - elRect.bottom;
-    const spaceAbove = elRect.top;
+      const spaceBelow = window.innerHeight - elRect.bottom;
+      const spaceAbove = elRect.top;
 
-    // Позиционирование по вертикали
-    if (spaceBelow >= tooltipRect.height + 6) {
-      tooltip.style.top = `${elRect.bottom + 6}px`;
-    } else if (spaceAbove >= tooltipRect.height + 6) {
-      tooltip.style.top = `${elRect.top - tooltipRect.height - 6}px`;
-    } else {
-      tooltip.style.top = `${elRect.bottom + 6}px`;
-    }
+      // Позиционирование по вертикали
+      if (spaceBelow >= tooltipRect.height + 8) {
+        tooltip.style.top = `${elRect.bottom + 8}px`;
+      } else if (spaceAbove >= tooltipRect.height + 8) {
+        tooltip.style.top = `${elRect.top - tooltipRect.height - 8}px`;
+      } else {
+        // Не хватает места ни сверху, ни снизу — показываем ближе к краю
+        tooltip.style.top = spaceBelow > spaceAbove
+          ? `${elRect.bottom + 4}px`
+          : `${Math.max(4, elRect.top - tooltipRect.height - 4)}px`;
+      }
 
-    // Позиционирование по горизонтали с учётом края окна
-    let left = elRect.left + elRect.width / 2;
-    if (left + tooltipRect.width / 2 > window.innerWidth) {
-      left = window.innerWidth - tooltipRect.width / 2 - 8;
-    }
-    if (left - tooltipRect.width / 2 < 0) {
-      left = tooltipRect.width / 2 + 8;
-    }
+      // Позиционирование по горизонтали
+      let left = elRect.left + elRect.width / 2;
+      const halfWidth = tooltipRect.width / 2;
 
-    tooltip.style.left = `${left}px`;
-    tooltip.style.transform = `translateX(-50%) translateY(0)`;
+      if (left + halfWidth > window.innerWidth - 8) {
+        left = window.innerWidth - halfWidth - 8;
+      }
+      if (left - halfWidth < 8) {
+        left = halfWidth + 8;
+      }
 
-    setTimeout(() => {
-      tooltip.style.transition = 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out';
+      tooltip.style.left = `${left}px`;
+      tooltip.style.transform = 'translateX(-50%)';
+
+      // Показываем
+      tooltip.style.visibility = 'visible';
       tooltip.style.opacity = '1';
       tooltip.style.pointerEvents = 'auto';
-    }, 10);
+    });
   }
 
   function hideTooltip() {
@@ -78,13 +82,15 @@ function createAndShowTooltip(targetEl) {
     tooltip.style.opacity = '0';
     tooltip.style.pointerEvents = 'none';
     setTimeout(() => {
-      tooltip.style.display = 'none';
-    }, 300);
+      if (tooltip.style.opacity === '0') {
+        tooltip.style.display = 'none';
+        tooltip.style.visibility = 'hidden';
+      }
+    }, 200);
   }
 
-  // Вешаем события прямо на элемент (так как мы теперь управляем созданием)
   targetEl.addEventListener('mouseenter', () => {
-    showTimeout = setTimeout(showTooltip, 1000);
+    showTimeout = setTimeout(showTooltip, 800);
   });
 
   targetEl.addEventListener('mouseleave', hideTooltip);

@@ -43,3 +43,8 @@
     font-weight: bold;
     font-size: var(--font-xs);
 }
+
+.similarity-content {
+  max-height: 550px;
+  overflow-y: auto;
+}

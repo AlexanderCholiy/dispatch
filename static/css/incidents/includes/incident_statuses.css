@@ -11,7 +11,7 @@
 }
 
 .status-history {
-  max-height: 250px;
+  max-height: 550px;
   overflow-y: auto;
   position: relative;
   padding: 0;
@@ -52,4 +52,13 @@
     min-width: 100px;
     max-width: 100px;
   }
+}
+
+.status-history-left-part,
+.status-history-right-part,
+.status-history-center-part {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
 }

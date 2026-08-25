@@ -1027,6 +1027,7 @@ def index(request: HttpRequest) -> HttpResponse:
 def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
     template_name = 'incidents/incident_detail.html'
     user: User = request.user
+
     incident = IncidentManager().prepare_incident_info(incident_id, user)
 
     if not incident:
@@ -1984,14 +1985,15 @@ def notify_operator(request: HttpRequest, incident_id: int) -> HttpResponse:
                     c.name for c in incident.categories.all()
                 }
                 comments = (
-                    'Статус добавлен автоматически после '
-                    'начала отправки автоответа.'
+                    'Статус установлен автоматически: '
+                    'отправлен автоответ заявителю о принятии работ.'
                 )
 
                 IncidentStatusHistory.objects.create(
                     incident=incident,
                     status=new_status,
                     comments=comments,
+                    author=user,
                     is_avr_category=AVR_CATEGORY in category_names,
                     is_rvr_category=RVR_CATEGORY in category_names,
                     is_dgu_category=DGU_CATEGORY in category_names,
@@ -2191,14 +2193,15 @@ def notify_avr_contractor(
                 )
 
                 comments = (
-                    'Статус добавлен автоматически после '
-                    'начала отправки автоответа.'
+                    'Статус установлен автоматически: отправлен автоответ '
+                    'о передаче инцидента подрядчику (АВР).'
                 )
 
                 IncidentStatusHistory.objects.create(
                     incident=incident,
                     status=new_status,
                     comments=comments,
+                    author=user,
                     is_avr_category=AVR_CATEGORY in category_names,
                     is_rvr_category=RVR_CATEGORY in category_names,
                     is_dgu_category=DGU_CATEGORY in category_names,
@@ -2480,14 +2483,15 @@ def notify_rvr_contractor(
                 )
 
                 comments = (
-                    'Статус добавлен автоматически после '
-                    'начала отправки автоответа.'
+                    'Статус установлен автоматически: отправлен автоответ'
+                    'о передаче инцидента подрядчику (РВР).'
                 )
 
                 IncidentStatusHistory.objects.create(
                     incident=incident,
                     status=new_status,
                     comments=comments,
+                    author=user,
                     is_avr_category=AVR_CATEGORY in category_names,
                     is_rvr_category=RVR_CATEGORY in category_names,
                     is_dgu_category=DGU_CATEGORY in category_names,
@@ -2794,14 +2798,15 @@ def notify_incident_closed(
                     c.name for c in incident.categories.all()
                 }
                 comments = (
-                    'Статус добавлен автоматически после '
-                    'начала отправки автоответа.'
+                    'Статус установлен автоматически: '
+                    'отправлен автоответ заявителю о закрытии инцидента.'
                 )
 
                 IncidentStatusHistory.objects.create(
                     incident=incident,
                     status=new_status,
                     comments=comments,
+                    author=user,
                     is_avr_category=AVR_CATEGORY in category_names,
                     is_rvr_category=RVR_CATEGORY in category_names,
                     is_dgu_category=DGU_CATEGORY in category_names,
