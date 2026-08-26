@@ -138,7 +138,7 @@ def planned_work_detail(request: HttpRequest, pk: int):
     )
 
     main_form = PlannedWorkForm(
-        instance=planned_work, author_user=planned_work.author
+        instance=planned_work, author_user=user
     )
 
     related_emails_data = []
@@ -209,7 +209,7 @@ def planned_work_detail(request: HttpRequest, pk: int):
     if request.method == 'POST' and 'planned_work_submit' in request.POST:
         main_form = PlannedWorkForm(
             request.POST,
-            author_user=planned_work.author,
+            author_user=user,
             instance=planned_work,
         )
 
