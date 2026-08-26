@@ -522,6 +522,7 @@ def index(request: HttpRequest) -> HttpResponse:
         .prefetch_related(
             'categories',
             'related_incidents',
+            'comments',
             Prefetch(
                 'favorited_by',
                 queryset=IncidentFavorite.objects.filter(user=user),
@@ -691,6 +692,7 @@ def index(request: HttpRequest) -> HttpResponse:
             base_qs = base_qs.filter(
                 Q(email_messages__email_subject__icontains=query)
                 | Q(pole__pole__startswith=query)
+                | Q(comments__content__icontains=query)
             ).distinct()
 
     if pole:
