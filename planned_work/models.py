@@ -1,8 +1,11 @@
+from typing import Optional
+
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
 from core.constants import MAX_LG_DESCRIPTION, MAX_ST_DESCRIPTION
+from core.utils import timedelta_to_human_time
 from emails.models import EmailMessage
 from planned_work.constants import (
     MAX_PLR_REASON_LEN,
@@ -139,6 +142,14 @@ class PlannedWork(models.Model):
             return PlannedWorkReason(self.reason).label
         except ValueError:
             return self.reason
+
+    @property
+    def plr_duration_val_label(self) -> Optional[str]:
+        end_date = self.end_date
+        if end_date is None:
+            return
+
+        return timedelta_to_human_time(end_date - self.start_date)
 
     def __str__(self):
         return f'PLR-{self.pk}' if self.pk else 'Новый ПЛР'

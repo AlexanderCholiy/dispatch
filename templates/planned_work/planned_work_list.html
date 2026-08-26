@@ -46,7 +46,7 @@
                 </td>
 
                 <td>
-                  <span class="status-badge {{ planned_work.status.value|default:'status-unknown' }}">
+                  <span class="status-badge {{ planned_work.status.value|default:'status-unknown' }} tooltip" data-title="{{ planned_work.plr_duration_val_label|default:'' }}">
                     {{ planned_work.status.label }}
                   </span>
                 </td>
