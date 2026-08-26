@@ -63,7 +63,7 @@ def create_planned_work(request: HttpRequest):
             instance.author = request.user
             instance.save()
 
-            msg = f'Плановая работа "{instance}" успешно создана.'
+            msg = f'Плановая работа {instance} успешно создана.'
 
             if instance.status == PlannedWorkStatus.PLANNED:
                 messages.info(request, f'{msg}')
@@ -216,7 +216,7 @@ def planned_work_detail(request: HttpRequest, pk: int):
         if main_form.is_valid():
             instance: PlannedWork = main_form.save()
 
-            msg = f'Плановая работа "{instance}" успешно обновлена.'
+            msg = 'Данные обновлены'
 
             if instance.status == PlannedWorkStatus.PLANNED:
                 messages.info(request, f'{msg}')

@@ -44,7 +44,8 @@
 
     <div class="sla-wrapper">
       <span
-        class="status-tag {{ status.value|default:'unknown' }}"
+        class="status-tag {{ status.value|default:'unknown' }} tooltip"
+        data-title="{{ planned_work.plr_duration_val_label|default:'' }}"
       >
         {{ status.label|default:'Отсутствует' }}
       </span>
