@@ -1,6 +1,6 @@
 {% load static %}
 
-{% load custom_filters %}
+{% load custom_filters bs_filters %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/includes/tables.css' %}">
@@ -186,14 +186,12 @@
       <div class="incident-info">
         <label class="field-label">Операторы</label>
         
+        {% load bs_filters %}
         {% with operators=incident.base_station.prefetched_bs_operators %}
-          <span class="field-value {% if operators.0 %}copy-text{% endif %}" 
-                data-text="{% for op in operators %}{{ op.operator_name }}{% if not forloop.last %}, {% endif %}{% endfor %}">
-            
-            {% if operators.0 %}
-              {{ operators.0.operator_group|default:operators.0.operator_name }}
-              
-              {% if operators|length > 1 %}(+{{ operators|length|add:"-1" }}){% endif %}
+          <span class="field-value {% if operators %}tooltip{% endif %}"
+                data-title="{{ operators|unique_names }}">
+            {% if operators %}
+              {{ operators|unique_groups }}
             {% else %}
               —
             {% endif %}

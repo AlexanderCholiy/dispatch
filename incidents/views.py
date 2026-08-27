@@ -71,7 +71,6 @@ from monitoring.services.monitoring_equipment import (
 )
 from planned_work.models import PlannedWork
 from ts.constants import UNDEFINED_CASE
-from ts.models import BaseStationOperator
 from users.models import Roles, User
 from users.utils import role_required
 from yandex_tracker.utils import yt_manager
@@ -108,6 +107,7 @@ from .forms import (
     NewEmailForm,
 )
 from .models import (
+    Comment,
     FavoritePriority,
     Incident,
     IncidentCategory,
@@ -120,7 +120,6 @@ from .models import (
     IncidentStatusHistory,
     SLAStatus,
     TimeStatus,
-    Comment,
 )
 from .selectors.incidents import IncidentSelector
 from .services.get_avr_contractor_map import get_avr_contractor_map
