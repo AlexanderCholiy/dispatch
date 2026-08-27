@@ -73,6 +73,9 @@ class PlannedWorkForm(forms.ModelForm):
         if self.instance.pk:
             self._old_instance = copy.deepcopy(self.instance)
 
+        # Кеш для шаблона:
+        self.author_list = [self.instance.author or self.author_user]
+
     def save(self, commit=True):
         instance = super().save(commit=False)
 

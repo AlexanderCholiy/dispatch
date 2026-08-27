@@ -125,7 +125,16 @@
       <div class="select-wrapper status-select incident-form-select {% if main_form.author.errors %}has-error{% endif %}">
         <label for="{{ main_form.author.id_for_label }}">{{ main_form.author.label }}</label>
 
-        {{ main_form.author }}
+        <select name="author" id="{{ main_form.author.id_for_label }}">
+          {% for user in main_form.author_list %}
+            <option value="{{ user.pk }}"
+              {% if main_form.author.value|stringformat:"s" == user.pk|stringformat:"s" %}selected{% endif %}
+            >
+              {{ user }}
+            </option>
+          {% endfor %}
+
+        </select>
         
         {% for error in main_form.author.errors %}
           <div class="form-error">{{ error }}</div>

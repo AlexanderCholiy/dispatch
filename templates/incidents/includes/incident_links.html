@@ -54,10 +54,10 @@
                       </td>
 
                       <td>
-                          {{ form.target_incident }}
-                          {% for error in form.target_incident.errors %}
-                              <div class="form-error">{{ error }}</div>
-                          {% endfor %}
+                        {{ form.target_incident }}
+                        {% for error in form.target_incident.errors %}
+                          <div class="form-error">{{ error }}</div>
+                        {% endfor %}
                       </td>
 
                       <td class="{% if form.instance.latest_status_date %}tooltip{% endif %}"
