@@ -120,6 +120,7 @@ from .models import (
     IncidentStatusHistory,
     SLAStatus,
     TimeStatus,
+    Comment,
 )
 from .selectors.incidents import IncidentSelector
 from .services.get_avr_contractor_map import get_avr_contractor_map
@@ -497,15 +498,6 @@ def index(request: HttpRequest) -> HttpResponse:
     latest_status_subquery = IncidentStatusHistory.objects.filter(
         incident=OuterRef('pk')
     ).order_by('-insert_date', '-id')
-
-    favorite_prefetches = []
-    favorite_prefetches.append(
-        Prefetch(
-            'favorited_by',
-            queryset=IncidentFavorite.objects.filter(user=user),
-            to_attr='my_favorites',
-        )
-    )
 
     base_qs = (
         Incident.objects
@@ -899,6 +891,10 @@ def index(request: HttpRequest) -> HttpResponse:
         )
     )
 
+    last_comment_qs = Comment.objects.filter(
+        incident=OuterRef('pk')
+    ).order_by('-created_at', '-id')
+
     incidents_qs = Incident.objects.filter(id__in=page_ids).select_related(
         'incident_type',
         'incident_subtype',
@@ -913,13 +909,6 @@ def index(request: HttpRequest) -> HttpResponse:
             'favorited_by',
             queryset=IncidentFavorite.objects.filter(user=user),
             to_attr='my_favorites',
-        ),
-        Prefetch(
-            'base_station__operator',
-            queryset=BaseStationOperator.objects.order_by(
-                'operator_group', 'operator_name'
-            ),
-            to_attr='prefetched_bs_operators'
         ),
     ).annotate(
         latest_status_name=Subquery(
@@ -941,6 +930,18 @@ def index(request: HttpRequest) -> HttpResponse:
         sla_rvr_status_val=Value('', output_field=CharField()),
         sla_dgu_status_val=Value('', output_field=CharField()),
         sla_eks_status_val=Value('', output_field=CharField()),
+        last_comment_text=Subquery(
+            last_comment_qs.values('content')[:1]
+        ),
+        last_comment_author_first_name=Subquery(
+            last_comment_qs.values('author__first_name')[:1]
+        ),
+        last_comment_author_last_name=Subquery(
+            last_comment_qs.values('author__last_name')[:1]
+        ),
+        last_comment_author_email=Subquery(
+            last_comment_qs.values('author__email')[:1]
+        ),
     )
 
     id_index = {id_: i for i, id_ in enumerate(page_ids)}

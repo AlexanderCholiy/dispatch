@@ -19,6 +19,7 @@
               <th data-col="code">Код</th>
               <th data-col="subject">Инцидент</th>
               <th data-col="status">Статус</th>
+              <th data-col="last_comment">Комментарий</th>
               <th data-col="user">Диспетчер</th>
               <th data-col="was_read" style="text-align: center;">Прочитано</th>
               <th data-col="updated">Обновлено</th>
@@ -60,6 +61,16 @@
                   —
                   {% endif %}
                 </td>
+
+                <td class="{% if incident.last_comment_text %}tooltip{% endif %}"
+                    data-title="{% if incident.last_comment_author_first_name and incident.last_comment_author_last_name %}{{ incident.last_comment_author_first_name }} {{ incident.last_comment_author_last_name }}{% elif incident.last_comment_author_email %}{{ incident.last_comment_author_email }}{% endif %}">
+                  {% if incident.last_comment_text %}
+                    {{ incident.last_comment_text|truncatechars:64|default:"—" }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+
                 <td class="tooltip"
                     data-title="{{ incident.responsible_user.email|default:'' }}">
                   <div class="user-table-info">
@@ -82,6 +93,7 @@
                     {% endif %}
                   </div>
                 </td>
+
                 <td style="text-align: center;">
                   {% if incident.was_read %}
                     <span class="badge badge-read"><i class="bx check-icon bx-check" style="font-weight: bold"></i></span>
@@ -89,6 +101,7 @@
                     <span class="badge badge-unread"><i class="bx check-icon bx-x" style="font-weight: bold"></i></span>
                   {% endif %}
                 </td>
+
                 <td>{{ incident.updated_human }}</td>
                 <td class="category" style="text-align: center;">
                   {% for cat in incident.categories.all %}
@@ -145,23 +158,22 @@
                     —
                   {% endif %}
                 </td>
-                {% with operators=incident.base_station.prefetched_bs_operators %}
-                  <td class="{% if operators.0 %}tooltip{% endif %}" 
-                        data-title="{% for op in operators %}{{ op.operator_name }}{% if not forloop.last %}, {% endif %}{% endfor %}">
-                    {% if incident.base_station %}
-                      <span class="copy-text" data-text="{{ incident.base_station.bs_name }}">{{ incident.base_station.bs_name|default:"—" }}</span>
-                    {% else %}
-                      —
-                    {% endif %}
-                  </td>
-                {% endwith %}
+
+                <td>
+                  {% if incident.base_station %}
+                    <span class="copy-text" data-text="{{ incident.base_station.bs_name }}">{{ incident.base_station.bs_name|default:"—" }}</span>
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+
                 <td>{{ incident.incident_date|date:"d.m.Y H:i" }}</td>
                 <td style="text-align: center;">
                   {% include "incidents/includes/favorite_button.html" with incident=incident %}
                 </td>
               </tr>
             {% empty %}
-              <tr><td colspan="15" class="empty">Нет данных...</td></tr>
+              <tr><td colspan="16" class="empty">Нет данных...</td></tr>
             {% endfor %}
           </tbody>
         </table>
