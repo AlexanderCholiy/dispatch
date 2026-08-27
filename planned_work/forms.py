@@ -35,7 +35,10 @@ class PlannedWorkForm(forms.ModelForm):
         widgets = {
             'pole': autocomplete.ModelSelect2(
                 url='ts:pole_autocomplete',
-                attrs={'data-placeholder': 'Не выбрано'}
+                attrs={
+                    'data-placeholder': 'Не выбрано',
+                    'data-minimum-input-length': '1',
+                }
             ),
             'reason': forms.Select(
                 attrs={'class': 'select'},
@@ -103,10 +106,13 @@ class PlannedWorkEmailForm(forms.Form):
     email = forms.ModelChoiceField(
         queryset=EmailMessage.objects.all(),
         required=False,
-        empty_label="Не выбрано",
+        empty_label='Не выбрано',
         widget=autocomplete.ModelSelect2(
             url='emails:emails_autocomplete',
-            attrs={'data-placeholder': 'Поиск по ID или теме письма...'}
+            attrs={
+                'data-placeholder': 'Поиск по ID или теме письма...',
+                'data-minimum-input-length': '1',
+            }
         )
     )
 

@@ -7,7 +7,7 @@ from django import forms
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
-from django.db.models import F, Prefetch, Q
+from django.db.models import F, Prefetch, Q, QuerySet
 from django.utils import timezone
 
 from emails.constants import (
@@ -372,12 +372,18 @@ class IncidentForm(forms.ModelForm):
             ),
             'pole': autocomplete.ModelSelect2(
                 url='ts:pole_autocomplete',
-                attrs={'data-placeholder': 'Не выбрано'}
+                attrs={
+                    'data-placeholder': 'Не выбрано',
+                    'data-minimum-input-length': '1',
+                }
             ),
             'base_station': autocomplete.ModelSelect2(
                 url='ts:bs_autocomplete',
                 forward=['pole'],
-                attrs={'data-placeholder': 'Не выбрано'},
+                attrs={
+                    'data-placeholder': 'Не выбрано',
+                    'data-minimum-input-length': '1',
+                },
             ),
             'avr_start_date': forms.DateTimeInput(
                 attrs={'type': 'datetime-local'},
@@ -415,6 +421,7 @@ class IncidentForm(forms.ModelForm):
 
     def __init__(
         self,
+        allowed_statuses: QuerySet[IncidentStatus],
         can_edit: bool = False,
         can_edit_region_responsible: bool = False,
         author: Optional[User] = None,
@@ -429,14 +436,9 @@ class IncidentForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         if self.instance.pk:
-            old_obj = (
-                Incident.objects
-                .prefetch_related('categories')
-                .get(pk=self.instance.pk)
-            )
-            self._old_instance = old_obj
+            self._old_instance = self.instance
             self._old_categories_names = set(
-                old_obj.categories.values_list('name', flat=True)
+                c.name for c in self.instance.categories.all()
             )
         else:
             self._old_instance = None
@@ -568,8 +570,6 @@ class IncidentForm(forms.ModelForm):
         else:
             last_status = None
 
-        allowed_statuses = get_allowed_statuses(last_status)
-
         self.fields['new_status'].queryset = allowed_statuses
         self.fields['new_status'].initial = last_status
         self.fields['new_status'].empty_label = None
@@ -605,6 +605,25 @@ class IncidentForm(forms.ModelForm):
         self.fields['incident_type'].empty_label = 'Не выбрано'
         self.fields['incident_subtype'].empty_label = 'Не выбрано'
         self.fields['rvr_priority'].empty_label = 'Не выбрано'
+
+        # Под кеш в шаблоне:
+        self.statuses_list = list(allowed_statuses)
+        self.categories_list = list(self.fields['categories'].queryset)
+        self.responsible_users_list = list(
+            self.fields['responsible_user'].queryset
+        )
+        self.region_responsible_user_list = list(
+            self.fields['region_responsible_user'].queryset
+        )
+        self.incident_types_list = list(
+            self.fields['incident_type'].queryset
+        )
+        self.incident_subtypes_list = list(
+            self.fields['incident_subtype'].queryset
+        )
+        self.rvr_priorities_list = list(
+            self.fields['rvr_priority'].queryset
+        )
 
     def clean(self):
         cleaned_data = super().clean()
@@ -1154,7 +1173,10 @@ class IncidentLinkInlineForm(forms.ModelForm):
         widgets = {
             'target_incident': autocomplete.ModelSelect2(
                 url='incidents:incidents_autocomplete',
-                attrs={'data-placeholder': 'Не выбрано'}
+                attrs={
+                    'data-placeholder': 'Не выбрано',
+                    'data-minimum-input-length': '1',
+                }
             ),
         }
 

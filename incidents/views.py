@@ -147,6 +147,7 @@ from .validators import (
     validate_notify_operator,
     validate_notify_rvr,
 )
+from incidents.services.status_transition import get_allowed_statuses
 
 
 @login_required
@@ -1036,6 +1037,7 @@ def index(request: HttpRequest) -> HttpResponse:
 @ratelimit(key='user_or_ip', rate='200/m', block=True)
 def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
     template_name = 'incidents/incident_detail.html'
+    # template_name = 'pages/about.html'
     user: User = request.user
 
     incident = IncidentManager().prepare_incident_info(incident_id, user)
@@ -1054,6 +1056,14 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
             )
         )
         return redirect(reverse(settings.LOGIN_URL))
+
+    last_status = (
+        incident.prefetched_status_history[0]
+        if incident.prefetched_status_history else None
+    )
+    last_status = last_status.status if last_status else None
+
+    allowed_statuses = get_allowed_statuses(last_status)
 
     monitiring_equipment = (
         get_monitiring_cache_equipment(incident.pole.pole)
@@ -1099,6 +1109,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         can_edit_region_responsible=user.is_incident_responsible,
         author=user,
         request=request,
+        allowed_statuses=allowed_statuses,
     )
 
     if request.method == 'POST':
@@ -1132,6 +1143,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
             can_edit_region_responsible=user.is_incident_responsible,
             author=user,
             request=request,
+            allowed_statuses=allowed_statuses,
         )
         if incident_form.is_valid():
             incident_form.save()
@@ -1637,11 +1649,14 @@ def create_incident(request: HttpRequest) -> HttpResponse:
 
     user: User = request.user
 
+    allowed_statuses = get_allowed_statuses(None)
+
     if request.method == 'POST':
         form = IncidentForm(
             data=request.POST,
             can_edit=True,
             author=user,
+            allowed_statuses=allowed_statuses,
         )
 
         if form.is_valid():
@@ -1655,10 +1670,11 @@ def create_incident(request: HttpRequest) -> HttpResponse:
     else:
         form = IncidentForm(
             initial={
-                'responsible_user': request.user
+                'responsible_user': request.user,
             },
             can_edit=True,
             author=user,
+            allowed_statuses=allowed_statuses,
         )
 
     context = {

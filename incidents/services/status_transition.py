@@ -4,6 +4,7 @@ from django.db.models import Case, QuerySet, When
 
 from incidents.constants import DEFAULT_STATUS_NAME, STATUS_TRANSITIONS
 from incidents.models import IncidentStatus
+from django.core.cache import cache
 
 
 def get_allowed_statuses(
