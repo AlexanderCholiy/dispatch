@@ -38,11 +38,12 @@
                     <th>Удалить</th>
                   </tr>
               </thead>
+
               <tbody>
                   {% for form in incident_links_formset %}
                   {% with target=form.instance.target_incident %}
                   <tr>
-                    <td class="tooltip" data-title="Как ТЕКУЩИЙ инцидент относится к ЦЕЛЕВОМУ?">
+                      <td class="tooltip" data-title="Как ТЕКУЩИЙ инцидент относится к ЦЕЛЕВОМУ?">
                         {{ form.id }}
                         <div class="select-wrapper status-select link-type">
                             {{ form.link_type }}
@@ -51,7 +52,7 @@
                             {% endfor %}
                         </div>
                       </td>
-  
+
                       <td>
                           {{ form.target_incident }}
                           {% for error in form.target_incident.errors %}

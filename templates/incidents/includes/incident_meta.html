@@ -249,7 +249,7 @@
               {% if field.name == "responsible_user" %}
                 {% for user in incident_form.responsible_users_list %}
                   <option value="{{ user.pk }}"
-                    {% if field.value == user %}selected{% endif %}
+                    {% if field.value|stringformat:"s" ==  user.pk|stringformat:"s" %}selected{% endif %}
                   >
                     {{ user }}
                   </option>
@@ -257,7 +257,7 @@
               {% else %}
                 {% for user in incident_form.region_responsible_user_list %}
                   <option value="{{ user.pk }}"
-                    {% if field.value == user %}selected{% endif %}
+                    {% if field.value|stringformat:"s" ==  user.pk|stringformat:"s" %}selected{% endif %}
                   >
                     {{ user }}
                   </option>

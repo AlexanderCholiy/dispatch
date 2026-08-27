@@ -1,3 +1,4 @@
+import copy
 import os
 from datetime import datetime
 from typing import Optional
@@ -53,7 +54,6 @@ from .models import (
 from .services.notify_responsible_user_on_reassign import (
     notify_responsible_user_on_reassign
 )
-from .services.status_transition import get_allowed_statuses
 from .utils import EmailNode, IncidentManager
 
 
@@ -436,9 +436,9 @@ class IncidentForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         if self.instance.pk:
-            self._old_instance = self.instance
+            self._old_instance = copy.deepcopy(self.instance)
             self._old_categories_names = set(
-                c.name for c in self.instance.categories.all()
+                c.name for c in self._old_instance.categories.all()
             )
         else:
             self._old_instance = None

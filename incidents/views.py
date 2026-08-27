@@ -64,6 +64,7 @@ from incidents.services.get_incident_auto_close_ttl import (
 from incidents.services.notify_contractor_incident_closed import (
     notify_contractor_incident_closed
 )
+from incidents.services.status_transition import get_allowed_statuses
 from incidents.services.valid_contractor_match import is_valid_contractor_match
 from monitoring.models import DeviceStatus, DeviceType
 from monitoring.services.monitoring_equipment import (
@@ -147,7 +148,6 @@ from .validators import (
     validate_notify_operator,
     validate_notify_rvr,
 )
-from incidents.services.status_transition import get_allowed_statuses
 
 
 @login_required

@@ -1,3 +1,5 @@
+import copy
+
 from dal import autocomplete
 from django import forms
 
@@ -69,15 +71,7 @@ class PlannedWorkForm(forms.ModelForm):
         self._old_instance = None
 
         if self.instance.pk:
-            try:
-                self._old_instance = (
-                    PlannedWork.objects
-                    .select_related('pole', 'author')
-                    .prefetch_related('emails')
-                    .get(pk=self.instance.pk)
-                )
-            except PlannedWork.DoesNotExist:
-                pass
+            self._old_instance = copy.deepcopy(self.instance)
 
     def save(self, commit=True):
         instance = super().save(commit=False)
