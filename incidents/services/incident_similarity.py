@@ -16,6 +16,7 @@ from incidents.constants import (
     MAX_SIMILAR_INCIDENTS_CANDIDATES,
     MAX_SIMILAR_INCIDENTS_THRESHOLD,
     MAX_SIMILAR_INCIDENTS_WINDOW_TTL,
+    REFRESH_CACHE_INFO_SIMILAR_INCIDENTS_TTL,
     TOTAL_CATEGORIES,
     SimilarFactor,
 )
@@ -207,10 +208,9 @@ class IncidentSimilarityService:
             )
             status_date = history_obj.insert_date if history_obj else None
 
-            categories_list = candidate.categories.all()
-
             cat_names = sorted(
-                [cat.name for cat in categories_list], key=str.lower
+                [cat.name for cat in candidate.categories.all()],
+                key=str.lower
             )
 
             incident_type_str = (
@@ -233,11 +233,22 @@ class IncidentSimilarityService:
 
     def find_similar(self, incident: Incident) -> list[IncidentSimilarity]:
         cache_key = f'{CACHE_SIMILAR_INCIDENTS_PREFIX}_{incident.id}'
+        refresh_cache_key = f'{cache_key}_refreshed'
 
         cached_result = cache.get(cache_key)
 
         if cached_result is not None:
-            return self._refresh_data(cached_result)
+            refreshed = cache.get(refresh_cache_key)
+            if refreshed is not None:
+                return refreshed
+
+            refreshed_data = self._refresh_data(cached_result)
+            cache.set(
+                refresh_cache_key,
+                refreshed_data,
+                REFRESH_CACHE_INFO_SIMILAR_INCIDENTS_TTL
+            )
+            return refreshed_data
 
         now = timezone.now()
 

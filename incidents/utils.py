@@ -68,6 +68,7 @@ from .models import (
     IncidentCategory,
     IncidentChangeLog,
     IncidentFavorite,
+    IncidentHistory,
     IncidentStatus,
     IncidentStatusHistory,
 )
@@ -1300,8 +1301,13 @@ class IncidentManager(IncidentValidator):
                 'pole__avr_contractor',
             )
             .prefetch_related(
-                'history',
                 'categories',
+                Prefetch(
+                    'history',
+                    queryset=IncidentHistory.objects.select_related(
+                        'performed_by'
+                    ).order_by('-insert_date', '-id'),
+                ),
                 Prefetch(
                     'change_logs',
                     queryset=IncidentChangeLog.objects.select_related(
