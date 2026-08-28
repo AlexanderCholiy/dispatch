@@ -375,6 +375,8 @@ class IncidentForm(forms.ModelForm):
                 attrs={
                     'data-placeholder': 'Не выбрано',
                     'data-minimum-input-length': '1',
+                    'data-ajax--cache': 'true',
+                    'data-ajax--delay': '1000',
                 }
             ),
             'base_station': autocomplete.ModelSelect2(
@@ -383,6 +385,8 @@ class IncidentForm(forms.ModelForm):
                 attrs={
                     'data-placeholder': 'Не выбрано',
                     'data-minimum-input-length': '1',
+                    'data-ajax--cache': 'true',
+                    'data-ajax--delay': '1000',
                 },
             ),
             'avr_start_date': forms.DateTimeInput(
@@ -1176,6 +1180,8 @@ class IncidentLinkInlineForm(forms.ModelForm):
                 attrs={
                     'data-placeholder': 'Не выбрано',
                     'data-minimum-input-length': '1',
+                    'data-ajax--cache': 'true',
+                    'data-ajax--delay': '1000',
                 }
             ),
         }

@@ -40,6 +40,8 @@ class PlannedWorkForm(forms.ModelForm):
                 attrs={
                     'data-placeholder': 'Не выбрано',
                     'data-minimum-input-length': '1',
+                    'data-ajax--cache': 'true',
+                    'data-ajax--delay': '1000',
                 }
             ),
             'reason': forms.Select(
@@ -109,6 +111,8 @@ class PlannedWorkEmailForm(forms.Form):
             attrs={
                 'data-placeholder': 'Поиск по ID или теме письма...',
                 'data-minimum-input-length': '1',
+                'data-ajax--cache': 'true',
+                'data-ajax--delay': '1000',
             }
         )
     )
