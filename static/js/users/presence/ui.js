@@ -1,6 +1,3 @@
-// static/js/users/presence/ui.js
-import { PRESENCE_CONFIG } from './config.js';
-
 const AVATARS_CONTAINER_ID = 'presence-avatars-list';
 const ADD_COUNT_CONTAINER_ID = 'presence-add-count';
 const MAX_VISIBLE_AVATARS = 7; // Максимальное количество видимых аватаров

@@ -1,5 +1,5 @@
 // static/js/profile/photo-manager.js
-import AVATAR_CONFIG from './constants.js';
+import AVATAR_CONFIG from '/js/users/profile/constants.js';
 
 class PhotoManager {
     constructor() {

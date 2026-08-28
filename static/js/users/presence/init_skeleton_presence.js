@@ -1,7 +1,7 @@
 // static/js/users/presence/init_skeleton_presence.js
-import { connectSocket, fetchUsersOnPage, notifyPageChange, setCallbacks, getSocketState } from './socket.js';
-import { initWidget, updateUsersList } from './ui.js';
-import { PRESENCE_CONFIG as MODULE_CONFIG } from './config.js';
+import { connectSocket, fetchUsersOnPage, notifyPageChange, setCallbacks, getSocketState } from '/js/users/presence/socket.js';
+import { initWidget, updateUsersList } from '/js/users/presence/ui.js';
+import { PRESENCE_CONFIG as MODULE_CONFIG } from '/js/users/presence/config.js';
 
 let currentPath = window.location.pathname;
 let refreshIntervalId = null;

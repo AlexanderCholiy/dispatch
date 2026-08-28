@@ -1,5 +1,5 @@
 // static/js/profile/icons-manager.js
-import AVATAR_CONFIG from './constants.js';
+import AVATAR_CONFIG from '/js/users/profile/constants.js';
 
 class IconsManager {
     constructor() {

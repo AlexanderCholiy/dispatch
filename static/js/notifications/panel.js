@@ -1,4 +1,4 @@
-import { getCookie, setCookie } from './cookie.js'
+import { getCookie, setCookie } from '/js/notifications/cookie.js';
 
 export function initPanel({ bell, panel, hideBtn }) {
     // восстановление состояния панели

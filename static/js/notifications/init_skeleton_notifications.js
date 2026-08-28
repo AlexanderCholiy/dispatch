@@ -1,8 +1,8 @@
-import { initPanel } from './panel.js';
-import { renderNotifications, addNotification, updateCount } from './notifications_render.js';
-import { initActions, markRead } from './notifications_actions.js';
-import { connectWS } from './ws.js';
-import { initNotificationsToggle } from './notifications_toggle.js';
+import { initPanel } from '/js/notifications/panel.js';
+import { renderNotifications, addNotification, updateCount } from '/js/notifications/notifications_render.js';
+import { initActions, markRead } from '/js/notifications/notifications_actions.js';
+import { connectWS } from '/js/notifications/ws.js';
+import { initNotificationsToggle } from '/js/notifications/notifications_toggle.js';
 
 document.addEventListener("DOMContentLoaded", () => {
     const bell = document.getElementById("notifications-toggle");

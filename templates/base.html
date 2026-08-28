@@ -38,6 +38,31 @@
       rel='stylesheet' 
       href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css'
       >
+
+    <script type="importmap">
+    {
+      "imports": {
+        "/js/notifications/panel.js": "{% static 'js/notifications/panel.js' %}",
+        "/js/notifications/notifications_render.js": "{% static 'js/notifications/notifications_render.js' %}",
+        "/js/notifications/notifications_actions.js": "{% static 'js/notifications/notifications_actions.js' %}",
+        "/js/notifications/ws.js": "{% static 'js/notifications/ws.js' %}",
+        "/js/notifications/notifications_toggle.js": "{% static 'js/notifications/notifications_toggle.js' %}",
+        "/js/notifications/cookie.js": "{% static 'js/notifications/cookie.js' %}",
+        "/js/users/presence/socket.js": "{% static 'js/users/presence/socket.js' %}",
+        "/js/users/presence/ui.js": "{% static 'js/users/presence/ui.js' %}",
+        "/js/users/presence/config.js": "{% static 'js/users/presence/config.js' %}",
+        "/js/incident_favorite/favorite_constants.js": "{% static 'js/incident_favorite/favorite_constants.js' %}",
+        "/js/incident_favorite/favorite_core.js": "{% static 'js/incident_favorite/favorite_core.js' %}",
+        "/js/incident_favorite/favorite_websocket.js": "{% static 'js/incident_favorite/favorite_websocket.js' %}",
+        "/js/comments/ws.js": "{% static 'js/comments/ws.js' %}",
+        "/js/comments/ui.js": "{% static 'js/comments/ui.js' %}",
+        "/js/users/profile/constants.js": "{% static 'js/users/profile/constants.js' %}",
+        "/js/users/profile/icons-manager.js": "{% static 'js/users/profile/icons-manager.js' %}",
+        "/js/users/profile/photo-manager.js": "{% static 'js/users/profile/photo-manager.js' %}"
+      }
+    }
+    </script>
+
     <script src="{% static 'js/theme_init.js' %}"></script>
     <link rel="stylesheet" href="{% static 'css/root.css' %}">
     <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
@@ -103,15 +128,15 @@
     <script src="{% static 'js/change_select_arrow.js' %}"></script>
     <script src="{% static 'js/checkbox_v2.js' %}"></script>
     {% if user.is_authenticated %}
-      <script type="module" src="{% static 'js/notifications/init_skeleton_notifications.js' %}"></script>
-      <script>
-          // Передаем ID и имя пользователя в глобальную область видимости
-          window.PRESENCE_CONFIG = window.PRESENCE_CONFIG || {};
-          window.PRESENCE_CONFIG.currentUser = {
-              id: {{ user.id }},
-              username: "{{ user.username }}"
-          };
+    <script>
+      // Передаем ID и имя пользователя в глобальную область видимости
+      window.PRESENCE_CONFIG = window.PRESENCE_CONFIG || {};
+      window.PRESENCE_CONFIG.currentUser = {
+        id: {{ user.id }},
+        username: "{{ user.username }}"
+      };
       </script>
+      <script type="module" src="{% static 'js/notifications/init_skeleton_notifications.js' %}"></script>
       <script type="module" src="{% static 'js/users/presence/init_skeleton_presence.js' %}"></script>
     {% endif %}
     {% block extra_js %}{% endblock %}

@@ -1,5 +1,3 @@
-// static/js/users/presence/config.js
-
 export const PRESENCE_CONFIG = {
     // Маршрут WebSocket
     ENDPOINT: '/ws/presence/',

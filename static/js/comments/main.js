@@ -1,6 +1,6 @@
 // static/js/comments/main.js
-import { CommentWebSocket } from './ws.js';
-import { CommentsUI } from './ui.js';
+import { CommentWebSocket } from '/js/comments/ws.js';
+import { CommentsUI } from '/js/comments/ui.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const configEl = document.getElementById('cw-config');

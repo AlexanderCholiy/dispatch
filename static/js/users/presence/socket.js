@@ -1,5 +1,4 @@
-// static/js/users/presence/socket.js
-import { getWebSocketUrl, PRESENCE_CONFIG } from './config.js';
+import { getWebSocketUrl, PRESENCE_CONFIG } from '/js/users/presence/config.js';
 
 let socket = null;
 let reconnectAttempts = 0;

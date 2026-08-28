@@ -1,4 +1,4 @@
-import { openPanel } from './notifications_toggle.js';
+import { openPanel } from '/js/notifications/notifications_toggle.js';
 
 export function renderNotifications(listEl, notifications, markReadFn, panel) {
     listEl.innerHTML = "";

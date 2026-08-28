@@ -1,5 +1,5 @@
-import { FavoriteConstants } from './favorite_constants.js';
-import { FavoriteCore } from './favorite_core.js';
+import { FavoriteConstants } from '/js/incident_favorite/favorite_constants.js';
+import { FavoriteCore } from '/js/incident_favorite/favorite_core.js';
 
 const connections = new Map();
 

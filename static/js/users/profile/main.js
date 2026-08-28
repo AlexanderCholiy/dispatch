@@ -1,7 +1,6 @@
 // static/js/profile/main.js
-import AVATAR_CONFIG from './constants.js';
-import IconsManager from './icons-manager.js';
-import PhotoManager from './photo-manager.js';
+import IconsManager from '/js/users/profile/icons-manager.js';
+import PhotoManager from '/js/users/profile/photo-manager.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const container = document.querySelector('#avatarSelector');

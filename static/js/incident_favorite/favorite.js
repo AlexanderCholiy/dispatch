@@ -1,6 +1,6 @@
-import { FavoriteConstants } from './favorite_constants.js';
-import { FavoriteCore } from './favorite_core.js';
-import { FavoriteWebSocket } from './favorite_websocket.js';
+import { FavoriteConstants } from '/js/incident_favorite/favorite_constants.js';
+import { FavoriteCore } from '/js/incident_favorite/favorite_core.js';
+import { FavoriteWebSocket } from '/js/incident_favorite/favorite_websocket.js';
 
 let observer = null;
 

@@ -1,4 +1,4 @@
-import { FavoriteConstants } from './favorite_constants.js';
+import { FavoriteConstants } from '/js/incident_favorite/favorite_constants.js';
 
 const stateMap = new Map();
 
