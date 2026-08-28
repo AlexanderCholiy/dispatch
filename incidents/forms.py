@@ -22,6 +22,9 @@ from emails.models import EmailMessage, EmailReference
 from incidents.services.get_incident_auto_close_ttl import (
     get_incident_auto_close_ttl,
 )
+from incidents.services.get_incident_categories import get_incident_categories
+from incidents.services.get_incident_type import get_incident_type_map
+from incidents.services.get_rvr_priority import get_rvr_priority_map
 from incidents.services.log_incident_changes import log_incident_changes
 from incidents.services.normalize_datetime_to_minute import is_data_changed
 from users.models import Roles, User
@@ -612,22 +615,18 @@ class IncidentForm(forms.ModelForm):
 
         # Под кеш в шаблоне:
         self.statuses_list = list(allowed_statuses)
-        self.categories_list = list(self.fields['categories'].queryset)
+        self.categories_map = get_incident_categories()
         self.responsible_users_list = list(
             self.fields['responsible_user'].queryset
         )
         self.region_responsible_user_list = list(
             self.fields['region_responsible_user'].queryset
         )
-        self.incident_types_list = list(
-            self.fields['incident_type'].queryset
-        )
+        self.incident_types_map = get_incident_type_map()
         self.incident_subtypes_list = list(
             self.fields['incident_subtype'].queryset
         )
-        self.rvr_priorities_list = list(
-            self.fields['rvr_priority'].queryset
-        )
+        self.rvr_priorities_map = get_rvr_priority_map()
 
     def clean(self):
         cleaned_data = super().clean()

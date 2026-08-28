@@ -61,6 +61,7 @@ from emails.tasks import send_incident_email_task
 from incidents.services.get_incident_auto_close_ttl import (
     get_incident_auto_close_ttl,
 )
+from incidents.services.get_incident_categories import get_incident_categories
 from incidents.services.notify_contractor_incident_closed import (
     notify_contractor_incident_closed
 )
@@ -111,7 +112,6 @@ from .models import (
     Comment,
     FavoritePriority,
     Incident,
-    IncidentCategory,
     IncidentChangeLog,
     IncidentFavorite,
     IncidentHistory,
@@ -200,14 +200,7 @@ def index(request: HttpRequest) -> HttpResponse:
         MAX_INCIDENTS_INFO_CACHE_SEC,
     )
 
-    categories = cache.get_or_set(
-        'incident_filter_categories',
-        lambda: list(
-            IncidentCategory.objects.all().order_by('name')
-            .values('id', 'name', 'description')
-        ),
-        MAX_INCIDENTS_INFO_CACHE_SEC,
-    )
+    categories = get_incident_categories()
 
     categories_ids = [v['id'] for v in categories]
 

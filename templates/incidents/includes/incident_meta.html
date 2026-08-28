@@ -206,8 +206,8 @@
           <div class="multi-select-values"></div>
           
           <div class="multi-select-dropdown">
-            {% for cat in incident_form.categories_list %}
-              <div class="multi-select-option" data-value="{{ cat.pk }}">
+            {% for cat in incident_form.categories_map %}
+              <div class="multi-select-option" data-value="{{ cat.id }}">
                 {{ cat.name }}
               </div>
             {% endfor %}
@@ -307,11 +307,11 @@
               <option value="" {% if not field.value %}selected{% endif %}>Не выбрано</option>
 
               {% if field.name == "incident_type" %}
-                {% for item in incident_form.incident_types_list %}
-                  <option value="{{ item.pk }}"
-                    {% if field.value|stringformat:"s" == item.pk|stringformat:"s" %}selected{% endif %}
+                {% for type_id, type_data in incident_form.incident_types_map.items %}
+                  <option value="{{ type_id }}"
+                    {% if field.value|stringformat:"s" == type_id|stringformat:"s" %}selected{% endif %}
                   >
-                    {{ item }}
+                    {{ type_data.name }}
                   </option>
                 {% endfor %}
               {% elif field.name == "incident_subtype" %}
@@ -323,11 +323,11 @@
                   </option>
                 {% endfor %}
               {% else %}
-                {% for item in incident_form.rvr_priorities_list %}
-                  <option value="{{ item.pk }}"
-                    {% if field.value|stringformat:"s" == item.pk|stringformat:"s" %}selected{% endif %}
+                {% for priority_id, priority_data in incident_form.rvr_priorities_map.items %}
+                  <option value="{{ priority_id }}"
+                    {% if field.value|stringformat:"s" == priority_id|stringformat:"s" %}selected{% endif %}
                   >
-                    {{ item }}
+                    {{ priority_data.name }}
                   </option>
                 {% endfor %}
               {% endif %}
