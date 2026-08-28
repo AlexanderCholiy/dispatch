@@ -4,7 +4,17 @@ from difflib import SequenceMatcher
 from typing import Optional, TypedDict
 
 from django.core.cache import cache
-from django.db.models import Case, DateTimeField, F, Max, Q, QuerySet, When
+from django.db.models import (
+    Case,
+    DateTimeField,
+    F,
+    Max,
+    OuterRef,
+    Q,
+    QuerySet,
+    Subquery,
+    When,
+)
 from django.utils import timezone
 
 from core.loggers import default_logger
@@ -164,7 +174,7 @@ class IncidentSimilarityService:
         if not results:
             return []
 
-        candidate_ids = [item['candidate_id'] for item in results]
+        candidate_ids = list({item['candidate_id'] for item in results})
 
         candidates_qs = (
             Incident.objects.filter(id__in=candidate_ids)
@@ -179,15 +189,22 @@ class IncidentSimilarityService:
 
         candidates_map = {c.id: c for c in candidates_qs}
 
-        last_status_ids = IncidentStatusHistory.objects.filter(
-            incident_id__in=candidate_ids
-        ).values('incident_id').annotate(
-            max_id=Max('id')
-        ).values_list('max_id', flat=True)
+        last_status_subquery = (
+            IncidentStatusHistory.objects
+            .filter(incident_id=OuterRef('incident_id'))
+            .order_by('-id')
+            .values('id')
+            [:1]
+        )
 
-        last_statuses_qs = IncidentStatusHistory.objects.filter(
-            id__in=list(last_status_ids)
-        ).select_related('status__status_type')
+        last_statuses_qs = (
+            IncidentStatusHistory.objects
+            .filter(
+                incident_id__in=candidate_ids,
+                id__in=Subquery(last_status_subquery)
+            )
+            .select_related('status__status_type')
+        )
 
         last_statuses_map = {h.incident_id: h for h in last_statuses_qs}
 
