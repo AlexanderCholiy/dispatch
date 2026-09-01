@@ -6,6 +6,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import include, path, re_path
+from django_prometheus.exports import ExportToDjangoView
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from rest_framework import permissions
@@ -20,9 +21,6 @@ from users.views import (
     CustomPasswordResetDoneView,
     CustomPasswordResetView,
 )
-
-# from django_prometheus.exports import ExportToDjangoView
-
 
 handler400 = 'core.views.bad_request'
 handler403 = 'core.views.permission_denied'
@@ -134,9 +132,9 @@ urlpatterns += (
         protected_media,
         name='protected_media'
     ),
-    # path(
-    #     'system-metrics/',
-    #     ExportToDjangoView,
-    #     name='prometheus-django-metrics'
-    # ),
+    path(
+        '__prometheus__/metrics',
+        ExportToDjangoView,
+        name='prometheus-django-metrics',
+    ),
 )

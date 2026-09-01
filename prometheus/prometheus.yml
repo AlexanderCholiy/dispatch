@@ -1,0 +1,38 @@
+global:
+  scrape_interval: 15s      # Как часто опрашивать все targets (по умолчанию)
+  evaluation_interval: 15s  # Как часто выполнять alerting rules и recording rules
+  scrape_timeout: 10s       # Максимум на ожидание ответа от target
+
+scrape_configs:
+  # Prometheus сам себя
+  - job_name: 'prometheus'
+    static_configs:
+      - targets:
+          - 'localhost:9090'
+    scrape_interval: 60s
+
+  # Node exporter (сервер)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets:
+          - 'dispatch_node_exporter:9100'
+        labels:
+          group: 'dispatch'
+    scrape_interval: 30s
+
+  # Docker контейнеры (cAdvisor)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets:
+          - 'dispatch_cadvisor:8080'
+    scrape_interval: 30s
+
+  # Django backend
+  - job_name: 'django'
+    metrics_path: /__prometheus__/metrics
+    static_configs:
+      - targets:
+          - 'dispatch-backend:8000'
+        labels:
+          group: 'dispatch'
+    scrape_interval: 15s

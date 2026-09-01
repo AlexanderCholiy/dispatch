@@ -57,7 +57,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.gis',
     'debug_toolbar',
-    # 'django_prometheus',
+    'django_prometheus',
     'core.apps.CoreConfig',
     'users.apps.UsersConfig',
     'pages.apps.PagesConfig',
@@ -89,7 +89,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    # 'django_prometheus.middleware.PrometheusBeforeMiddleware',
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'users.middleware.SafeSessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -100,7 +100,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django_ratelimit.middleware.RatelimitMiddleware',
-    # 'django_prometheus.middleware.PrometheusAfterMiddleware',
+    'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 
 STORAGES = {
@@ -163,7 +163,7 @@ CHANNEL_LAYERS = {
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
+        'ENGINE': 'django_prometheus.db.backends.postgresql',
         'NAME': os.getenv('POSTGRES_DB', 'django'),
         'USER': os.getenv('POSTGRES_USER', 'django'),
         'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
@@ -312,7 +312,7 @@ CELERY_BEAT_SCHEDULE = {
 
 CACHES = {
     'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
+        'BACKEND': 'django_prometheus.cache.backends.redis.RedisCache',
         'LOCATION': (
             f'redis://{os.getenv("REDIS_USER", "default")}:'
             f'{os.getenv("REDIS_PASSWORD", "")}@'
