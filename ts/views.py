@@ -18,7 +18,9 @@ from .models import BaseStation, Pole
 def get_cached_poles() -> list[tuple[int, str]]:
     poles = cache.get('autocomplete_all_poles')
     if poles is None:
-        poles = list(Pole.objects.only('id', 'pole').order_by('pole', 'id'))
+        poles = list(Pole.objects.only('id', 'pole'))
+        # Сортируем в Python, а не в БД: PostgreSQL collation ≠ Python Unicode,
+        # из-за чего bisect_left находит неверную позицию
         poles.sort(key=lambda p: (p.pole.lower(), p.id))
         cache.set('autocomplete_all_poles', poles, POLE_CACHE_TTL)
 
@@ -34,8 +36,9 @@ def get_cached_base_stations_all():
             .select_related('pole')
             .exclude(bs_name__exact='')
             .only('id', 'bs_name', 'pole_id', 'pole__pole')
-            .order_by('bs_name', 'pole_id', 'id')
         )
+        # Сортируем в Python, а не в БД: PostgreSQL collation ≠ Python Unicode,
+        # из-за чего bisect_left находит неверную позицию
         bs_list.sort(key=lambda bs: (bs.bs_name.lower(), bs.pole_id, bs.id))
         cache.set(
             'autocomplete_all_base_stations', bs_list, BASE_STATION_CACHE_TTL
