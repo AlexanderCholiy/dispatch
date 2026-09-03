@@ -19,6 +19,7 @@ def get_cached_poles() -> list[tuple[int, str]]:
     poles = cache.get('autocomplete_all_poles')
     if poles is None:
         poles = list(Pole.objects.only('id', 'pole').order_by('pole', 'id'))
+        poles.sort(key=lambda p: (p.pole.lower(), p.id))
         cache.set('autocomplete_all_poles', poles, POLE_CACHE_TTL)
 
     return poles
@@ -35,6 +36,7 @@ def get_cached_base_stations_all():
             .only('id', 'bs_name', 'pole_id', 'pole__pole')
             .order_by('bs_name', 'pole_id', 'id')
         )
+        bs_list.sort(key=lambda bs: (bs.bs_name.lower(), bs.pole_id, bs.id))
         cache.set(
             'autocomplete_all_base_stations', bs_list, BASE_STATION_CACHE_TTL
         )
@@ -125,13 +127,11 @@ class BaseStationAutocomplete(autocomplete.Select2QuerySetView):
             i = bisect.bisect_left(
                 candidates, q, key=lambda bs: bs.bs_name.lower()
             )
+
             results = []
             while (
                 i < len(candidates)
-                and (
-                    candidates[i].bs_name.lower().startswith(q)
-                    or candidates[i].pole.pole.lower().startswith(q)
-                )
+                and candidates[i].bs_name.lower().startswith(q)
             ):
                 results.append(candidates[i])
                 if len(results) >= BASE_STATIONS_PER_PAGE:
