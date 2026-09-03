@@ -8,8 +8,9 @@ CRON_TZ=Europe/Moscow
 
 # Работа с файловой системой:
 0 1 * * * nice -n 19 ionice -c 3 /usr/local/bin/python /app/manage.py delete_unknown_files >> /app/logs/cron/cron.log 2>&1
-30 2 * * * nice -n 19 ionice -c 3 /usr/local/bin/python /app/manage.py delete_irrelevant_files >> /app/logs/cron/cron.log 2>&1
-0 4 * * * nice -n 19 ionice -c 3 /usr/local/bin/python /app/manage.py cleanup_users_avatars >> /app/logs/cron/cron.log 2>&1
+30 1 * * * nice -n 19 ionice -c 3 /usr/local/bin/python /app/manage.py delete_irrelevant_files >> /app/logs/cron/cron.log 2>&1
+0 2 * * * nice -n 19 ionice -c 3 /usr/local/bin/python /app/manage.py compress_old_files >> /app/logs/cron/cron.log 2>&1
+0 3 * * * nice -n 19 ionice -c 3 /usr/local/bin/python /app/manage.py cleanup_users_avatars >> /app/logs/cron/cron.log 2>&1
 
 # Проверка данных:
 15 3 * * * nice -n 19 ionice -c 3 /usr/local/bin/python /app/manage.py clean_email_references >> /app/logs/cron/cron.log 2>&1

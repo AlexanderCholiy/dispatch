@@ -55,3 +55,12 @@ def format_timedelta_readable(
         parts.append(f'{value} {unit_name}')
 
     return ' '.join(parts) if parts else '0 сек.'
+
+
+def format_size_readable(size_bytes: float) -> str:
+    """Форматирует размер в человекочитаемый вид."""
+    for unit in ('B', 'KB', 'MB', 'GB', 'TB'):
+        if size_bytes < 1024:
+            return f'{size_bytes:.1f} {unit}'
+        size_bytes /= 1024
+    return f'{size_bytes:.1f} PB'

@@ -42,7 +42,12 @@
             </div>
             <div class="email-meta">
               <div class="email-date">{{ email.email_date|date:"d.m.Y H:i" }}</div>
-              <div class="email-id">ID: {{ email.id }}</div>
+              <a 
+                class="email-id link" 
+                href="{% url 'emails:email_detail' email.id %}"
+              >
+                ID: {{ email.id }}
+              </a>
             </div>
           </div>
 

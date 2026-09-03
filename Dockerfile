@@ -17,7 +17,12 @@ RUN apt-get update && apt-get install -y \
     rsync \
     gdal-bin \
     libgdal-dev \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
+
+# cron точно будет работать по Москве:
+ENV TZ=Europe/Moscow
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Добавление репозитория Microsoft для ODBC Driver 17:
 RUN curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg \

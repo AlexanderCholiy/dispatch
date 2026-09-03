@@ -135,6 +135,16 @@
   padding-right: var(--space-xs);
 }
 
+.link {
+  color: var(--add-color);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 768px) {
   .email-body-content {
     max-height: none;

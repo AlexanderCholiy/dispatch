@@ -1,6 +1,6 @@
 global:
-  scrape_interval: 15s      # Как часто опрашивать все targets (по умолчанию)
-  evaluation_interval: 15s  # Как часто выполнять alerting rules и recording rules
+  scrape_interval: 30s      # Как часто опрашивать все targets (по умолчанию)
+  evaluation_interval: 30s  # Как часто выполнять alerting rules и recording rules
   scrape_timeout: 10s       # Максимум на ожидание ответа от target
 
 scrape_configs:

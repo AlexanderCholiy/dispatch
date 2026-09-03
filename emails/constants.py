@@ -16,7 +16,12 @@ MAX_SEND_ATTACHMENT_SIZE = 50 * 1024 * 1024
 # вложения:
 MAX_EMAILS_ATTACHMENT_DAYS = 180
 
+# Файлы старше N дней → сжать в .zip:
+COMPRESS_EMAILS_ATTACHMENT_DAYS = MAX_EMAILS_ATTACHMENT_DAYS // 2
+
 EMAILS_FILES_2_DEL_BATCH_SIZE = 500
+
+COMPRESS_BATCH_SIZE = 500
 
 MAX_EMAILS_INFO_CACHE_SEC = 3600
 
@@ -85,6 +90,10 @@ ALLOWED_MIME_PREFIXES = {
     'application/octet-stream',
 }
 
+ARCHIVE_EXTENSIONS = {
+    '.zip', '.7z', '.rar', '.tar', '.gz', '.bz2',
+}
+
 ALLOWED_EXTENSIONS = {
     # Документы
     '.pdf',  # PDF
@@ -107,7 +116,7 @@ ALLOWED_EXTENSIONS = {
     '.txt', '.rtf',
 
     # Архивы
-    '.zip', '.7z', '.rar', '.tar', '.gz', '.bz2',
+    *ARCHIVE_EXTENSIONS,
 
     # Специфические офисные форматы
     '.mpp',  # MS Project

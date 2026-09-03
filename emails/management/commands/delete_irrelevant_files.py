@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from core.loggers import incident_logger
 from core.pretty_print import PrettyPrint
+from core.wraps import timer
 from emails.constants import (
     EMAILS_FILES_2_DEL_BATCH_SIZE,
     MAX_EMAILS_ATTACHMENT_DAYS,
@@ -25,6 +26,7 @@ class Command(BaseCommand):
         'старых писем без инцидента'
     )
 
+    @timer(incident_logger)
     def handle(self, *args, **kwargs):
         self._remove_old_attachments_with_closed_incident()
 
@@ -63,6 +65,8 @@ class Command(BaseCommand):
                         ),
                         email_msg__email_date__lt=threshold_for_email,
                     )
+                ).select_related(
+                    'email_msg', 'email_msg__email_incident',
                 )
             )
 

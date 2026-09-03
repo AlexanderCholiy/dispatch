@@ -22,6 +22,7 @@ from stream_zip import ZIP_32, ZIP_64, stream_zip
 from core.constants import DATETIME_LOCAL_FORMAT, ZIP64_THRESHOLD
 from core.services.get_max_today_datetime import get_max_today_datetime
 from core.validators import get_aware_datetime
+from core.views import send_x_accel_file
 from incidents.services.valid_contractor_match import is_valid_contractor_match
 from users.models import Roles, User
 from users.utils import role_required
@@ -237,7 +238,7 @@ def email_detail(request: HttpRequest, email_id: int) -> HttpResponse:
 @ratelimit(key='user_or_ip', rate='60/m', block=True)
 def download_email_attachments(
     request: HttpRequest, email_id: int
-) -> StreamingHttpResponse:
+) -> StreamingHttpResponse | HttpResponse:
     """
     Генерирует и отдает ZIP-архив со всеми вложениями инцидента на лету.
     Не сохраняет архив на диск.
@@ -301,6 +302,9 @@ def download_email_attachments(
 
     if not files_data:
         raise Http404('Нет доступных вложений для скачивания')
+
+    if len(files_data) == 1:
+        return send_x_accel_file(files_data[0]['path'], as_attachment=True)
 
     archive_format = (
         ZIP_64 if total_uncompressed_size > ZIP64_THRESHOLD else ZIP_32

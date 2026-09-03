@@ -281,7 +281,7 @@ services:
     networks:
       - dispatch_network
     depends_on:
-      - dispatch_backend
+
       - dispatch_cadvisor
       - dispatch_node_exporter
     deploy:

@@ -61,7 +61,10 @@ def too_many_requests(
     )
 
 
-def send_x_accel_file(file_path: Path | str) -> HttpResponse:
+def send_x_accel_file(
+    file_path: Path | str,
+    as_attachment: bool = False,
+) -> HttpResponse:
     file_path = Path(unquote(str(file_path)))
     media_root = Path(settings.MEDIA_ROOT).resolve()
 
@@ -95,7 +98,9 @@ def send_x_accel_file(file_path: Path | str) -> HttpResponse:
     is_inline = full_path.suffix.lower() in INLINE_EXTS
 
     if settings.DEBUG:
-        return FileResponse(open(full_path, 'rb'), as_attachment=not is_inline)
+        return FileResponse(
+            open(full_path, 'rb'), as_attachment=as_attachment or not is_inline
+        )
 
     safe_path = '/'.join(quote(part) for part in normalized_path.split('/'))
     redirect_url = f"{settings.MEDIA_URL}{safe_path}"
@@ -106,8 +111,13 @@ def send_x_accel_file(file_path: Path | str) -> HttpResponse:
     filename_ascii = safe_filename.encode('ascii', 'ignore').decode() or 'file'
     filename_rfc5987 = quote(safe_filename)
 
+    attachment = (
+        'attachment'
+        if as_attachment else 'inline' if is_inline else 'attachment'
+    )
+
     disposition = (
-        f'{"inline" if is_inline else "attachment"}; '
+        f'{attachment}; '
         f'filename="{filename_ascii}"; '
         f"filename*=UTF-8''{filename_rfc5987}"
     )
