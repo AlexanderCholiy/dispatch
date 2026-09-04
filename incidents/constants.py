@@ -229,7 +229,7 @@ AUTO_CLOSE_BY_OPERATOR_TTL = {
     'other': AUTO_CLOSE_DEFAULT_TTL,
     'tele2': timedelta(hours=24),
     'vimpelcom': timedelta(hours=24),
-    'mts': AUTO_CLOSE_DEFAULT_TTL,
+    'mts': timedelta(hours=24),
     'megafon': AUTO_CLOSE_DEFAULT_TTL,
 }
 
