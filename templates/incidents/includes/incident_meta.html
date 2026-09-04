@@ -60,7 +60,7 @@
 
         <label class="toggle-v2-wrapper tooltip {% if incident_form.auto_close.field.disabled %}disabled{% endif %}"
             for="{{ incident_form.auto_close.id_for_label }}"
-            data-title="Автоматически закрыть инцидент через 12 ч.">
+            data-title="Автоматически закрыть инцидент через {{ incident_form.auto_close_human_ttl }}">
 
             {{ incident_form.auto_close }}
 

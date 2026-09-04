@@ -20,7 +20,11 @@ def get_incident_auto_close_ttl(incident: Incident) -> timedelta:
     if not base_station:
         return AUTO_CLOSE_DEFAULT_TTL
 
-    operators: QuerySet[BaseStationOperator] = base_station.operator.all()
+    operators: QuerySet[BaseStationOperator] = (
+        base_station.prefetched_bs_operators
+        if hasattr(base_station, 'prefetched_bs_operators')
+        else base_station.operator.all()
+    )
 
     possible_ttls: list[timedelta] = []
 

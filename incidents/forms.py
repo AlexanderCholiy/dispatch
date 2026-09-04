@@ -11,6 +11,7 @@ from django.core.validators import validate_email
 from django.db.models import F, Prefetch, Q, QuerySet
 from django.utils import timezone
 
+from core.services.formatters import format_timedelta_readable
 from emails.constants import (
     ALLOWED_EXTENSIONS,
     ALLOWED_MIME_PREFIXES,
@@ -627,6 +628,11 @@ class IncidentForm(forms.ModelForm):
             self.fields['incident_subtype'].queryset
         )
         self.rvr_priorities_map = get_rvr_priority_map()
+
+        self._auto_close_ttl = get_incident_auto_close_ttl(self.instance)
+        self.auto_close_human_ttl = format_timedelta_readable(
+            self._auto_close_ttl
+        )
 
     def clean(self):
         cleaned_data = super().clean()
