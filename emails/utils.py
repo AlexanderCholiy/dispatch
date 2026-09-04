@@ -483,7 +483,7 @@ class EmailManager:
         forced_local = email_date.replace(tzinfo=local_tz)
 
         if abs(forced_local - now_local) <= threshold:
-            email_parser_logger.warning(
+            email_parser_logger.debug(
                 f'Письмо {msg_id}: дата после преобразования '
                 f'({email_date}) оказалась в будущем. '
                 f'Исправлено на {forced_local} '
