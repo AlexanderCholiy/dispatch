@@ -138,6 +138,10 @@ EMAIL_RE = re.compile(
     re.IGNORECASE,
 )
 
+EMAIL_EXTRACT_RE = re.compile(
+    r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
+)
+
 MIN_STACK_EMAILS_TTL = 120  # Не менять, сначала просмотеть задачу в Cellery
 
 MAX_STACK_EMAILS_TTL = 3600

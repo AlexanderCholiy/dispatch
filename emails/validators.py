@@ -18,6 +18,7 @@ from core.loggers import email_parser_logger
 from .constants import (
     ALLOWED_EXTENSIONS,
     ALLOWED_MIME_PREFIXES,
+    EMAIL_EXTRACT_RE,
     EMAIL_RE,
     MAX_DOWNLOAD_ATTACHMENT_SIZE,
     MAX_EMAIL_LEN,
@@ -118,6 +119,23 @@ class EmailValidator:
             if EMAIL_RE.match(addr) and len(addr) <= MAX_EMAIL_LEN:
                 emails.append(addr)
             else:
+                match = EMAIL_EXTRACT_RE.search(addr)
+                if match:
+                    extracted = match.group(0)
+
+                    if (
+                        len(extracted) <= MAX_EMAIL_LEN
+                        and extracted not in emails
+                        and 'IMCEAEX' not in addr
+                    ):
+                        email_parser_logger.debug(
+                            'Извлечён email из некорректной строки: '
+                            'msg_id=%r, raw=%r, extracted=%r',
+                            email_id, addr, extracted
+                        )
+                        emails.append(extracted)
+                        continue
+
                 full_str = f'{name} email: {addr}' if name else addr
                 invalid_emails.append(full_str)
 
