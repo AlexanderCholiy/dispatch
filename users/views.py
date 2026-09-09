@@ -270,7 +270,10 @@ def activate(
             username=pending_user.username,
             email=pending_user.email,
             password=pending_user.password,  # hashed
-            is_active=True
+            is_active=True,
+            first_name=pending_user.first_name,
+            last_name=pending_user.last_name,
+            date_of_birth=pending_user.date_of_birth,
         )
         messages.success(request, 'Ваш аккаунт был успешно активирован')
         return redirect('login')

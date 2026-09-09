@@ -48,7 +48,7 @@
       <form method="post" action="{% url 'login' %}" class="user-form">
         {% csrf_token %}
         <div class="form-group">
-          <label for="{{ form.username.id_for_label }}">Имя пользователя или Email:</label>
+          <label for="{{ form.username.id_for_label }}">Логин или Email:</label>
           {{ form.username }}
         </div>
 

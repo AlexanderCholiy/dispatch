@@ -65,7 +65,7 @@ class User(AbstractUser):
         validators=[validate_user_email]
     )
     username = models.CharField(
-        'Имя пользователя',
+        'Логин',
         max_length=MAX_USER_USERNAME_LEN,
         unique=True,
         validators=username_format_validators + [validate_user_username],
@@ -301,7 +301,7 @@ class WorkSchedule(models.Model):
 
 class PendingUser(models.Model):
     username = models.CharField(
-        'Имя пользователя',
+        'Логин',
         max_length=MAX_USER_USERNAME_LEN,
         unique=True,
         validators=username_format_validators + [validate_pending_username],
@@ -322,6 +322,23 @@ class PendingUser(models.Model):
 
     last_login = models.DateTimeField('Дата регистрации', default=timezone.now)
     is_active = models.BooleanField(default=True)
+    first_name = models.CharField(
+        'Имя',
+        max_length=150,  # default Django User
+        null=True,
+        blank=True,
+    )
+    last_name = models.CharField(
+        'Фамилия',
+        max_length=150,  # default Django User
+        null=True,
+        blank=True,
+    )
+    date_of_birth = models.DateField(
+        'День рождения',
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         verbose_name = 'регистрация пользователя'
@@ -333,7 +350,7 @@ class PendingUser(models.Model):
     @property
     def original_username(self):
         """
-        Извлекает оригинальное имя пользователя.
+        Извлекает оригинальный логин пользователя.
         Нужно для поиска по username в модели User.
         """
         parts = self.username.rsplit('__temp_', 1)

@@ -43,10 +43,32 @@ class UserRegisterForm(forms.ModelForm):
 
     class Meta:
         model = PendingUser
-        fields = ('username', 'email')
+        fields = (
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'date_of_birth',
+        )
         widgets = {
             'username': forms.TextInput(attrs={'autocomplete': 'username'}),
             'email': forms.EmailInput(attrs={'autocomplete': 'email'}),
+            'first_name': forms.TextInput(
+                attrs={'placeholder': 'Не обязательно'}
+            ),
+            'last_name': forms.TextInput(
+                attrs={'placeholder': 'Не обязательно'}
+            ),
+            'date_of_birth': forms.DateInput(
+                attrs={
+                    'type': 'date',
+                    'max': str(date.today().replace(
+                        year=date.today().year - MIN_USER_AGE)),
+                    'min': str(date.today().replace(
+                        year=date.today().year - MAX_USER_AGE))
+                },
+                format='%Y-%m-%d'
+            ),
         }
 
     def clean_username(self) -> str:
@@ -57,7 +79,7 @@ class UserRegisterForm(forms.ModelForm):
         username: str = self.cleaned_data.get('username', '').strip()
         if len(username) > MAX_USER_USERNAME_DISPLAY_LEN:
             raise ValidationError(
-                f'Имя пользователя должно быть не длиннее '
+                f'Логин должен быть не длиннее '
                 f'{MAX_USER_USERNAME_DISPLAY_LEN} символов'
             )
         return username
@@ -74,6 +96,28 @@ class UserRegisterForm(forms.ModelForm):
             except ValidationError as error:
                 self.add_error('password1', error)
         return password1
+
+    def clean_date_of_birth(self):
+        value: date = self.cleaned_data.get('date_of_birth')
+        if not value:
+            return value
+
+        today = date.today()
+        age = (
+            today.year - value.year
+            - ((today.month, today.day) < (value.month, value.day))
+        )
+
+        if age < MIN_USER_AGE:
+            raise ValidationError(
+                f'Пользователь должен быть старше {MIN_USER_AGE}'
+            )
+        if age > MAX_USER_AGE:
+            raise ValidationError(
+                f'Пользователь должен быть младше {MAX_USER_AGE}'
+            )
+
+        return value
 
     def clean(self):
         cleaned_data = super().clean()
@@ -96,14 +140,14 @@ class UserRegisterForm(forms.ModelForm):
 
 class AuthForm(AuthenticationForm):
     username = forms.CharField(
-        label='Имя пользователя или email',
+        label='Логин или Email',
         strip=True,
         required=True
     )
 
     error_messages = {
         'invalid_login': (
-            "Пожалуйста, введите правильные имя пользователя/email и пароль. "
+            "Пожалуйста, введите правильные логин/email и пароль. "
             "Оба поля могут быть чувствительны к регистру."
         ),
         'inactive': "Этот аккаунт неактивен.",

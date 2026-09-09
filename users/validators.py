@@ -13,14 +13,14 @@ username_format_validators = [
     RegexValidator(
         regex=r'^[a-zA-Z0-9._-]+$',
         message=(
-            'Недопустимые символы в имени пользователя. '
+            'Недопустимые символы в логине пользователя. '
             'Разрешены только: английские буквы, цифры и . - _'
         )
     ),
     MinLengthValidator(
         limit_value=MIN_USER_USERNAME_LEN,
         message=(
-            'Имя пользователя должно содержать минимум '
+            'Логин должен содержать минимум '
             f'{MIN_USER_USERNAME_LEN} символа.'
         )
     )
@@ -47,14 +47,16 @@ def validate_user_username(username: str, instance=None):
         if instance and instance.pk:
             qs = qs.exclude(pk=instance.pk)
         if qs.exists():
-            raise ValidationError('Имя пользователя уже занято.')
+            raise ValidationError('Логин уже занят.')
 
     pending = PendingUser.objects.filter(username=username).first()
     if pending:
         if pending.is_expired:
             pending.delete()
         else:
-            raise ValidationError('Имя пользователя ожидает подтверждения.')
+            raise ValidationError(
+                'Логин этого пользователя ожидает подтверждения.'
+            )
 
 
 def validate_user_email(email: str, instance=None):
@@ -80,7 +82,7 @@ def validate_pending_username(username: str, instance=None):
     from .models import PendingUser, User
 
     if User.objects.filter(username=username).exists():
-        raise ValidationError('Имя пользователя уже занято.')
+        raise ValidationError('Логин уже занят.')
 
     qs = PendingUser.objects.filter(username=username)
     if instance and instance.pk:
@@ -90,7 +92,9 @@ def validate_pending_username(username: str, instance=None):
         if pending.is_expired:
             pending.delete()
         else:
-            raise ValidationError('Имя пользователя ожидает подтверждения.')
+            raise ValidationError(
+                'Логин этого пользователя ожидает подтверждения.'
+            )
 
 
 def validate_pending_email(email: str, instance=None):
