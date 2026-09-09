@@ -30,6 +30,7 @@
               <th data-col="sla_eks">ВРТ ЭКС</th>
               <th data-col="pole">Шифр опоры</th>
               <th data-col="bs">Номер БС</th>
+              <th data-col="address">Адрес</th>
               <th data-col="created">Дата регистрации</th>
               <th data-col="is_favorite" style="text-align: center;">Избранное</th>
             </tr>
@@ -151,7 +152,7 @@
                     —
                   {% endif %}
                 </td>
-                <td class="tooltip" data-title="{{ incident.pole.region.region_ru|default_if_none:'' }}">
+                <td class="tooltip" data-title="{{ incident.pole.region|default_if_none:'' }}">
                   {% if incident.pole %}
                     <span class="copy-text" data-text="{{ incident.pole.pole }}">{{ incident.pole.pole|default:"—" }}</span>
                   {% else %}
@@ -167,13 +168,22 @@
                   {% endif %}
                 </td>
 
+                <td>
+                  {% if incident.pole and incident.pole.address %}
+                    <span class="tooltip" data-title="{{ incident.pole.address|default_if_none:'' }}">{{ incident.pole.address|truncatechars:64|default:"—" }}</span>
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+
                 <td>{{ incident.incident_date|date:"d.m.Y H:i" }}</td>
+
                 <td style="text-align: center;">
                   {% include "incidents/includes/favorite_button.html" with incident=incident %}
                 </td>
               </tr>
             {% empty %}
-              <tr><td colspan="16" class="empty">Нет данных...</td></tr>
+              <tr><td colspan="17" class="empty">Нет данных...</td></tr>
             {% endfor %}
           </tbody>
         </table>

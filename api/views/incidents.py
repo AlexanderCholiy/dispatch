@@ -72,6 +72,7 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
     - pole: Шифр опоры.
     - region_ru: Регион опоры.
     - macroregion: Макрорегион опоры.
+    - address: Адрес опоры.
 
     - base_station: Базовая станция.
     - operator_group: Группа операторов базовой станции.

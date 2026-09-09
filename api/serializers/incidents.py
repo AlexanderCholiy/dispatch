@@ -45,6 +45,10 @@ class IncidentReportSerializer(serializers.ModelSerializer):
         source='is_sla_eks_expired',
         read_only=True
     )
+    address = serializers.CharField(
+        source='pole.address',
+        read_only=True
+    )
 
     last_status = serializers.SerializerMethodField()
     avr_emails = serializers.SerializerMethodField()
@@ -133,6 +137,7 @@ class IncidentReportSerializer(serializers.ModelSerializer):
             'region_ru',
             'responsible_manager',
             'macroregion',
+            'address',
             'base_station',
             'operator_group',
 

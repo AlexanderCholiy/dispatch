@@ -153,14 +153,23 @@
 
       <div class="incident-info">
         {% if incident.pole %}
-        <div class="infrastructure-company">
-          {{ incident.pole.infrastructure_company }}, {{ incident.pole.region }}
+        <div class="pole-address">
+          {% if incident.pole.address %}
+            <span class="tooltip" data-title="{{ incident.pole.region }}">{{ incident.pole.address }}</span>
+          {% else %}
+            {{ incident.pole.region }}
+          {% endif %}
         </div>
         {% endif %}
-        <label class="field-label">Подрядчик по АВР</label>
+        <label class="field-label">
+          Подрядчик по АВР:
+          {% if incident.avr_contractor %}
+            <span class="avr_contractor">{{ incident.avr_contractor }}</span>
+          {% endif %}
+        </label>
         <span class="field-value {% if incident.avr_contractor %}copy-text{% endif %}" data-text="{% for e in incident.pole.prefetched_avr_emails %}{{ e.email }}{% if not forloop.last %}, {% endif %}{% endfor %}">
           {% if incident.avr_contractor %}
-            {{ incident.avr_contractor }}
+            {% for e in incident.pole.prefetched_avr_emails %}{{ e.email }}{% if not forloop.last %}, {% endif %}{% endfor %}
           {% else %}
             —
           {% endif %}

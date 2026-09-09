@@ -121,6 +121,6 @@
   }
 }
 
-.infrastructure-company {
-  font-size: var(--font-md);
+.avr_contractor {
+  color: var(--add-color);
 }
