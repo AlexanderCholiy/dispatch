@@ -7,9 +7,17 @@ from django.utils import timezone
 from assets.constants import (
     CACHE_ASSETS_CANDIDATE_TTL,
     CACHE_KEY_ASSETS_CANDIDATE_PREFIX,
+    DEFAULT_RVR_PREORITY,
 )
 from core.loggers import assets_logger
-from incidents.models import Comment, Incident
+from incidents.constants import RVR_CATEGORY
+from incidents.models import (
+    Comment,
+    Incident,
+    IncidentCategory,
+    IncidentCategoryRelation,
+    RVRPriority,
+)
 from incidents.services.send_auto_reply import AutoReply
 from incidents.utils import IncidentManager
 from monitoring.models import DeviceStatus, DeviceType, MSysModem
@@ -86,6 +94,12 @@ def make_incident_from_asset(
     ).strip()
 
     with transaction.atomic():
+        rvr_category, _ = IncidentCategory.objects.get_or_create(
+            name=RVR_CATEGORY
+        )
+        rvr_priority = RVRPriority.objects.filter(
+            name=DEFAULT_RVR_PREORITY,
+        ).first()
         incident = Incident.objects.create(
             incident_date=timezone.now(),
             pole=pole,
@@ -93,8 +107,15 @@ def make_incident_from_asset(
             responsible_user=(
                 IncidentManager.choice_dispatch_for_incident(None)
             ),
+            rvr_priority=rvr_priority,
             is_yt_tracker_controlled=False,
             was_read=False,
+        )
+        # По умолчанию будет добавлена категория АВР:
+        IncidentCategoryRelation.objects.filter(incident=incident).delete()
+        IncidentCategoryRelation.objects.get_or_create(
+            incident=incident,
+            category=rvr_category
         )
         IncidentManager.add_default_status(incident)
 
