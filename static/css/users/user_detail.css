@@ -42,10 +42,19 @@
   text-decoration: underline;
 }
 
+.username {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--font-md);
+  font-weight: 500;
+  color: var(--add-color);
+  transition: color var(--transition-value);
+}
+
 .user-role {
-  font-weight: 400;
-  font-size: var(--font-sm);
-  color: var(--gray-color);
+  color: var(--color);
+  font-weight: bolder;
   justify-content: center;
   align-items: center;
 }

@@ -61,11 +61,12 @@
             <span class="status-badge offline-badge">{{ user_info.presence_status.status_text }}</span>
           {% endif %}
 
-          <p class="user-role">
+          <p class="username">
+            <span class="user-role">{{ user_info.get_role_display }}:</span>
             {% if user_info.first_name and user_info.last_name %}
-                {{ user_info.get_role_display }} {{ user_info.first_name }} {{ user_info.last_name }}
+                <span>{{ user_info.first_name }} {{ user_info.last_name }}</span>
             {% else %}
-                Новый {{ user_info.get_role_display|lower }}
+                <span>—</span>
             {% endif %}
           </p>
         </div>
