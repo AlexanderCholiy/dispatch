@@ -7,22 +7,22 @@
       <div class="incident-meta-label-right">
         {% if start_field.name == "avr_start_date" %}
           <span class="tooltip incident-meta-info" 
-                data-title="TTL между регистрацие и передачей на АВР: {{ incident.avr_transfer_delta_label|default:'—' }}">
+                data-title="TTL между регистрацией и передачей на АВР: {{ incident.avr_transfer_delta_label|default:'—' }}">
             <i class="bx bx-info-circle" style="font-weight: bold"></i>
           </span>
         {% elif start_field.name == "rvr_start_date" %}
           <span class="tooltip incident-meta-info" 
-                data-title="TTL между регистрацие и передачей на РВР: {{ incident.rvr_transfer_delta_label|default:'—' }}">
+                data-title="TTL между регистрацией и передачей на РВР: {{ incident.rvr_transfer_delta_label|default:'—' }}">
             <i class="bx bx-info-circle" style="font-weight: bold"></i>
           </span>
         {% elif start_field.name == "dgu_start_date" %}
           <span class="tooltip incident-meta-info" 
-                data-title="TTL между регистрацие и передачей на ДГУ: {{ incident.dgu_transfer_delta_label|default:'—' }}">
+                data-title="TTL между регистрацией и передачей на ДГУ: {{ incident.dgu_transfer_delta_label|default:'—' }}">
             <i class="bx bx-info-circle" style="font-weight: bold"></i>
           </span>
         {% elif start_field.name == "eks_start_date" %}
           <span class="tooltip incident-meta-info" 
-                data-title="TTL между регистрацие и передачей на ЭКС: {{ incident.eks_transfer_delta_label|default:'—' }}">
+                data-title="TTL между регистрацией и передачей на ЭКС: {{ incident.eks_transfer_delta_label|default:'—' }}">
             <i class="bx bx-info-circle" style="font-weight: bold"></i>
           </span>
         {% endif %}
