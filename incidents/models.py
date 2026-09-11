@@ -533,6 +533,12 @@ class Incident(models.Model):
             raise ValidationError(errors)
 
     @property
+    def ttl_label(self) -> str:
+        """TTL инцидента: от регистрации до закрытия (или текущего момента)."""
+        end_date = self.incident_finish_date or timezone.now()
+        return self._delta_label(self.incident_date, end_date)
+
+    @property
     def is_sla_avr_expired(self) -> Optional[bool]:
         is_expired = None
         if (
@@ -846,6 +852,52 @@ class Incident(models.Model):
             return TimeStatus.EXPIRED_OPEN
 
         return None
+
+    def _delta_label(self, start_date, end_date) -> Optional[str]:
+        """Человекочитаемая дельта между двумя датами или None."""
+        if not start_date or not end_date:
+            return None
+        return timedelta_to_human_time(end_date - start_date)
+
+    @property
+    def avr_transfer_delta_label(self) -> Optional[str]:
+        """Время от регистрации до передачи на АВР."""
+        return self._delta_label(self.incident_date, self.avr_start_date)
+
+    @property
+    def rvr_transfer_delta_label(self) -> Optional[str]:
+        """Время от регистрации до передачи на РВР."""
+        return self._delta_label(self.incident_date, self.rvr_start_date)
+
+    @property
+    def eks_transfer_delta_label(self) -> Optional[str]:
+        """Время от регистрации до передачи на ЭКС."""
+        return self._delta_label(self.incident_date, self.eks_start_date)
+
+    @property
+    def dgu_transfer_delta_label(self) -> Optional[str]:
+        """Время от регистрации до передачи на ДГУ."""
+        return self._delta_label(self.incident_date, self.dgu_start_date)
+
+    @property
+    def avr_close_to_finish_delta_label(self) -> Optional[str]:
+        """Время от закрытия АВР до завершения инцидента."""
+        return self._delta_label(self.avr_end_date, self.incident_finish_date)
+
+    @property
+    def rvr_close_to_finish_delta_label(self) -> Optional[str]:
+        """Время от закрытия РВР до завершения инцидента."""
+        return self._delta_label(self.rvr_end_date, self.incident_finish_date)
+
+    @property
+    def eks_close_to_finish_delta_label(self) -> Optional[str]:
+        """Время от закрытия ЭКС до завершения инцидента."""
+        return self._delta_label(self.eks_end_date, self.incident_finish_date)
+
+    @property
+    def dgu_close_to_finish_delta_label(self) -> Optional[str]:
+        """Время от закрытия ДГУ до завершения инцидента."""
+        return self._delta_label(self.dgu_end_date, self.incident_finish_date)
 
 
 class IncidentHistory(models.Model):
