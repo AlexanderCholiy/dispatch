@@ -119,7 +119,7 @@
           <div class="pole-label-right">
             {% if incident.pole %}
               <a href="https://fridge.newtowers.ru/site/passport/{{ incident.pole.site_id }}?proj={{ incident.pole.site_id }}" 
-                class="pole-link tooltip" data-title="{{ incident.pole.region.macroregion|default:incident.pole.region }}" target="_blank">
+                class="pole-link tooltip" data-title="{{ incident.pole.infrastructure_company }}" target="_blank">
                 {{ incident.pole }}
               </a>
               {% if incident.pole %}<span class="ts-pole-status">{{ incident.pole.pole_status }}</span>{% endif %}

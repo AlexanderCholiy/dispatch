@@ -5,8 +5,8 @@
     "name": "adbz9m5",
     "namespace": "default",
     "uid": "a08e97a3-829b-4cc4-a616-d3aca5616791",
-    "resourceVersion": "1788336513766005",
-    "generation": 1173,
+    "resourceVersion": "1789114396843005",
+    "generation": 1240,
     "creationTimestamp": "2026-05-05T10:48:24Z",
     "labels": {
       "grafana.app/deprecatedInternalID": "2477154384912384"
@@ -16,7 +16,7 @@
       "grafana.app/folder": "bfl50ueq6xmv4e",
       "grafana.app/saved-from-ui": "Grafana v13.0.1 (a100054f)",
       "grafana.app/updatedBy": "user:efl1z88m79kowf",
-      "grafana.app/updatedTimestamp": "2026-09-02T08:08:33Z",
+      "grafana.app/updatedTimestamp": "2026-09-11T08:13:16Z",
       "grafana.app/folderTitle": "Public Dashboards",
       "grafana.app/folderUrl": "/grafana/dashboards/f/bfl50ueq6xmv4e/public-dashboards"
     }
@@ -73,7 +73,7 @@
                         "editorMode": "code",
                         "format": "time_series",
                         "rawQuery": true,
-                        "rawSql": "SELECT\r\n  DATE(i.incident_date AT TIME ZONE 'Europe/Moscow') AS time,\r\n  CASE\r\n    WHEN m.name IS NOT NULL THEN m.name\r\n    ELSE 'Без макрорегиона'\r\n  END AS \"МР\",\r\n  COUNT(DISTINCT i.id) AS \" \"\r\nFROM\r\n  incidents_incident AS i\r\n  LEFT JOIN ts_pole AS p ON i.pole_id = p.id\r\n  LEFT JOIN ts_region AS r ON p.region_id = r.id\r\n  LEFT JOIN ts_macroregion AS m ON r.macroregion_id = m.id\r\n  LEFT JOIN ts_basestation AS b ON i.base_station_id = b.id\r\n  LEFT JOIN ts_basestation_operator AS bs_op ON b.id = bs_op.basestation_id\r\n  LEFT JOIN ts_basestationoperator AS op ON bs_op.basestationoperator_id = op.id\r\nWHERE\r\n  $__timeFilter(i.incident_date)\r\n  AND (\r\n    $macroregion = 0\r\n    OR m.id IN ($macroregion)\r\n  )\r\n  AND (\r\n    $avr_contractor = 0\r\n    OR p.avr_contractor_id IN ($avr_contractor)\r\n  )\r\n  AND (\r\n    '${region_manager}' = '0'\r\n    OR r.responsible_manager = '${region_manager}'\r\n  )\r\n  AND (\r\n    $dispatch = 0\r\n    OR i.responsible_user_id IN ($dispatch)\r\n  )\r\n  AND (\r\n    '${operator_group}' = '0'\r\n    OR op.operator_group = '${operator_group}'\r\n  )\r\n  AND (\r\n    (\r\n      '${min_incident_ttl}' = '0'\r\n      OR (\r\n        CASE\r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(\r\n            EPOCH\r\n            FROM\r\n              (i.incident_finish_date - i.incident_date)\r\n          )\r\n          ELSE EXTRACT(\r\n            EPOCH\r\n            FROM\r\n              (NOW() - i.incident_date)\r\n          )\r\n        END\r\n      ) >= ${min_incident_ttl}\r\n    )\r\n  )\r\n  AND (\r\n    (\r\n      '${max_incident_ttl}' = '0'\r\n      OR (\r\n        CASE\r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(\r\n            EPOCH\r\n            FROM\r\n              (i.incident_finish_date - i.incident_date)\r\n          )\r\n          ELSE EXTRACT(\r\n            EPOCH\r\n            FROM\r\n              (NOW() - i.incident_date)\r\n          )\r\n        END\r\n      ) <= ${max_incident_ttl}\r\n    )\r\n  )\r\n  AND (\r\n    (\r\n      -1 IN ($incident_type)\r\n      AND (\r\n        incident_type_id IS NULL\r\n        OR incident_type_id IN ($incident_type)\r\n      )\r\n    )\r\n    OR 0 IN ($incident_type)\r\n    OR incident_type_id IN ($incident_type)\r\n  )\r\n  AND (\r\n    (\r\n      -1 IN ($incident_subtype)\r\n      AND (\r\n        incident_subtype_id IS NULL\r\n        OR incident_subtype_id IN ($incident_subtype)\r\n      )\r\n    )\r\n    OR 0 IN ($incident_subtype)\r\n    OR incident_subtype_id IN ($incident_subtype)\r\n  )\r\n  AND (\r\n    (\r\n      -1 IN ($rvr_priority)\r\n      AND (\r\n        rvr_priority_id IS NULL\r\n        OR rvr_priority_id IN ($rvr_priority)\r\n      )\r\n    )\r\n    OR 0 IN ($rvr_priority)\r\n    OR rvr_priority_id IN ($rvr_priority)\r\n  )\r\n  AND ('0' = '$pole' OR p.pole LIKE TRIM('$pole') || '%')\r\nGROUP BY\r\n  DATE(i.incident_date AT TIME ZONE 'Europe/Moscow'),\r\n  m.name\r\nORDER BY\r\n  time ASC;",
+                        "rawSql": "SELECT\r\n  DATE(i.incident_date AT TIME ZONE 'Europe/Moscow') AS time,\r\n  CASE\r\n    WHEN m.name IS NOT NULL THEN m.name\r\n    ELSE 'Без макрорегиона'\r\n  END AS \"МР\",\r\n  COUNT(DISTINCT i.id) AS \" \"\r\nFROM\r\n  incidents_incident AS i\r\n  LEFT JOIN ts_pole AS p ON i.pole_id = p.id\r\n  LEFT JOIN ts_region AS r ON p.region_id = r.id\r\n  LEFT JOIN ts_macroregion AS m ON r.macroregion_id = m.id\r\n  LEFT JOIN ts_basestation AS b ON i.base_station_id = b.id\r\n  LEFT JOIN ts_basestation_operator AS bs_op ON b.id = bs_op.basestation_id\r\n  LEFT JOIN ts_basestationoperator AS op ON bs_op.basestationoperator_id = op.id\r\nWHERE\r\n  $__timeFilter(i.incident_date)\r\n  AND (\r\n    $macroregion = 0\r\n    OR m.id IN ($macroregion)\r\n  )\r\n  AND (\r\n    $avr_contractor = 0\r\n    OR p.avr_contractor_id IN ($avr_contractor)\r\n  )\r\n  AND (\r\n    '${region_manager}' = '0'\r\n    OR r.responsible_manager = '${region_manager}'\r\n  )\r\n  AND (\r\n    $dispatch = 0\r\n    OR i.responsible_user_id IN ($dispatch)\r\n  )\r\n  AND (\r\n    '${operator_group}' = '0'\r\n    OR op.operator_group = '${operator_group}'\r\n  )\r\n  AND (\r\n    (\r\n      '${min_incident_ttl}' = '0'\r\n      OR (\r\n        CASE\r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(\r\n            EPOCH\r\n            FROM\r\n              (i.incident_finish_date - i.incident_date)\r\n          )\r\n          ELSE EXTRACT(\r\n            EPOCH\r\n            FROM\r\n              (NOW() - i.incident_date)\r\n          )\r\n        END\r\n      ) >= ${min_incident_ttl}\r\n    )\r\n  )\r\n  AND (\r\n    (\r\n      '${max_incident_ttl}' = '0'\r\n      OR (\r\n        CASE\r\n          WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(\r\n            EPOCH\r\n            FROM\r\n              (i.incident_finish_date - i.incident_date)\r\n          )\r\n          ELSE EXTRACT(\r\n            EPOCH\r\n            FROM\r\n              (NOW() - i.incident_date)\r\n          )\r\n        END\r\n      ) <= ${max_incident_ttl}\r\n    )\r\n  )\r\n  AND (\r\n    (\r\n      -1 IN ($incident_type)\r\n      AND (\r\n        incident_type_id IS NULL\r\n        OR incident_type_id IN ($incident_type)\r\n      )\r\n    )\r\n    OR 0 IN ($incident_type)\r\n    OR incident_type_id IN ($incident_type)\r\n  )\r\n  AND (\r\n    (\r\n      -1 IN ($incident_subtype)\r\n      AND (\r\n        incident_subtype_id IS NULL\r\n        OR incident_subtype_id IN ($incident_subtype)\r\n      )\r\n    )\r\n    OR 0 IN ($incident_subtype)\r\n    OR incident_subtype_id IN ($incident_subtype)\r\n  )\r\n  AND (\r\n    (\r\n      -1 IN ($rvr_priority)\r\n      AND (\r\n        rvr_priority_id IS NULL\r\n        OR rvr_priority_id IN ($rvr_priority)\r\n      )\r\n    )\r\n    OR 0 IN ($rvr_priority)\r\n    OR rvr_priority_id IN ($rvr_priority)\r\n  )\r\n  AND ('0' = '$pole' OR p.pole LIKE TRIM('$pole') || '%')\r\nGROUP BY\r\n  time,\r\n  m.name\r\nORDER BY\r\n  time ASC;",
                         "sql": {
                           "columns": [
                             {
@@ -110,6 +110,18 @@
                         "reducer": "sum"
                       },
                       "replaceFields": false
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "regression",
+                  "spec": {
+                    "options": {
+                      "degree": 3,
+                      "modelType": "polynomial",
+                      "xFieldName": "Time",
+                      "yFieldName": "По России"
                     }
                   }
                 }
@@ -151,6 +163,7 @@
               },
               "fieldConfig": {
                 "defaults": {
+                  "min": 0,
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
@@ -222,7 +235,7 @@
                       {
                         "id": "color",
                         "value": {
-                          "fixedColor": "transparent",
+                          "fixedColor": "text",
                           "mode": "fixed"
                         }
                       }
@@ -250,14 +263,6 @@
                       {
                         "id": "custom.showPoints",
                         "value": "never"
-                      },
-                      {
-                        "id": "color",
-                        "value": {
-                          "fixedColor": "text",
-                          "mode": "shades",
-                          "seriesBy": "last"
-                        }
                       },
                       {
                         "id": "thresholds",
@@ -288,6 +293,35 @@
                         "value": {
                           "mode": "area"
                         }
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "Кубическая полиномиальная регрессия По России"
+                    },
+                    "properties": [
+                      {
+                        "id": "color",
+                        "value": {
+                          "fixedColor": "text",
+                          "mode": "fixed"
+                        }
+                      },
+                      {
+                        "id": "custom.lineStyle",
+                        "value": {
+                          "dash": [
+                            10,
+                            10
+                          ],
+                          "fill": "dash"
+                        }
+                      },
+                      {
+                        "id": "custom.fillOpacity",
+                        "value": 0
                       }
                     ]
                   }
@@ -8048,7 +8082,7 @@
                         "editorMode": "code",
                         "format": "time_series",
                         "rawQuery": true,
-                        "rawSql": "SELECT\r\n  DATE(i.incident_date AT TIME ZONE 'Europe/Moscow') AS time,\r\n  ef.name AS \"Папка\",\r\n  --DATE_TRUNC('hour', i.incident_date AT TIME ZONE 'Europe/Moscow') AS time,\r\n  COUNT(em.id) AS \"Кол-во писем\"\r\nFROM\r\n  incidents_incident AS i\r\n  LEFT JOIN emails_emailmessage AS em ON i.id = em.email_incident_id\r\n  LEFT JOIN emails_emailfolder AS ef ON em.folder_id = ef.id\r\n  LEFT JOIN ts_pole AS p ON i.pole_id = p.id\r\n  LEFT JOIN ts_region AS r ON p.region_id = r.id\r\n  LEFT JOIN ts_macroregion AS m ON r.macroregion_id = m.id\r\n  LEFT JOIN ts_basestation AS b ON i.base_station_id = b.id\r\n  LEFT JOIN ts_basestation_operator AS bs_op ON b.id = bs_op.basestation_id\r\n  LEFT JOIN ts_basestationoperator AS op ON bs_op.basestationoperator_id = op.id\r\nWHERE\r\n  $__timeFilter(i.incident_date)\r\n  AND ef.name IS NOT NULL \r\n  AND ($macroregion = 0 OR m.id IN ($macroregion))\r\n  AND ($avr_contractor = 0 OR p.avr_contractor_id IN ($avr_contractor))\r\n  AND ('${region_manager}' = '0' OR r.responsible_manager = '${region_manager}')\r\n  AND ($dispatch = 0 OR i.responsible_user_id IN ($dispatch))\r\n  AND ('${operator_group}' = '0' OR op.operator_group = '${operator_group}')\r\n  AND (\r\n      ( '${min_incident_ttl}' = '0' OR \r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) >= ${min_incident_ttl} )\r\n  )\r\n  AND (\r\n      ( '${max_incident_ttl}' = '0' OR \r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) <= ${max_incident_ttl} )\r\n  )\r\n  AND (\r\n      (-1 IN ($incident_type) AND (incident_type_id IS NULL OR incident_type_id IN ($incident_type)))\r\n      OR 0 IN ($incident_type)\r\n      OR incident_type_id IN ($incident_type)\r\n  )\r\n  AND (\r\n      (-1 IN ($incident_subtype) AND (incident_subtype_id IS NULL OR incident_subtype_id IN ($incident_subtype)))\r\n      OR 0 IN ($incident_subtype)\r\n      OR incident_subtype_id IN ($incident_subtype)\r\n  )\r\n  AND (\r\n    (\r\n      -1 IN ($rvr_priority)\r\n      AND (\r\n        rvr_priority_id IS NULL\r\n        OR rvr_priority_id IN ($rvr_priority)\r\n      )\r\n    )\r\n    OR 0 IN ($rvr_priority)\r\n    OR rvr_priority_id IN ($rvr_priority)\r\n  )\r\n  AND ('0' = '$pole' OR p.pole LIKE TRIM('$pole') || '%')\r\nGROUP BY\r\n  DATE(i.incident_date AT TIME ZONE 'Europe/Moscow'),\r\n  ef.name\r\n  --DATE_TRUNC('hour', i.incident_date AT TIME ZONE 'Europe/Moscow')\r\nORDER BY time ASC;",
+                        "rawSql": "SELECT\r\n  DATE(i.incident_date AT TIME ZONE 'Europe/Moscow') AS time,\r\n  ef.name AS \"Папка\",\r\n  --DATE_TRUNC('hour', i.incident_date AT TIME ZONE 'Europe/Moscow') AS time,\r\n  COUNT(em.id) AS \"Кол-во писем\"\r\nFROM\r\n  incidents_incident AS i\r\n  LEFT JOIN emails_emailmessage AS em ON i.id = em.email_incident_id\r\n  LEFT JOIN emails_emailfolder AS ef ON em.folder_id = ef.id\r\n  LEFT JOIN ts_pole AS p ON i.pole_id = p.id\r\n  LEFT JOIN ts_region AS r ON p.region_id = r.id\r\n  LEFT JOIN ts_macroregion AS m ON r.macroregion_id = m.id\r\n  LEFT JOIN ts_basestation AS b ON i.base_station_id = b.id\r\n  LEFT JOIN ts_basestation_operator AS bs_op ON b.id = bs_op.basestation_id\r\n  LEFT JOIN ts_basestationoperator AS op ON bs_op.basestationoperator_id = op.id\r\nWHERE\r\n  $__timeFilter(i.incident_date)\r\n  AND ef.name IS NOT NULL \r\n  AND ($macroregion = 0 OR m.id IN ($macroregion))\r\n  AND ($avr_contractor = 0 OR p.avr_contractor_id IN ($avr_contractor))\r\n  AND ('${region_manager}' = '0' OR r.responsible_manager = '${region_manager}')\r\n  AND ($dispatch = 0 OR i.responsible_user_id IN ($dispatch))\r\n  AND ('${operator_group}' = '0' OR op.operator_group = '${operator_group}')\r\n  AND (\r\n      ( '${min_incident_ttl}' = '0' OR \r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) >= ${min_incident_ttl} )\r\n  )\r\n  AND (\r\n      ( '${max_incident_ttl}' = '0' OR \r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) <= ${max_incident_ttl} )\r\n  )\r\n  AND (\r\n      (-1 IN ($incident_type) AND (incident_type_id IS NULL OR incident_type_id IN ($incident_type)))\r\n      OR 0 IN ($incident_type)\r\n      OR incident_type_id IN ($incident_type)\r\n  )\r\n  AND (\r\n      (-1 IN ($incident_subtype) AND (incident_subtype_id IS NULL OR incident_subtype_id IN ($incident_subtype)))\r\n      OR 0 IN ($incident_subtype)\r\n      OR incident_subtype_id IN ($incident_subtype)\r\n  )\r\n  AND (\r\n    (\r\n      -1 IN ($rvr_priority)\r\n      AND (\r\n        rvr_priority_id IS NULL\r\n        OR rvr_priority_id IN ($rvr_priority)\r\n      )\r\n    )\r\n    OR 0 IN ($rvr_priority)\r\n    OR rvr_priority_id IN ($rvr_priority)\r\n  )\r\n  AND ('0' = '$pole' OR p.pole LIKE TRIM('$pole') || '%')\r\nGROUP BY\r\n  time,\r\n  ef.name\r\n  --DATE_TRUNC('hour', i.incident_date AT TIME ZONE 'Europe/Moscow')\r\nORDER BY time ASC;",
                         "sql": {
                           "columns": [
                             {
@@ -12505,7 +12539,7 @@
         "kind": "Panel",
         "spec": {
           "id": 73,
-          "title": "SLA АВР",
+          "title": "Ежедневная сводка SLA АВР инцидентов",
           "description": "",
           "links": [],
           "data": {
@@ -12527,7 +12561,7 @@
                         "editorMode": "code",
                         "format": "time_series",
                         "rawQuery": true,
-                        "rawSql": "WITH sla_calc AS (\r\n  SELECT DISTINCT\r\n    i.id,\r\n    DATE(i.incident_date AT TIME ZONE 'Europe/Moscow') AS incident_day,\r\n    CASE\r\n      WHEN i.avr_end_date IS NOT NULL THEN\r\n        CASE \r\n          WHEN i.avr_end_date > (i.avr_start_date + (it.sla_deadline || ' minutes')::interval)\r\n            THEN 'Просрочен (закрыт)'\r\n          ELSE 'Закрыто вовремя'\r\n        END\r\n      ELSE\r\n        CASE \r\n          WHEN EXTRACT(EPOCH FROM ((i.avr_start_date + (it.sla_deadline || ' minutes')::interval) - NOW())) < 0 THEN 'Просрочен (открыт)'\r\n          WHEN EXTRACT(EPOCH FROM ((i.avr_start_date + (it.sla_deadline || ' minutes')::interval) - NOW())) <= 3600 THEN 'Менее часа'\r\n          ELSE 'В работе'\r\n        END\r\n    END as sla_status\r\n  FROM\r\n    incidents_incident AS i\r\n    JOIN incidents_incidenttype AS it ON i.incident_type_id = it.id\r\n    LEFT JOIN ts_pole AS p ON i.pole_id = p.id\r\n    LEFT JOIN ts_region AS r ON p.region_id = r.id\r\n    LEFT JOIN ts_macroregion AS m ON r.macroregion_id = m.id\r\n    LEFT JOIN ts_basestation AS b ON i.base_station_id = b.id\r\n    LEFT JOIN ts_basestation_operator AS bs_op ON b.id = bs_op.basestation_id\r\n    LEFT JOIN ts_basestationoperator AS op ON bs_op.basestationoperator_id = op.id\r\n  WHERE\r\n    $__timeFilter(i.incident_date)\r\n    AND ($macroregion = 0 OR m.id IN ($macroregion))\r\n    AND ($avr_contractor = 0 OR p.avr_contractor_id IN ($avr_contractor))\r\n    AND ('${region_manager}' = '0' OR r.responsible_manager = '${region_manager}')\r\n    AND ($dispatch = 0 OR i.responsible_user_id IN ($dispatch))\r\n    AND ('${operator_group}' = '0' OR op.operator_group = '${operator_group}')\r\n    AND (\r\n      ('${min_incident_ttl}' = '0' OR\r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) >= ${min_incident_ttl})\r\n    )\r\n    AND (\r\n      ('${max_incident_ttl}' = '0' OR\r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) <= ${max_incident_ttl})\r\n    )\r\n    AND i.incident_type_id IS NOT NULL\r\n    AND it.sla_deadline IS NOT NULL\r\n    AND i.avr_start_date IS NOT NULL\r\n    AND (\r\n      (-1 IN ($incident_type) AND (incident_type_id IS NULL OR incident_type_id IN ($incident_type)))\r\n      OR 0 IN ($incident_type)\r\n      OR incident_type_id IN ($incident_type)\r\n    )\r\n    AND (\r\n      (-1 IN ($incident_subtype) AND (incident_subtype_id IS NULL OR incident_subtype_id IN ($incident_subtype)))\r\n      OR 0 IN ($incident_subtype)\r\n      OR incident_subtype_id IN ($incident_subtype)\r\n    )\r\n    AND (\r\n      (-1 IN ($rvr_priority) AND (rvr_priority_id IS NULL OR rvr_priority_id IN ($rvr_priority)))\r\n      OR 0 IN ($rvr_priority)\r\n      OR rvr_priority_id IN ($rvr_priority)\r\n    )\r\n    AND ('0' = '$pole' OR p.pole LIKE TRIM('$pole') || '%')\r\n)\r\nSELECT\r\n  incident_day AS time,\r\n  sla_status,\r\n  COUNT(DISTINCT id) AS count\r\nFROM sla_calc\r\nGROUP BY incident_day, sla_status\r\nORDER BY incident_day, sla_status;",
+                        "rawSql": "WITH sla_calc AS (\r\n  SELECT DISTINCT\r\n    i.id,\r\n    DATE(i.incident_date AT TIME ZONE 'Europe/Moscow') AS incident_day,\r\n    CASE\r\n      WHEN i.avr_end_date IS NOT NULL THEN\r\n        CASE \r\n          WHEN i.avr_end_date > (i.avr_start_date + (it.sla_deadline || ' minutes')::interval)\r\n            THEN 'Просрочен (закрыт)'\r\n          ELSE 'Закрыто вовремя'\r\n        END\r\n      ELSE\r\n        CASE \r\n          WHEN EXTRACT(EPOCH FROM ((i.avr_start_date + (it.sla_deadline || ' minutes')::interval) - NOW())) < 0 THEN 'Просрочен (открыт)'\r\n          WHEN EXTRACT(EPOCH FROM ((i.avr_start_date + (it.sla_deadline || ' minutes')::interval) - NOW())) <= 3600 THEN 'Менее часа'\r\n          ELSE 'В работе'\r\n        END\r\n    END as sla_status\r\n  FROM\r\n    incidents_incident AS i\r\n    JOIN incidents_incidenttype AS it ON i.incident_type_id = it.id\r\n    LEFT JOIN ts_pole AS p ON i.pole_id = p.id\r\n    LEFT JOIN ts_region AS r ON p.region_id = r.id\r\n    LEFT JOIN ts_macroregion AS m ON r.macroregion_id = m.id\r\n    LEFT JOIN ts_basestation AS b ON i.base_station_id = b.id\r\n    LEFT JOIN ts_basestation_operator AS bs_op ON b.id = bs_op.basestation_id\r\n    LEFT JOIN ts_basestationoperator AS op ON bs_op.basestationoperator_id = op.id\r\n  WHERE\r\n    $__timeFilter(i.incident_date)\r\n    AND ($macroregion = 0 OR m.id IN ($macroregion))\r\n    AND ($avr_contractor = 0 OR p.avr_contractor_id IN ($avr_contractor))\r\n    AND ('${region_manager}' = '0' OR r.responsible_manager = '${region_manager}')\r\n    AND ($dispatch = 0 OR i.responsible_user_id IN ($dispatch))\r\n    AND ('${operator_group}' = '0' OR op.operator_group = '${operator_group}')\r\n    AND (\r\n      ('${min_incident_ttl}' = '0' OR\r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) >= ${min_incident_ttl})\r\n    )\r\n    AND (\r\n      ('${max_incident_ttl}' = '0' OR\r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) <= ${max_incident_ttl})\r\n    )\r\n    AND i.incident_type_id IS NOT NULL\r\n    AND it.sla_deadline IS NOT NULL\r\n    AND i.avr_start_date IS NOT NULL\r\n    AND (\r\n      (-1 IN ($incident_type) AND (incident_type_id IS NULL OR incident_type_id IN ($incident_type)))\r\n      OR 0 IN ($incident_type)\r\n      OR incident_type_id IN ($incident_type)\r\n    )\r\n    AND (\r\n      (-1 IN ($incident_subtype) AND (incident_subtype_id IS NULL OR incident_subtype_id IN ($incident_subtype)))\r\n      OR 0 IN ($incident_subtype)\r\n      OR incident_subtype_id IN ($incident_subtype)\r\n    )\r\n    AND (\r\n      (-1 IN ($rvr_priority) AND (rvr_priority_id IS NULL OR rvr_priority_id IN ($rvr_priority)))\r\n      OR 0 IN ($rvr_priority)\r\n      OR rvr_priority_id IN ($rvr_priority)\r\n    )\r\n    AND ('0' = '$pole' OR p.pole LIKE TRIM('$pole') || '%')\r\n)\r\nSELECT\r\n  incident_day AS time,\r\n  sla_status,\r\n  COUNT(DISTINCT id) AS \" \"\r\nFROM sla_calc\r\nGROUP BY incident_day, sla_status\r\nORDER BY incident_day, sla_status;",
                         "sql": {
                           "columns": [
                             {
@@ -12552,7 +12586,61 @@
                   }
                 }
               ],
-              "transformations": [],
+              "transformations": [
+                {
+                  "kind": "Transformation",
+                  "group": "regression",
+                  "spec": {
+                    "options": {
+                      "degree": 10,
+                      "modelType": "linear",
+                      "predictionCount": 100,
+                      "xFieldName": "Time",
+                      "yFieldName": "  В работе"
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "regression",
+                  "spec": {
+                    "options": {
+                      "xFieldName": "Time",
+                      "yFieldName": "  Закрыто вовремя"
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "regression",
+                  "spec": {
+                    "options": {
+                      "xFieldName": "Time",
+                      "yFieldName": "  Менее часа"
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "regression",
+                  "spec": {
+                    "options": {
+                      "xFieldName": "Time",
+                      "yFieldName": "  Просрочен (закрыт)"
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "regression",
+                  "spec": {
+                    "options": {
+                      "xFieldName": "Time",
+                      "yFieldName": "  Просрочен (открыт)"
+                    }
+                  }
+                }
+              ],
               "queryOptions": {}
             }
           },
@@ -12585,6 +12673,7 @@
               },
               "fieldConfig": {
                 "defaults": {
+                  "min": 0,
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
@@ -12637,115 +12726,7 @@
                   {
                     "matcher": {
                       "id": "byName",
-                      "scope": "series",
-                      "options": "Time"
-                    },
-                    "properties": [
-                      {
-                        "id": "unit",
-                        "value": ""
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count В работе"
-                    },
-                    "properties": [
-                      {
-                        "id": "displayName",
-                        "value": "В работе"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Закрыто вовремя"
-                    },
-                    "properties": [
-                      {
-                        "id": "displayName",
-                        "value": "Закрыто вовремя"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Менее часа"
-                    },
-                    "properties": [
-                      {
-                        "id": "displayName",
-                        "value": "Менее часа"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Просрочен (закрыт)"
-                    },
-                    "properties": [
-                      {
-                        "id": "displayName",
-                        "value": "Просрочен (закрыт)"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Просрочен (открыт)"
-                    },
-                    "properties": [
-                      {
-                        "id": "displayName",
-                        "value": "Просрочен (открыт)"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "options": "Закрыто вовремя"
-                    },
-                    "properties": [
-                      {
-                        "id": "color",
-                        "value": {
-                          "fixedColor": "green",
-                          "mode": "fixed"
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "options": "Просрочен (открыт)"
-                    },
-                    "properties": [
-                      {
-                        "id": "color",
-                        "value": {
-                          "fixedColor": "orange",
-                          "mode": "fixed"
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "options": "В работе"
+                      "options": "  В работе"
                     },
                     "properties": [
                       {
@@ -12760,7 +12741,22 @@
                   {
                     "matcher": {
                       "id": "byName",
-                      "options": "Менее часа"
+                      "options": "  Закрыто вовремя"
+                    },
+                    "properties": [
+                      {
+                        "id": "color",
+                        "value": {
+                          "fixedColor": "green",
+                          "mode": "fixed"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "  Менее часа"
                     },
                     "properties": [
                       {
@@ -12775,7 +12771,7 @@
                   {
                     "matcher": {
                       "id": "byName",
-                      "options": "Просрочен (закрыт)"
+                      "options": "  Просрочен (закрыт)"
                     },
                     "properties": [
                       {
@@ -12786,521 +12782,55 @@
                         }
                       }
                     ]
-                  }
-                ]
-              }
-            }
-          }
-        }
-      },
-      "panel-74": {
-        "kind": "Panel",
-        "spec": {
-          "id": 74,
-          "title": "SLA РВР",
-          "description": "",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "grafana-postgresql-datasource",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "ffl50zkmfecxse"
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "  Просрочен (открыт)"
+                    },
+                    "properties": [
+                      {
+                        "id": "color",
+                        "value": {
+                          "fixedColor": "orange",
+                          "mode": "fixed"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "Линейная регрессия   В работе"
+                    },
+                    "properties": [
+                      {
+                        "id": "color",
+                        "value": {
+                          "fixedColor": "blue",
+                          "mode": "fixed"
+                        }
                       },
-                      "spec": {
-                        "dataset": "dispatch",
-                        "editorMode": "code",
-                        "format": "time_series",
-                        "rawQuery": true,
-                        "rawSql": "WITH date_range AS (\r\n  SELECT generate_series(\r\n    DATE(MIN(i.incident_date) AT TIME ZONE 'Europe/Moscow'),\r\n    DATE(MAX(i.incident_date) AT TIME ZONE 'Europe/Moscow'),\r\n    '1 day'\r\n  )::date AS day\r\n  FROM incidents_incident i\r\n  WHERE $__timeFilter(i.incident_date)\r\n),\r\nsla_calc AS (\r\n  SELECT DISTINCT\r\n    i.id,\r\n    DATE(i.incident_date AT TIME ZONE 'Europe/Moscow') AS incident_day,\r\n    CASE\r\n      WHEN i.rvr_end_date IS NOT NULL THEN\r\n        CASE \r\n          WHEN i.rvr_end_date > (i.rvr_start_date + (irp.sla_deadline || ' minutes')::interval)\r\n            THEN 'Просрочен (закрыт)'\r\n          ELSE 'Закрыто вовремя'\r\n        END\r\n      ELSE\r\n        CASE \r\n          WHEN EXTRACT(EPOCH FROM ((i.rvr_start_date + (irp.sla_deadline || ' minutes')::interval) - NOW())) < 0 THEN 'Просрочен (открыт)'\r\n          WHEN EXTRACT(EPOCH FROM ((i.rvr_start_date + (irp.sla_deadline || ' minutes')::interval) - NOW())) <= 3600 THEN 'Менее часа'\r\n          ELSE 'В работе'\r\n        END\r\n    END as sla_status\r\n  FROM\r\n    incidents_incident AS i\r\n    JOIN incidents_rvrpriority AS irp ON i.rvr_priority_id = irp.id\r\n    LEFT JOIN ts_pole AS p ON i.pole_id = p.id\r\n    LEFT JOIN ts_region AS r ON p.region_id = r.id\r\n    LEFT JOIN ts_macroregion AS m ON r.macroregion_id = m.id\r\n    LEFT JOIN ts_basestation AS b ON i.base_station_id = b.id\r\n    LEFT JOIN ts_basestation_operator AS bs_op ON b.id = bs_op.basestation_id\r\n    LEFT JOIN ts_basestationoperator AS op ON bs_op.basestationoperator_id = op.id\r\n  WHERE\r\n    $__timeFilter(i.incident_date)\r\n    AND ($macroregion = 0 OR m.id IN ($macroregion))\r\n    AND ($avr_contractor = 0 OR p.avr_contractor_id IN ($avr_contractor))\r\n    AND ('${region_manager}' = '0' OR r.responsible_manager = '${region_manager}')\r\n    AND ($dispatch = 0 OR i.responsible_user_id IN ($dispatch))\r\n    AND ('${operator_group}' = '0' OR op.operator_group = '${operator_group}')\r\n    AND (\r\n      ('${min_incident_ttl}' = '0' OR\r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) >= ${min_incident_ttl})\r\n    )\r\n    AND (\r\n      ('${max_incident_ttl}' = '0' OR\r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) <= ${max_incident_ttl})\r\n    )\r\n    AND i.rvr_start_date IS NOT NULL\r\n    AND (\r\n      (-1 IN ($incident_type) AND (incident_type_id IS NULL OR incident_type_id IN ($incident_type)))\r\n      OR 0 IN ($incident_type)\r\n      OR incident_type_id IN ($incident_type)\r\n    )\r\n    AND (\r\n      (-1 IN ($incident_subtype) AND (incident_subtype_id IS NULL OR incident_subtype_id IN ($incident_subtype)))\r\n      OR 0 IN ($incident_subtype)\r\n      OR incident_subtype_id IN ($incident_subtype)\r\n    )\r\n    AND (\r\n      (-1 IN ($rvr_priority) AND (rvr_priority_id IS NULL OR rvr_priority_id IN ($rvr_priority)))\r\n      OR 0 IN ($rvr_priority)\r\n      OR rvr_priority_id IN ($rvr_priority)\r\n    )\r\n    AND ('0' = '$pole' OR p.pole LIKE TRIM('$pole') || '%')\r\n),\r\nstatuses AS (\r\n  SELECT DISTINCT sla_status FROM sla_calc\r\n)\r\nSELECT\r\n  d.day AS time,\r\n  s.sla_status,\r\n  COUNT(sc.id) AS count\r\nFROM date_range d\r\nCROSS JOIN statuses s\r\nLEFT JOIN sla_calc sc\r\n  ON sc.incident_day = d.day\r\n  AND sc.sla_status = s.sla_status\r\nGROUP BY d.day, s.sla_status\r\nORDER BY d.day, s.sla_status;",
-                        "sql": {
-                          "columns": [
-                            {
-                              "parameters": [],
-                              "type": "function"
-                            }
+                      {
+                        "id": "custom.lineStyle",
+                        "value": {
+                          "dash": [
+                            10,
+                            10
                           ],
-                          "groupBy": [
-                            {
-                              "property": {
-                                "type": "string"
-                              },
-                              "type": "groupBy"
-                            }
-                          ],
-                          "limit": 50
+                          "fill": "dash"
                         }
-                      }
-                    },
-                    "refId": "A",
-                    "hidden": false
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "timeseries",
-            "version": "13.0.1",
-            "spec": {
-              "options": {
-                "annotations": {
-                  "clustering": -1,
-                  "multiLane": false
-                },
-                "legend": {
-                  "calcs": [],
-                  "displayMode": "list",
-                  "placement": "bottom",
-                  "showLegend": true,
-                  "sortBy": "Name",
-                  "sortDesc": false
-                },
-                "timezone": [
-                  "Europe/Moscow"
-                ],
-                "tooltip": {
-                  "hideZeros": false,
-                  "mode": "single",
-                  "sort": "none"
-                }
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "value": 0,
-                        "color": "green"
-                      }
-                    ]
-                  },
-                  "color": {
-                    "mode": "palette-classic"
-                  },
-                  "custom": {
-                    "axisBorderShow": false,
-                    "axisCenteredZero": false,
-                    "axisColorMode": "text",
-                    "axisLabel": "",
-                    "axisPlacement": "auto",
-                    "barAlignment": 0,
-                    "barWidthFactor": 0.6,
-                    "drawStyle": "line",
-                    "fillOpacity": 10,
-                    "gradientMode": "none",
-                    "hideFrom": {
-                      "legend": false,
-                      "tooltip": false,
-                      "viz": false
-                    },
-                    "insertNulls": false,
-                    "lineInterpolation": "smooth",
-                    "lineWidth": 3,
-                    "pointSize": 6,
-                    "scaleDistribution": {
-                      "type": "linear"
-                    },
-                    "showPoints": "auto",
-                    "showValues": false,
-                    "spanNulls": true,
-                    "stacking": {
-                      "group": "A",
-                      "mode": "none"
-                    },
-                    "thresholdsStyle": {
-                      "mode": "off"
-                    }
-                  },
-                  "fieldMinMax": false
-                },
-                "overrides": [
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "Time"
-                    },
-                    "properties": [
-                      {
-                        "id": "unit",
-                        "value": ""
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count В работе"
-                    },
-                    "properties": [
-                      {
-                        "id": "displayName",
-                        "value": "В работе"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Закрыто вовремя"
-                    },
-                    "properties": [
-                      {
-                        "id": "displayName",
-                        "value": "Закрыто вовремя"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Менее часа"
-                    },
-                    "properties": [
-                      {
-                        "id": "displayName",
-                        "value": "Менее часа"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Просрочен (закрыт)"
-                    },
-                    "properties": [
-                      {
-                        "id": "displayName",
-                        "value": "Просрочен (закрыт)"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Просрочен (открыт)"
-                    },
-                    "properties": [
-                      {
-                        "id": "displayName",
-                        "value": "Просрочен (открыт)"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "options": "Закрыто вовремя"
-                    },
-                    "properties": [
-                      {
-                        "id": "color",
-                        "value": {
-                          "fixedColor": "green",
-                          "mode": "fixed"
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "options": "Просрочен (открыт)"
-                    },
-                    "properties": [
-                      {
-                        "id": "color",
-                        "value": {
-                          "fixedColor": "orange",
-                          "mode": "fixed"
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "options": "В работе"
-                    },
-                    "properties": [
-                      {
-                        "id": "color",
-                        "value": {
-                          "fixedColor": "blue",
-                          "mode": "fixed"
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "options": "Менее часа"
-                    },
-                    "properties": [
-                      {
-                        "id": "color",
-                        "value": {
-                          "fixedColor": "yellow",
-                          "mode": "fixed"
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "options": "Просрочен (закрыт)"
-                    },
-                    "properties": [
-                      {
-                        "id": "color",
-                        "value": {
-                          "fixedColor": "red",
-                          "mode": "fixed"
-                        }
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
-        }
-      },
-      "panel-75": {
-        "kind": "Panel",
-        "spec": {
-          "id": 75,
-          "title": "SLA ДГУ",
-          "description": "",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "grafana-postgresql-datasource",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "ffl50zkmfecxse"
                       },
-                      "spec": {
-                        "dataset": "dispatch",
-                        "editorMode": "code",
-                        "format": "time_series",
-                        "rawQuery": true,
-                        "rawSql": "WITH date_range AS (\r\n  SELECT generate_series(\r\n    DATE(MIN(i.incident_date) AT TIME ZONE 'Europe/Moscow'),\r\n    DATE(MAX(i.incident_date) AT TIME ZONE 'Europe/Moscow'),\r\n    '1 day'\r\n  )::date AS day\r\n  FROM incidents_incident i\r\n  WHERE $__timeFilter(i.incident_date)\r\n),\r\nsla_calc AS (\r\n  SELECT DISTINCT\r\n    i.id,\r\n    DATE(i.incident_date AT TIME ZONE 'Europe/Moscow') AS incident_day,\r\n    CASE\r\n      WHEN i.dgu_end_date IS NOT NULL THEN\r\n        CASE \r\n          WHEN i.dgu_end_date > (i.dgu_start_date + INTERVAL '15 days') \r\n            THEN 'Более 15 дн (закрыт)'\r\n          ELSE 'Закрыт за 15 дней'\r\n        END\r\n      ELSE\r\n        CASE \r\n          WHEN EXTRACT(EPOCH FROM (NOW() - i.dgu_start_date)) > 1296000 THEN 'Более 15 дн (открыт)'\r\n          WHEN EXTRACT(EPOCH FROM (NOW() - i.dgu_start_date)) <= 43200 THEN 'Менее 12 часов'\r\n          ELSE 'Менее 15 дней'\r\n        END\r\n    END as sla_status\r\n  FROM\r\n    incidents_incident AS i\r\n    LEFT JOIN ts_pole AS p ON i.pole_id = p.id\r\n    LEFT JOIN ts_region AS r ON p.region_id = r.id\r\n    LEFT JOIN ts_macroregion AS m ON r.macroregion_id = m.id\r\n    LEFT JOIN ts_basestation AS b ON i.base_station_id = b.id\r\n    LEFT JOIN ts_basestation_operator AS bs_op ON b.id = bs_op.basestation_id\r\n    LEFT JOIN ts_basestationoperator AS op ON bs_op.basestationoperator_id = op.id\r\n  WHERE\r\n    $__timeFilter(i.incident_date)\r\n    AND ($macroregion = 0 OR m.id IN ($macroregion))\r\n    AND ($avr_contractor = 0 OR p.avr_contractor_id IN ($avr_contractor))\r\n    AND ('${region_manager}' = '0' OR r.responsible_manager = '${region_manager}')\r\n    AND ($dispatch = 0 OR i.responsible_user_id IN ($dispatch))\r\n    AND ('${operator_group}' = '0' OR op.operator_group = '${operator_group}')\r\n    AND (\r\n      ('${min_incident_ttl}' = '0' OR\r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) >= ${min_incident_ttl})\r\n    )\r\n    AND (\r\n      ('${max_incident_ttl}' = '0' OR\r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) <= ${max_incident_ttl})\r\n    )\r\n    AND i.dgu_start_date IS NOT NULL\r\n    AND (\r\n      (-1 IN ($incident_type) AND (incident_type_id IS NULL OR incident_type_id IN ($incident_type)))\r\n      OR 0 IN ($incident_type)\r\n      OR incident_type_id IN ($incident_type)\r\n    )\r\n    AND (\r\n      (-1 IN ($incident_subtype) AND (incident_subtype_id IS NULL OR incident_subtype_id IN ($incident_subtype)))\r\n      OR 0 IN ($incident_subtype)\r\n      OR incident_subtype_id IN ($incident_subtype)\r\n    )\r\n    AND (\r\n      (-1 IN ($rvr_priority) AND (rvr_priority_id IS NULL OR rvr_priority_id IN ($rvr_priority)))\r\n      OR 0 IN ($rvr_priority)\r\n      OR rvr_priority_id IN ($rvr_priority)\r\n    )\r\n    AND ('0' = '$pole' OR p.pole LIKE TRIM('$pole') || '%')\r\n),\r\nstatuses AS (\r\n  SELECT DISTINCT sla_status FROM sla_calc\r\n)\r\nSELECT\r\n  d.day AS time,\r\n  s.sla_status,\r\n  COUNT(sc.id) AS count\r\nFROM date_range d\r\nCROSS JOIN statuses s\r\nLEFT JOIN sla_calc sc\r\n  ON sc.incident_day = d.day\r\n  AND sc.sla_status = s.sla_status\r\nGROUP BY d.day, s.sla_status\r\nORDER BY d.day, s.sla_status;",
-                        "sql": {
-                          "columns": [
-                            {
-                              "parameters": [],
-                              "type": "function"
-                            }
-                          ],
-                          "groupBy": [
-                            {
-                              "property": {
-                                "type": "string"
-                              },
-                              "type": "groupBy"
-                            }
-                          ],
-                          "limit": 50
-                        }
-                      }
-                    },
-                    "refId": "A",
-                    "hidden": false
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "timeseries",
-            "version": "13.0.1",
-            "spec": {
-              "options": {
-                "annotations": {
-                  "clustering": -1,
-                  "multiLane": false
-                },
-                "legend": {
-                  "calcs": [],
-                  "displayMode": "list",
-                  "placement": "bottom",
-                  "showLegend": true,
-                  "sortBy": "Name",
-                  "sortDesc": false
-                },
-                "timezone": [
-                  "Europe/Moscow"
-                ],
-                "tooltip": {
-                  "hideZeros": false,
-                  "mode": "single",
-                  "sort": "none"
-                }
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
                       {
-                        "value": 0,
-                        "color": "green"
-                      }
-                    ]
-                  },
-                  "color": {
-                    "mode": "palette-classic"
-                  },
-                  "custom": {
-                    "axisBorderShow": false,
-                    "axisCenteredZero": false,
-                    "axisColorMode": "text",
-                    "axisLabel": "",
-                    "axisPlacement": "auto",
-                    "barAlignment": 0,
-                    "barWidthFactor": 0.6,
-                    "drawStyle": "line",
-                    "fillOpacity": 10,
-                    "gradientMode": "none",
-                    "hideFrom": {
-                      "legend": false,
-                      "tooltip": false,
-                      "viz": false
-                    },
-                    "insertNulls": false,
-                    "lineInterpolation": "smooth",
-                    "lineWidth": 3,
-                    "pointSize": 6,
-                    "scaleDistribution": {
-                      "type": "linear"
-                    },
-                    "showPoints": "auto",
-                    "showValues": false,
-                    "spanNulls": true,
-                    "stacking": {
-                      "group": "A",
-                      "mode": "none"
-                    },
-                    "thresholdsStyle": {
-                      "mode": "off"
-                    }
-                  },
-                  "fieldMinMax": false
-                },
-                "overrides": [
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "Time"
-                    },
-                    "properties": [
-                      {
-                        "id": "unit",
-                        "value": ""
+                        "id": "custom.fillOpacity",
+                        "value": 0
                       }
                     ]
                   },
                   {
                     "matcher": {
                       "id": "byName",
-                      "scope": "series",
-                      "options": "count Менее 15 дней"
-                    },
-                    "properties": [
-                      {
-                        "id": "displayName",
-                        "value": "Менее 15 дней"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Закрыт за 15 дней"
-                    },
-                    "properties": [
-                      {
-                        "id": "displayName",
-                        "value": "Закрыт за 15 дней"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Менее 15 дней"
-                    },
-                    "properties": [
-                      {
-                        "id": "displayName",
-                        "value": "Менее 15 дней"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Более 15 дн (закрыт)"
-                    },
-                    "properties": [
-                      {
-                        "id": "displayName",
-                        "value": "Более 15 дн (закрыт)"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Более 15 дн (открыт)"
-                    },
-                    "properties": [
-                      {
-                        "id": "displayName",
-                        "value": "Более 15 дн (открыт)"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Закрыт за 15 дней"
+                      "options": "Линейная регрессия   Закрыто вовремя"
                     },
                     "properties": [
                       {
@@ -13309,46 +12839,27 @@
                           "fixedColor": "green",
                           "mode": "fixed"
                         }
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Более 15 дн (открыт)"
-                    },
-                    "properties": [
+                      },
                       {
-                        "id": "color",
+                        "id": "custom.lineStyle",
                         "value": {
-                          "fixedColor": "orange",
-                          "mode": "fixed"
+                          "dash": [
+                            10,
+                            10
+                          ],
+                          "fill": "dash"
                         }
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Менее 15 дней"
-                    },
-                    "properties": [
+                      },
                       {
-                        "id": "color",
-                        "value": {
-                          "fixedColor": "blue",
-                          "mode": "fixed"
-                        }
+                        "id": "custom.fillOpacity",
+                        "value": 0
                       }
                     ]
                   },
                   {
                     "matcher": {
                       "id": "byName",
-                      "scope": "series",
-                      "options": "count Менее 12 часов"
+                      "options": "Линейная регрессия   Менее часа"
                     },
                     "properties": [
                       {
@@ -13357,14 +12868,27 @@
                           "fixedColor": "yellow",
                           "mode": "fixed"
                         }
+                      },
+                      {
+                        "id": "custom.lineStyle",
+                        "value": {
+                          "dash": [
+                            10,
+                            10
+                          ],
+                          "fill": "dash"
+                        }
+                      },
+                      {
+                        "id": "custom.fillOpacity",
+                        "value": 0
                       }
                     ]
                   },
                   {
                     "matcher": {
                       "id": "byName",
-                      "scope": "series",
-                      "options": "count Более 15 дн (закрыт)"
+                      "options": "Линейная регрессия   Просрочен (закрыт)"
                     },
                     "properties": [
                       {
@@ -13373,13 +12897,27 @@
                           "fixedColor": "red",
                           "mode": "fixed"
                         }
+                      },
+                      {
+                        "id": "custom.lineStyle",
+                        "value": {
+                          "dash": [
+                            10,
+                            10
+                          ],
+                          "fill": "dash"
+                        }
+                      },
+                      {
+                        "id": "custom.fillOpacity",
+                        "value": 0
                       }
                     ]
                   },
                   {
                     "matcher": {
                       "id": "byName",
-                      "options": "Более 15 дн (открыт)"
+                      "options": "Линейная регрессия   Просрочен (открыт)"
                     },
                     "properties": [
                       {
@@ -13388,78 +12926,45 @@
                           "fixedColor": "orange",
                           "mode": "fixed"
                         }
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "options": "Закрыт за 15 дней"
-                    },
-                    "properties": [
+                      },
                       {
-                        "id": "color",
+                        "id": "custom.lineStyle",
                         "value": {
-                          "fixedColor": "green",
-                          "mode": "fixed"
+                          "dash": [
+                            10,
+                            10
+                          ],
+                          "fill": "dash"
                         }
+                      },
+                      {
+                        "id": "custom.fillOpacity",
+                        "value": 0
                       }
                     ]
                   },
                   {
+                    "__systemRef": "hideSeriesFrom",
                     "matcher": {
-                      "id": "byName",
-                      "options": "Более 15 дн (закрыт)"
+                      "id": "byNames",
+                      "options": {
+                        "mode": "exclude",
+                        "names": [
+                          "  Закрыто вовремя",
+                          "  Просрочен (закрыт)",
+                          "  Просрочен (открыт)"
+                        ],
+                        "prefix": "All except:",
+                        "readOnly": true
+                      }
                     },
                     "properties": [
                       {
-                        "id": "color",
+                        "id": "custom.hideFrom",
                         "value": {
-                          "fixedColor": "red",
-                          "mode": "fixed"
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "options": "Менее 15 дней"
-                    },
-                    "properties": [
-                      {
-                        "id": "color",
-                        "value": {
-                          "fixedColor": "yellow",
-                          "mode": "fixed"
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Менее 12 часов"
-                    },
-                    "properties": [
-                      {
-                        "id": "displayName",
-                        "value": "Менее 12 часов"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "options": "Менее 12 часов"
-                    },
-                    "properties": [
-                      {
-                        "id": "color",
-                        "value": {
-                          "fixedColor": "blue",
-                          "mode": "fixed"
+                          "legend": false,
+                          "tooltip": true,
+                          "viz": true
                         }
                       }
                     ]
@@ -13474,7 +12979,7 @@
         "kind": "Panel",
         "spec": {
           "id": 76,
-          "title": "SLA ЭКС",
+          "title": "Ежедневная сводка SLA ЭКС инцидентов",
           "description": "",
           "links": [],
           "data": {
@@ -13496,7 +13001,7 @@
                         "editorMode": "code",
                         "format": "time_series",
                         "rawQuery": true,
-                        "rawSql": "WITH date_range AS (\r\n  SELECT generate_series(\r\n    DATE(MIN(i.incident_date) AT TIME ZONE 'Europe/Moscow'),\r\n    DATE(MAX(i.incident_date) AT TIME ZONE 'Europe/Moscow'),\r\n    '1 day'\r\n  )::date AS day\r\n  FROM incidents_incident i\r\n  WHERE $__timeFilter(i.incident_date)\r\n),\r\nsla_calc AS (\r\n  SELECT DISTINCT\r\n    i.id,\r\n    DATE(i.incident_date AT TIME ZONE 'Europe/Moscow') AS incident_day,\r\n    CASE\r\n      WHEN i.eks_end_date IS NOT NULL THEN \r\n        CASE \r\n          WHEN i.eks_end_date > (i.eks_start_date + INTERVAL '15 days') THEN 'Более 15 дн (закрыт)'\r\n          ELSE 'Закрыт за 15 дней'\r\n        END\r\n      ELSE \r\n        CASE \r\n          WHEN EXTRACT(EPOCH FROM (NOW() - i.eks_start_date)) > 1296000 THEN 'Более 15 дн (открыт)'\r\n          WHEN EXTRACT(EPOCH FROM (NOW() - i.eks_start_date)) <= 43200 THEN 'Менее 12 часов'\r\n          ELSE 'Менее 15 дней'\r\n        END\r\n    END as sla_status\r\n  FROM\r\n    incidents_incident AS i\r\n    LEFT JOIN ts_pole AS p ON i.pole_id = p.id\r\n    LEFT JOIN ts_region AS r ON p.region_id = r.id\r\n    LEFT JOIN ts_macroregion AS m ON r.macroregion_id = m.id\r\n    LEFT JOIN ts_basestation AS b ON i.base_station_id = b.id\r\n    LEFT JOIN ts_basestation_operator AS bs_op ON b.id = bs_op.basestation_id\r\n    LEFT JOIN ts_basestationoperator AS op ON bs_op.basestationoperator_id = op.id\r\n  WHERE\r\n    $__timeFilter(i.incident_date)\r\n    AND ($macroregion = 0 OR m.id IN ($macroregion))\r\n    AND ($avr_contractor = 0 OR p.avr_contractor_id IN ($avr_contractor))\r\n    AND ('${region_manager}' = '0' OR r.responsible_manager = '${region_manager}')\r\n    AND ($dispatch = 0 OR i.responsible_user_id IN ($dispatch))\r\n    AND ('${operator_group}' = '0' OR op.operator_group = '${operator_group}')\r\n    AND (\r\n      ('${min_incident_ttl}' = '0' OR\r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) >= ${min_incident_ttl})\r\n    )\r\n    AND (\r\n      ('${max_incident_ttl}' = '0' OR\r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) <= ${max_incident_ttl})\r\n    )\r\n    AND i.eks_start_date IS NOT NULL\r\n    AND (\r\n      (-1 IN ($incident_type) AND (incident_type_id IS NULL OR incident_type_id IN ($incident_type)))\r\n      OR 0 IN ($incident_type)\r\n      OR incident_type_id IN ($incident_type)\r\n    )\r\n    AND (\r\n      (-1 IN ($incident_subtype) AND (incident_subtype_id IS NULL OR incident_subtype_id IN ($incident_subtype)))\r\n      OR 0 IN ($incident_subtype)\r\n      OR incident_subtype_id IN ($incident_subtype)\r\n    )\r\n    AND (\r\n      (-1 IN ($rvr_priority) AND (rvr_priority_id IS NULL OR rvr_priority_id IN ($rvr_priority)))\r\n      OR 0 IN ($rvr_priority)\r\n      OR rvr_priority_id IN ($rvr_priority)\r\n    )\r\n    AND ('0' = '$pole' OR p.pole LIKE TRIM('$pole') || '%')\r\n),\r\nstatuses AS (\r\n  SELECT DISTINCT sla_status FROM sla_calc\r\n)\r\nSELECT\r\n  d.day AS time,\r\n  s.sla_status,\r\n  COUNT(sc.id) AS count\r\nFROM date_range d\r\nCROSS JOIN statuses s\r\nLEFT JOIN sla_calc sc\r\n  ON sc.incident_day = d.day\r\n  AND sc.sla_status = s.sla_status\r\nGROUP BY d.day, s.sla_status\r\nORDER BY d.day, s.sla_status;",
+                        "rawSql": "WITH date_range AS (\r\n  SELECT generate_series(\r\n    DATE(MIN(i.incident_date) AT TIME ZONE 'Europe/Moscow'),\r\n    DATE(MAX(i.incident_date) AT TIME ZONE 'Europe/Moscow'),\r\n    '1 day'\r\n  )::date AS day\r\n  FROM incidents_incident i\r\n  WHERE $__timeFilter(i.incident_date)\r\n),\r\nsla_calc AS (\r\n  SELECT DISTINCT\r\n    i.id,\r\n    DATE(i.incident_date AT TIME ZONE 'Europe/Moscow') AS incident_day,\r\n    CASE\r\n      WHEN i.eks_end_date IS NOT NULL THEN \r\n        CASE \r\n          WHEN i.eks_end_date > (i.eks_start_date + INTERVAL '15 days') THEN 'Более 15 дн (закрыт)'\r\n          ELSE 'Закрыт за 15 дней'\r\n        END\r\n      ELSE \r\n        CASE \r\n          WHEN EXTRACT(EPOCH FROM (NOW() - i.eks_start_date)) > 1296000 THEN 'Более 15 дн (открыт)'\r\n          WHEN EXTRACT(EPOCH FROM (NOW() - i.eks_start_date)) <= 43200 THEN 'Менее 12 часов'\r\n          ELSE 'Менее 15 дней'\r\n        END\r\n    END as sla_status\r\n  FROM\r\n    incidents_incident AS i\r\n    LEFT JOIN ts_pole AS p ON i.pole_id = p.id\r\n    LEFT JOIN ts_region AS r ON p.region_id = r.id\r\n    LEFT JOIN ts_macroregion AS m ON r.macroregion_id = m.id\r\n    LEFT JOIN ts_basestation AS b ON i.base_station_id = b.id\r\n    LEFT JOIN ts_basestation_operator AS bs_op ON b.id = bs_op.basestation_id\r\n    LEFT JOIN ts_basestationoperator AS op ON bs_op.basestationoperator_id = op.id\r\n  WHERE\r\n    $__timeFilter(i.incident_date)\r\n    AND ($macroregion = 0 OR m.id IN ($macroregion))\r\n    AND ($avr_contractor = 0 OR p.avr_contractor_id IN ($avr_contractor))\r\n    AND ('${region_manager}' = '0' OR r.responsible_manager = '${region_manager}')\r\n    AND ($dispatch = 0 OR i.responsible_user_id IN ($dispatch))\r\n    AND ('${operator_group}' = '0' OR op.operator_group = '${operator_group}')\r\n    AND (\r\n      ('${min_incident_ttl}' = '0' OR\r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) >= ${min_incident_ttl})\r\n    )\r\n    AND (\r\n      ('${max_incident_ttl}' = '0' OR\r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) <= ${max_incident_ttl})\r\n    )\r\n    AND i.eks_start_date IS NOT NULL\r\n    AND (\r\n      (-1 IN ($incident_type) AND (incident_type_id IS NULL OR incident_type_id IN ($incident_type)))\r\n      OR 0 IN ($incident_type)\r\n      OR incident_type_id IN ($incident_type)\r\n    )\r\n    AND (\r\n      (-1 IN ($incident_subtype) AND (incident_subtype_id IS NULL OR incident_subtype_id IN ($incident_subtype)))\r\n      OR 0 IN ($incident_subtype)\r\n      OR incident_subtype_id IN ($incident_subtype)\r\n    )\r\n    AND (\r\n      (-1 IN ($rvr_priority) AND (rvr_priority_id IS NULL OR rvr_priority_id IN ($rvr_priority)))\r\n      OR 0 IN ($rvr_priority)\r\n      OR rvr_priority_id IN ($rvr_priority)\r\n    )\r\n    AND ('0' = '$pole' OR p.pole LIKE TRIM('$pole') || '%')\r\n),\r\nstatuses AS (\r\n  SELECT DISTINCT sla_status FROM sla_calc\r\n)\r\nSELECT\r\n  d.day AS time,\r\n  s.sla_status,\r\n  COUNT(sc.id) AS \" \"\r\nFROM date_range d\r\nCROSS JOIN statuses s\r\nLEFT JOIN sla_calc sc\r\n  ON sc.incident_day = d.day\r\n  AND sc.sla_status = s.sla_status\r\nGROUP BY d.day, s.sla_status\r\nORDER BY d.day, s.sla_status;",
                         "sql": {
                           "columns": [
                             {
@@ -13521,7 +13026,61 @@
                   }
                 }
               ],
-              "transformations": [],
+              "transformations": [
+                {
+                  "kind": "Transformation",
+                  "group": "regression",
+                  "spec": {
+                    "options": {
+                      "xFieldName": "Time",
+                      "yFieldName": "  Закрыт за 15 дней"
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "regression",
+                  "spec": {
+                    "options": {
+                      "degree": 2,
+                      "modelType": "linear",
+                      "predictionCount": 100,
+                      "xFieldName": "Time",
+                      "yFieldName": "  Более 15 дн (закрыт)"
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "regression",
+                  "spec": {
+                    "options": {
+                      "xFieldName": "Time",
+                      "yFieldName": "  Более 15 дн (открыт)"
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "regression",
+                  "spec": {
+                    "options": {
+                      "xFieldName": "Time",
+                      "yFieldName": "  Менее 12 часов"
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "regression",
+                  "spec": {
+                    "options": {
+                      "xFieldName": "Time",
+                      "yFieldName": "  Менее 15 дней"
+                    }
+                  }
+                }
+              ],
               "queryOptions": {}
             }
           },
@@ -13536,9 +13095,823 @@
                   "multiLane": false
                 },
                 "legend": {
-                  "calcs": [
-                    "sum"
-                  ],
+                  "calcs": [],
+                  "displayMode": "list",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "timezone": [
+                  "Europe/Moscow"
+                ],
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "min": 0,
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "fixed"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 10,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "smooth",
+                    "lineWidth": 3,
+                    "pointSize": 3,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "showValues": false,
+                    "spanNulls": true,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "fieldMinMax": false
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "  Более 15 дн (закрыт)"
+                    },
+                    "properties": [
+                      {
+                        "id": "color",
+                        "value": {
+                          "fixedColor": "red",
+                          "mode": "fixed"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "  Более 15 дн (открыт)"
+                    },
+                    "properties": [
+                      {
+                        "id": "color",
+                        "value": {
+                          "fixedColor": "orange",
+                          "mode": "fixed"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "  Закрыт за 15 дней"
+                    },
+                    "properties": [
+                      {
+                        "id": "color",
+                        "value": {
+                          "fixedColor": "green",
+                          "mode": "fixed"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "  Менее 12 часов"
+                    },
+                    "properties": [
+                      {
+                        "id": "color",
+                        "value": {
+                          "fixedColor": "blue",
+                          "mode": "fixed"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "  Менее 15 дней"
+                    },
+                    "properties": [
+                      {
+                        "id": "color",
+                        "value": {
+                          "fixedColor": "yellow",
+                          "mode": "fixed"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "Линейная регрессия   Закрыт за 15 дней"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.lineStyle",
+                        "value": {
+                          "dash": [
+                            10,
+                            10
+                          ],
+                          "fill": "dash"
+                        }
+                      },
+                      {
+                        "id": "custom.fillOpacity",
+                        "value": 0
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "Линейная регрессия   Более 15 дн (закрыт)"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.lineStyle",
+                        "value": {
+                          "dash": [
+                            10,
+                            10
+                          ],
+                          "fill": "dash"
+                        }
+                      },
+                      {
+                        "id": "custom.fillOpacity",
+                        "value": 0
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "Линейная регрессия   Более 15 дн (открыт)"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.lineStyle",
+                        "value": {
+                          "dash": [
+                            10,
+                            10
+                          ],
+                          "fill": "dash"
+                        }
+                      },
+                      {
+                        "id": "custom.fillOpacity",
+                        "value": 0
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "Линейная регрессия   Менее 12 часов"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.lineStyle",
+                        "value": {
+                          "dash": [
+                            10,
+                            10
+                          ],
+                          "fill": "dash"
+                        }
+                      },
+                      {
+                        "id": "custom.fillOpacity",
+                        "value": 0
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "Линейная регрессия   Менее 15 дней"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.lineStyle",
+                        "value": {
+                          "dash": [
+                            10,
+                            10
+                          ],
+                          "fill": "dash"
+                        }
+                      },
+                      {
+                        "id": "custom.fillOpacity",
+                        "value": 0
+                      }
+                    ]
+                  },
+                  {
+                    "__systemRef": "hideSeriesFrom",
+                    "matcher": {
+                      "id": "byNames",
+                      "options": {
+                        "mode": "exclude",
+                        "names": [
+                          "  Более 15 дн (закрыт)",
+                          "  Более 15 дн (открыт)",
+                          "  Закрыт за 15 дней"
+                        ],
+                        "prefix": "All except:",
+                        "readOnly": true
+                      }
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.hideFrom",
+                        "value": {
+                          "legend": false,
+                          "tooltip": true,
+                          "viz": true
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "panel-77": {
+        "kind": "Panel",
+        "spec": {
+          "id": 77,
+          "title": "Ежедневная сводка SLA ДГУ инцидентов",
+          "description": "",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "grafana-postgresql-datasource",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "ffl50zkmfecxse"
+                      },
+                      "spec": {
+                        "dataset": "dispatch",
+                        "editorMode": "code",
+                        "format": "time_series",
+                        "rawQuery": true,
+                        "rawSql": "WITH date_range AS (\r\n  SELECT generate_series(\r\n    DATE(MIN(i.incident_date) AT TIME ZONE 'Europe/Moscow'),\r\n    DATE(MAX(i.incident_date) AT TIME ZONE 'Europe/Moscow'),\r\n    '1 day'\r\n  )::date AS day\r\n  FROM incidents_incident i\r\n  WHERE $__timeFilter(i.incident_date)\r\n),\r\nsla_calc AS (\r\n  SELECT DISTINCT\r\n    i.id,\r\n    DATE(i.incident_date AT TIME ZONE 'Europe/Moscow') AS incident_day,\r\n    CASE\r\n      WHEN i.dgu_end_date IS NOT NULL THEN\r\n        CASE \r\n          WHEN i.dgu_end_date > (i.dgu_start_date + INTERVAL '15 days') \r\n            THEN 'Более 15 дн (закрыт)'\r\n          ELSE 'Закрыт за 15 дней'\r\n        END\r\n      ELSE\r\n        CASE \r\n          WHEN EXTRACT(EPOCH FROM (NOW() - i.dgu_start_date)) > 1296000 THEN 'Более 15 дн (открыт)'\r\n          WHEN EXTRACT(EPOCH FROM (NOW() - i.dgu_start_date)) <= 43200 THEN 'Менее 12 часов'\r\n          ELSE 'Менее 15 дней'\r\n        END\r\n    END as sla_status\r\n  FROM\r\n    incidents_incident AS i\r\n    LEFT JOIN ts_pole AS p ON i.pole_id = p.id\r\n    LEFT JOIN ts_region AS r ON p.region_id = r.id\r\n    LEFT JOIN ts_macroregion AS m ON r.macroregion_id = m.id\r\n    LEFT JOIN ts_basestation AS b ON i.base_station_id = b.id\r\n    LEFT JOIN ts_basestation_operator AS bs_op ON b.id = bs_op.basestation_id\r\n    LEFT JOIN ts_basestationoperator AS op ON bs_op.basestationoperator_id = op.id\r\n  WHERE\r\n    $__timeFilter(i.incident_date)\r\n    AND ($macroregion = 0 OR m.id IN ($macroregion))\r\n    AND ($avr_contractor = 0 OR p.avr_contractor_id IN ($avr_contractor))\r\n    AND ('${region_manager}' = '0' OR r.responsible_manager = '${region_manager}')\r\n    AND ($dispatch = 0 OR i.responsible_user_id IN ($dispatch))\r\n    AND ('${operator_group}' = '0' OR op.operator_group = '${operator_group}')\r\n    AND (\r\n      ('${min_incident_ttl}' = '0' OR\r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) >= ${min_incident_ttl})\r\n    )\r\n    AND (\r\n      ('${max_incident_ttl}' = '0' OR\r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) <= ${max_incident_ttl})\r\n    )\r\n    AND i.dgu_start_date IS NOT NULL\r\n    AND (\r\n      (-1 IN ($incident_type) AND (incident_type_id IS NULL OR incident_type_id IN ($incident_type)))\r\n      OR 0 IN ($incident_type)\r\n      OR incident_type_id IN ($incident_type)\r\n    )\r\n    AND (\r\n      (-1 IN ($incident_subtype) AND (incident_subtype_id IS NULL OR incident_subtype_id IN ($incident_subtype)))\r\n      OR 0 IN ($incident_subtype)\r\n      OR incident_subtype_id IN ($incident_subtype)\r\n    )\r\n    AND (\r\n      (-1 IN ($rvr_priority) AND (rvr_priority_id IS NULL OR rvr_priority_id IN ($rvr_priority)))\r\n      OR 0 IN ($rvr_priority)\r\n      OR rvr_priority_id IN ($rvr_priority)\r\n    )\r\n    AND ('0' = '$pole' OR p.pole LIKE TRIM('$pole') || '%')\r\n),\r\nstatuses AS (\r\n  SELECT DISTINCT sla_status FROM sla_calc\r\n)\r\nSELECT\r\n  d.day AS time,\r\n  s.sla_status,\r\n  COUNT(sc.id) AS \" \"\r\nFROM date_range d\r\nCROSS JOIN statuses s\r\nLEFT JOIN sla_calc sc\r\n  ON sc.incident_day = d.day\r\n  AND sc.sla_status = s.sla_status\r\nGROUP BY d.day, s.sla_status\r\nORDER BY d.day, s.sla_status;",
+                        "sql": {
+                          "columns": [
+                            {
+                              "parameters": [],
+                              "type": "function"
+                            }
+                          ],
+                          "groupBy": [
+                            {
+                              "property": {
+                                "type": "string"
+                              },
+                              "type": "groupBy"
+                            }
+                          ],
+                          "limit": 50
+                        }
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [
+                {
+                  "kind": "Transformation",
+                  "group": "regression",
+                  "spec": {
+                    "options": {
+                      "xFieldName": "Time",
+                      "yFieldName": "  Закрыт за 15 дней"
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "regression",
+                  "spec": {
+                    "options": {
+                      "degree": 2,
+                      "modelType": "linear",
+                      "predictionCount": 100,
+                      "xFieldName": "Time",
+                      "yFieldName": "  Более 15 дн (закрыт)"
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "regression",
+                  "spec": {
+                    "options": {
+                      "xFieldName": "Time",
+                      "yFieldName": "  Более 15 дн (открыт)"
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "regression",
+                  "spec": {
+                    "options": {
+                      "xFieldName": "Time",
+                      "yFieldName": "  Менее 12 часов"
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "regression",
+                  "spec": {
+                    "options": {
+                      "xFieldName": "Time",
+                      "yFieldName": "  Менее 15 дней"
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.0.1",
+            "spec": {
+              "options": {
+                "annotations": {
+                  "clustering": -1,
+                  "multiLane": false
+                },
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "timezone": [
+                  "Europe/Moscow"
+                ],
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "min": 0,
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "fixed"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 10,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "smooth",
+                    "lineWidth": 3,
+                    "pointSize": 3,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "showValues": false,
+                    "spanNulls": true,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "fieldMinMax": false
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "  Более 15 дн (закрыт)"
+                    },
+                    "properties": [
+                      {
+                        "id": "color",
+                        "value": {
+                          "fixedColor": "red",
+                          "mode": "fixed"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "  Более 15 дн (открыт)"
+                    },
+                    "properties": [
+                      {
+                        "id": "color",
+                        "value": {
+                          "fixedColor": "orange",
+                          "mode": "fixed"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "  Закрыт за 15 дней"
+                    },
+                    "properties": [
+                      {
+                        "id": "color",
+                        "value": {
+                          "fixedColor": "green",
+                          "mode": "fixed"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "  Менее 12 часов"
+                    },
+                    "properties": [
+                      {
+                        "id": "color",
+                        "value": {
+                          "fixedColor": "blue",
+                          "mode": "fixed"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "  Менее 15 дней"
+                    },
+                    "properties": [
+                      {
+                        "id": "color",
+                        "value": {
+                          "fixedColor": "yellow",
+                          "mode": "fixed"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "Линейная регрессия   Закрыт за 15 дней"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.lineStyle",
+                        "value": {
+                          "dash": [
+                            10,
+                            10
+                          ],
+                          "fill": "dash"
+                        }
+                      },
+                      {
+                        "id": "custom.fillOpacity",
+                        "value": 0
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "Линейная регрессия   Более 15 дн (закрыт)"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.lineStyle",
+                        "value": {
+                          "dash": [
+                            10,
+                            10
+                          ],
+                          "fill": "dash"
+                        }
+                      },
+                      {
+                        "id": "custom.fillOpacity",
+                        "value": 0
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "Линейная регрессия   Более 15 дн (открыт)"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.lineStyle",
+                        "value": {
+                          "dash": [
+                            10,
+                            10
+                          ],
+                          "fill": "dash"
+                        }
+                      },
+                      {
+                        "id": "custom.fillOpacity",
+                        "value": 0
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "Линейная регрессия   Менее 12 часов"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.lineStyle",
+                        "value": {
+                          "dash": [
+                            10,
+                            10
+                          ],
+                          "fill": "dash"
+                        }
+                      },
+                      {
+                        "id": "custom.fillOpacity",
+                        "value": 0
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "Линейная регрессия   Менее 15 дней"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.lineStyle",
+                        "value": {
+                          "dash": [
+                            10,
+                            10
+                          ],
+                          "fill": "dash"
+                        }
+                      },
+                      {
+                        "id": "custom.fillOpacity",
+                        "value": 0
+                      }
+                    ]
+                  },
+                  {
+                    "__systemRef": "hideSeriesFrom",
+                    "matcher": {
+                      "id": "byNames",
+                      "options": {
+                        "mode": "exclude",
+                        "names": [
+                          "  Более 15 дн (закрыт)",
+                          "  Более 15 дн (открыт)",
+                          "  Закрыт за 15 дней"
+                        ],
+                        "prefix": "All except:",
+                        "readOnly": true
+                      }
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.hideFrom",
+                        "value": {
+                          "legend": false,
+                          "tooltip": true,
+                          "viz": true
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "panel-78": {
+        "kind": "Panel",
+        "spec": {
+          "id": 78,
+          "title": "Ежедневная сводка SLA РВР инцидентов",
+          "description": "",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "grafana-postgresql-datasource",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "ffl50zkmfecxse"
+                      },
+                      "spec": {
+                        "dataset": "dispatch",
+                        "editorMode": "code",
+                        "format": "time_series",
+                        "rawQuery": true,
+                        "rawSql": "WITH date_range AS (\r\n  SELECT generate_series(\r\n    DATE(MIN(i.incident_date) AT TIME ZONE 'Europe/Moscow'),\r\n    DATE(MAX(i.incident_date) AT TIME ZONE 'Europe/Moscow'),\r\n    '1 day'\r\n  )::date AS day\r\n  FROM incidents_incident i\r\n  WHERE $__timeFilter(i.incident_date)\r\n),\r\nsla_calc AS (\r\n  SELECT DISTINCT\r\n    i.id,\r\n    DATE(i.incident_date AT TIME ZONE 'Europe/Moscow') AS incident_day,\r\n    CASE\r\n      WHEN i.rvr_end_date IS NOT NULL THEN\r\n        CASE \r\n          WHEN i.rvr_end_date > (i.rvr_start_date + (irp.sla_deadline || ' minutes')::interval)\r\n            THEN 'Просрочен (закрыт)'\r\n          ELSE 'Закрыто вовремя'\r\n        END\r\n      ELSE\r\n        CASE \r\n          WHEN EXTRACT(EPOCH FROM ((i.rvr_start_date + (irp.sla_deadline || ' minutes')::interval) - NOW())) < 0 THEN 'Просрочен (открыт)'\r\n          WHEN EXTRACT(EPOCH FROM ((i.rvr_start_date + (irp.sla_deadline || ' minutes')::interval) - NOW())) <= 3600 THEN 'Менее часа'\r\n          ELSE 'В работе'\r\n        END\r\n    END as sla_status\r\n  FROM\r\n    incidents_incident AS i\r\n    JOIN incidents_rvrpriority AS irp ON i.rvr_priority_id = irp.id\r\n    LEFT JOIN ts_pole AS p ON i.pole_id = p.id\r\n    LEFT JOIN ts_region AS r ON p.region_id = r.id\r\n    LEFT JOIN ts_macroregion AS m ON r.macroregion_id = m.id\r\n    LEFT JOIN ts_basestation AS b ON i.base_station_id = b.id\r\n    LEFT JOIN ts_basestation_operator AS bs_op ON b.id = bs_op.basestation_id\r\n    LEFT JOIN ts_basestationoperator AS op ON bs_op.basestationoperator_id = op.id\r\n  WHERE\r\n    $__timeFilter(i.incident_date)\r\n    AND ($macroregion = 0 OR m.id IN ($macroregion))\r\n    AND ($avr_contractor = 0 OR p.avr_contractor_id IN ($avr_contractor))\r\n    AND ('${region_manager}' = '0' OR r.responsible_manager = '${region_manager}')\r\n    AND ($dispatch = 0 OR i.responsible_user_id IN ($dispatch))\r\n    AND ('${operator_group}' = '0' OR op.operator_group = '${operator_group}')\r\n    AND (\r\n      ('${min_incident_ttl}' = '0' OR\r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) >= ${min_incident_ttl})\r\n    )\r\n    AND (\r\n      ('${max_incident_ttl}' = '0' OR\r\n        (CASE WHEN i.incident_finish_date IS NOT NULL THEN EXTRACT(EPOCH FROM (i.incident_finish_date - i.incident_date)) ELSE EXTRACT(EPOCH FROM (NOW() - i.incident_date)) END) <= ${max_incident_ttl})\r\n    )\r\n    AND i.rvr_start_date IS NOT NULL\r\n    AND (\r\n      (-1 IN ($incident_type) AND (incident_type_id IS NULL OR incident_type_id IN ($incident_type)))\r\n      OR 0 IN ($incident_type)\r\n      OR incident_type_id IN ($incident_type)\r\n    )\r\n    AND (\r\n      (-1 IN ($incident_subtype) AND (incident_subtype_id IS NULL OR incident_subtype_id IN ($incident_subtype)))\r\n      OR 0 IN ($incident_subtype)\r\n      OR incident_subtype_id IN ($incident_subtype)\r\n    )\r\n    AND (\r\n      (-1 IN ($rvr_priority) AND (rvr_priority_id IS NULL OR rvr_priority_id IN ($rvr_priority)))\r\n      OR 0 IN ($rvr_priority)\r\n      OR rvr_priority_id IN ($rvr_priority)\r\n    )\r\n    AND ('0' = '$pole' OR p.pole LIKE TRIM('$pole') || '%')\r\n),\r\nstatuses AS (\r\n  SELECT DISTINCT sla_status FROM sla_calc\r\n)\r\nSELECT\r\n  d.day AS time,\r\n  s.sla_status,\r\n  COUNT(sc.id) AS \" \"\r\nFROM date_range d\r\nCROSS JOIN statuses s\r\nLEFT JOIN sla_calc sc\r\n  ON sc.incident_day = d.day\r\n  AND sc.sla_status = s.sla_status\r\nGROUP BY d.day, s.sla_status\r\nORDER BY d.day, s.sla_status;",
+                        "sql": {
+                          "columns": [
+                            {
+                              "parameters": [],
+                              "type": "function"
+                            }
+                          ],
+                          "groupBy": [
+                            {
+                              "property": {
+                                "type": "string"
+                              },
+                              "type": "groupBy"
+                            }
+                          ],
+                          "limit": 50
+                        }
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [
+                {
+                  "kind": "Transformation",
+                  "group": "regression",
+                  "spec": {
+                    "options": {
+                      "degree": 10,
+                      "modelType": "linear",
+                      "predictionCount": 100,
+                      "xFieldName": "Time",
+                      "yFieldName": "  В работе"
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "regression",
+                  "spec": {
+                    "options": {
+                      "xFieldName": "Time",
+                      "yFieldName": "  Закрыто вовремя"
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "regression",
+                  "spec": {
+                    "options": {
+                      "xFieldName": "Time",
+                      "yFieldName": "  Менее часа"
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "regression",
+                  "spec": {
+                    "options": {
+                      "xFieldName": "Time",
+                      "yFieldName": "  Просрочен (закрыт)"
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "regression",
+                  "spec": {
+                    "options": {
+                      "xFieldName": "Time",
+                      "yFieldName": "  Просрочен (открыт)"
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.0.1",
+            "spec": {
+              "options": {
+                "annotations": {
+                  "clustering": -1,
+                  "multiLane": false
+                },
+                "legend": {
+                  "calcs": [],
                   "displayMode": "list",
                   "placement": "bottom",
                   "showLegend": true,
@@ -13556,6 +13929,7 @@
               },
               "fieldConfig": {
                 "defaults": {
+                  "min": 0,
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
@@ -13608,118 +13982,7 @@
                   {
                     "matcher": {
                       "id": "byName",
-                      "scope": "series",
-                      "options": "Time"
-                    },
-                    "properties": [
-                      {
-                        "id": "unit",
-                        "value": ""
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Менее 15 дней"
-                    },
-                    "properties": [
-                      {
-                        "id": "displayName",
-                        "value": "Менее 15 дней"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Закрыт за 15 дней"
-                    },
-                    "properties": [
-                      {
-                        "id": "displayName",
-                        "value": "Закрыт за 15 дней"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Менее 15 дней"
-                    },
-                    "properties": [
-                      {
-                        "id": "displayName",
-                        "value": "Менее 15 дней"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Более 15 дн (закрыт)"
-                    },
-                    "properties": [
-                      {
-                        "id": "displayName",
-                        "value": "Более 15 дн (закрыт)"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Более 15 дн (открыт)"
-                    },
-                    "properties": [
-                      {
-                        "id": "displayName",
-                        "value": "Более 15 дн (открыт)"
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Закрыт за 15 дней"
-                    },
-                    "properties": [
-                      {
-                        "id": "color",
-                        "value": {
-                          "fixedColor": "green",
-                          "mode": "fixed"
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Более 15 дн (открыт)"
-                    },
-                    "properties": [
-                      {
-                        "id": "color",
-                        "value": {
-                          "fixedColor": "orange",
-                          "mode": "fixed"
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Менее 15 дней"
+                      "options": "  В работе"
                     },
                     "properties": [
                       {
@@ -13734,54 +13997,7 @@
                   {
                     "matcher": {
                       "id": "byName",
-                      "scope": "series",
-                      "options": "count Менее 12 часов"
-                    },
-                    "properties": [
-                      {
-                        "id": "color",
-                        "value": {
-                          "fixedColor": "yellow",
-                          "mode": "fixed"
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "scope": "series",
-                      "options": "count Более 15 дн (закрыт)"
-                    },
-                    "properties": [
-                      {
-                        "id": "color",
-                        "value": {
-                          "fixedColor": "red",
-                          "mode": "fixed"
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "options": "Более 15 дн (открыт)"
-                    },
-                    "properties": [
-                      {
-                        "id": "color",
-                        "value": {
-                          "fixedColor": "orange",
-                          "mode": "fixed"
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "options": "Закрыт за 15 дней"
+                      "options": "  Закрыто вовремя"
                     },
                     "properties": [
                       {
@@ -13796,22 +14012,7 @@
                   {
                     "matcher": {
                       "id": "byName",
-                      "options": "Более 15 дн (закрыт)"
-                    },
-                    "properties": [
-                      {
-                        "id": "color",
-                        "value": {
-                          "fixedColor": "red",
-                          "mode": "fixed"
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "options": "Менее 15 дней"
+                      "options": "  Менее часа"
                     },
                     "properties": [
                       {
@@ -13826,20 +14027,37 @@
                   {
                     "matcher": {
                       "id": "byName",
-                      "scope": "series",
-                      "options": "count Менее 12 часов"
+                      "options": "  Просрочен (закрыт)"
                     },
                     "properties": [
                       {
-                        "id": "displayName",
-                        "value": "Менее 12 часов"
+                        "id": "color",
+                        "value": {
+                          "fixedColor": "red",
+                          "mode": "fixed"
+                        }
                       }
                     ]
                   },
                   {
                     "matcher": {
                       "id": "byName",
-                      "options": "Менее 12 часов"
+                      "options": "  Просрочен (открыт)"
+                    },
+                    "properties": [
+                      {
+                        "id": "color",
+                        "value": {
+                          "fixedColor": "orange",
+                          "mode": "fixed"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "Линейная регрессия   В работе"
                     },
                     "properties": [
                       {
@@ -13847,6 +14065,162 @@
                         "value": {
                           "fixedColor": "blue",
                           "mode": "fixed"
+                        }
+                      },
+                      {
+                        "id": "custom.lineStyle",
+                        "value": {
+                          "dash": [
+                            10,
+                            10
+                          ],
+                          "fill": "dash"
+                        }
+                      },
+                      {
+                        "id": "custom.fillOpacity",
+                        "value": 0
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "Линейная регрессия   Закрыто вовремя"
+                    },
+                    "properties": [
+                      {
+                        "id": "color",
+                        "value": {
+                          "fixedColor": "green",
+                          "mode": "fixed"
+                        }
+                      },
+                      {
+                        "id": "custom.lineStyle",
+                        "value": {
+                          "dash": [
+                            10,
+                            10
+                          ],
+                          "fill": "dash"
+                        }
+                      },
+                      {
+                        "id": "custom.fillOpacity",
+                        "value": 0
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "Линейная регрессия   Менее часа"
+                    },
+                    "properties": [
+                      {
+                        "id": "color",
+                        "value": {
+                          "fixedColor": "yellow",
+                          "mode": "fixed"
+                        }
+                      },
+                      {
+                        "id": "custom.lineStyle",
+                        "value": {
+                          "dash": [
+                            10,
+                            10
+                          ],
+                          "fill": "dash"
+                        }
+                      },
+                      {
+                        "id": "custom.fillOpacity",
+                        "value": 0
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "Линейная регрессия   Просрочен (закрыт)"
+                    },
+                    "properties": [
+                      {
+                        "id": "color",
+                        "value": {
+                          "fixedColor": "red",
+                          "mode": "fixed"
+                        }
+                      },
+                      {
+                        "id": "custom.lineStyle",
+                        "value": {
+                          "dash": [
+                            10,
+                            10
+                          ],
+                          "fill": "dash"
+                        }
+                      },
+                      {
+                        "id": "custom.fillOpacity",
+                        "value": 0
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "Линейная регрессия   Просрочен (открыт)"
+                    },
+                    "properties": [
+                      {
+                        "id": "color",
+                        "value": {
+                          "fixedColor": "orange",
+                          "mode": "fixed"
+                        }
+                      },
+                      {
+                        "id": "custom.lineStyle",
+                        "value": {
+                          "dash": [
+                            10,
+                            10
+                          ],
+                          "fill": "dash"
+                        }
+                      },
+                      {
+                        "id": "custom.fillOpacity",
+                        "value": 0
+                      }
+                    ]
+                  },
+                  {
+                    "__systemRef": "hideSeriesFrom",
+                    "matcher": {
+                      "id": "byNames",
+                      "options": {
+                        "mode": "exclude",
+                        "names": [
+                          "  Закрыто вовремя",
+                          "  Просрочен (закрыт)",
+                          "  Просрочен (открыт)"
+                        ],
+                        "prefix": "All except:",
+                        "readOnly": true
+                      }
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.hideFrom",
+                        "value": {
+                          "legend": false,
+                          "tooltip": true,
+                          "viz": true
                         }
                       }
                     ]
@@ -14205,7 +14579,7 @@
                         "x": 0,
                         "y": 0,
                         "width": 14,
-                        "height": 22,
+                        "height": 23,
                         "element": {
                           "kind": "ElementReference",
                           "name": "panel-1"
@@ -14218,7 +14592,7 @@
                         "x": 14,
                         "y": 0,
                         "width": 10,
-                        "height": 7,
+                        "height": 4,
                         "element": {
                           "kind": "ElementReference",
                           "name": "panel-4"
@@ -14229,7 +14603,20 @@
                       "kind": "GridLayoutItem",
                       "spec": {
                         "x": 14,
-                        "y": 7,
+                        "y": 4,
+                        "width": 10,
+                        "height": 4,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-60"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 14,
+                        "y": 8,
                         "width": 10,
                         "height": 15,
                         "element": {
@@ -14242,7 +14629,7 @@
                       "kind": "GridLayoutItem",
                       "spec": {
                         "x": 0,
-                        "y": 22,
+                        "y": 23,
                         "width": 24,
                         "height": 11,
                         "element": {
@@ -14255,7 +14642,7 @@
                       "kind": "GridLayoutItem",
                       "spec": {
                         "x": 0,
-                        "y": 33,
+                        "y": 34,
                         "width": 24,
                         "height": 4,
                         "element": {
@@ -14297,20 +14684,7 @@
                         "x": 17,
                         "y": 0,
                         "width": 7,
-                        "height": 4,
-                        "element": {
-                          "kind": "ElementReference",
-                          "name": "panel-60"
-                        }
-                      }
-                    },
-                    {
-                      "kind": "GridLayoutItem",
-                      "spec": {
-                        "x": 17,
-                        "y": 4,
-                        "width": 7,
-                        "height": 11,
+                        "height": 15,
                         "element": {
                           "kind": "ElementReference",
                           "name": "panel-8"
@@ -14613,7 +14987,7 @@
                                   "height": 10,
                                   "element": {
                                     "kind": "ElementReference",
-                                    "name": "panel-74"
+                                    "name": "panel-78"
                                   }
                                 }
                               },
@@ -14823,7 +15197,7 @@
                                   "height": 10,
                                   "element": {
                                     "kind": "ElementReference",
-                                    "name": "panel-75"
+                                    "name": "panel-77"
                                   }
                                 }
                               },
