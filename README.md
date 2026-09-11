@@ -736,8 +736,7 @@ sudo docker compose up -d --build --force-recreate \
   dispatch_grafana \
   dispatch_celery_heavy_worker \
   dispatch_celery_worker \
-  dispatch_celery_beat \
-  dispatch_prometheus
+  dispatch_celery_beat
 
 # Перезапуск Celery-воркеров после изменений в коде:
 sudo docker compose restart \
