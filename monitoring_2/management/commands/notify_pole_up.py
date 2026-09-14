@@ -292,11 +292,9 @@ class Command(BaseCommand):
 
                 full_message = '\n'.join(msg_lines)
 
-                self.mark_notification_sent(ip)
-                self._remove_from_failed_cache(ip)
-
                 try:
                     if not DEBUG_MODE:
+                        self.mark_notification_sent(ip)
                         send_mail(
                             subject=subject,
                             message=full_message,
@@ -305,6 +303,7 @@ class Command(BaseCommand):
                             fail_silently=False,
                         )
 
+                    self._remove_from_failed_cache(ip)
                     new_poles.append(nearest_pole['pole'])
 
                 except Exception as e:
