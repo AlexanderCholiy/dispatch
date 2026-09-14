@@ -30,6 +30,7 @@
               <th data-col="sla_eks">ВРТ ЭКС</th>
               <th data-col="pole">Шифр опоры</th>
               <th data-col="bs">Номер БС</th>
+              <th data-col="macroregion">МР</th>
               <th data-col="address">Адрес</th>
               <th data-col="created">Дата регистрации</th>
               <th data-col="is_favorite" style="text-align: center;">Избранное</th>
@@ -163,6 +164,14 @@
                 <td>
                   {% if incident.base_station %}
                     <span class="copy-text" data-text="{{ incident.base_station.bs_name }}">{{ incident.base_station.bs_name|default:"—" }}</span>
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+
+                <td>
+                  {% if incident.pole.region.macroregion %}
+                    {{ incident.pole.region.macroregion|default:"—" }}
                   {% else %}
                     —
                   {% endif %}

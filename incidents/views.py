@@ -895,6 +895,7 @@ def index(request: HttpRequest) -> HttpResponse:
         'responsible_user',
         'pole',
         'pole__region',
+        'pole__region__macroregion',
         'base_station',
     ).prefetch_related(
         'categories',
