@@ -99,12 +99,14 @@ class Modem(models.Model):
         on_delete=models.DO_NOTHING,
         verbose_name='Тип устройства',
         db_column='Level',
+        related_name='modems',
     )
     status = models.ForeignKey(
         ModemStatus,
         on_delete=models.DO_NOTHING,
         verbose_name='Статус',
         db_column='Status',
+        related_name='modems',
     )
     slate = models.IntegerField(
         'Состояние модема',
@@ -208,6 +210,7 @@ class Pole(models.Model):
         on_delete=models.DO_NOTHING,
         verbose_name='Статус',
         db_column='Status',
+        related_name='poles',
     )
 
     class Meta:
@@ -229,12 +232,14 @@ class ModemPoleRealtion(models.Model):
         on_delete=models.CASCADE,
         verbose_name='Устройство',
         db_column='ModemId',
+        related_name='modem_pole_relations',
     )
     pole = models.ForeignKey(
         Pole,
         on_delete=models.CASCADE,
         verbose_name='Опора',
         db_column='SiteId',
+        related_name='modem_pole_relations',
     )
     dismantled = models.BooleanField(
         'Был ли демонтаж',
@@ -267,6 +272,7 @@ class ModemNotification(models.Model):
         on_delete=models.CASCADE,
         verbose_name='Устройство',
         db_column='ModemId',
+        related_name='modem_notifications',
     )
     action = models.TextField(
         'Действие',
@@ -297,6 +303,7 @@ class Counter(models.Model):
         on_delete=models.CASCADE,
         verbose_name='Устройство',
         db_column='ModemId',
+        related_name='counters',
     )
 
     class Meta:

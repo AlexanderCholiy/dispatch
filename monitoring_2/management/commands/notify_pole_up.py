@@ -1,21 +1,24 @@
 import math
 import os
+from http import HTTPStatus
 from typing import TypedDict
 
+import requests
 from django.conf import settings
 from django.core.cache import cache
 from django.core.mail import send_mail
 from django.core.management.base import BaseCommand
-from django.db import connections
-from django.db.models import Q, QuerySet
+from django.db.models import Q, QuerySet, Subquery
+from requests.adapters import HTTPAdapter
 from tqdm import tqdm
+from urllib3.util.retry import Retry
 
 from core.constants import DEBUG_MODE
-from core.loggers import monitoring_logger
+from core.loggers import monitoring_2_logger
 from core.services.haversine_distance import haversine_distance
 from core.wraps import timer
 from monitoring.constants import (
-    COORDINATE_PATTERN,
+    FACTORIES_ZONES,
     FACTORY_EXCLUSION_RADIUS,
     GPS_NUMBER_DECIMAL_PLACES,
     MAX_MIN_LEN_BETWEEN_MODEM_AND_POLE,
@@ -27,8 +30,16 @@ from monitoring.constants import (
     TOP_N_NEAREST_POLES,
     TRETHHOLD_RATIO_BETWEEN_MODEM_AND_POLE,
 )
-from monitoring.models import DeviceStatus, DeviceType, MSysCounter, MSysModem
-from ts.models import Pole
+from monitoring_2.constants import (
+    HU_NEVA_NEW_ID,
+    NORMAL_STATUS_ID,
+    NOTIFICATION_FAILED_CACHE_KEY,
+    NOTIFICATION_FAILED_CACHE_TIMEOUT,
+    NOTIFICATION_POLE_UP_URL,
+    POLE_UP_ACTION_KEY,
+    RHU_NEW_ID,
+)
+from monitoring_2.models import Counter, Modem, Pole
 
 
 class NearestDevice(TypedDict):
@@ -40,8 +51,9 @@ class NearestDevice(TypedDict):
 class Command(BaseCommand):
     help = 'Уведомление о включении РЩУ рядом с ближайшей опорой'
 
-    @timer(monitoring_logger)
+    @timer(monitoring_2_logger)
     def handle(self, *args, **kwargs):
+
         acquired = cache.add(
             NOTIFY_NEW_POLE_LOCK_KEY, str(os.getpid()),
             timeout=NOTIFY_NEW_POLE_LOCK_TIMEOUT
@@ -57,7 +69,7 @@ class Command(BaseCommand):
                     timeout=NOTIFY_NEW_POLE_LOCK_TIMEOUT
                 )
 
-            monitoring_logger.warning(
+            monitoring_2_logger.warning(
                 'Задача отправки уведомлений о включении опор уже запущена. '
                 'Пропуск.'
             )
@@ -68,7 +80,7 @@ class Command(BaseCommand):
         except KeyboardInterrupt:
             raise
         except Exception as e:
-            monitoring_logger.exception(
+            monitoring_2_logger.exception(
                 f'Ошибка отправки уведомлений о включении опор: {e}'
             )
         finally:
@@ -82,28 +94,25 @@ class Command(BaseCommand):
         new_poles: list[str] = []
 
         if not total:
-            monitoring_logger.debug(
+            monitoring_2_logger.debug(
                 'Устройств требующих отправки уведомлений не обнаружено'
             )
             return
 
         if total > MAX_NEW_RHU_NOTIFICATION:
-            monitoring_logger.warning(
+            monitoring_2_logger.warning(
                 f'Слишком много новых опор ({total} шт.). Пропуск задачи.'
             )
             return
 
         poles_list = list(
-            Pole.objects.filter(
-                pole_latitude__isnull=False,
-                pole_longtitude__isnull=False,
-            ).values(
-                'pole', 'address', 'pole_latitude', 'pole_longtitude'
-            )
+            Pole.objects
+            .exclude(coordinates__isnull=True)
+            .values('pole', 'address', 'coordinates')
         )
 
         if not poles_list:
-            monitoring_logger.warning(
+            monitoring_2_logger.warning(
                 'Опоры для поиска отсутствуют. Пропуск задачи.'
             )
             return
@@ -117,59 +126,14 @@ class Command(BaseCommand):
             disable=not DEBUG_MODE,
         ) as pbar_outer:
             for device in devices.iterator(chunk_size=MONITORING_CHUNK_SIZE):
-                try:
-                    ip = device.modem_ip.strip()
-                    dev_lat_str = str(device.modem_latitude).strip()
-                    dev_lon_str = str(device.modem_longtitude).strip()
-
-                    if (
-                        not COORDINATE_PATTERN.match(dev_lat_str)
-                        or not COORDINATE_PATTERN.match(dev_lon_str)
-                    ):
-                        monitoring_logger.warning(
-                            'Некорректный формат координат у '
-                            f'{device.modem_ip.strip()}: '
-                            f'lat="{dev_lat_str}", '
-                            f'lon="{dev_lon_str}". Пропуск.'
-                        )
-                        skipped_count += 1
-                        pbar_outer.update(1)
-                        continue
-
-                    dev_lat = float(dev_lat_str)
-                    dev_lon = float(dev_lon_str)
-
-                except ValueError:
-                    monitoring_logger.error(
-                        'Ошибка парсинга координат у '
-                        f'{device.modem_ip.strip()}. Пропуск.'
-                    )
-                    skipped_count += 1
-                    pbar_outer.update(1)
-                    continue
+                ip = device.ip.strip()
+                dev_lon = device.coordinates.x
+                dev_lat = device.coordinates.y
 
                 # Фильтрация по зонам (заводы где собирают щиты):
-                zones = [
-                    # Allics:
-                    (55.810244, 37.833093),
-                    # Kvanta:
-                    (55.61364891050723, 37.585634328688705),
-                    # DC Telecom:
-                    (55.843576, 37.537767),
-                    # DI Group:
-                    (55.966669167, 38.06768783),
-                    # NPK Energo-Sila:
-                    (55.490010833, 46.424347),
-                    (56.0100305, 47.594736),
-                    # ElektroConstrakshn:
-                    (56.10033, 47.258308667),
-                    # TIK:
-                    (57.9556695, 56.231073333),
-                ]
-
                 is_excluded = False
 
-                for factory_lat, factory_lon in zones:
+                for factory_lat, factory_lon in FACTORIES_ZONES:
                     dist_to_center = haversine_distance(
                         dev_lat, dev_lon, factory_lat, factory_lon
                     )
@@ -191,14 +155,14 @@ class Command(BaseCommand):
                 distances: list[NearestDevice] = []
 
                 for pole in poles_list:
-                    pole_latitude: float = pole['pole_latitude']
-                    pole_longtitude: float = pole['pole_longtitude']
+                    pole_longtitude = pole['coordinates'].x
+                    pole_latitude = pole['coordinates'].y
 
                     dist = haversine_distance(
                         dev_lat,
                         dev_lon,
-                        pole['pole_latitude'],
-                        pole['pole_longtitude'],
+                        pole_latitude,
+                        pole_longtitude,
                     )
 
                     if (
@@ -229,9 +193,9 @@ class Command(BaseCommand):
                 )
 
                 if not top_nearest_poles:
-                    monitoring_logger.debug(
+                    monitoring_2_logger.debug(
                         'Расстояние между контроллером '
-                        f'{device.modem_ip.strip()} и ближайшей опорой '
+                        f'{ip} и ближайшей опорой '
                         'превышает максимальный лимит '
                         f'{MAX_MIN_LEN_BETWEEN_MODEM_AND_POLE} м. Пропуск.'
                     )
@@ -241,10 +205,7 @@ class Command(BaseCommand):
 
                 nearest_pole = top_nearest_poles[0]
 
-                dev_type_name = (
-                    'ЩУ-Нева'
-                    if device.level == DeviceType.HU_NEVA_NEW else 'РЩУ'
-                )
+                dev_type_name = str(device.level).replace('NEW', '').strip()
 
                 subject = (
                     f'Включение {dev_type_name} '
@@ -255,19 +216,19 @@ class Command(BaseCommand):
 
                 msg_lines.append(
                     f'На опоре {nearest_pole["pole"]} '
-                    f'({nearest_pole["address"]}) '
-                    f'зафиксировано включение оборудования ({dev_type_name}).'
+                    f'[{nearest_pole["address"]}] '
+                    f'зафиксировано включение оборудования [{dev_type_name}].'
                 )
                 msg_lines.append('')
                 msg_lines.append(
-                    f'• IP адрес: {ip.strip()}'
+                    f'• IP адрес: {ip}'
                 )
 
-                serial = device.modem_serial
+                serial = device.serial
                 cabinet = device.cabinet
-                counters: QuerySet[MSysCounter] = device.counters.all()
+                counters: QuerySet[Counter] = device.counters.all()
                 counters_numbers = (
-                    [c.counter_number.strip() for c in counters]
+                    sorted(c.counter_number.strip() for c in counters)
                     if counters else None
                 )
 
@@ -314,7 +275,7 @@ class Command(BaseCommand):
                         ):
                             msg_lines.append(
                                 '• Ближайшая альтернативная опора '
-                                f'({pole_info["pole"]}) '
+                                f'[{pole_info["pole"]}] '
                                 f'находится в {dist_other} м.'
                             )
                         else:
@@ -331,18 +292,11 @@ class Command(BaseCommand):
 
                 full_message = '\n'.join(msg_lines)
 
-                # Стоит запрет на редактирование данных мониторинга, поэтому
-                # используем сырые SQL запросы:
+                self.mark_notification_sent(ip)
+                self._remove_from_failed_cache(ip)
+
                 try:
                     if not DEBUG_MODE:
-                        with connections['monitoring'].cursor() as cursor:
-                            sql_update = """
-                                UPDATE MSys_Modems
-                                SET is_notification_sent = 1
-                                WHERE ModemID = %s;
-                            """
-                            cursor.execute(sql_update, [device.modem_ip])
-
                         send_mail(
                             subject=subject,
                             message=full_message,
@@ -355,52 +309,131 @@ class Command(BaseCommand):
 
                 except Exception as e:
                     skipped_count += 1
-                    monitoring_logger.exception(
-                        'Ошибка отправки письма для '
-                        f'{device.modem_ip.strip()}: {e}'
+                    monitoring_2_logger.exception(
+                        f'Ошибка отправки письма для {ip}: {e}'
                     )
-                    with connections['monitoring'].cursor() as cursor:
-                        sql_update = """
-                            UPDATE MSys_Modems
-                            SET is_notification_sent = 0
-                            WHERE ModemID = %s;
-                        """
-                        cursor.execute(sql_update, [device.modem_ip])
+                    self._cache_failed_notification(ip)
 
                 pbar_outer.update(1)
 
         success_count = total - skipped_count
         if success_count:
-            monitoring_logger.info(
+            monitoring_2_logger.info(
                 f'Отправлено: {success_count} уведомлений о включении опор: '
                 f'{", ".join(new_poles)}. '
                 f'Всего обработано: {total}, Пропущено: {skipped_count}'
             )
 
-    def get_new_devices(self):
-        bad_gps = [
-            'NULL',
-            'nu.0',
-            'K.0',
-            'mp.945',
-            '7.367e-06',
-            '5.75e-06',
-        ]
+    def mark_notification_sent(
+        self,
+        ip: str,
+        timeout: int = 10,
+        retries: int = 3,
+        backoff: float = 1.0,
+    ):
+        """
+        Проставляет флаг отправки уведомления в БД Мониторинга 2.0.
 
-        return (
-            MSysModem.objects
+        PUT /api/integration/notifications/modem/<action>/sent?ip=<ip>
+
+        :param ip: IP адрес модема
+        :param timeout: таймаут запроса в секундах
+        :param retries: количество повторных попыток
+        :param backoff: множитель задержки между попытками (сек)
+        """
+        ip = ip.strip()
+        session = requests.Session()
+        retry = Retry(
+            total=retries,
+            backoff_factor=backoff,
+            status_forcelist=[
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+                HTTPStatus.BAD_GATEWAY,
+                HTTPStatus.SERVICE_UNAVAILABLE,
+                HTTPStatus.GATEWAY_TIMEOUT,
+            ],
+            allowed_methods=['PUT'],
+        )
+        session.mount('https://', HTTPAdapter(max_retries=retry))
+
+        try:
+            response = session.put(
+                NOTIFICATION_POLE_UP_URL,
+                params={'ip': ip},
+                timeout=timeout,
+            )
+            response.raise_for_status()
+            monitoring_2_logger.debug(
+                f'Флаг "{POLE_UP_ACTION_KEY}" для {ip} проставлен успешно '
+                f'(status={response.status_code})'
+            )
+
+        except requests.exceptions.RequestException as e:
+            monitoring_2_logger.error(
+                f'Ошибка простановки флага "{POLE_UP_ACTION_KEY}" '
+                f'для {ip} после {retries} попыток: {e}'
+            )
+            raise
+
+    def _cache_failed_notification(self, ip: str):
+        """Кладёт IP в кеш для повторной отправки."""
+        failed_ips: list[str] = cache.get(NOTIFICATION_FAILED_CACHE_KEY, [])
+        if ip not in failed_ips:
+            failed_ips.append(ip)
+            cache.set(
+                NOTIFICATION_FAILED_CACHE_KEY,
+                failed_ips,
+                timeout=NOTIFICATION_FAILED_CACHE_TIMEOUT,
+            )
+            monitoring_2_logger.warning(
+                f'IP {ip} добавлен в очередь повторной отправки '
+                f'(всего в очереди: {len(failed_ips)})'
+            )
+
+    def _remove_from_failed_cache(self, ip: str):
+        """Удаляет IP из кеша после успешной отправки."""
+        failed_ips: list[str] = cache.get(NOTIFICATION_FAILED_CACHE_KEY, [])
+        if ip in failed_ips:
+            failed_ips.remove(ip)
+            if failed_ips:
+                cache.set(
+                    NOTIFICATION_FAILED_CACHE_KEY,
+                    failed_ips,
+                    timeout=NOTIFICATION_FAILED_CACHE_TIMEOUT,
+                )
+            else:
+                cache.delete(NOTIFICATION_FAILED_CACHE_KEY)
+
+    def get_new_devices(self):
+        stuck_ips: list[str] = cache.get(NOTIFICATION_FAILED_CACHE_KEY, [])
+        base_qs = (
+            Modem.objects
             .filter(
-                level__in=[DeviceType.RHU_NEW, DeviceType.HU_NEVA_NEW],
-                status=DeviceStatus.MODEM_NORMAL,
+                level__id__in=[RHU_NEW_ID, HU_NEVA_NEW_ID],
+                status__id=NORMAL_STATUS_ID,
             )
             .exclude(
-                Q(is_notification_sent=True)
-                | Q(modem_latitude__isnull=True)
-                | Q(modem_longtitude__isnull=True)
-                | Q(modem_longtitude__in=bad_gps)
-                | Q(modem_latitude__in=bad_gps)
+                Q(coordinates__isnull=True)
+                | Q(modem_notifications__action=POLE_UP_ACTION_KEY)
             )
-            .select_related('pole_1')
-            .prefetch_related('counters')
-            .order_by('updated_at', 'modem_ip')
+        )
+
+        if stuck_ips:
+            stuck_qs = Modem.objects.filter(ip__in=stuck_ips)
+            union_qs = base_qs.union(stuck_qs)
+            qs = Modem.objects.filter(
+                id__in=Subquery(union_qs.values('id'))
+            )
+        else:
+            qs = base_qs
+
+        return (
+            qs
+            .select_related('level', 'status')
+            .prefetch_related(
+                'counters',
+                'modem_pole_relations',
+                'modem_notifications',
+            )
+            .order_by('last_data_at', 'id')
         )

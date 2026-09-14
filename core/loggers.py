@@ -13,6 +13,7 @@ from .constants import (
     EMAIL_PARSER_LOG_ROTATING_FILE,
     INCIDENTS_LOG_ROTATING_FILE,
     MAX_API_LOG_ROTATING_FILE,
+    MONITORING_2_LOG_ROTATING_FILE,
     MONITORING_LOG_ROTATING_FILE,
     MONITORING_PAAS_LOG_ROTATING_FILE,
     MONITORING_RVR_SMS_LOG_ROTATING_FILE,
@@ -165,6 +166,10 @@ default_logger = LoggerFactory(
 
 monitoring_logger = LoggerFactory(
     'monitoring', MONITORING_LOG_ROTATING_FILE
+).get_logger()
+
+monitoring_2_logger = LoggerFactory(
+    'monitoring_2', MONITORING_2_LOG_ROTATING_FILE
 ).get_logger()
 
 monitoring_paas_logger = LoggerFactory(
