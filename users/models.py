@@ -15,6 +15,7 @@ from .constants import (
     ALLOWED_IMAGE_EXTENSIONS,
     DEFAULT_AVATARS_DIR,
     MAX_DEFAULT_AVATAR_LEN,
+    MAX_PHONE_LEN,
     MAX_USER_EMAIL_LEN,
     MAX_USER_PASSWORD_LEN,
     MAX_USER_ROLE_LEN,
@@ -23,11 +24,13 @@ from .constants import (
     SUBFOLDER_AVATAR_DIR,
     USERNAME_HELP_TEXT,
 )
+from .services.normalize_ru_phone import normalize_ru_phone
 from .validators import (
     username_format_validators,
     validate_pending_email,
     validate_pending_password,
     validate_pending_username,
+    validate_ru_phone,
     validate_user_email,
     validate_user_username,
 )
@@ -132,6 +135,14 @@ class User(AbstractUser):
         verbose_name='Регионы инцидентов',
         help_text='Регионы, за которые отвечает пользователь по инцидентам.',
     )
+    phone = models.CharField(
+        'Телефон',
+        max_length=MAX_PHONE_LEN,
+        blank=True,
+        null=True,
+        help_text='Российский номер, например: +7 800 234-67-66.',
+        validators=[validate_ru_phone]
+    )
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
@@ -197,6 +208,9 @@ class User(AbstractUser):
                 })
 
     def save(self, *args, **kwargs) -> None:
+        if self.phone:
+            self.phone = normalize_ru_phone(self.phone)
+
         is_new = self.pk is None
 
         if (

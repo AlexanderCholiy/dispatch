@@ -224,6 +224,14 @@ html.dark .form-group input[type="date"]::-webkit-calendar-picker-indicator {
   color: var(--red-color);
 }
 
+.phone-form .errorlist {
+  color: var(--color);
+}
+
+.phone-form .errorlist li {
+  padding-block: var(--space-xs);
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-5px); }
   to   { opacity: 1; transform: translateY(0); }

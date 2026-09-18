@@ -223,7 +223,12 @@
                 <div class="region-responsible-user-label-left">{{ incident_form.region_responsible_user.label }}:</div>
                 <div class="region-responsible-user-label-right">
                   {% if incident.region_responsible_user %}
-                    <span class="copy-text region-responsible-user-email" data-text="{{ incident.region_responsible_user.email|default:'' }}">{{ incident.region_responsible_user.email }}</span>
+                    <a href="{% url 'users:user_detail' user_id=incident.region_responsible_user.id %}" 
+                      target="_blank"
+                      class="tooltip region-responsible-user-email" 
+                      data-title="{% if incident.region_responsible_user.phone %}Тел.: {{ incident.region_responsible_user.phone }}{% endif %}">
+                        {{ incident.region_responsible_user.email }}
+                    </a>
                   {% else %}
                     —
                   {% endif %}

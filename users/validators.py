@@ -1,3 +1,5 @@
+import re
+
 from django.contrib.auth.password_validation import (
     CommonPasswordValidator,
     MinimumLengthValidator,
@@ -112,3 +114,18 @@ def validate_pending_email(email: str, instance=None):
             pending.delete()
         else:
             raise ValidationError('Дынный email ожидает подтверждения.')
+
+
+def validate_ru_phone(value: str | None):
+    """Валидатор российского номера телефона."""
+
+    if not value:
+        return
+
+    digits = re.sub(r'\D', '', value)
+
+    if not (digits.startswith('8') and len(digits) == 11):
+        raise ValidationError(
+            'Введите корректный номер телефона, '
+            'например: 88002346766.'
+        )

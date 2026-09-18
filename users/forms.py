@@ -19,6 +19,7 @@ from .constants import (
     PASSWORD_HELP_TEXT,
 )
 from .models import PendingUser, User, WorkSchedule
+from .services.normalize_ru_phone import normalize_ru_phone
 from .validators import validate_user_email
 
 
@@ -231,12 +232,19 @@ class UserForm(forms.ModelForm):
         label='Выбрать иконку',
         help_text='Если выбрано, загрузка фото будет отключена.'
     )
+    phone = forms.CharField(
+        required=False,
+        max_length=20,
+        label='Телефон',
+        help_text='Российский номер, например: 89161234567.',
+    )
 
     class Meta:
         model = User
         fields = (
             'avatar',
             'default_avatar',
+            'phone',
             'date_of_birth',
             'first_name',
             'last_name',
@@ -245,6 +253,11 @@ class UserForm(forms.ModelForm):
             'avatar': forms.ClearableFileInput(attrs={
                 'class': 'avatar-input',
                 'accept': 'image/png, image/jpeg',
+            }),
+            'phone': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '89161234567',
+                'maxlength': '20',
             }),
             'date_of_birth': forms.DateInput(
                 attrs={
@@ -297,6 +310,12 @@ class UserForm(forms.ModelForm):
                 raise ValidationError('Разрешены только форматы JPG и PNG.')
 
         return avatar
+
+    def clean_phone(self):
+        phone = self.cleaned_data.get('phone')
+        if phone:
+            phone = normalize_ru_phone(phone)
+            return phone
 
     def clean(self):
         cleaned_data = super().clean()

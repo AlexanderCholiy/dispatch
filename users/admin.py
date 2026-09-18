@@ -55,6 +55,7 @@ class BaseUserAdmin(UserAdmin):
             {'fields': (
                 'first_name',
                 'last_name',
+                'phone',
                 'avatar',
                 'default_avatar',
                 'date_of_birth',

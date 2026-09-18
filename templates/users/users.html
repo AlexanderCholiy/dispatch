@@ -21,6 +21,7 @@
           <span class="user-name">{{ user.get_full_name|default:"Новый пользователь" }}</span>
 
           <p class="user-email copy-text" data-text={{ user.email }}>{{ user.email }}</p>
+
           <p class="user-schedule">
             <strong>График:</strong>
             {% if user.work_schedule.is_working %}
