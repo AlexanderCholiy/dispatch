@@ -7,6 +7,7 @@ from core.constants import UPDATE_DATA_FROM_TS_LOCK_FILE
 from core.loggers import ts_logger
 from core.wraps import timer
 from ts.constants import TS_DATA_DIR
+from ts.services.update_bs_sla_operators import update_bs_sla_operators
 from ts.utils import TSManager
 
 
@@ -58,6 +59,7 @@ class Command(BaseCommand):
             ts_api.update_avr()
             ts_api.update_base_stations()
             ts_api.update_region_responsible_manager()
+            update_bs_sla_operators()
 
         except Exception as e:
             ts_logger.exception(e)

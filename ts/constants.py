@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from core.constants import DATA_DIR
 
@@ -85,3 +86,5 @@ POLE_CACHE_TTL = 1500  # Чаще чем синхронизация с TS
 BASE_STATION_CACHE_TTL = 1500  # Чаще чем синхронизация с TS
 OPERATORS_CACHE_TTL = 1500  # Чаще чем синхронизация с TS
 REGION_RESPONSIBLE_MANAGER_CACHE_TTL = 1500  # Чаще чем синхронизация с TS
+
+BS_SLA_OPERATORS_FILE = Path(DATA_DIR) / 'ts' / 'sla_operators.xlsx'

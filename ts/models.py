@@ -322,6 +322,11 @@ class BaseStation(models.Model):
         related_name='base_stations',
         verbose_name='Операторы',
     )
+    sla_contract_deadline = models.IntegerField(
+        'Срок устранения аварии по договору (мин)',
+        null=True,
+        blank=True
+    )
 
     class Meta:
         constraints = [
