@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from rest_framework import serializers
 
@@ -73,6 +73,9 @@ class IncidentReportSerializer(serializers.ModelSerializer):
     eks_deadline = serializers.SerializerMethodField()
     eks_duration = serializers.SerializerMethodField()
 
+    contract_sla_minutes = serializers.SerializerMethodField()
+    contract_deadline = serializers.SerializerMethodField()
+
     incident_datetime = serializers.SerializerMethodField()
     incident_update_datetime = serializers.SerializerMethodField()
     incident_finish_datetime = serializers.SerializerMethodField()
@@ -138,8 +141,11 @@ class IncidentReportSerializer(serializers.ModelSerializer):
             'responsible_manager',
             'macroregion',
             'address',
+
             'base_station',
             'operator_group',
+            'contract_sla_minutes',
+            'contract_deadline',
 
             'region_responsible_user_id',
             'region_responsible_user_name',
@@ -212,6 +218,20 @@ class IncidentReportSerializer(serializers.ModelSerializer):
         if not obj.eks_end_date:
             return
         return conversion_utc_datetime(obj.eks_end_date, False, True)
+
+    def get_contract_sla_minutes(self, obj: Incident):
+        return (
+            obj.base_station.sla_contract_deadline
+            if obj.base_station else None
+        )
+
+    def get_contract_deadline(self, obj: Incident) -> datetime | None:
+        sla_minutes = self.get_contract_sla_minutes(obj)
+        if sla_minutes is None:
+            return
+
+        end_date = obj.incident_date + timedelta(minutes=sla_minutes)
+        return conversion_utc_datetime(end_date, False, True)
 
     def get_avr_emails(self, obj: Incident):
         if not obj.pole or not obj.pole.avr_contractor:
