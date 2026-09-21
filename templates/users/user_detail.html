@@ -22,7 +22,7 @@
           <p><strong>Email: </strong><span class="user-email copy-text" data-text={{ user_info.email }}>{{ user_info.email }}</span></p>
 
           {% if user_info.phone %}
-            <p><strong>Телефон: </strong><span class="copy-text" data-text={{ user_info.phone }}>{{ user_info.phone }}</span></p>
+            <p><strong>Телефон: </strong><span class="copy-text" data-text={{ user_info.phone }}>{{ user_info.phone.as_national }}</span></p>
           {% endif %}
 
           <p><strong>День рождения:</strong> {{ user_info.date_of_birth|date:"j E"|default:"Не указана" }}</p>

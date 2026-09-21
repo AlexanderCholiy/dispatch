@@ -281,9 +281,6 @@ class UserForm(forms.ModelForm):
         if instance and instance.phone:
             phone_str: str = instance.phone.as_national
 
-            if phone_str.startswith('8 '):
-                phone_str = '+7 ' + phone_str[2:]
-
             initial = kwargs.get('initial', {})
             initial['phone'] = phone_str
             kwargs['initial'] = initial

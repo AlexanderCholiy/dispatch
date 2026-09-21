@@ -13,11 +13,11 @@ MAX_DOWNLOAD_ATTACHMENT_SIZE = 100 * 1024 * 1024
 MAX_SEND_ATTACHMENT_SIZE = 50 * 1024 * 1024
 
 # Кол-во дней через которое для не актуальных инцидентов будут удалены
-# вложения:
-MAX_EMAILS_ATTACHMENT_DAYS = 180
+# вложения (по регламенту 3 года):
+MAX_EMAILS_ATTACHMENT_DAYS = 3 * 365
 
 # Файлы старше N дней → сжать в .zip:
-COMPRESS_EMAILS_ATTACHMENT_DAYS = MAX_EMAILS_ATTACHMENT_DAYS // 2
+COMPRESS_EMAILS_ATTACHMENT_DAYS = 365
 
 EMAILS_FILES_2_DEL_BATCH_SIZE = 500
 

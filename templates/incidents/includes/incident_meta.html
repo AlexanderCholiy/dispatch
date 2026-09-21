@@ -226,7 +226,7 @@
                     <a href="{% url 'users:user_detail' user_id=incident.region_responsible_user.id %}" 
                       target="_blank"
                       class="tooltip region-responsible-user-email" 
-                      data-title="{% if incident.region_responsible_user.phone %}Тел.: {{ incident.region_responsible_user.phone }}{% endif %}">
+                      data-title="{% if incident.region_responsible_user.phone %}Тел: {{ incident.region_responsible_user.phone.as_national }}{% endif %}">
                         {{ incident.region_responsible_user.email }}
                     </a>
                   {% else %}
