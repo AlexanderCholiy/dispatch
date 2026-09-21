@@ -897,6 +897,7 @@ def index(request: HttpRequest) -> HttpResponse:
         'pole__region',
         'pole__region__macroregion',
         'base_station',
+        'source_type',
     ).prefetch_related(
         'categories',
         Prefetch(
@@ -1655,6 +1656,7 @@ def create_incident(request: HttpRequest) -> HttpResponse:
         if form.is_valid():
             incident: Incident = form.save()
             incident.is_yt_tracker_controlled = False
+            incident.is_auto_incident = False
             incident.save()
             return redirect(
                 'incidents:incident_detail', incident_id=incident.id

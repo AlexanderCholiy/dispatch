@@ -8,6 +8,8 @@ from assets.constants import (
     CACHE_ASSETS_CANDIDATE_TTL,
     CACHE_KEY_ASSETS_CANDIDATE_PREFIX,
     DEFAULT_RVR_PREORITY,
+    INCIDENT_SOURCE_TYPE,
+    INCIDENT_SOURCE_TYPE_DEFAULT_DESC,
 )
 from core.loggers import assets_logger
 from incidents.constants import RVR_CATEGORY
@@ -16,6 +18,7 @@ from incidents.models import (
     Incident,
     IncidentCategory,
     IncidentCategoryRelation,
+    IncidentSourceType,
     RVRPriority,
 )
 from incidents.services.send_auto_reply import AutoReply
@@ -94,9 +97,15 @@ def make_incident_from_asset(
     ).strip()
 
     with transaction.atomic():
+        source_type, _ = IncidentSourceType.objects.get_or_create(
+            name=INCIDENT_SOURCE_TYPE,
+            defaults={'description': INCIDENT_SOURCE_TYPE_DEFAULT_DESC},
+        )
+
         rvr_category, _ = IncidentCategory.objects.get_or_create(
             name=RVR_CATEGORY
         )
+
         rvr_priority = RVRPriority.objects.filter(
             name=DEFAULT_RVR_PREORITY,
         ).first()
@@ -110,6 +119,7 @@ def make_incident_from_asset(
             rvr_priority=rvr_priority,
             is_yt_tracker_controlled=False,
             was_read=False,
+            source_type=source_type,
         )
         # По умолчанию будет добавлена категория АВР:
         IncidentCategoryRelation.objects.filter(incident=incident).delete()

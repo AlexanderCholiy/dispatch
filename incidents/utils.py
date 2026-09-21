@@ -1299,6 +1299,7 @@ class IncidentManager(IncidentValidator):
                 'base_station',
                 'pole__region__macroregion',
                 'pole__avr_contractor',
+                'source_type',
             )
             .prefetch_related(
                 'categories',

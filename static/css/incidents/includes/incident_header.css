@@ -15,6 +15,10 @@
   word-break: break-word; 
 }
 
+.incident-title.incident-with-source-type {
+  color: var(--yellow-color);
+}
+
 .card-header-top,
 .card-header-bottom {
   display: flex;

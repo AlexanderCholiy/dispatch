@@ -23,6 +23,7 @@ from .models import (
     IncidentChangeLog,
     IncidentHistory,
     IncidentLink,
+    IncidentSourceType,
     IncidentStatus,
     IncidentStatusHistory,
     IncidentSubType,
@@ -152,6 +153,7 @@ class IncidentAdmin(admin.ModelAdmin):
             'base_station',
             'responsible_user',
             'incident_type',
+            'source_type',
         ).prefetch_related('statuses', 'categories', 'history')
 
     readonly_fields = (
@@ -190,6 +192,7 @@ class IncidentAdmin(admin.ModelAdmin):
                 'incident_finish_date',
                 'auto_close_date',
                 'is_auto_incident',
+                'source_type',
                 'is_yt_tracker_controlled',
                 'was_read',
                 'disable_thread_auto_link',
@@ -350,3 +353,9 @@ class RVRPriorityAdmin(admin.ModelAdmin):
     list_display = ('name', 'sla_deadline')
     list_editable = ('sla_deadline',)
     search_fields = ('name',)
+
+
+@admin.register(IncidentSourceType)
+class IncidentSourceTypeAdmin(admin.ModelAdmin):
+    list_display = ['name', 'description']
+    search_fields = ['name']

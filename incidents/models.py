@@ -273,6 +273,15 @@ class Incident(models.Model):
             'Инциденты, входящие в группу (управляется через типы связей)'
         )
     )
+    source_type = models.ForeignKey(
+        'IncidentSourceType',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='incidents',
+        verbose_name='Источник регистрации',
+        db_index=True,
+    )
 
     class Meta:
         verbose_name = 'инцидент'
@@ -1657,3 +1666,15 @@ class IncidentFavorite(models.Model):
 
     def __str__(self):
         return f'{self.user}: {self.incident}'
+
+
+class IncidentSourceType(Detail):
+    """Источник регистрации инцидента"""
+
+    class Meta:
+        verbose_name = 'Источник регистрации'
+        verbose_name_plural = 'Источники регистрации'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.description if self.description else self.name

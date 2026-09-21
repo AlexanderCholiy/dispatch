@@ -12,3 +12,8 @@ CACHE_ASSETS_CANDIDATE_TTL = 1800
 CACHE_KEY_ASSETS_CANDIDATE_PREFIX = 'assets:candidate:'
 
 DEFAULT_RVR_PREORITY = 'Приоритет 1'
+
+INCIDENT_SOURCE_TYPE = 'Активное оборудование'
+INCIDENT_SOURCE_TYPE_DEFAULT_DESC = (
+    'Регистрация по данным телеметрии активного оборудования'
+)

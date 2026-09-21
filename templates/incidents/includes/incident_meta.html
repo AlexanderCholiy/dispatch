@@ -19,8 +19,12 @@
   <div class="card-header">
     <div class="card-header-top-wrapper">
       <div class="card-header-top">
-        <p class="incident-title">
-          {{ incident.first_email_subject|default:"—" }}
+        <p class="incident-title {% if incident.source_type %}incident-with-source-type{% endif %}">
+          {% if incident.source_type %}
+            {{ incident.source_type }}
+          {% else %}
+            {{ incident.first_email_subject|default:"—" }}
+          {% endif %}
         </p>
         <div class="select-wrapper status-select">
           <select name="{{ incident_form.new_status.name }}">
