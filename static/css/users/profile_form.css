@@ -221,10 +221,6 @@ html.dark .form-group input[type="date"]::-webkit-calendar-picker-indicator {
 .errorlist {
   margin: 0;
   padding: 0;
-  color: var(--red-color);
-}
-
-.phone-form .errorlist {
   color: var(--color);
 }
 

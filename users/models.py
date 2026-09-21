@@ -8,14 +8,15 @@ from django.core.files.storage import default_storage
 from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils import timezone
+from phonenumber_field.modelfields import PhoneNumberField
 
 from ts.models import AVRContractor, Region
+from users.constants import MAX_FIRST_NAME_LEN, MAX_LAST_NAME_LEN
 
 from .constants import (
     ALLOWED_IMAGE_EXTENSIONS,
     DEFAULT_AVATARS_DIR,
     MAX_DEFAULT_AVATAR_LEN,
-    MAX_PHONE_LEN,
     MAX_USER_EMAIL_LEN,
     MAX_USER_PASSWORD_LEN,
     MAX_USER_ROLE_LEN,
@@ -24,13 +25,12 @@ from .constants import (
     SUBFOLDER_AVATAR_DIR,
     USERNAME_HELP_TEXT,
 )
-from .services.normalize_ru_phone import normalize_ru_phone
 from .validators import (
     username_format_validators,
+    validate_name_format,
     validate_pending_email,
     validate_pending_password,
     validate_pending_username,
-    validate_ru_phone,
     validate_user_email,
     validate_user_username,
 )
@@ -73,6 +73,22 @@ class User(AbstractUser):
         unique=True,
         validators=username_format_validators + [validate_user_username],
         help_text=USERNAME_HELP_TEXT,
+    )
+    first_name = models.CharField(
+        'Имя',
+        max_length=MAX_FIRST_NAME_LEN,
+        validators=[validate_name_format],
+        db_index=True,
+        null=True,
+        blank=True,
+    )
+    last_name = models.CharField(
+        'Фамилия',
+        max_length=MAX_LAST_NAME_LEN,
+        validators=[validate_name_format],
+        db_index=True,
+        null=True,
+        blank=True,
     )
     avatar = models.ImageField(
         'Аватар',
@@ -135,13 +151,15 @@ class User(AbstractUser):
         verbose_name='Регионы инцидентов',
         help_text='Регионы, за которые отвечает пользователь по инцидентам.',
     )
-    phone = models.CharField(
-        'Телефон',
-        max_length=MAX_PHONE_LEN,
+    phone = PhoneNumberField(
+        'Номер телефона',
+        region='RU',
         blank=True,
         null=True,
-        help_text='Российский номер, например: +7 800 234-67-66.',
-        validators=[validate_ru_phone]
+        help_text='Формат: RU',
+        error_messages={
+            'invalid': 'Введите корректный российский номер телефона.'
+        },
     )
 
     USERNAME_FIELD = 'email'
@@ -208,9 +226,6 @@ class User(AbstractUser):
                 })
 
     def save(self, *args, **kwargs) -> None:
-        if self.phone:
-            self.phone = normalize_ru_phone(self.phone)
-
         is_new = self.pk is None
 
         if (
@@ -338,13 +353,17 @@ class PendingUser(models.Model):
     is_active = models.BooleanField(default=True)
     first_name = models.CharField(
         'Имя',
-        max_length=150,  # default Django User
+        max_length=MAX_FIRST_NAME_LEN,
+        validators=[validate_name_format],
+        db_index=True,
         null=True,
         blank=True,
     )
     last_name = models.CharField(
         'Фамилия',
-        max_length=150,  # default Django User
+        max_length=MAX_LAST_NAME_LEN,
+        validators=[validate_name_format],
+        db_index=True,
         null=True,
         blank=True,
     )

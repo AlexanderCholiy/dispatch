@@ -8,8 +8,13 @@ from django.contrib.auth.password_validation import (
 )
 from django.core.exceptions import ValidationError
 from django.core.validators import MinLengthValidator, RegexValidator
+from django.utils.translation import gettext_lazy
 
-from .constants import MIN_USER_PASSWORD_LEN, MIN_USER_USERNAME_LEN
+from .constants import (
+    MIN_FIRST_NAME_LEN,
+    MIN_USER_PASSWORD_LEN,
+    MIN_USER_USERNAME_LEN,
+)
 
 username_format_validators = [
     RegexValidator(
@@ -116,16 +121,36 @@ def validate_pending_email(email: str, instance=None):
             raise ValidationError('Дынный email ожидает подтверждения.')
 
 
-def validate_ru_phone(value: str | None):
-    """Валидатор российского номера телефона."""
-
-    if not value:
+def validate_name_format(value: str | None) -> None:
+    if value is None:
         return
 
-    digits = re.sub(r'\D', '', value)
+    cleaned = value.strip()
 
-    if not (digits.startswith('8') and len(digits) == 11):
+    if len(cleaned) < MIN_FIRST_NAME_LEN:
         raise ValidationError(
-            'Введите корректный номер телефона, '
-            'например: 88002346766.'
+            gettext_lazy(
+                f'Длина должна быть не менее {MIN_FIRST_NAME_LEN} символов.'
+            ),
+            code='min_length'
+        )
+
+    if not re.match(r'^[a-zA-Zа-яА-ЯёЁ\-]+$', cleaned):
+        raise ValidationError(
+            gettext_lazy('Разрешены только буквы и дефис.'),
+            code='invalid_format'
+        )
+
+    if cleaned.startswith('-') or cleaned.endswith('-'):
+        raise ValidationError(
+            gettext_lazy(
+                'Слово не может начинаться или заканчиваться дефисом.'
+            ),
+            code='hyphen_position'
+        )
+
+    if cleaned.count('-') > 1:
+        raise ValidationError(
+            gettext_lazy('В слове может быть только один дефис.'),
+            code='too_many_hyphens'
         )

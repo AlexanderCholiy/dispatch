@@ -19,7 +19,6 @@ from .constants import (
     PASSWORD_HELP_TEXT,
 )
 from .models import PendingUser, User, WorkSchedule
-from .services.normalize_ru_phone import normalize_ru_phone
 from .validators import validate_user_email
 
 
@@ -254,11 +253,12 @@ class UserForm(forms.ModelForm):
                 'class': 'avatar-input',
                 'accept': 'image/png, image/jpeg',
             }),
-            'phone': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': '89161234567',
-                'maxlength': '20',
-            }),
+            'phone': forms.TextInput(
+                attrs={
+                    'type': 'tel',
+                    'title': 'Российский формат, например 8 (800) 234-67-66',
+                },
+            ),
             'date_of_birth': forms.DateInput(
                 attrs={
                     'type': 'date',
@@ -273,6 +273,22 @@ class UserForm(forms.ModelForm):
                 attrs={'class': 'form-select', 'id': 'id_default_avatar'}
             )
         }
+
+    def __init__(self, *args, **kwargs):
+        instance: User = kwargs.get('instance')
+
+        instance = kwargs.get('instance')
+        if instance and instance.phone:
+            phone_str: str = instance.phone.as_national
+
+            if phone_str.startswith('8 '):
+                phone_str = '+7 ' + phone_str[2:]
+
+            initial = kwargs.get('initial', {})
+            initial['phone'] = phone_str
+            kwargs['initial'] = initial
+
+        super().__init__(*args, **kwargs)
 
     def clean_date_of_birth(self):
         value: date = self.cleaned_data.get('date_of_birth')
@@ -310,12 +326,6 @@ class UserForm(forms.ModelForm):
                 raise ValidationError('Разрешены только форматы JPG и PNG.')
 
         return avatar
-
-    def clean_phone(self):
-        phone = self.cleaned_data.get('phone')
-        if phone:
-            phone = normalize_ru_phone(phone)
-            return phone
 
     def clean(self):
         cleaned_data = super().clean()
