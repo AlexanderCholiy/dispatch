@@ -57,8 +57,6 @@ def get_monitiring_2_cache_equipment(
         cache_key
     )
 
-    cached_data = None
-
     if cached_data is not None:
         return cached_data
 
@@ -66,7 +64,6 @@ def get_monitiring_2_cache_equipment(
 
     try:
         all_modems: QuerySet[Modem] = monitoring_2_qs(pole)
-        raise
 
         for modem in all_modems:
             level: ModemLevel = modem.level
