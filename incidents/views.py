@@ -67,9 +67,8 @@ from incidents.services.notify_contractor_incident_closed import (
 )
 from incidents.services.status_transition import get_allowed_statuses
 from incidents.services.valid_contractor_match import is_valid_contractor_match
-from monitoring.models import DeviceStatus, DeviceType
-from monitoring.services.monitoring_equipment import (
-    get_monitiring_cache_equipment,
+from monitoring_2.services.monitoring_equipment import (
+    get_monitiring_2_cache_equipment,
 )
 from planned_work.models import PlannedWork
 from ts.constants import UNDEFINED_CASE
@@ -1060,33 +1059,9 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
     allowed_statuses = get_allowed_statuses(last_status)
 
     monitiring_equipment = (
-        get_monitiring_cache_equipment(incident.pole.pole)
+        get_monitiring_2_cache_equipment(incident.pole.pole)
         if incident.pole else None
     ) or []
-
-    monitoring_data = {}
-    for eq in monitiring_equipment:
-        try:
-            level_obj = DeviceType(eq['level'])
-            level_label = level_obj.label
-        except (ValueError, KeyError):
-            level_label = f'№{eq['level']}'
-        try:
-            status_obj = DeviceStatus(eq['status'])
-            status_label = status_obj.label
-        except (ValueError, KeyError):
-            status_label = f'№{eq['status']}'
-
-        monitoring_data[eq['modem_ip']] = {
-            **eq,
-            'level_val': level_label,
-            'status_val': status_label,
-        }
-
-    sorted_monitoring = sorted(
-        monitoring_data.items(),
-        key=lambda item: (item[1]['level_val'], item[0])
-    )
 
     user: User = request.user
     allowed_roles = [Roles.DISPATCH]
@@ -1299,7 +1274,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
                 'confirm_stage': True,
                 'can_manage': can_manage,
                 'incident_form': incident_form,
-                'monitoring': sorted_monitoring,
+                'monitoring': monitiring_equipment,
                 'active_tab': 'email',
                 'planned_works': planned_works,
                 'planned_works_total': planned_works_total,
@@ -1487,7 +1462,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         'confirm_stage': confirm_stage,
         'can_manage': can_manage,
         'incident_form': incident_form,
-        'monitoring': sorted_monitoring,
+        'monitoring': monitiring_equipment,
         'active_tab': 'incident',
         'emails_view_type': emails_view_type,
         'incident_links_formset': incident_links_formset,
