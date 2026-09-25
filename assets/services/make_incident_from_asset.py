@@ -23,7 +23,9 @@ from incidents.models import (
 )
 from incidents.services.send_auto_reply import AutoReply
 from incidents.utils import IncidentManager
-from monitoring.models import DeviceStatus, DeviceType, MSysModem
+
+# Заменили старые импорты мониторинга на новые модели
+from monitoring_2.models import Modem
 from notifications.constants import (
     MAX_NOTIFICATION_TEXT_LEN,
     MAX_NOTIFICATION_TITLE_LEN,
@@ -34,7 +36,7 @@ from users.models import Roles, User
 
 
 def make_incident_from_asset(
-    pole: Pole, err_devices: list[MSysModem], bot_user: Optional[User]
+    pole: Pole, err_devices: list[Modem], bot_user: Optional[User]
 ) -> Optional[Incident]:
     """
     Создает новый инцидент, если проблема держится долго
@@ -73,22 +75,14 @@ def make_incident_from_asset(
     status_groups: list[str] = []
 
     for eq in err_devices:
-        try:
-            level_label = DeviceType(eq.level).label
-        except ValueError:
-            level_label = eq.level
+        level_label = str(eq.level) if eq.level else 'Неизвестный тип'
 
-        try:
-            status_label = DeviceStatus(eq.status.id).label
-        except (ValueError, AttributeError):
-            status_label = (
-                f'Статус {eq.status.id}'
-                if eq.status else 'UNKNOWN'
-            )
+        status_label = str(eq.status) if eq.status else 'Неизвестный статус'
+
+        modem_ip = eq.ip.strip() if eq.ip else 'Без IP'
 
         status_groups.append(
-            f'- {level_label}: {eq.modem_ip.strip()} '
-            f'[{status_label}]'
+            f'- {level_label}: {modem_ip} [{status_label}]'
         )
 
     comment_txt = (
