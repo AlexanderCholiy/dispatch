@@ -142,7 +142,7 @@ class Command(BaseCommand):
 
         fieldnames = [
             'phone_from',
-            'received_time',
+            'sms_date',
             'answer',
         ]
         excel_dt_format = '%Y-%m-%d %H:%M'
@@ -180,16 +180,22 @@ class Command(BaseCommand):
                             )
                             continue
 
-                        received_time = (
-                            sms.received_time.strftime(excel_dt_format)
-                            if sms.received_time else None
+                        sms_date = (
+                            max(sms.received_time, sms.sent_time)
+                            if sms.received_time and sms.sent_time
+                            else sms.received_time or sms.sent_time
+                        )
+                        sms_date_str = (
+                            sms_date.strftime(excel_dt_format)
+                            if sms_date else None
                         )
 
                         record = {
                             'phone_from': sms.phone_from,
-                            'received_time': received_time,
+                            'sms_date': sms_date_str,
                             'answer': sms.answer,
                         }
+
                         writer.writerow(record)
 
                         files_processed += 1
