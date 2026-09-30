@@ -849,12 +849,17 @@ class TSManager(SocialValidators):
                 index, total, 'Обновление BaseStation и BaseStationOperator:'
             )
 
-            pole_number = row['Шифр опоры']
-            bs_name = row['Имя БС/Оборудование']
-            operator_name = row['Оператор']
-            operator_group = row['Группа операторов']
+            def clean(value):
+                if isinstance(value, str):
+                    value = value.strip()
+                return value or None
 
-            if isinstance(bs_name, NoneType):
+            pole_number = clean(row['Шифр опоры'])
+            bs_name = clean(row['Имя БС/Оборудование'])
+            operator_name = clean(row['Оператор'])
+            operator_group = clean(row['Группа операторов'])
+
+            if bs_name is None:
                 continue
 
             if (
@@ -869,10 +874,6 @@ class TSManager(SocialValidators):
             pole = poles.get(pole_number)
             if not pole:
                 continue
-
-            if isinstance(operator_group, str):
-                if not operator_group.strip():
-                    operator_group = None
 
             bs_key = (bs_name, pole.id)
             base_station = bs_cache.get(bs_key)
@@ -889,7 +890,7 @@ class TSManager(SocialValidators):
             if op_key not in operators_cache:
                 operators_cache[op_key] = BaseStationOperator(
                     operator_name=operator_name,
-                    operator_group=operator_group
+                    operator_group=operator_group,
                 )
                 bulk_operators_to_create.append(operators_cache[op_key])
 

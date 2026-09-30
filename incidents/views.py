@@ -1031,6 +1031,7 @@ def index(request: HttpRequest) -> HttpResponse:
 @ratelimit(key='user_or_ip', rate='200/m', block=True)
 def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
     template_name = 'incidents/incident_detail.html'
+
     user: User = request.user
 
     incident = IncidentManager().prepare_incident_info(incident_id, user)
