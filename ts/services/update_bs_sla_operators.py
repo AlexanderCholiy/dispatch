@@ -6,173 +6,341 @@ from tqdm import tqdm
 from core.constants import DEBUG_MODE
 from core.loggers import ts_logger
 from ts.constants import BS_SLA_OPERATORS_FILE, DB_CHUNK_UPDATE
-from ts.models import BaseStation, Pole
+from ts.models import (
+    BaseStation,
+    BaseStationOperator,
+    BaseStationOperatorContract,
+    Pole,
+)
 
 
-def update_bs_sla_operators():
+class BSSLAOperatorsSync:
     """
-    Синхронизирует сроки устранения аварий (SLA) базовых станций из Excel.
+    Синхронизация сроков устранения аварий (SLA) по договорам из Excel.
 
-    Скрипт выполняет быструю пакетную синхронизацию данных между файлом и базой
-    данных PostgreSQL, минимизируя нагрузку на СУБД (использует bulk_update).
+    Источник истины — файл. Таблица BaseStationOperatorContract
+    перестраивается по нему целиком: совпадающие пары (БС, оператор)
+    создаются или обновляются через ON CONFLICT, отсутствующие в файле
+    договоры удаляются.
 
-    Сценарии синхронизации (Логика работы):
-        1. Изоляция дубликатов в файле:
-           Если в Excel-файле присутствует несколько одинаковых связок
-           [pole + bs_name], скрипт оставляет только последнюю строку
-           (keep='last'), считая её актуальной.
+    Связь BaseStation.operator (M2M) этим скриптом НЕ изменяется.
 
-        2. Обновление измененного SLA (Сценарий "Изменился"):
-           Если связка [Опора + БС] найдена в базе данных, и её текущий SLA
-           отличается от значения в файле (включая изменение числа на NULL/NaN
-           или наоборот), значение перезаписывается новым из файла.
+    Обязательные колонки файла:
+        'pole', 'bs_name', 'operator_name', 'operator_group', 'sla_min'
 
-        3. Сброс отсутствующего SLA (Сценарий "Удален из файла / Обнуление"):
-           Если БС существует в базе данных и у неё сейчас установлен
-           какой-либо SLA, но этой БС (или её опоры) вообще нет в текущем
-           Excel-файле — её SLA сбрасывается в `None` (NULL в БД).
+    Правила:
+        1. Дубликаты [pole + bs_name + operator_name + operator_group]
+           в файле схлопываются, остаётся последняя строка (keep='last').
+        2. Если sla_min пуст/NULL или не парсится -> SLA = None.
+        3. Если у БС нет данного оператора (нет связи в M2M) -> договор
+           не создаётся, SLA не выставляется, строка логируется.
+        4. Отсутствующие в БД опора / БС / оператор -> строка пропускается.
+        5. Договоры, которых нет в файле -> удаляются.
+        6. Совпадающие со значением в БД строки в UPDATE не попадают
+           (их обрабатывает ON CONFLICT, изменения отсутствуют).
 
-        4. Игнорирование идентичных данных (Оптимизация трафика):
-           Если данные в файле полностью совпадают с текущим состоянием БД,
-           запись игнорируется и не участвует в транзакции на обновление.
-
-        5. Пропуск записей без инфраструктуры (Сценарий "Нет опоры"):
-           Если опора `pole` из файла отсутствует в таблице `Pole` в БД, запись
-           пропускается (так как БС не может существовать без привязанной
-           опоры).
-
-    Исключения (Raises):
-        ValueError: Если файл отсутствует по указанному пути.
-        KeyError: Если в файле нет обязательных колонок
-        ('pole', 'bs_name', 'sla_min').
+    Usage:
+        BSSLAOperatorsSync().run()
     """
 
-    if not BS_SLA_OPERATORS_FILE.exists():
-        raise ValueError(
-            f'Файл {BS_SLA_OPERATORS_FILE} со сроками устранения аварий '
-            'по договорам отсутствует.'
+    REQUIRED_COLUMNS = frozenset({
+        'pole',
+        'bs_name',
+        'operator_name',
+        'operator_group',
+        'sla_min',
+    })
+
+    TEXT_COLUMNS = ('pole', 'bs_name', 'operator_name', 'operator_group')
+
+    DEDUPE_KEYS = [
+        'pole',
+        'bs_name',
+        'operator_name',
+        'operator_group',
+    ]
+
+    def __init__(self, file_path=BS_SLA_OPERATORS_FILE):
+        self.file_path = file_path
+        self.filename = file_path.name
+
+        self.poles_map: dict[str, int] = {}
+        self.stations_map: dict[tuple[int, str], int] = {}
+        self.operators_map: dict[tuple[str, str | None], int] = {}
+        self.m2m_links: set[tuple[int, int]] = set()
+
+        self.skipped_unknown = 0
+        self.skipped_no_link = 0
+        self.invalid_sla = 0
+
+    @transaction.atomic
+    def run(self):
+        """Полный цикл синхронизации. Возвращает статистику."""
+        df = self._load_file()
+        self._build_caches(df)
+        rows = self._parse_rows(df)
+
+        if not rows:
+            ts_logger.warning(
+                f'В файле {self.filename} нет применимых записей.'
+            )
+            stats = self._stats(0, 0)
+            self._log_stats(stats)
+            return
+
+        upserted = self._upsert_contracts(rows)
+        deleted = self._delete_stale(rows)
+
+        stats = self._stats(upserted, deleted)
+        self._log_stats(stats)
+
+    def _load_file(self) -> pd.DataFrame:
+        """Загрузка и подготовка файла"""
+        if not self.file_path.exists():
+            raise ValueError(
+                f'Файл {self.file_path} со сроками устранения аварий '
+                'по договорам отсутствует.'
+            )
+
+        df = pd.read_excel(self.file_path)
+
+        if not self.REQUIRED_COLUMNS.issubset(df.columns):
+            missing = self.REQUIRED_COLUMNS - set(df.columns)
+            raise KeyError(
+                f'В файле {self.filename} отсутствуют столбцы: {missing}'
+            )
+
+        df = df.replace({np.nan: None})
+
+        for column in self.TEXT_COLUMNS:
+            df[column] = df[column].astype('string').str.strip()
+
+        for column in self.TEXT_COLUMNS:
+            df[column] = (
+                df[column]
+                .astype('string')
+                .str.strip()
+                .replace({'': None})
+            )
+
+        df = df.drop_duplicates(subset=self.DEDUPE_KEYS, keep='last')
+
+        return df
+
+    def _build_caches(self, df: pd.DataFrame) -> None:
+        """Кеши справочников"""
+        self.poles_map = dict(
+            Pole.objects.filter(pole__in=df['pole'].unique())
+            .values_list('pole', 'id')
         )
 
-    filename = BS_SLA_OPERATORS_FILE.name
+        self.stations_map = {
+            (pole_id, bs_name): bs_id
+            for bs_id, pole_id, bs_name in BaseStation.objects.values_list(
+                'id', 'pole_id', 'bs_name'
+            )
+        }
 
-    df = pd.read_excel(BS_SLA_OPERATORS_FILE)
-
-    required_columns = {'pole', 'bs_name', 'sla_min'}
-
-    if not required_columns.issubset(df.columns):
-        missing = required_columns - set(df.columns)
-        raise KeyError(f'В файле {filename} отсутствуют столбцы: {missing}')
-
-    df = df.replace({np.nan: None})
-
-    df['pole'] = df['pole'].astype('string').str.strip()
-    df['bs_name'] = df['bs_name'].astype('string').str.strip()
-
-    df = df.drop_duplicates(subset=['pole', 'bs_name'], keep='last')
-
-    poles_map = {
-        p['pole']: p['id']
-        for p in (
-            Pole.objects
-            .filter(pole__in=df['pole'].unique()).values('id', 'pole')
-        )
-    }
-
-    existing_stations = {
-        (bs.pole_id, bs.bs_name): bs
-        for bs in BaseStation.objects.only(
-            'id', 'pole_id', 'bs_name', 'sla_contract_deadline'
-        )
-    }
-
-    stations_to_update = []
-    stations_to_reset = []
-
-    # Множество для фиксации того, какие связки мы ОСТАВЛЯЕМ (они в файле):
-    processed_in_file = set()
-
-    with tqdm(
-        total=len(df),
-        desc=f'Обрабатываем записи, которые пришли в {filename}',
-        colour='blue',
-        position=0,
-        leave=True,
-        disable=not DEBUG_MODE,
-    ) as pbar:
-        for _, row in df.iterrows():
-            pole_code = row['pole']
-            bs_name = row['bs_name']
-            sla_val = None
-            if row['sla_min'] is not None:
-                try:
-                    sla_val = int(float(row['sla_min']))
-                except (ValueError, TypeError):
-                    sla_val = None
-                    ts_logger.warning(
-                        f'Некорректный SLA для {bs_name} ({pole_code}): '
-                        f'{row["sla_min"]}'
-                    )
-
-            pole_id = poles_map.get(pole_code)
-            if not pole_id:
-                ts_logger.warning(
-                    f'Неизвестная опора {pole_code} в файле {filename}.'
+        self.operators_map = {
+            (operator_name, operator_group): operator_id
+            for operator_name, operator_group, operator_id in (
+                BaseStationOperator.objects.filter(
+                    operator_name__in=df['operator_name'].unique()
+                ).values_list(
+                    'operator_name', 'operator_group', 'id'
                 )
-                pbar.update(1)
+            )
+        }
+
+        # M2M-привязки только по БС, упомянутым в файле
+        candidate_bs_ids = {
+            self.stations_map[(pole_id, bs_name)]
+            for pole_id, bs_name in zip(
+                (self.poles_map.get(p) for p in df['pole']),
+                df['bs_name'],
+            )
+            if pole_id and (pole_id, bs_name) in self.stations_map
+        }
+
+        self.m2m_links = set(
+            BaseStation.operator.through.objects.filter(
+                basestation_id__in=candidate_bs_ids
+            ).values_list('basestation_id', 'basestationoperator_id')
+        ) if candidate_bs_ids else set()
+
+    def _parse_rows(
+        self, df: pd.DataFrame
+    ) -> list[tuple[int, int, int | None]]:
+        """Возвращает [(base_station_id, operator_id, sla), ...]."""
+        rows = []
+
+        for _, row in tqdm(
+            df.iterrows(),
+            total=len(df),
+            desc=f'Обрабатываем записи из {self.filename}',
+            colour='blue',
+            position=0,
+            leave=True,
+            disable=not DEBUG_MODE,
+        ):
+            ids = self._resolve_ids(row)
+            if ids is None:
                 continue
 
-            processed_in_file.add((pole_id, bs_name))
+            base_station_id, operator_id = ids
 
-            station = existing_stations.get((pole_id, bs_name))
-            if station and station.sla_contract_deadline != sla_val:
-                station.sla_contract_deadline = sla_val
-                stations_to_update.append(station)
-            elif not station:
-                ts_logger.warning(
-                    f'БС {bs_name} (опора {pole_code}) '
-                    f'найдена в файле {filename}, '
-                    f'но отсутствует в БД.'
+            # у БС нет такого оператора -> SLA не выставляем
+            if (base_station_id, operator_id) not in self.m2m_links:
+                self.skipped_no_link += 1
+                ts_logger.debug(
+                    f'Оператор {row["operator_name"]} '
+                    f'(группа {row["operator_group"]}) не привязан к БС '
+                    f'{row["bs_name"]} (опора {row["pole"]}) — SLA пропущен.'
                 )
+                continue
 
-            pbar.update(1)
+            rows.append(
+                (base_station_id, operator_id, self._parse_sla(row))
+            )
 
-    with tqdm(
-        total=len(existing_stations),
-        desc=f'Проверяем БС из базы, которых не было в файле {filename}',
-        colour='red',
-        position=0,
-        leave=True,
-        disable=not DEBUG_MODE,
-    ) as pbar:
-        for key, station in existing_stations.items():
-            if (
-                key not in processed_in_file
-                and station.sla_contract_deadline is not None
-            ):
-                station.sla_contract_deadline = None
-                stations_to_reset.append(station)
+        return rows
 
-            pbar.update(1)
+    def _resolve_ids(self, row) -> tuple[int, int] | None:
+        pole_id = self.poles_map.get(row['pole'])
+        if not pole_id:
+            self.skipped_unknown += 1
+            ts_logger.debug(
+                f'Неизвестная опора {row["pole"]} в файле {self.filename}.'
+            )
+            return None
 
-    if stations_to_update or stations_to_reset:
-        with transaction.atomic():
-            if stations_to_update:
-                BaseStation.objects.bulk_update(
-                    stations_to_update,
-                    fields=['sla_contract_deadline'],
-                    batch_size=DB_CHUNK_UPDATE,
+        base_station_id = self.stations_map.get((pole_id, row['bs_name']))
+        if not base_station_id:
+            self.skipped_unknown += 1
+            ts_logger.debug(
+                f'БС {row["bs_name"]} (опора {row["pole"]}) найдена в файле '
+                f'{self.filename}, но отсутствует в БД.'
+            )
+            return None
+
+        operator_id = self.operators_map.get(
+            (row['operator_name'], row['operator_group'])
+        )
+        if not operator_id:
+            self.skipped_unknown += 1
+            ts_logger.debug(
+                f'Оператор {row["operator_name"]} '
+                f'(группа {row["operator_group"]}) из файла '
+                f'{self.filename} отсутствует в БД.'
+            )
+            return None
+
+        return base_station_id, operator_id
+
+    def _parse_sla(self, row) -> int | None:
+        raw_value = row['sla_min']
+
+        if raw_value is None:
+            return None
+
+        try:
+            return int(float(raw_value))
+        except (ValueError, TypeError):
+            self.invalid_sla += 1
+            ts_logger.warning(
+                f'Некорректный SLA для {row["bs_name"]} '
+                f'({row["pole"]}) / {row["operator_name"]}: '
+                f'{raw_value!r}'
+            )
+            return None
+
+    def _upsert_contracts(
+        self, rows: list[tuple[int, int, int | None]]
+    ) -> int:
+        """Запись в БД"""
+        contracts = [
+            BaseStationOperatorContract(
+                base_station_id=base_station_id,
+                operator_id=operator_id,
+                sla_contract_deadline=sla,
+            )
+            for base_station_id, operator_id, sla in rows
+        ]
+
+        BaseStationOperatorContract.objects.bulk_create(
+            contracts,
+            update_conflicts=True,
+            unique_fields=['base_station', 'operator'],
+            update_fields=['sla_contract_deadline'],
+            batch_size=DB_CHUNK_UPDATE,
+        )
+
+        return len(contracts)
+
+    def _delete_stale(
+        self, rows: list[tuple[int, int, int | None]]
+    ) -> int:
+        """Удаление неактуального"""
+        keep = {
+            (base_station_id, operator_id)
+            for base_station_id, operator_id, _ in rows
+        }
+
+        stale_pks = [
+            contract_id
+            for base_station_id, operator_id, contract_id in (
+                BaseStationOperatorContract.objects.values_list(
+                    'base_station_id', 'operator_id', 'id'
                 )
+            )
+            if (base_station_id, operator_id) not in keep
+        ]
 
-            if stations_to_reset:
-                BaseStation.objects.bulk_update(
-                    stations_to_reset,
-                    fields=['sla_contract_deadline'],
-                    batch_size=DB_CHUNK_UPDATE
-                )
+        deleted = 0
+        for chunk in self._chunked(stale_pks, DB_CHUNK_UPDATE):
+            count, _ = BaseStationOperatorContract.objects.filter(
+                id__in=chunk
+            ).delete()
+            deleted += count
 
-    ts_logger.debug(
-        f'Успешно обновлено SLA записей БС из файла: {len(stations_to_update)}'
-    )
-    ts_logger.debug(
-        f'Обнулен SLA у БС, отсутствующих в файле: {len(stations_to_reset)}'
-    )
+        return deleted
+
+    @staticmethod
+    def _chunked(items, size):
+        items = list(items)
+        for i in range(0, len(items), size):
+            yield items[i:i + size]
+
+    def _stats(self, upserted: int, deleted: int) -> dict[str, int]:
+        return {
+            'upserted': upserted,
+            'deleted': deleted,
+            'skipped_unknown': self.skipped_unknown,
+            'skipped_no_link': self.skipped_no_link,
+            'invalid_sla': self.invalid_sla,
+        }
+
+    def _log_stats(self, stats: dict[str, int]) -> None:
+        ts_logger.debug(
+            f'SLA по договорам из {self.filename}: '
+            f'создано/обновлено {stats["upserted"]}, '
+            f'удалено неактуальных {stats["deleted"]}.'
+        )
+
+        if stats['skipped_unknown']:
+            ts_logger.warning(
+                'Пропущено строк из-за отсутствующих опор/БС/операторов: '
+                f'{stats["skipped_unknown"]}'
+            )
+
+        if stats['skipped_no_link']:
+            ts_logger.warning(
+                f'Пропущено строк без привязки оператора к БС: '
+                f'{stats["skipped_no_link"]}'
+            )
+
+        if stats['invalid_sla']:
+            ts_logger.warning(
+                f'Строк с некорректным значением sla_min: '
+                f'{stats["invalid_sla"]}'
+            )

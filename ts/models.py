@@ -322,11 +322,6 @@ class BaseStation(models.Model):
         related_name='base_stations',
         verbose_name='Операторы',
     )
-    sla_contract_deadline = models.IntegerField(
-        'Срок устранения аварии по договору (мин)',
-        null=True,
-        blank=True
-    )
 
     class Meta:
         constraints = [
@@ -368,3 +363,44 @@ class BaseStationOperator(models.Model):
 
     def __str__(self):
         return self.operator_name
+
+
+class BaseStationOperatorContract(models.Model):
+    """Договорные условия оператора на конкретной БС."""
+    base_station = models.ForeignKey(
+        BaseStation,
+        on_delete=models.CASCADE,
+        related_name='operator_contracts',
+        verbose_name='Базовая станция',
+        db_index=True,
+    )
+    operator = models.ForeignKey(
+        BaseStationOperator,
+        on_delete=models.CASCADE,
+        related_name='bs_contracts',
+        verbose_name='Оператор',
+        db_index=True,
+    )
+    sla_contract_deadline = models.IntegerField(
+        'Срок устранения аварии по договору (мин)',
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['base_station', 'operator'],
+                name='unique_bs_operator_contract',
+            ),
+        ]
+        verbose_name = 'договор оператора на БС'
+        verbose_name_plural = 'Договора операторов на БС'
+
+    def __str__(self):
+        sla = (
+            f'{self.sla_contract_deadline} мин'
+            if self.sla_contract_deadline is not None
+            else 'SLA не задан'
+        )
+        return f'{self.base_station} — {self.operator} ({sla})'

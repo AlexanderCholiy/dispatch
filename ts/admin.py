@@ -17,6 +17,7 @@ from .models import (
     AVRContractor,
     BaseStation,
     BaseStationOperator,
+    BaseStationOperatorContract,
     ContractorEmail,
     Pole,
     PoleContractorEmail,
@@ -156,6 +157,13 @@ class AVRContractorAdmin(admin.ModelAdmin):
     all_phones.short_description = 'Телефоны подрядчика'
 
 
+class BaseStationOperatorContractInline(admin.TabularInline):
+    model = BaseStationOperatorContract
+    extra = 0
+    autocomplete_fields = ['operator']
+    min_num = 0
+
+
 @admin.register(BaseStation)
 class BaseStationTSAdmin(admin.ModelAdmin):
     list_per_page = BASE_STATIONS_PER_PAGE
@@ -164,6 +172,7 @@ class BaseStationTSAdmin(admin.ModelAdmin):
     ordering = ('pole__pole',)
     filter_horizontal = ('operator',)
     autocomplete_fields = ('pole',)
+    inlines = [BaseStationOperatorContractInline]
 
 
 @admin.register(BaseStationOperator)

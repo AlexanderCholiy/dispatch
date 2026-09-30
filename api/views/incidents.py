@@ -75,7 +75,13 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
     - address: Адрес опоры.
 
     - base_station: Базовая станция.
-    - operator_group: Группа операторов базовой станции.
+    - operator_group: Группа операторов базовой станции
+      (или имя оператора, если группа не задана).
+    - contract_sla_minutes: Перечень сроков устранения аварии по договорам
+      через запятую, в том же порядке, что и operator_group.
+      Если по договору срок не задан — пустое значение на его позиции.
+    - contract_deadline: Ближайший дедлайн устранения аварии
+      по договорам (минимальный SLA).
 
     - region_responsible_user_id: Идентификатор ответственного пользователя.
     - region_responsible_user_name: Имя ответственного пользователя в системе.
@@ -121,6 +127,7 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
         'pole__region__macroregion',
     ).prefetch_related(
         'base_station__operator',
+        'base_station__operator_contracts',
         'statuses',
         'categories',
         Prefetch(

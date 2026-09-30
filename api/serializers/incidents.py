@@ -7,7 +7,7 @@ from api.utils import conversion_utc_datetime
 from core.utils import timedelta_to_human_time
 from incidents.constants import POWER_ISSUE_TYPES
 from incidents.models import Incident
-from ts.models import Region
+from ts.models import BaseStationOperator, Region
 from users.models import Roles
 
 
@@ -219,20 +219,6 @@ class IncidentReportSerializer(serializers.ModelSerializer):
             return
         return conversion_utc_datetime(obj.eks_end_date, False, True)
 
-    def get_contract_sla_minutes(self, obj: Incident):
-        return (
-            obj.base_station.sla_contract_deadline
-            if obj.base_station else None
-        )
-
-    def get_contract_deadline(self, obj: Incident) -> datetime | None:
-        sla_minutes = self.get_contract_sla_minutes(obj)
-        if sla_minutes is None:
-            return
-
-        end_date = obj.incident_date + timedelta(minutes=sla_minutes)
-        return conversion_utc_datetime(end_date, False, True)
-
     def get_avr_emails(self, obj: Incident):
         if not obj.pole or not obj.pole.avr_contractor:
             return None
@@ -244,20 +230,71 @@ class IncidentReportSerializer(serializers.ModelSerializer):
         ]
         return ', '.join(sorted(set(emails))) if emails else None
 
-    def get_operator_group(self, obj: Incident):
-        if not obj.base_station:
-            return None
+    def _operator_contracts(self, obj: Incident):
+        """
+        Упорядоченный список (label, sla) по БС инцидента.
 
-        groups = {
-            op.operator_group
-            for op in obj.base_station.operator.all()
-            if op.operator_group is not None
+        label — группа операторов, а если группа не задана — имя оператора.
+        Порядок один и тот же для operator_group и contract_sla_minutes:
+        сортировка по label.
+
+        Возвращает список пар; кэшируется на объекте, чтобы методы
+        сериализатора не пересобирали список повторно.
+        """
+        cached = getattr(obj, '_operator_contracts_cache', None)
+        if cached is not None:
+            return cached
+
+        if not obj.base_station:
+            obj._operator_contracts_cache = []
+            return []
+
+        operators: dict[int, BaseStationOperator] = {
+            op.id: op for op in obj.base_station.operator.all()
         }
 
-        if not groups:
+        pairs: list[tuple[str, int | None]] = []
+        for contract in obj.base_station.operator_contracts.all():
+            operator = operators.get(contract.operator_id)
+            if operator is None:
+                # оператор отвязан от БС — договор не учитываем
+                continue
+
+            label = operator.operator_group or operator.operator_name
+            pairs.append((label, contract.sla_contract_deadline))
+
+        pairs.sort(key=lambda item: item[0])
+
+        obj._operator_contracts_cache = pairs
+        return pairs
+
+    def get_operator_group(self, obj: Incident):
+        labels = [
+            label for label, _ in self._operator_contracts(obj)
+        ]
+        return ', '.join(labels) or None
+
+    def get_contract_sla_minutes(self, obj: Incident):
+        pairs = self._operator_contracts(obj)
+        if not pairs:
             return None
 
-        return ', '.join(sorted(groups))
+        return ', '.join(
+            str(sla) if sla is not None else '-'
+            for _, sla in pairs
+        )
+
+    def get_contract_deadline(self, obj: Incident):
+        slas = [
+            sla for _, sla in self._operator_contracts(obj)
+            if sla is not None
+        ]
+
+        if not slas or not obj.incident_date:
+            return None
+
+        end_date = obj.incident_date + timedelta(minutes=min(slas))
+        return conversion_utc_datetime(end_date, False, True)
 
     def get_avr_deadline(self, obj: Incident):
         deadline = obj.sla_avr_deadline
