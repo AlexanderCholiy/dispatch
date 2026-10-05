@@ -14,7 +14,7 @@ from core.constants import (
 )
 from core.models import Detail
 from core.utils import timedelta_to_human_time
-from ts.models import AVRContractor, BaseStation, Pole
+from ts.models import AVRContractor, BaseStation, ContractorEmail, Pole, Region
 from users.models import User
 
 from .constants import (
@@ -1678,3 +1678,99 @@ class IncidentSourceType(Detail):
 
     def __str__(self):
         return self.description if self.description else self.name
+
+
+class RegionRvrEmailAssignment(models.Model):
+    """
+    Назначение email'ов подрядчика РВР на уровне
+    регион / тип / подтип.
+
+    Уровень специфичности определяется заполненностью полей:
+      - только region            -> переопределение для региона по всем типам
+      - region + type            -> переопределение для типа в регионе
+      - region + type + subtype  -> точечное переопределение
+    Пустые поля = «наследуем с уровня выше», вплоть до
+    Region.rvr_email как дефолта.
+    """
+    region = models.ForeignKey(
+        Region,
+        on_delete=models.CASCADE,
+        related_name='rvr_email_assignments',
+        verbose_name='Регион',
+    )
+    incident_type = models.ForeignKey(
+        IncidentType,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='rvr_email_assignments',
+        verbose_name='Тип инцидента',
+    )
+    incident_subtype = models.ForeignKey(
+        IncidentSubType,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='rvr_email_assignments',
+        verbose_name='Подтип инцидента',
+    )
+    emails = models.ManyToManyField(
+        ContractorEmail,
+        related_name='region_assignments',
+        verbose_name='Email подрядчика по РВР',
+    )
+
+    class Meta:
+        verbose_name = 'назначение email РВР'
+        verbose_name_plural = 'Назначения email РВР'
+        constraints = [
+            # Уровень 1: только регион (type и subtype NULL)
+            models.UniqueConstraint(
+                fields=['region'],
+                condition=Q(
+                    incident_type__isnull=True,
+                    incident_subtype__isnull=True,
+                ),
+                name='uniq_rvr_assign_region_only',
+            ),
+            # Уровень 2: регион + тип (subtype NULL)
+            models.UniqueConstraint(
+                fields=['region', 'incident_type'],
+                condition=Q(incident_subtype__isnull=True),
+                name='uniq_rvr_assign_region_type',
+            ),
+            # Уровень 3: регион + тип + подтип (все заполнены)
+            models.UniqueConstraint(
+                fields=['region', 'incident_type', 'incident_subtype'],
+                name='uniq_rvr_assign_full',
+            ),
+        ]
+
+    def __str__(self):
+        parts = [str(self.region)]
+        if self.incident_type:
+            parts.append(str(self.incident_type))
+        if self.incident_subtype:
+            parts.append(str(self.incident_subtype))
+        return ' / '.join(parts)
+
+    def clean(self):
+        super().clean()
+        # Подтип без типа не имеет смысла:
+        if self.incident_subtype and not self.incident_type:
+            raise ValidationError(
+                'Нельзя указать подтип без указания типа инцидента.'
+            )
+        # Подтип должен принадлежать указанному типу:
+        if (
+            self.incident_subtype
+            and self.incident_type
+            and not TypeSubTypeRelation.objects.filter(
+                incident_type=self.incident_type,
+                incident_subtype=self.incident_subtype,
+            ).exists()
+        ):
+            raise ValidationError(
+                f'Подтип «{self.incident_subtype}» не относится к типу '
+                f'«{self.incident_type}».'
+            )

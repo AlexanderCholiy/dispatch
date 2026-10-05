@@ -25,6 +25,7 @@ from emails.models import (
     EmailTo,
     EmailToCC,
 )
+from incidents.services.get_rvr_email import resolve_rvr_emails
 from ts.models import BaseStationOperator, ContractorEmail
 from users.models import Roles, User
 from yandex_tracker.utils import YandexTrackerManager
@@ -911,15 +912,7 @@ class IncidentManager(IncidentValidator):
 
     @staticmethod
     def get_rvr_emails(incident: Incident) -> list[str]:
-        email_to = []
-        if (
-            incident.pole
-            and incident.pole.region
-            and incident.pole.region.rvr_email
-        ):
-            email_to.append(incident.pole.region.rvr_email.email)
-
-        return email_to
+        return resolve_rvr_emails(incident)
 
     @staticmethod
     def get_last_status_by_name(

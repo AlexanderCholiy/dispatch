@@ -18,6 +18,7 @@ from incidents.constants import (
     NOTIFY_CONTRACTOR_STATUS_NAME,
 )
 from incidents.models import Incident
+from incidents.services.get_rvr_email import resolve_rvr_emails
 from incidents.services.incident_signature import get_incident_signature
 
 
@@ -54,11 +55,7 @@ def notify_contractor_incident_closed(
         for obj in incident.pole.prefetched_pole_avr_emails
     ]) if incident.pole else set()
 
-    rvr_emails = set([incident.pole.region.rvr_email.email]) if (
-        incident.pole
-        and incident.pole.region
-        and incident.pole.region.rvr_email
-    ) else set()
+    rvr_emails = set(resolve_rvr_emails(incident))
 
     if not was_avr or not was_rvr:
         all_msg_addrs = set()
@@ -77,7 +74,7 @@ def notify_contractor_incident_closed(
         if rvr_emails and rvr_emails.intersection(all_msg_addrs):
             was_rvr = True
 
-    if not was_avr and was_rvr:
+    if not was_avr and not was_rvr:
         return {
             'notify_avr': False,
             'notify_rvr': False,

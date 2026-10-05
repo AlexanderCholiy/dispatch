@@ -62,6 +62,7 @@ from incidents.services.get_incident_auto_close_ttl import (
     get_incident_auto_close_ttl,
 )
 from incidents.services.get_incident_categories import get_incident_categories
+from incidents.services.get_rvr_email import resolve_rvr_emails
 from incidents.services.notify_contractor_incident_closed import (
     notify_contractor_incident_closed
 )
@@ -2538,19 +2539,8 @@ def notify_rvr_contractor(
             )
             initial_data['subject'] = clean_subj
 
-        if (
-            incident.pole
-            and incident.pole.region
-            and incident.pole.region.rvr_email
-        ):
-            initial_data['to'] = (
-                incident.pole.region.rvr_email.email
-                if (
-                    not incident.region_responsible_user
-                    or not incident.region_responsible_user.is_active
-                )
-                else incident.region_responsible_user.email
-            )
+        rvr_emails = resolve_rvr_emails(incident)
+        initial_data['to'] = ', '.join(rvr_emails)
 
         text_parts = []
 

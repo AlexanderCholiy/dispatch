@@ -1,10 +1,12 @@
 from django.contrib import admin
+from django.db.models import Prefetch
 from django.http import HttpRequest
 from django.urls import reverse
 from django.utils.html import format_html
 
 from core.constants import EMPTY_VALUE
 from emails.models import EmailMessage
+from ts.models import ContractorEmail
 
 from .constants import (
     INCIDENT_CATEGORIES_PER_PAGE,
@@ -28,6 +30,7 @@ from .models import (
     IncidentStatusHistory,
     IncidentSubType,
     IncidentType,
+    RegionRvrEmailAssignment,
     RVRPriority,
     StatusType,
     TypeSubTypeRelation,
@@ -359,3 +362,58 @@ class RVRPriorityAdmin(admin.ModelAdmin):
 class IncidentSourceTypeAdmin(admin.ModelAdmin):
     list_display = ['name', 'description']
     search_fields = ['name']
+
+
+@admin.register(RegionRvrEmailAssignment)
+class RegionRvrEmailAssignmentAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'region',
+        'incident_type',
+        'incident_subtype',
+        'emails_summary',
+    )
+    list_filter = (
+        'region',
+        'incident_type',
+        'incident_subtype',
+    )
+    search_fields = (
+        'region__region_ru',
+        'region__region_en',
+        'incident_type__name',
+        'incident_subtype__name',
+    )
+    autocomplete_fields = (
+        'region', 'incident_type', 'incident_subtype',
+    )
+    filter_horizontal = ('emails',)
+    ordering = ('region', 'incident_type', 'incident_subtype')
+
+    @admin.display(description='Email подрядчика')
+    def emails_summary(self, obj):
+        emails = list(obj.emails.all()[:3])
+        if not emails:
+            return '—'
+        names = ', '.join(str(e) for e in emails)
+        if obj.emails.count() > 3:
+            names += f' (+{obj.emails.count() - 3})'
+        return names
+
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .select_related(
+                'region',
+                'incident_type',
+                'incident_subtype',
+            )
+            .prefetch_related(
+                Prefetch(
+                    'emails',
+                    queryset=ContractorEmail.objects.only('id', 'email'),
+                    to_attr='emails_limited',
+                ),
+            )
+        )

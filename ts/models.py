@@ -136,7 +136,7 @@ class Region(models.Model):
         null=True,
         blank=True,
         related_name='regions',
-        verbose_name='Email подрядчика по РВР',
+        verbose_name='Базовый Email подрядчика по РВР (по умолчанию)',
         db_index=True
     )
     macroregion = models.ForeignKey(
