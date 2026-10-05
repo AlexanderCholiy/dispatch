@@ -495,7 +495,7 @@ LOGGING = {
         },
         'rotating_celery_file': {
             'class': 'logging.handlers.RotatingFileHandler',
-            'level': 'WARNING',
+            'level': 'INFO',
             'formatter': 'verbose',
             'filename': os.path.join(BASE_DIR, 'logs', 'celery', 'celery.log'),
             'maxBytes': 10 * 1024 * 1024,
@@ -522,7 +522,7 @@ LOGGING = {
             'handlers': [
                 'rotating_celery_file', 'console'
             ] if DEBUG else ['rotating_celery_file'],
-            'level': 'WARNING',
+            'level': 'INFO',
             'propagate': False,
         }
     },
