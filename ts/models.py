@@ -404,3 +404,65 @@ class BaseStationOperatorContract(models.Model):
             else 'SLA не задан'
         )
         return f'{self.base_station} — {self.operator} ({sla})'
+
+
+class VolsContractor(models.Model):
+    """Подрядчик ВОЛС."""
+    name = models.CharField(
+        'Имя подрядчика',
+        max_length=MAX_ST_DESCRIPTION,
+        unique=True,
+        db_index=True
+    )
+    email = models.ManyToManyField(
+        ContractorEmail,
+        related_name='vols_contractors',
+        verbose_name='Email адреса',
+        blank=True
+    )
+    is_avr_contractor = models.BooleanField(
+        'Выполняет работы по АВР',
+        default=False,
+    )
+
+    class Meta:
+        verbose_name = 'подрядчик ВОЛС'
+        verbose_name_plural = 'Подрядчики ВОЛС'
+
+    def __str__(self):
+        return self.name
+
+
+class Vols(models.Model):
+    """Волоконно-оптическая линия связи (ВОЛС)."""
+    site_id = models.IntegerField(
+        unique=True,
+        null=False,
+        verbose_name='ID ВОЛС в TS'
+    )
+    name = models.CharField(
+        'Название ВОЛС',
+        max_length=MAX_ST_DESCRIPTION,
+        unique=True,
+    )
+    contractor = models.ForeignKey(
+        VolsContractor,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='vols',
+        verbose_name='Подрядчик ВОЛС',
+    )
+    base_stations = models.ManyToManyField(
+        BaseStation,
+        related_name='vols',
+        verbose_name='Базовые станции',
+        blank=True
+    )
+
+    class Meta:
+        verbose_name = 'ВОЛС'
+        verbose_name_plural = 'ВОЛСы'
+
+    def __str__(self):
+        return self.name

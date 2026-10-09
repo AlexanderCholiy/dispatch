@@ -23,6 +23,8 @@ from .models import (
     PoleContractorEmail,
     PoleContractorPhone,
     Region,
+    Vols,
+    VolsContractor,
 )
 
 admin.site.empty_value_display = EMPTY_VALUE
@@ -200,3 +202,28 @@ class RegionAdmin(admin.ModelAdmin):
     autocomplete_fields = ('rvr_email',)
     list_editable = ('rvr_email',)
     list_filter = ('macroregion',)
+
+
+@admin.register(VolsContractor)
+class VolsContractorAdmin(admin.ModelAdmin):
+    list_display = ('name', 'is_avr_contractor')
+    list_filter = ('is_avr_contractor',)
+    search_fields = ('name',)
+    filter_horizontal = ('email',)
+
+
+class BaseStationVolsInline(admin.TabularInline):
+    model = Vols.base_stations.through
+    autocomplete_fields = ('basestation',)
+    extra = 1
+
+
+@admin.register(Vols)
+class VolsAdmin(admin.ModelAdmin):
+    list_display = ('site_id', 'name', 'contractor')
+    search_fields = ('site_id', 'name', 'contractor__name')
+    list_filter = ('contractor',)
+    filter_horizontal = ('base_stations',)
+    list_select_related = ('contractor',)
+    inlines = [BaseStationVolsInline]
+    exclude = ('base_stations',)

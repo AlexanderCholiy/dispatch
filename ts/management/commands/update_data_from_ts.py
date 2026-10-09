@@ -59,6 +59,7 @@ class Command(BaseCommand):
             ts_api.update_avr()
             ts_api.update_base_stations()
             ts_api.update_region_responsible_manager()
+            ts_api.update_vols()
             BSSLAOperatorsSync().run()
 
         except Exception as e:
