@@ -133,7 +133,7 @@ class IncidentAdmin(admin.ModelAdmin):
         'is_incident_finish',
         IncidentCategoryFilter,
     )
-    autocomplete_fields = ('pole', 'base_station')
+    autocomplete_fields = ('pole', 'base_station', 'vols')
     list_editable = ('incident_type', 'responsible_user')
 
     inlines = [
@@ -154,6 +154,7 @@ class IncidentAdmin(admin.ModelAdmin):
         return qs.select_related(
             'pole',
             'base_station',
+            'vols',
             'responsible_user',
             'incident_type',
             'source_type',
@@ -175,6 +176,7 @@ class IncidentAdmin(admin.ModelAdmin):
                 'incident_date',
                 'pole',
                 'base_station',
+                'vols',
                 'incident_type',
                 'incident_subtype',
                 'rvr_priority',

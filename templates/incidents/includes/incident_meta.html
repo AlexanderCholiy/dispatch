@@ -126,7 +126,7 @@
                 class="pole-link tooltip" data-title="{{ incident.pole.infrastructure_company }}" target="_blank">
                 {{ incident.pole }}
               </a>
-              {% if incident.pole %}<span class="ts-pole-status">{{ incident.pole.pole_status }}</span>{% endif %}
+              {% if incident.pole.pole_status %}<span class="ts-pole-status">{{ incident.pole.pole_status }}</span>{% endif %}
             {% else %}
               —
             {% endif %}
@@ -193,6 +193,35 @@
             {% endif %}
           </span>
         {% endwith %}
+      </div>
+    </div>
+
+    <div class="incident-row">
+      <div class="form-group {% if incident_form.vols.errors %}has-error{% endif %}">
+        <label for="{{ incident_form.vols.id_for_label }}" class="field-label pole-label">
+          <div class="pole-label-left">{{ incident_form.vols.label }}:</div>
+          <div class="pole-label-right">
+            {% if incident.vols %}
+              <a href="https://fridge.newtowers.ru/fls/{{ incident.vols.site_id }}" 
+                class="pole-link" target="_blank">
+                {{ incident.vols }}
+              </a>
+              {% if incident.vols.contractor %}<span class="ts-pole-status">{{ incident.vols.contractor }}</span>{% endif %}
+            {% else %}
+              —
+            {% endif %}
+          </div>
+        </label>
+
+        {{ incident_form.vols }}
+
+        {% for error in incident_form.vols.errors %}
+          <div class="form-error">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="incident-info">
+        <label class="field-label">Подрядчик по ВОЛС</label>
       </div>
     </div>
 

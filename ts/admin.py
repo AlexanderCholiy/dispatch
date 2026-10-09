@@ -221,7 +221,9 @@ class BaseStationVolsInline(admin.TabularInline):
 @admin.register(Vols)
 class VolsAdmin(admin.ModelAdmin):
     list_display = ('site_id', 'name', 'contractor')
-    search_fields = ('site_id', 'name', 'contractor__name')
+    search_fields = (
+        'site_id', 'name', 'contractor__name', 'base_stations__bs_name'
+    )
     list_filter = ('contractor',)
     filter_horizontal = ('base_stations',)
     list_select_related = ('contractor',)

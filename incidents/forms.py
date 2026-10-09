@@ -302,6 +302,7 @@ class IncidentForm(forms.ModelForm):
             'new_status',
             'pole',
             'base_station',
+            'vols',
             'categories',
             'responsible_user',
             'region_responsible_user',
@@ -321,6 +322,7 @@ class IncidentForm(forms.ModelForm):
         labels = {
             'pole': 'Опора',
             'base_station': 'Базовая станция',
+            'vols': 'ВОЛС',
             'responsible_user': 'Диспетчер',
             'region_responsible_user': 'Ответственный',
             'incident_type': 'Тип инцидента',
@@ -386,6 +388,16 @@ class IncidentForm(forms.ModelForm):
             'base_station': autocomplete.ModelSelect2(
                 url='ts:bs_autocomplete',
                 forward=['pole'],
+                attrs={
+                    'data-placeholder': 'Не выбрано',
+                    'data-minimum-input-length': '1',
+                    'data-ajax--cache': 'true',
+                    'data-ajax--delay': '1000',
+                },
+            ),
+            'vols': autocomplete.ModelSelect2(
+                url='ts:vols_autocomplete',
+                forward=['base_station'],
                 attrs={
                     'data-placeholder': 'Не выбрано',
                     'data-minimum-input-length': '1',
@@ -496,6 +508,7 @@ class IncidentForm(forms.ModelForm):
 
         self.fields['pole'].widget.attrs['title'] = ''
         self.fields['base_station'].widget.attrs['title'] = ''
+        self.fields['vols'].widget.attrs['title'] = ''
 
         now = timezone.localtime()
         weekday = now.weekday()
@@ -639,6 +652,7 @@ class IncidentForm(forms.ModelForm):
 
         pole = cleaned_data.get('pole')
         bs = cleaned_data.get('base_station')
+        vols = cleaned_data.get('vols')
 
         if bs:
             if not pole and bs.pole:
@@ -653,6 +667,27 @@ class IncidentForm(forms.ModelForm):
                 self.add_error(
                     'pole',
                     'Опора не соответствует выбранной БС'
+                )
+
+        if vols and bs:
+            if not vols.base_stations.filter(pk=bs.pk).exists():
+                self.add_error(
+                    'vols',
+                    'ВОЛС не соответствует выбранной БС'
+                )
+                self.add_error(
+                    'base_station',
+                    'БС не соответствует выбранной ВОЛС'
+                )
+        elif vols and pole:
+            if not vols.base_stations.filter(pole=pole).exists():
+                self.add_error(
+                    'vols',
+                    'ВОЛС не соответствует выбранной опоре'
+                )
+                self.add_error(
+                    'pole',
+                    'Опора не соответствует выбранной ВОЛС'
                 )
 
         date_pairs = [

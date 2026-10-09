@@ -11,8 +11,10 @@ from .constants import (
     BASE_STATIONS_PER_PAGE,
     POLE_CACHE_TTL,
     POLES_PER_PAGE,
+    VOLES_CACHE_TTL,
+    VOLS_PER_PAGE,
 )
-from .models import BaseStation, Pole
+from .models import BaseStation, Pole, Vols
 
 
 def get_cached_poles() -> list[tuple[int, str]]:
@@ -171,3 +173,38 @@ class BaseStationAutocomplete(autocomplete.Select2QuerySetView):
         bs_name = item.bs_name or 'unknown'
         pole_code = getattr(getattr(item, 'pole', None), 'pole', 'unknown')
         return f'{bs_name} [{pole_code}]'
+
+
+class VolesAutocomplete(autocomplete.Select2QuerySetView):
+
+    def get_queryset(self):
+        user: User = self.request.user
+        if (
+            not user.is_authenticated
+            or (user.role in [Roles.GUEST] and not user.is_superuser)
+            or not user.is_active
+        ):
+            return Vols.objects.none()
+
+        qs = Vols.objects.all()
+        q = (self.q or '').lower().strip()
+
+        if q:
+            results = list(
+                Vols.objects
+                .filter(
+                    Q(name__istartswith=q)
+                    | Q(base_stations__bs_name__istartswith=q)
+                    | Q(base_stations__pole__pole__istartswith=q)
+                )
+                .distinct()
+                .prefetch_related(
+                    'base_stations',
+                    'base_stations__pole',
+                )
+                [:VOLS_PER_PAGE]
+            )
+
+            return results
+
+        return list(qs[:VOLS_PER_PAGE])

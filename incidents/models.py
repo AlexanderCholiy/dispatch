@@ -14,7 +14,14 @@ from core.constants import (
 )
 from core.models import Detail
 from core.utils import timedelta_to_human_time
-from ts.models import AVRContractor, BaseStation, ContractorEmail, Pole, Region
+from ts.models import (
+    AVRContractor,
+    BaseStation,
+    ContractorEmail,
+    Pole,
+    Region,
+    Vols,
+)
 from users.models import User
 
 from .constants import (
@@ -125,6 +132,15 @@ class Incident(models.Model):
         blank=True,
         related_name='incidents',
         verbose_name='Базовая станция',
+        db_index=True
+    )
+    vols = models.ForeignKey(
+        Vols,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='incidents',
+        verbose_name='ВОЛС',
         db_index=True
     )
     responsible_user = models.ForeignKey(
