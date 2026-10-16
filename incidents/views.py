@@ -3147,7 +3147,7 @@ def notify_vols_contractor(
 
         default_vols_msg_1 = (
             '  • Трасса ВОЛС: [наименование]\n'
-            f'  • Маркировка ВОЛС: {incident.vols.name}\n'
+            f'  • Номер ВОЛС: {incident.vols.name}\n'
             '  • Точка А: [шифр опоры]\n'
             '  • Точка Б: [шифр опоры]\n'
             '  • Характер аварии: '

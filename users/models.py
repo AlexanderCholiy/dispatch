@@ -171,7 +171,8 @@ class User(AbstractUser):
 
     def __str__(self):
         role: str = self.get_role_display()
-        return self.get_full_name() or f'Новый {role.lower()}'
+        full_name = f'{self.first_name or ""} {self.last_name or ""}'.strip()
+        return full_name or f'Новый {role.lower()}'
 
     @property
     def get_avatar_url(self):

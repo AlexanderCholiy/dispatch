@@ -49,6 +49,10 @@ class IncidentReportSerializer(serializers.ModelSerializer):
         source='pole.address',
         read_only=True
     )
+    vols = serializers.CharField(source='vols.name', read_only=True)
+    vols_contractor = serializers.CharField(
+        source='vols_contractor.name', read_only=True
+    )
 
     last_status = serializers.SerializerMethodField()
     avr_emails = serializers.SerializerMethodField()
@@ -146,6 +150,9 @@ class IncidentReportSerializer(serializers.ModelSerializer):
             'operator_group',
             'contract_sla_minutes',
             'contract_deadline',
+
+            'vols',
+            'vols_contractor',
 
             'region_responsible_user_id',
             'region_responsible_user_name',

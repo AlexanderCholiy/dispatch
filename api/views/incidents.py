@@ -83,6 +83,9 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
     - contract_deadline: Ближайший дедлайн устранения аварии
       по договорам (минимальный SLA).
 
+    - vols: Номер ВОЛС.
+    - vols_contractor: Имя подрядчика ВОЛС
+
     - region_responsible_user_id: Идентификатор ответственного пользователя.
     - region_responsible_user_name: Имя ответственного пользователя в системе.
 
@@ -125,6 +128,8 @@ class IncidentReportViewSet(viewsets.ReadOnlyModelViewSet):
         'region_responsible_user',
         'pole__region',
         'pole__region__macroregion',
+        'vols',
+        'vols_contractor',
     ).prefetch_related(
         'base_station__operator',
         'base_station__operator_contracts',
