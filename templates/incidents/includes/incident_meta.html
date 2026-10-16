@@ -207,7 +207,7 @@
                 class="pole-link" target="_blank">
                 {{ incident.vols }}
               </a>
-              {% if incident.vols.contractor %}<span class="ts-pole-status">{{ incident.vols.contractor }}</span>{% endif %}
+              {% if incident.vols.contractor %}<span class="ts-pole-status tooltip" data-title="Подрядчик ВОЛС в TS">{{ incident.vols.contractor }}</span>{% endif %}
             {% else %}
               —
             {% endif %}

@@ -8,7 +8,7 @@
       {% endif %}
     </div>
     <div class="incident-meta-label-right">
-      <span class="vols-contractor-email">
+      <span class="vols-contractor-email {% if vols_contractor.emails_list %}copy-text{% endif %}" {% if vols_contractor.emails_list %}data-text="{{ vols_contractor.emails_list|join:", " }}"{% endif %}>
       {% if vols_contractor.emails_list %}
         {{ vols_contractor.emails_list|join:", " }}
       {% else %}

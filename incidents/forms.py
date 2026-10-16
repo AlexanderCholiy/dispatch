@@ -626,6 +626,12 @@ class IncidentForm(forms.ModelForm):
             )
 
         self.fields['vols_contractor'].empty_label = 'Не назначен'
+        self.fields['vols_contractor'].queryset = (
+            VolsContractor.objects
+            .filter(is_avr_contractor=True)
+            .order_by('name')
+        )
+
         self.fields['responsible_user'].empty_label = 'Не назначен'
         self.fields['incident_type'].empty_label = 'Не выбрано'
         self.fields['incident_subtype'].empty_label = 'Не выбрано'

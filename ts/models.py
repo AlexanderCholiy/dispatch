@@ -428,6 +428,7 @@ class VolsContractor(models.Model):
     class Meta:
         verbose_name = 'подрядчик ВОЛС'
         verbose_name_plural = 'Подрядчики ВОЛС'
+        ordering = ('name',)
 
     def __str__(self):
         return self.name

@@ -50,6 +50,11 @@ urlpatterns = [
         name='notify_rvr_contractor'
     ),
     path(
+        'incidents/<int:incident_id>/emails/notify-vols-contractor/',
+        views.notify_vols_contractor,
+        name='notify_vols_contractor'
+    ),
+    path(
         'incidents/<int:incident_id>/emails/notify-incident-closed/',
         views.notify_incident_closed,
         name='notify_incident_closed'

@@ -27,6 +27,11 @@
         Передать подрядчику РВР
     </a>
 
+    <a href="{% url 'incidents:notify_vols_contractor' incident.id %}"
+        class="dropdown-item">
+        Передать подрядчику ВОЛС
+    </a>
+
     <a href="{% url 'incidents:notify_incident_closed' incident.id %}"
         class="dropdown-item">
         Уведомить о закрытии

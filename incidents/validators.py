@@ -402,3 +402,64 @@ def validate_notify_rvr(
         return transition_error
 
     return None
+
+
+def validate_notify_vols(
+    incident: Incident,
+    last_status: Optional[IncidentStatus],
+    category_names: set[str],
+) -> Optional[str]:
+    err_msg = validate_actual_email_incident(incident, last_status)
+    if err_msg:
+        return err_msg
+
+    if (
+        last_status
+        and last_status.name in (
+            NOTIFY_CONTRACTOR_STATUS_NAME,
+            NOTIFIED_CONTRACTOR_STATUS_NAME,
+        )
+    ):
+        return (
+            f'Инцидент {incident} уже находится в статусе '
+            f'«{last_status.name}».'
+        )
+
+    if not incident.pole:
+        return (
+            f'Перед передачей инцидента {incident} '
+            f'на ВОЛС необходимо указать шифр опоры.'
+        )
+
+    if not incident.vols:
+        return (
+            f'Перед передачей инцидента {incident} '
+            f'на ВОЛС необходимо указать номер ВОЛС.'
+        )
+
+    if not incident.vols_contractor:
+        return (
+            f'Перед передачей инцидента {incident} '
+            f'на ВОЛС необходимо выбрать подрядчика ВОЛС.'
+        )
+
+    if not incident.incident_type:
+        return (
+            'Необходимо выбрать тип инцидента прежде чем '
+            'отправить заявку на ВОЛС.'
+        )
+
+    if not incident.incident_type.sla_deadline:
+        return (
+            'Необходимо выбрать тип инцидента с установленным дедлайном SLA '
+            'перед отправкой заявки на ВОЛС.'
+        )
+
+    transition_error = validate_status_transition(
+        last_status,
+        NOTIFIED_CONTRACTOR_STATUS_NAME,
+    )
+    if transition_error:
+        return transition_error
+
+    return None

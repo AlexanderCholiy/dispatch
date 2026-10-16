@@ -273,3 +273,8 @@ class SimilarFactor:
 
 
 FAV_EMPTY = 'empty'
+
+VOLS_DEFAULT_PARTICIPANTS = [
+    em.strip() for em in os.getenv('VOLS_DEFAULT_PARTICIPANTS', '').split(',')
+    if em.strip() and '@' in em
+]
