@@ -66,6 +66,8 @@ def log_incident_changes(
     fields_to_track = [
         'pole',
         'base_station',
+        'vols',
+        'vols_contractor',
         'responsible_user',
         'region_responsible_user',
         'incident_type',

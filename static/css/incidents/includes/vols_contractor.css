@@ -1,0 +1,20 @@
+.vols-contractor-section {
+  justify-content: center;
+  padding-bottom: 0;
+}
+
+.vols-contractor-section .select-wrapper.status-select {
+  max-width: 100%;
+}
+
+.vols-contractor-section .select-wrapper.status-select label {
+  margin-bottom: var(--space-xs);
+}
+
+.vols-contractor-section .incident-meta-label-left {
+  text-align: left;
+}
+
+.vols-contractor-email {
+  color: var(--gray-color);
+}

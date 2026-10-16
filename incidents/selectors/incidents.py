@@ -61,9 +61,14 @@ class IncidentSelector:
                 'pole__region__rvr_email',
                 'pole__avr_contractor',
                 'base_station',
+                'vols',
+                'vols_contractor',
+                'vols__contractor',
             )
             .prefetch_related(
                 'categories',
+                'vols_contractor__email',
+                'vols__contractor__email',
                 Prefetch(
                     'email_messages',
                     queryset=emails_qs,

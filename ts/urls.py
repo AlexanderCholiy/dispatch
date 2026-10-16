@@ -15,4 +15,9 @@ urlpatterns = [
         views.BaseStationAutocomplete.as_view(),
         name='bs_autocomplete'
     ),
+    path(
+        'vols-autocomplete/',
+        views.VolesAutocomplete.as_view(),
+        name='vols_autocomplete'
+    ),
 ]

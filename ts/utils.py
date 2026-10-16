@@ -29,11 +29,15 @@ from .constants import (
     RAISE_TS_POLE_DEL_LIMIT,
     RAISE_TS_POLE_TABLE_LIMIT,
     RAISE_TS_REGION_RESPONSIBLE_MANAGER_TABLE_LIMIT,
+    RAISE_TS_VOLS_DEL_LIMIT,
+    RAISE_TS_VOLS_TABLE_LIMIT,
     RVR_FILE,
+    TS_ADD_VOLS_TABLE,
     TS_AVR_TABLE,
     TS_BASE_STATION_TABLE,
     TS_POLE_TABLE,
     TS_REGION_RESPONSIBLE_MANAGER_TABLE,
+    TS_VOLS_TABLE,
     UNDEFINED_CASE,
     UNDEFINED_EMAILS,
     UNDEFINED_ID,
@@ -51,6 +55,8 @@ from .models import (
     PoleContractorEmail,
     PoleContractorPhone,
     Region,
+    Vols,
+    VolsContractor,
 )
 from .validators import SocialValidators
 
@@ -1110,3 +1116,244 @@ class TSManager(SocialValidators):
                 )
             else:
                 ts_logger.debug('Изменений нет.')
+
+    def get_ts_vols(self) -> pd.DataFrame:
+        query = (
+            f'''
+            SELECT DISTINCT
+                vols_id."ID объекта ВОЛС" AS vols_ts_id,
+                vols_args."Шифр проекта" AS vols_name,
+                vols_args."Шифр опоры" AS pole_name,
+                vols_args."Номер БС" AS bs_name,
+                vols_args."Подрядчик" AS vols_contractor
+            FROM "{TS_VOLS_TABLE}" AS vols_args
+            LEFT JOIN "{TS_ADD_VOLS_TABLE}" AS vols_id
+            ON vols_id."Шифр ВОЛС" = vols_args."Шифр проекта"
+            WHERE (
+                -- Обязательно есть внутренний ID и номер ВОЛС:
+                vols_id."ID объекта ВОЛС" IS NOT NULL
+                AND vols_args."Шифр проекта" IS NOT NULL
+                AND TRIM(vols_args."Шифр проекта") != ''
+                -- Обязательно указана опора:
+                AND vols_args."Шифр опоры" IS NOT NULL
+                AND TRIM(vols_args."Шифр опоры") != ''
+                -- Обязательно указана базовая станция:
+                AND vols_args."Номер БС" IS NOT NULL
+                AND TRIM(vols_args."Номер БС") != ''
+            );
+            '''
+        )
+
+        with connections['ts'].cursor() as cursor:
+            cursor.execute(query)
+            columns = [col[0] for col in cursor.description]
+            data = cursor.fetchall()
+
+        if len(data) < RAISE_TS_VOLS_TABLE_LIMIT:
+            raise EmptyTableError(TS_VOLS_TABLE, len(data))
+
+        df = pd.DataFrame.from_records(data, columns=columns)
+
+        # Заменяем пустые значения на None:
+
+        df = df.replace(r'^\s*$', None, regex=True)
+
+        df = df.astype(object).where(pd.notnull(df), None)
+
+        return df
+
+    @transaction.atomic
+    def update_vols(self):
+        """Синхронизация ВОЛС и их подрядчиков."""
+        df_ts = self.get_ts_vols()
+        if df_ts.empty:
+            ts_logger.debug('Нет данных для синхронизации ВОЛС.')
+            return
+
+        # ШАГ 1: Синхронизация подрядчиков (VolsContractor)
+        incoming_contractors = (
+            df_ts['vols_contractor'].dropna().str.strip().unique()
+        )
+        existing_contractors = VolsContractor.objects.filter(
+            name__in=incoming_contractors
+        )
+        existing_contractors_map = {c.name: c for c in existing_contractors}
+
+        contractors_to_create = []
+        for c_name in incoming_contractors:
+            if c_name not in existing_contractors_map:
+                contractors_to_create.append(VolsContractor(name=c_name))
+
+        if contractors_to_create:
+            VolsContractor.objects.bulk_create(
+                contractors_to_create, DB_CHUNK_UPDATE
+            )
+            existing_contractors = VolsContractor.objects.filter(
+                name__in=incoming_contractors
+            )
+            existing_contractors_map = {
+                c.name: c for c in existing_contractors
+            }
+
+        # ШАГ 2: Подготовка кэша для ВОЛС и Базовых Станций
+        df_unique_bs = (
+            df_ts[['bs_name', 'pole_name']].dropna().drop_duplicates()
+        )
+        bs_names_list = df_unique_bs['bs_name'].str.strip().unique()
+        pole_names_list = df_unique_bs['pole_name'].str.strip().unique()
+
+        bs_queryset = BaseStation.objects.filter(
+            bs_name__in=bs_names_list,
+            pole__pole__in=pole_names_list
+        ).select_related('pole')
+
+        bs_map = {
+            (bs.bs_name.strip(), bs.pole.pole.strip()): bs
+            for bs in bs_queryset if bs.pole and bs.pole.pole
+        }
+
+        ts_vols_ids = df_ts['vols_ts_id'].unique()
+        incoming_vols_names = df_ts['vols_name'].dropna().str.strip().unique()
+
+        # Выбираем ВОЛС И по site_id, И по уникальному имени name
+        vols_queryset = Vols.objects.filter(
+            Q(site_id__in=ts_vols_ids) | Q(name__in=incoming_vols_names)
+        )
+
+        # Строим две кэш-карты для проверки дубликатов с обеих сторон
+        existing_vols_by_id = {v.site_id: v for v in vols_queryset}
+        existing_vols_by_name = {v.name: v for v in vols_queryset}
+
+        grouped = df_ts.groupby('vols_ts_id')
+
+        vols_to_create: list[Vols] = []
+        vols_to_update: list[Vols] = []
+        vols_bs_relations: dict[int, list[BaseStation]] = {}
+
+        # ШАГ 3: Распределение ВОЛС на создание и обновление
+        with tqdm(
+            total=len(grouped),
+            desc='Распределение ВОЛС на создание и обновление:',
+            colour='blue',
+            position=0,
+            leave=True,
+            disable=not DEBUG_MODE,
+        ) as pbar:
+            for vols_ts_id, group in grouped:
+                site_id = int(vols_ts_id)
+
+                first_row = group.iloc[0]
+                name = str(first_row['vols_name']).strip()
+                contractor_name = first_row['vols_contractor']
+                contractor_name = (
+                    contractor_name.strip()
+                    if isinstance(contractor_name, str) else None
+                )
+
+                contractor_obj = (
+                    existing_contractors_map.get(contractor_name)
+                    if contractor_name else None
+                )
+
+                current_vols_bs = []
+                unique_pairs = (
+                    group[['bs_name', 'pole_name']].dropna().drop_duplicates()
+                )
+
+                for _, row in unique_pairs.iterrows():
+                    b_name = str(row['bs_name']).strip()
+                    p_name = str(row['pole_name']).strip()
+
+                    bs_obj = bs_map.get((b_name, p_name))
+                    if bs_obj:
+                        current_vols_bs.append(bs_obj)
+
+                vols_obj = existing_vols_by_id.get(site_id)
+                if vols_obj is None:
+                    vols_obj = existing_vols_by_name.get(name)
+
+                if vols_obj is None:
+                    # Новая ВОЛС (нет ни такого site_id, ни такого name)
+                    new_vols = Vols(
+                        site_id=site_id,
+                        name=name,
+                        contractor=contractor_obj
+                    )
+                    vols_to_create.append(new_vols)
+                    vols_bs_relations[site_id] = current_vols_bs
+
+                    # Записываем в локальный кэш текущей итерации, чтобы
+                    # защититься от дублей внутри самой выгрузки df_ts
+                    existing_vols_by_name[name] = new_vols
+                else:
+                    # Существующая ВОЛС — обновляем поля при изменениях
+                    has_changes = False
+                    if vols_obj.site_id != site_id:
+                        vols_obj.site_id = site_id
+                        has_changes = True
+                    if vols_obj.name != name:
+                        vols_obj.name = name
+                        has_changes = True
+                    if vols_obj.contractor != contractor_obj:
+                        vols_obj.contractor = contractor_obj
+                        has_changes = True
+
+                    if has_changes:
+                        vols_to_update.append(vols_obj)
+
+                    vols_bs_relations[site_id] = current_vols_bs
+
+                    existing_vols_by_id[site_id] = vols_obj
+                    existing_vols_by_name[name] = vols_obj
+
+                pbar.update(1)
+
+        # ШАГ 4: Сохранение данных в БД
+        if vols_to_create:
+            Vols.objects.bulk_create(vols_to_create, DB_CHUNK_UPDATE)
+            # Пересобираем кэш для корректной работы M2M связей на следующем
+            # шаге
+            created_vols = Vols.objects.filter(
+                site_id__in=[v.site_id for v in vols_to_create]
+            )
+            existing_vols_by_id.update({v.site_id: v for v in created_vols})
+
+        if vols_to_update:
+            # Не забываем добавить 'site_id' в список обновляемых полей
+            Vols.objects.bulk_update(
+                vols_to_update, ['site_id', 'name', 'contractor']
+            )
+
+        # Синхронизируем Many-to-Many связи с базовыми станциями
+        with tqdm(
+            total=len(vols_bs_relations),
+            desc='Синхронизация базовых станций ВОЛС',
+            colour='green',
+            position=0,
+            leave=True,
+            disable=not DEBUG_MODE,
+        ) as pbar:
+            for site_id, bs_list in vols_bs_relations.items():
+                vols_instance = existing_vols_by_id.get(site_id)
+                if vols_instance:
+                    vols_instance.base_stations.set(bs_list)
+                pbar.update(1)
+
+        # ШАГ 5: Безопасное удаление устаревших ВОЛС
+        vols_to_delete_queryset = Vols.objects.exclude(site_id__in=ts_vols_ids)
+        count_to_delete = vols_to_delete_queryset.count()
+
+        if count_to_delete > 0:
+            if count_to_delete > RAISE_TS_VOLS_DEL_LIMIT:
+                raise TooManyRecordsToDeleteError(
+                    Vols.__name__,
+                    count_to_delete,
+                    RAISE_TS_VOLS_DEL_LIMIT,
+                )
+
+            vols_to_delete_queryset.delete()
+            ts_logger.info(
+                f'Успешно удалено {count_to_delete} устаревших ВОЛС.'
+            )
+        else:
+            ts_logger.debug('Нет ВОЛС для удаления.')

@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="{% static 'css/incidents/includes/incident_meta_forms.css' %}">
 <link rel="stylesheet" href="{% static 'css/incidents/includes/sla_forms.css' %}">
 <link rel="stylesheet" href="{% static 'css/incidents/includes/monitoring_section.css' %}">
+<link rel="stylesheet" href="{% static 'css/incidents/includes/vols_contractor.css' %}">
 {% endblock %}
 
 <form method="post">
@@ -126,7 +127,7 @@
                 class="pole-link tooltip" data-title="{{ incident.pole.infrastructure_company }}" target="_blank">
                 {{ incident.pole }}
               </a>
-              {% if incident.pole %}<span class="ts-pole-status">{{ incident.pole.pole_status }}</span>{% endif %}
+              {% if incident.pole.pole_status %}<span class="ts-pole-status">{{ incident.pole.pole_status }}</span>{% endif %}
             {% else %}
               —
             {% endif %}
@@ -193,6 +194,35 @@
             {% endif %}
           </span>
         {% endwith %}
+      </div>
+    </div>
+
+    <div class="incident-row">
+      <div class="form-group {% if incident_form.vols.errors %}has-error{% endif %}">
+        <label for="{{ incident_form.vols.id_for_label }}" class="field-label pole-label">
+          <div class="pole-label-left">{{ incident_form.vols.label }}:</div>
+          <div class="pole-label-right">
+            {% if incident.vols %}
+              <a href="https://fridge.newtowers.ru/fls/{{ incident.vols.site_id }}" 
+                class="pole-link" target="_blank">
+                {{ incident.vols }}
+              </a>
+              {% if incident.vols.contractor %}<span class="ts-pole-status tooltip" data-title="Подрядчик ВОЛС в TS">{{ incident.vols.contractor }}</span>{% endif %}
+            {% else %}
+              —
+            {% endif %}
+          </div>
+        </label>
+
+        {{ incident_form.vols }}
+
+        {% for error in incident_form.vols.errors %}
+          <div class="form-error">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="incident-info vols-contractor-section">
+        {% include "incidents/includes/vols_contractor.html" with incident=incident field=incident_form.vols_contractor vols_contractor=incident_form.vols_contractor_obj %}
       </div>
     </div>
 

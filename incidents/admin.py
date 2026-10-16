@@ -133,8 +133,7 @@ class IncidentAdmin(admin.ModelAdmin):
         'is_incident_finish',
         IncidentCategoryFilter,
     )
-    autocomplete_fields = ('pole', 'base_station')
-    list_editable = ('incident_type', 'responsible_user')
+    autocomplete_fields = ('pole', 'base_station', 'vols', 'vols_contractor')
 
     inlines = [
         IncidentCategoryRelationInline,
@@ -145,8 +144,11 @@ class IncidentAdmin(admin.ModelAdmin):
     ]
 
     def get_last_status(self, obj):
-        latest = obj.status_history.order_by('-insert_date', '-id').first()
-        return latest.status.name if latest else EMPTY_VALUE
+        history = obj.status_history_prefetched
+        if not history:
+            return EMPTY_VALUE
+        return history[0].status.name or EMPTY_VALUE
+
     get_last_status.short_description = 'Статус'
 
     def get_queryset(self, request):
@@ -154,10 +156,24 @@ class IncidentAdmin(admin.ModelAdmin):
         return qs.select_related(
             'pole',
             'base_station',
+            'vols',
             'responsible_user',
             'incident_type',
             'source_type',
-        ).prefetch_related('statuses', 'categories', 'history')
+            'vols',
+            'vols_contractor',
+        ).prefetch_related(
+            Prefetch(
+                'status_history',
+                queryset=(
+                    IncidentStatusHistory.objects
+                    .select_related('status').order_by('-insert_date', '-id')
+                ),
+                to_attr='status_history_prefetched',
+            ),
+            'categories',
+            'history',
+        )
 
     readonly_fields = (
         'avr_contractor',
@@ -175,6 +191,8 @@ class IncidentAdmin(admin.ModelAdmin):
                 'incident_date',
                 'pole',
                 'base_station',
+                'vols',
+                'vols_contractor',
                 'incident_type',
                 'incident_subtype',
                 'rvr_priority',

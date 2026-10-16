@@ -1293,9 +1293,13 @@ class IncidentManager(IncidentValidator):
                 'pole__region__macroregion',
                 'pole__avr_contractor',
                 'source_type',
+                'vols',
+                'vols_contractor',
+                'vols__contractor',
             )
             .prefetch_related(
                 'categories',
+                'vols__contractor__email',
                 Prefetch(
                     'history',
                     queryset=IncidentHistory.objects.select_related(

@@ -1,0 +1,33 @@
+<div class="select-wrapper status-select incident-form-select {% if field.errors %}has-error{% endif %}">
+  <label for="{{ field.id_for_label }}" class="field-label incident-meta-label">
+    <div class="incident-meta-label-left">
+      {% if vols_contractor and not incident.vols_contractor %}
+        {{ vols_contractor.name }}
+      {% else %}
+        {{ field.label }}:
+      {% endif %}
+    </div>
+    <div class="incident-meta-label-right">
+      <span class="vols-contractor-email {% if vols_contractor.emails_list %}copy-text{% endif %}" {% if vols_contractor.emails_list %}data-text="{{ vols_contractor.emails_list|join:", " }}"{% endif %}>
+      {% if vols_contractor.emails_list %}
+        {{ vols_contractor.emails_list|join:", " }}
+      {% else %}
+        —
+      {% endif %}
+      </span>
+    </div>
+  </label>
+
+  <select name="{{ field.name }}" id="{{ field.id_for_label }}">
+    {% for pk, display in field.field.choices %}
+      <option value="{{ pk }}"
+              {% if field.value|stringformat:"s" == pk|stringformat:"s" %}selected{% endif %}>
+        {{ display }}
+      </option>
+    {% endfor %}
+  </select>
+
+  {% for error in field.errors %}
+    <div class="form-error">{{ error }}</div>
+  {% endfor %}
+</div>
