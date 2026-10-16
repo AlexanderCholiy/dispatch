@@ -21,6 +21,7 @@ from ts.models import (
     Pole,
     Region,
     Vols,
+    VolsContractor,
 )
 from users.models import User
 
@@ -142,6 +143,14 @@ class Incident(models.Model):
         related_name='incidents',
         verbose_name='ВОЛС',
         db_index=True
+    )
+    vols_contractor = models.ForeignKey(
+        VolsContractor,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='incidents',
+        verbose_name='Подрядчик ВОЛС',
     )
     responsible_user = models.ForeignKey(
         User,

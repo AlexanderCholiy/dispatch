@@ -28,6 +28,7 @@ from incidents.services.get_incident_type import get_incident_type_map
 from incidents.services.get_rvr_priority import get_rvr_priority_map
 from incidents.services.log_incident_changes import log_incident_changes
 from incidents.services.normalize_datetime_to_minute import is_data_changed
+from ts.models import VolsContractor
 from users.models import Roles, User
 
 from .constants import (
@@ -303,6 +304,7 @@ class IncidentForm(forms.ModelForm):
             'pole',
             'base_station',
             'vols',
+            'vols_contractor',
             'categories',
             'responsible_user',
             'region_responsible_user',
@@ -323,6 +325,7 @@ class IncidentForm(forms.ModelForm):
             'pole': 'Опора',
             'base_station': 'Базовая станция',
             'vols': 'ВОЛС',
+            'vols_contractor': 'Подрядчик по  ВОЛС',
             'responsible_user': 'Диспетчер',
             'region_responsible_user': 'Ответственный',
             'incident_type': 'Тип инцидента',
@@ -622,6 +625,7 @@ class IncidentForm(forms.ModelForm):
                 IncidentSubType.objects.all().order_by('name')
             )
 
+        self.fields['vols_contractor'].empty_label = 'Не назначен'
         self.fields['responsible_user'].empty_label = 'Не назначен'
         self.fields['incident_type'].empty_label = 'Не выбрано'
         self.fields['incident_subtype'].empty_label = 'Не выбрано'
@@ -646,6 +650,36 @@ class IncidentForm(forms.ModelForm):
         self.auto_close_human_ttl = format_timedelta_readable(
             self._auto_close_ttl
         )
+
+        # --- Подрядчик ВОЛС: автоподстановка из Vols.contractor ---
+        self.vols_contractor_obj = None
+
+        if self.instance.pk:
+            # Инцидент сохранён: если vols есть, а подрядчика нет — подставляем
+            if self.instance.vols_id and not self.instance.vols_contractor_id:
+                self.vols_contractor_obj = self.instance.vols.contractor
+            else:
+                self.vols_contractor_obj = self.instance.vols_contractor
+
+        # Если POST — берём выбранного подрядчика из данных формы,
+        # чтобы шаблон показывал актуальное состояние после сабмита
+        if self.data and 'vols_contractor' in self.data:
+            selected_pk = self.data.get('vols_contractor')
+            if selected_pk:
+                self.vols_contractor_obj = (
+                    VolsContractor.objects
+                    .prefetch_related('email')
+                    .filter(pk=selected_pk)
+                    .first()
+                )
+            else:
+                self.vols_contractor_obj = None
+
+        # Кеш email-ов для шаблона, чтобы не дёргать M2M на каждый рендер
+        if self.vols_contractor_obj:
+            self.vols_contractor_obj.emails_list = list(
+                self.vols_contractor_obj.email.values_list('email', flat=True)
+            )
 
     def clean(self):
         cleaned_data = super().clean()

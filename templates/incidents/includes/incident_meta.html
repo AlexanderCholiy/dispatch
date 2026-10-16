@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="{% static 'css/incidents/includes/incident_meta_forms.css' %}">
 <link rel="stylesheet" href="{% static 'css/incidents/includes/sla_forms.css' %}">
 <link rel="stylesheet" href="{% static 'css/incidents/includes/monitoring_section.css' %}">
+<link rel="stylesheet" href="{% static 'css/incidents/includes/vols_contractor.css' %}">
 {% endblock %}
 
 <form method="post">
@@ -220,8 +221,8 @@
         {% endfor %}
       </div>
 
-      <div class="incident-info">
-        <label class="field-label">Подрядчик по ВОЛС</label>
+      <div class="incident-info vols-contractor-section">
+        {% include "incidents/includes/vols_contractor.html" with incident=incident field=incident_form.vols_contractor vols_contractor=incident_form.vols_contractor_obj %}
       </div>
     </div>
 
