@@ -26,6 +26,7 @@ from .models import Incident, IncidentStatus, IncidentStatusHistory
     queue='low',
     soft_time_limit=30,
     time_limit=40,
+    ignore_result=True,
     acks_late=True,
 )
 def close_incident_auto(self, incident_id: int):
@@ -162,7 +163,12 @@ def close_incident_auto(self, incident_id: int):
         raise self.retry(exc=e, countdown=60)
 
 
-@shared_task(queue='low')
+@shared_task(
+    queue='low',
+    ignore_result=True,
+    soft_time_limit=30,
+    time_limit=45,
+)
 def check_stale_auto_closes():
     """
     Периодическая задача.

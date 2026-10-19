@@ -25,6 +25,7 @@ from .services.send_email_msg import send_via_django_email
     queue='high',
     soft_time_limit=30,
     time_limit=40,
+    ignore_result=True,
     acks_late=True,
 )
 def send_incident_email_task(

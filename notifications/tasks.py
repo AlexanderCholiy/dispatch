@@ -19,6 +19,7 @@ from .models import Notification, NotificationLevel
     queue='medium',
     soft_time_limit=5,
     time_limit=10,
+    ignore_result=True,
     acks_late=True,
 )
 def send_notification_task(self, notification_id: int):
@@ -77,7 +78,12 @@ def send_notification_task(self, notification_id: int):
         raise self.retry(exc=e)
 
 
-@shared_task(queue='low')
+@shared_task(
+    queue='low',
+    ignore_result=True,
+    soft_time_limit=30,
+    time_limit=45,
+)
 def check_overdue_notifications():
     """Проверка уведомлений, которые должны быть отправлены, но не были."""
     now = timezone.now() + timedelta(seconds=1)
@@ -112,6 +118,7 @@ def check_overdue_notifications():
     queue='low',
     soft_time_limit=30,
     time_limit=60,
+    ignore_result=True,
     acks_late=True,
 )
 def schedule_birthday_notifications(self):

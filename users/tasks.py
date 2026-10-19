@@ -17,6 +17,9 @@ from .models import PendingUser, User
     max_retries=3,
     default_retry_delay=10,
     queue='default',
+    ignore_result=True,
+    soft_time_limit=30,
+    time_limit=45,
 )
 def send_activation_email_task(
     self: Task, pending_user_id: int, domain: str, activation_link: str
@@ -69,6 +72,9 @@ def send_activation_email_task(
     max_retries=3,
     default_retry_delay=10,
     queue='default',
+    ignore_result=True,
+    soft_time_limit=30,
+    time_limit=45,
 )
 def send_confirm_email_task(
     self: Task, pending_user_id: int, domain: str, confirm_email_link: str
@@ -123,6 +129,9 @@ def send_confirm_email_task(
     max_retries=3,
     default_retry_delay=10,
     queue='default',
+    ignore_result=True,
+    soft_time_limit=30,
+    time_limit=45,
 )
 def send_password_reset_email_task(
     self: Task, user_id: int, domain: str, reset_password_link: str
@@ -160,7 +169,12 @@ def send_password_reset_email_task(
         raise self.retry(exc=e)
 
 
-@shared_task(queue='low')
+@shared_task(
+    queue='low',
+    ignore_result=True,
+    soft_time_limit=30,
+    time_limit=45,
+)
 def update_user_last_online():
     """Периодическая задача для обновления поля last_online в БД."""
     now = timezone.now()

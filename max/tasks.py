@@ -22,6 +22,7 @@ from max.services.get_wait_message import save_notification_status
     queue='low',
     soft_time_limit=30,
     time_limit=40,
+    ignore_result=True,
     acks_late=True,
 )
 def send_max_incident_notification(
