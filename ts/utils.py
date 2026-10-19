@@ -394,22 +394,16 @@ class TSManager(SocialValidators):
             )
 
     def get_ts_avr(self) -> pd.DataFrame:
-        email_col = (
-            '"2_Контактные данные подрядчика Email" '
-            'AS "Контактные данные подрядчика Email"'
-        )
-        phone_col = (
-            '"3_Контактные данные подрядчика Тел" '
-            'AS "Контактные данные подрядчика Телефон"'
-        )
+        email_src = '"2_Контактные данные подрядчика Email"'
+        phone_src = '"3_Контактные данные подрядчика Тел"'
 
         columns_quoted = ', '.join(
             (
-                email_col
+                f'TRIM({email_src}) AS "{col}"'
                 if col == 'Контактные данные подрядчика Email'
-                else phone_col
+                else f'TRIM({phone_src}) AS "{col}"'
                 if col == 'Контактные данные подрядчика Телефон'
-                else f'"{col}"'
+                else f'TRIM("{col}") AS "{col}"'
             )
             for col in COLUMNS_TO_KEEP_AVR_REPORT
         )
@@ -736,7 +730,8 @@ class TSManager(SocialValidators):
 
     def get_ts_bs(self) -> pd.DataFrame:
         columns_quoted = ', '.join(
-            f'"{col}"' for col in COLUMNS_TO_KEEP_BS_OPERATORS_REPORT
+            f'TRIM("{col}") AS "{col}"'
+            for col in COLUMNS_TO_KEEP_BS_OPERATORS_REPORT
         )
         query = (
             f'''
