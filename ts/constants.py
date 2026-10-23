@@ -55,6 +55,7 @@ COLUMNS_TO_KEEP_AVR_REPORT: list[str] = [
     'Контактные данные подрядчика Телефон',
 ]
 COLUMNS_TO_KEEP_BS_OPERATORS_REPORT: list[str] = [
+    'AssetKitId',
     'Шифр опоры',
     'Имя БС/Оборудование',
     'Оператор',
@@ -84,7 +85,7 @@ RAISE_TS_VOLS_TABLE_LIMIT = 1000
 
 RAISE_TS_POLE_DEL_LIMIT = 5_000
 RAISE_TS_AVR_DEL_LIMIT = 3_000
-RAISE_TS_BASE_STATION_DEL_LIMIT = 10_000
+RAISE_TS_BASE_STATION_DEL_LIMIT = 5_000
 RAISE_TS_VOLS_DEL_LIMIT = 100
 
 POLE_CACHE_TTL = 1500  # Чаще чем синхронизация с TS

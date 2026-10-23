@@ -304,6 +304,11 @@ class Pole(models.Model):
 
 class BaseStation(models.Model):
     """Базовые станции/оборудование."""
+    asset_kit_id = models.IntegerField(
+        unique=True,
+        null=True,
+        verbose_name='ID базовой станции в TS (EI.Размещённые арендаторы)',
+    )
     bs_name = models.CharField(
         'Имя БС / оборудования',
         max_length=MAX_ST_DESCRIPTION,

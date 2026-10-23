@@ -730,7 +730,7 @@ class TSManager(SocialValidators):
 
     def get_ts_bs(self) -> pd.DataFrame:
         columns_quoted = ', '.join(
-            f'TRIM("{col}") AS "{col}"'
+            f'TRIM("{col}") AS "{col}"' if col != 'AssetKitId' else f'"{col}"'
             for col in COLUMNS_TO_KEEP_BS_OPERATORS_REPORT
         )
         query = (
@@ -754,52 +754,50 @@ class TSManager(SocialValidators):
     @transaction.atomic
     def update_base_stations(self):
         base_stations = self.get_ts_bs()
-
         total = len(base_stations)
 
-        # Удаляем не актуальные записи:
-        new_bs_combinations = set(
-            zip(
-                base_stations['Шифр опоры'],
-                base_stations['Имя БС/Оборудование']
-            )
-        )
-        existing_bs_combinations = set(
-            BaseStation.objects.values_list('pole__pole', 'bs_name')
-        )
-        combinations_bs_to_delete = (
-            existing_bs_combinations - new_bs_combinations
+        # Переменные для сбора итоговой статистики
+        bs_deleted_count = 0
+        operators_deleted_count = 0
+        m2m_updated_count = 0
+
+        # 1. Удаляем неактуальные записи:
+        new_asset_kit_ids = set(base_stations['AssetKitId'].astype(int))
+        existing_asset_kit_ids = set(
+            BaseStation.objects.values_list('asset_kit_id', flat=True)
         )
 
-        if len(combinations_bs_to_delete) > RAISE_TS_BASE_STATION_DEL_LIMIT:
+        # Исключаем None из существующих (на период пока идет миграция):
+        existing_asset_kit_ids.discard(None)
+
+        ids_to_delete = existing_asset_kit_ids - new_asset_kit_ids
+
+        if len(ids_to_delete) > RAISE_TS_BASE_STATION_DEL_LIMIT:
             raise TooManyRecordsToDeleteError(
-                BaseStation.__name__,
-                len(combinations_bs_to_delete),
+                BaseStation.__name__, len(ids_to_delete),
                 RAISE_TS_BASE_STATION_DEL_LIMIT,
             )
 
-        if combinations_bs_to_delete:
-            deleted_count = 0
+        if ids_to_delete:
             for chunk in self.chunked(
-                combinations_bs_to_delete, chunk_size=DB_CHUNK_UPDATE
+                list(ids_to_delete), chunk_size=DB_CHUNK_UPDATE
             ):
-                query = Q()
-                for pole_val, bs_val in chunk:
-                    query |= Q(pole__pole=pole_val, bs_name=bs_val)
-
-                deleted_count_i, _ = BaseStation.objects.filter(query).delete()
-
-                deleted_count += deleted_count_i
-
+                deleted_count_i, _ = BaseStation.objects.filter(
+                    asset_kit_id__in=chunk
+                ).delete()
+                bs_deleted_count += deleted_count_i
             ts_logger.debug(
-                'BaseStation удалены: '
-                f'{deleted_count} из {len(combinations_bs_to_delete)}'
+                f'BaseStation удалены: {bs_deleted_count} '
+                f'из {len(ids_to_delete)}'
+            )
+        else:
+            ts_logger.debug(
+                'Устаревших BaseStation для удаления не обнаружено.'
             )
 
+        # Удаление операторов:
         new_operators_combinations = set(
-            zip(
-                base_stations['Оператор'], base_stations['Группа операторов']
-            )
+            zip(base_stations['Оператор'], base_stations['Группа операторов'])
         )
         existing_operators_combinations = set(
             BaseStationOperator.objects.values_list(
@@ -811,7 +809,6 @@ class TSManager(SocialValidators):
         )
 
         if combinations_operators_to_delete:
-            deleted_count = 0
             for chunk in self.chunked(
                 combinations_operators_to_delete, chunk_size=DB_CHUNK_UPDATE
             ):
@@ -821,30 +818,40 @@ class TSManager(SocialValidators):
                 deleted_count_i, _ = (
                     BaseStationOperator.objects.filter(query).delete()
                 )
-                deleted_count += deleted_count_i
-
+                operators_deleted_count += deleted_count_i
             ts_logger.debug(
                 'BaseStationOperator удалены: '
-                f'{deleted_count} из {len(combinations_operators_to_delete)}'
+                f'{operators_deleted_count} '
+                f'из {len(combinations_operators_to_delete)}'
+            )
+        else:
+            ts_logger.debug(
+                'Устаревших BaseStationOperator для удаления не обнаружено.'
             )
 
-        # Кешируем все существующие опоры и операторов:
+        # 2. Кеширование:
         poles = {p.pole: p for p in Pole.objects.all()}
-        bs_cache: dict[tuple[str, int], BaseStation] = {
-            (b.bs_name, b.pole_id): b
-            for b in BaseStation.objects.select_related('pole')
-        }
-        operators_cache: dict[tuple[str, str], BaseStationOperator] = {
+        operators_cache = {
             (o.operator_name, o.operator_group): o
             for o in BaseStationOperator.objects.all()
         }
 
-        bulk_bs_to_create = []
-        bulk_operators_to_create = []
-        relations_to_set = []
+        # Двойной кеш для переходного периода:
+        bs_by_kit_id: dict[int, BaseStation] = {}
+        bs_by_legacy_key: dict[tuple[str, int], BaseStation] = {}
 
+        for b in BaseStation.objects.select_related('pole'):
+            if b.asset_kit_id is not None:
+                bs_by_kit_id[b.asset_kit_id] = b
+            bs_by_legacy_key[(b.bs_name, b.pole_id)] = b
+
+        bulk_bs_to_create = []
+        bulk_bs_to_update = []
+        bulk_operators_to_create = []
+        relations_to_set = []  # связываем через asset_kit_id
         find_unvalid_values = 0
 
+        # 3. Основной цикл обработки строк
         for index, row in base_stations.iterrows():
             PrettyPrint.progress_bar_error(
                 index, total, 'Обновление BaseStation и BaseStationOperator:'
@@ -855,6 +862,7 @@ class TSManager(SocialValidators):
                     value = value.strip()
                 return value or None
 
+            asset_kit_id = int(row['AssetKitId'])
             pole_number = clean(row['Шифр опоры'])
             bs_name = clean(row['Имя БС/Оборудование'])
             operator_name = clean(row['Оператор'])
@@ -863,11 +871,11 @@ class TSManager(SocialValidators):
             if bs_name is None:
                 continue
 
-            if (
-                not isinstance(pole_number, str)
-                or not isinstance(bs_name, str)
-                or not isinstance(operator_name, str)
-                or not isinstance(operator_group, (str, NoneType))
+            if not (
+                isinstance(pole_number, str)
+                and isinstance(bs_name, str)
+                and isinstance(operator_name, str)
+                and isinstance(operator_group, (str, NoneType))
             ):
                 find_unvalid_values += 1
                 continue
@@ -876,15 +884,45 @@ class TSManager(SocialValidators):
             if not pole:
                 continue
 
-            bs_key = (bs_name, pole.id)
-            base_station = bs_cache.get(bs_key)
-            if not base_station:
-                base_station = BaseStation(bs_name=bs_name, pole=pole)
-                bs_cache[bs_key] = base_station
+            # Пытаемся найти запись: сначала по новому asset_kit_id,
+            # затем по старой комбинации
+            base_station = bs_by_kit_id.get(asset_kit_id)
+            legacy_key = (bs_name, pole.id)
+
+            if base_station:
+                # Если запись найдена по asset_kit_id, проверяем, изменились
+                # ли имя или опора
+                is_changed = False
+                if base_station.bs_name != bs_name:
+                    base_station.bs_name = bs_name
+                    is_changed = True
+                if base_station.pole_id != pole.id:
+                    base_station.pole = pole
+                    is_changed = True
+
+                if is_changed and base_station not in bulk_bs_to_update:
+                    bulk_bs_to_update.append(base_station)
+
+            # 2. Если по asset_kit_id не нашли,
+            # ищем по старой комбинации (для переходного периода)
+            elif legacy_key in bs_by_legacy_key:
+                base_station = bs_by_legacy_key[legacy_key]
+                base_station.asset_kit_id = asset_kit_id
+                bulk_bs_to_update.append(base_station)
+                bs_by_kit_id[asset_kit_id] = base_station
+
+            # 3. Если вообще нигде не нашли — создаем новую
+            else:
+                base_station = BaseStation(
+                    asset_kit_id=asset_kit_id,
+                    bs_name=bs_name,
+                    pole=pole,
+                )
+                bs_by_kit_id[asset_kit_id] = base_station
                 bulk_bs_to_create.append(base_station)
 
             relations_to_set.append(
-                ((bs_name, pole.id), (operator_name, operator_group))
+                (asset_kit_id, (operator_name, operator_group))
             )
 
             op_key = (operator_name, operator_group)
@@ -895,68 +933,90 @@ class TSManager(SocialValidators):
                 )
                 bulk_operators_to_create.append(operators_cache[op_key])
 
-        if find_unvalid_values:
-            msg = (
-                f'TS: в "{TS_BASE_STATION_TABLE}" обнаружено '
-                f'{find_unvalid_values} невалидных записей.'
-            )
-
-            ts_logger.warning(msg) if (
-                find_unvalid_values > UNVALID_DEBUG_MSG_LIMIT
-            ) else ts_logger.debug(msg)
-
+        # Блок сохранения операторов:
+        operators_created_count = len(bulk_operators_to_create)
         if bulk_operators_to_create:
-            new_operators = BaseStationOperator.objects.bulk_create(
+            BaseStationOperator.objects.bulk_create(
                 bulk_operators_to_create,
-                ignore_conflicts=True,
+                ignore_conflicts=True if not DEBUG_MODE else False,
                 batch_size=DB_CHUNK_UPDATE
             )
             operators_cache = {
                 (o.operator_name, o.operator_group): o
                 for o in BaseStationOperator.objects.all()
             }
-            ts_logger.debug(
-                'BaseStationOperator добавлены: '
-                f'{len(new_operators)} из {len(bulk_operators_to_create)}'
-            )
 
-        if bulk_bs_to_create:
-            new_bs = BaseStation.objects.bulk_create(
-                bulk_bs_to_create,
-                ignore_conflicts=True,
+        # 4. Сохранение и обновление BaseStation
+        bs_updated_count = len(bulk_bs_to_update)
+        if bulk_bs_to_update:
+            BaseStation.objects.bulk_update(
+                bulk_bs_to_update,
+                fields=['asset_kit_id', 'bs_name', 'pole'],
                 batch_size=DB_CHUNK_UPDATE
             )
-            bs_cache = {
-                (b.bs_name, b.pole_id): b
-                for b in BaseStation.objects.select_related('pole')
-            }
             ts_logger.debug(
-                'BaseStationOperator добавлены: '
-                f'{len(new_bs)} из {len(bulk_bs_to_create)}'
+                f'BaseStation обновлен asset_kit_id: {bs_updated_count}'
             )
 
-        bs_2_operators: dict[tuple[str, int], list[BaseStationOperator]] = {}
-        for bs_key, op_key in relations_to_set:
-            bs_2_operators.setdefault(bs_key, []).append(
+        bs_created_count = len(bulk_bs_to_create)
+        if bulk_bs_to_create:
+            BaseStation.objects.bulk_create(
+                bulk_bs_to_create,
+                ignore_conflicts=True if not DEBUG_MODE else False,
+                batch_size=DB_CHUNK_UPDATE
+            )
+            ts_logger.debug(
+                f'BaseStation добавлены новые: {bs_created_count}'
+            )
+
+        # Обновляем кеш после сохранения, чтобы получить актуальные id из базы:
+        bs_cache = {b.asset_kit_id: b for b in BaseStation.objects.all()}
+
+        # 5. Обновление связей Many-to-Many (группируем по asset_kit_id)
+        bs_2_operators: dict[int, list[BaseStationOperator]] = {}
+        for kit_id, op_key in relations_to_set:
+            bs_2_operators.setdefault(kit_id, []).append(
                 operators_cache[op_key]
             )
 
-        total = len(bs_2_operators)
-        for index, (bs_key, operator_objs) in enumerate(
+        total_relations = len(bs_2_operators)
+        for index, (kit_id, operator_objs) in enumerate(
             bs_2_operators.items()
         ):
             PrettyPrint.progress_bar_info(
-                index, total,
-                'Обновление связей между BaseStation и BaseStationOperator:'
+                index,
+                total_relations,
+                'Обновление связей между BaseStation and BaseStationOperator:'
             )
-            base_station = bs_cache[bs_key]
-
+            base_station = bs_cache.get(kit_id)
+            if not base_station:
+                continue
             current_operator_ids = set(
                 base_station.operator.values_list('id', flat=True)
             )
             new_operator_ids = set(o.id for o in operator_objs)
             if current_operator_ids != new_operator_ids:
                 base_station.operator.set(operator_objs)
+                m2m_updated_count += 1
+
+        # Финальный вывод всей собранной информации
+        ts_logger.debug(
+            f'Добавлено БС: {bs_created_count} '
+            f'| Обновлено БС (миграция ID): {bs_updated_count} '
+            f'| Удалено БС: {bs_deleted_count}'
+        )
+        ts_logger.debug(
+            f'Создано новых операторов: {operators_created_count} '
+            f'| Удалено операторов: {operators_deleted_count} '
+            f'| Обновлено M2M связей: {m2m_updated_count}'
+        )
+        if find_unvalid_values > 0:
+            ts_logger.warning(
+                'Пропущено строк с невалидными типами данных: '
+                f'{find_unvalid_values} из таблицы {TS_BASE_STATION_TABLE}'
+            )
+
+        return
 
     @transaction.atomic
     def update_rvr(self):
