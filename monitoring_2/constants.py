@@ -28,3 +28,6 @@ MONITORING_2_EQUIPMENT_CACHE_KEY_PREFIX = 'monitoring_2_equipment'
 MAX_EQUIPMENT_PER_POLE = 21
 
 MODEM_NORMAL_STATUS_ID = 1000
+
+# Количество дней для определения типа объекта (Реконструкция / Новая стройка):
+CONSTRUCTION_TYPE_DAYS_THRESHOLD = 30

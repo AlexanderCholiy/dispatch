@@ -1,5 +1,6 @@
 import math
 import os
+from datetime import date
 from http import HTTPStatus
 from typing import TypedDict
 
@@ -31,6 +32,7 @@ from monitoring.constants import (
     TRETHHOLD_RATIO_BETWEEN_MODEM_AND_POLE,
 )
 from monitoring_2.constants import (
+    CONSTRUCTION_TYPE_DAYS_THRESHOLD,
     HU_NEVA_NEW_ID,
     NORMAL_STATUS_ID,
     NOTIFICATION_FAILED_CACHE_KEY,
@@ -46,6 +48,8 @@ class NearestDevice(TypedDict):
     pole: str
     distance: float
     address: str
+    on_air_date: date | None
+    ts_status: str | None
 
 
 class Command(BaseCommand):
@@ -108,7 +112,13 @@ class Command(BaseCommand):
         poles_list = list(
             Pole.objects
             .exclude(coordinates__isnull=True)
-            .values('pole', 'address', 'coordinates')
+            .values(
+                'pole',
+                'address',
+                'coordinates',
+                'on_air_date',
+                'ts_status',
+            )
         )
 
         if not poles_list:
@@ -184,6 +194,8 @@ class Command(BaseCommand):
                         'pole': pole['pole'],
                         'distance': dist,
                         'address': pole['address'] or gps,
+                        'on_air_date': pole['on_air_date'],
+                        'ts_status': pole['ts_status'],
                     })
 
                 distances.sort(key=lambda x: x['distance'])
@@ -205,19 +217,40 @@ class Command(BaseCommand):
 
                 nearest_pole = top_nearest_poles[0]
 
+                # Логика определения типа стройки (Новая / Реконструкция):
+                pole_on_air_date: date | None = nearest_pole.get('on_air_date')
+
+                if pole_on_air_date:
+                    days_passed = (date.today() - pole_on_air_date).days
+                    construction_type = (
+                        'Реконструкция'
+                        if days_passed >= CONSTRUCTION_TYPE_DAYS_THRESHOLD
+                        else 'Новая стройка'
+                    )
+                else:
+                    # Дефолтное значение, если дата OnAir не заполнена в БД:
+                    construction_type = 'Новая стройка'
+
                 dev_type_name = str(device.level).replace('NEW', '').strip()
 
                 subject = (
                     f'Включение {dev_type_name} '
-                    f'на опоре {nearest_pole["pole"]}'
+                    f'на опоре {nearest_pole["pole"]} '
+                    f'[{construction_type}]'
+                )
+
+                ts_status: str | None = (
+                    nearest_pole.get('ts_status') or 'Unknown'
                 )
 
                 msg_lines = []
 
                 msg_lines.append(
                     f'На опоре {nearest_pole["pole"]} '
-                    f'[{nearest_pole["address"]}] '
-                    f'зафиксировано включение оборудования [{dev_type_name}].'
+                    f'({nearest_pole["address"]}) '
+                    f'зафиксировано включение оборудования ({dev_type_name}). '
+                    f'{construction_type}, '
+                    f'опора находится в статусе {ts_status}.'
                 )
                 msg_lines.append('')
                 msg_lines.append(

@@ -212,6 +212,18 @@ class Pole(models.Model):
         db_column='Status',
         related_name='poles',
     )
+    on_air_date = models.DateField(
+        'Дата OnAir',
+        null=True,
+        blank=True,
+        db_column='OnAirDate',
+    )
+    ts_status = models.TextField(
+        'Статус опоры в TowerStore',
+        null=True,
+        blank=True,
+        db_column='TSStatus',
+    )
 
     class Meta:
         db_table = 'Sites'
