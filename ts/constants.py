@@ -60,6 +60,7 @@ COLUMNS_TO_KEEP_BS_OPERATORS_REPORT: list[str] = [
     'Имя БС/Оборудование',
     'Оператор',
     'Группа операторов',
+    'Статус кита',
 ]
 
 COLUMNS_TO_KEEP_RVR_REPORT = [
@@ -95,3 +96,12 @@ OPERATORS_CACHE_TTL = 1500  # Чаще чем синхронизация с TS
 REGION_RESPONSIBLE_MANAGER_CACHE_TTL = 1500  # Чаще чем синхронизация с TS
 
 BS_SLA_OPERATORS_FILE = Path(DATA_DIR) / 'ts' / 'sla_operators.xlsx'
+
+# Сверху самые актуальные:
+TS_BS_STATUS_PRIORITY: tuple[str, ...] = (
+    'Mounted',
+    'Dismantled',
+    'Mounting',
+    'Draft',
+    'Terminated',
+)

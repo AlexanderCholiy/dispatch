@@ -35,6 +35,7 @@ from .constants import (
     TS_ADD_VOLS_TABLE,
     TS_AVR_TABLE,
     TS_BASE_STATION_TABLE,
+    TS_BS_STATUS_PRIORITY,
     TS_POLE_TABLE,
     TS_REGION_RESPONSIBLE_MANAGER_TABLE,
     TS_VOLS_TABLE,
@@ -733,13 +734,25 @@ class TSManager(SocialValidators):
             f'TRIM("{col}") AS "{col}"' if col != 'AssetKitId' else f'"{col}"'
             for col in COLUMNS_TO_KEEP_BS_OPERATORS_REPORT
         )
-        query = (
-            f'''
-            SELECT {columns_quoted}
-            FROM "{TS_BASE_STATION_TABLE}"
-            WHERE "Оператор" IS NOT NULL;
-            '''
+
+        # CASE должен стоять в SELECT из-за DISTINCT; тот же номер используется
+        # в ORDER BY по позиции.
+        status_case = ' '.join(
+            f"WHEN BTRIM(\"Статус кита\") = '{status}' THEN {i}"
+            for i, status in enumerate(TS_BS_STATUS_PRIORITY)
         )
+        status_priority_expr = (
+            f'CASE {status_case} ELSE {len(TS_BS_STATUS_PRIORITY)} END'
+        )
+
+        query = f'''
+            SELECT DISTINCT
+                {columns_quoted},
+                {status_priority_expr} AS "status_priority"
+            FROM "{TS_BASE_STATION_TABLE}"
+            WHERE BTRIM("Оператор") <> ''
+            ORDER BY "status_priority", "AssetKitId"
+        '''
 
         with connections['ts'].cursor() as cursor:
             cursor.execute(query)
@@ -749,7 +762,19 @@ class TSManager(SocialValidators):
         if len(data) < RAISE_TS_BASE_STATION_TABLE_LIMIT:
             raise EmptyTableError(TS_BASE_STATION_TABLE, len(data))
 
-        return pd.DataFrame.from_records(data, columns=columns)
+        df = pd.DataFrame.from_records(data, columns=columns)
+
+        unknown = df.loc[
+            df['status_priority'] == len(TS_BS_STATUS_PRIORITY), 'Статус кита'
+        ]
+        if not unknown.empty:
+            ts_logger.warning(
+                f'TS ({TS_BASE_STATION_TABLE}): неизвестные значения '
+                f'"Статус кита", отсортированы в конец: '
+                f'{sorted(unknown.dropna().unique())}'
+            )
+
+        return df.drop(columns=['status_priority'])
 
     @transaction.atomic
     def update_base_stations(self):
@@ -851,6 +876,12 @@ class TSManager(SocialValidators):
         relations_to_set = []  # связываем через asset_kit_id
         find_unvalid_values = 0
 
+        # Множество для отслеживания уникальности (pole_id, bs_name)
+        # в рамках ТЕКУЩЕГО импорта:
+        seen_business_keys = set()
+
+        bad_bs_row_cnt = 0
+
         # 3. Основной цикл обработки строк
         for index, row in base_stations.iterrows():
             PrettyPrint.progress_bar_error(
@@ -888,6 +919,17 @@ class TSManager(SocialValidators):
             # затем по старой комбинации
             base_station = bs_by_kit_id.get(asset_kit_id)
             legacy_key = (bs_name, pole.id)
+
+            if legacy_key in seen_business_keys:
+                ts_logger.debug(
+                    'Дубликат уникального ключа в исходных данных TS. '
+                    f'Пара БС/Опора {legacy_key} уже обработана. '
+                    f'Пропуск AssetKitId {asset_kit_id}'
+                )
+                bad_bs_row_cnt += 1
+                continue
+
+            seen_business_keys.add(legacy_key)
 
             if base_station:
                 # Если запись найдена по asset_kit_id, проверяем, изменились
@@ -932,6 +974,13 @@ class TSManager(SocialValidators):
                     operator_group=operator_group,
                 )
                 bulk_operators_to_create.append(operators_cache[op_key])
+
+        if bad_bs_row_cnt > 0:
+            ts_logger.warning(
+                f'Пропущено {bad_bs_row_cnt} строк с дублирующейся парой '
+                '"Имя БС/Оборудование" + "Шифр опоры" '
+                f'в таблице {TS_BASE_STATION_TABLE}'
+            )
 
         # Блок сохранения операторов:
         operators_created_count = len(bulk_operators_to_create)
