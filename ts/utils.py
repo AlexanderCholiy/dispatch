@@ -751,7 +751,7 @@ class TSManager(SocialValidators):
                 {status_priority_expr} AS "status_priority"
             FROM "{TS_BASE_STATION_TABLE}"
             WHERE BTRIM("Оператор") <> ''
-            ORDER BY "status_priority", "AssetKitId"
+            ORDER BY "status_priority", "AssetKitId" DESC
         '''
 
         with connections['ts'].cursor() as cursor:
@@ -882,6 +882,8 @@ class TSManager(SocialValidators):
 
         bad_bs_row_cnt = 0
 
+        pks_in_update = set()
+
         # 3. Основной цикл обработки строк
         for index, row in base_stations.iterrows():
             PrettyPrint.progress_bar_error(
@@ -919,6 +921,23 @@ class TSManager(SocialValidators):
             # затем по старой комбинации
             base_station = bs_by_kit_id.get(asset_kit_id)
             legacy_key = (bs_name, pole.id)
+            old_legacy_key = None
+
+            # Проверка: целевая пара занята другой записью?
+            other = bs_by_legacy_key.get(legacy_key)
+            if (
+                other is not None
+                and (base_station is None or other.pk != base_station.pk)
+            ):
+                ts_logger.debug(
+                    f'Конфликт: asset_kit_id={asset_kit_id} '
+                    f'хочет пару {legacy_key}, '
+                    f'но она занята pk={other.pk} '
+                    f'(asset_kit_id={other.asset_kit_id}). '
+                    f'Пропуск строки.'
+                )
+                bad_bs_row_cnt += 1
+                continue
 
             if legacy_key in seen_business_keys:
                 ts_logger.debug(
@@ -935,22 +954,34 @@ class TSManager(SocialValidators):
                 # Если запись найдена по asset_kit_id, проверяем, изменились
                 # ли имя или опора
                 is_changed = False
-                if base_station.bs_name != bs_name:
+                if (
+                    base_station.bs_name != bs_name
+                    or base_station.pole_id != pole.id
+                ):
+                    old_legacy_key = (
+                        base_station.bs_name, base_station.pole_id
+                    )
                     base_station.bs_name = bs_name
-                    is_changed = True
-                if base_station.pole_id != pole.id:
                     base_station.pole = pole
                     is_changed = True
 
-                if is_changed and base_station not in bulk_bs_to_update:
-                    bulk_bs_to_update.append(base_station)
+                if is_changed:
+                    if old_legacy_key:
+                        bs_by_legacy_key.pop(old_legacy_key, None)
+                    bs_by_legacy_key[legacy_key] = base_station
+
+                    if base_station.pk not in pks_in_update:
+                        bulk_bs_to_update.append(base_station)
+                        pks_in_update.add(base_station.pk)
 
             # 2. Если по asset_kit_id не нашли,
             # ищем по старой комбинации (для переходного периода)
             elif legacy_key in bs_by_legacy_key:
                 base_station = bs_by_legacy_key[legacy_key]
                 base_station.asset_kit_id = asset_kit_id
-                bulk_bs_to_update.append(base_station)
+                if base_station.pk not in pks_in_update:
+                    bulk_bs_to_update.append(base_station)
+                    pks_in_update.add(base_station.pk)
                 bs_by_kit_id[asset_kit_id] = base_station
 
             # 3. Если вообще нигде не нашли — создаем новую
@@ -961,6 +992,7 @@ class TSManager(SocialValidators):
                     pole=pole,
                 )
                 bs_by_kit_id[asset_kit_id] = base_station
+                bs_by_legacy_key[legacy_key] = base_station
                 bulk_bs_to_create.append(base_station)
 
             relations_to_set.append(
