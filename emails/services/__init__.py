@@ -1,0 +1,1 @@
+from .get_original_email import strip_attachments

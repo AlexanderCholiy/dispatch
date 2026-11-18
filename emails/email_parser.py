@@ -27,6 +27,7 @@ from emails.constants import (
     EMAILD_UID_CACHE_TTL,
 )
 from emails.models import EmailErr, EmailFolder, EmailMessage, EmailMime
+from emails.services import strip_attachments
 from emails.services.turn_off_incident_auto_close import (
     turn_off_incident_auto_close,
 )
@@ -813,8 +814,14 @@ class EmailParser(EmailValidator, EmailManager, IncidentManager):
                             email_msg=email_msg
                         )
                         filename = f'{email_msg_id}.eml'
+                        msg_bytes_without_attachments = strip_attachments(
+                            raw_msg_bytes=raw_msg_bytes,
+                            email_msg_id=email_msg_id,
+                        )
                         email_mime.file_url.save(
-                            filename, ContentFile(raw_msg_bytes), save=True
+                            filename,
+                            ContentFile(msg_bytes_without_attachments),
+                            save=True
                         )
 
                         self.add_incident_from_email(
