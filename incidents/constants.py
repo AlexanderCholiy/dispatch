@@ -278,3 +278,10 @@ VOLS_DEFAULT_PARTICIPANTS = [
     em.strip() for em in os.getenv('VOLS_DEFAULT_PARTICIPANTS', '').split(',')
     if em.strip() and '@' in em
 ]
+
+SUBJECT_WARNING_TEXT = (
+    '⚠️ Важно: При любых ответах на данное уведомление, пожалуйста, '
+    'сохраняйте исходную тему письма. Изменение темы может быть '
+    'классифицировано как новое обращение, что приведет к дублированию заявки '
+    'или нарушению SLA обработки.\n\n'
+)

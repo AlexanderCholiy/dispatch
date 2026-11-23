@@ -32,6 +32,16 @@
         Передать подрядчику ВОЛС
     </a>
 
+    <a href="{% url 'incidents:notify_plr_contractor' incident.id %}"
+        class="dropdown-item">
+        Уведомить о ПЛ/АВ работах
+    </a>
+
+    <a href="{% url 'incidents:notify_feedback_avr_contractor' incident.id %}"
+        class="dropdown-item">
+        Запрос обратной связи АВР
+    </a>
+
     <a href="{% url 'incidents:notify_incident_closed' incident.id %}"
         class="dropdown-item">
         Уведомить о закрытии

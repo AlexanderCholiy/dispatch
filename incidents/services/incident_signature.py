@@ -46,7 +46,7 @@ def get_incident_signature(
             signature.append(f'• Регион: {region}')
 
         if pole.address:
-            signature.append(f'• Адрес: {pole.address}')
+            signature.append(f'• Адрес: {pole.address.strip()}')
 
     signature.append('\nПожалуйста, не меняйте тему письма.\n\n')
 

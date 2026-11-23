@@ -59,4 +59,14 @@ urlpatterns = [
         views.notify_incident_closed,
         name='notify_incident_closed'
     ),
+    path(
+        'incidents/<int:incident_id>/emails/notify-plr-contractor/',
+        views.notify_plr_contractor,
+        name='notify_plr_contractor'
+    ),
+    path(
+        'incidents/<int:incident_id>/emails/feedback-avr-contractor/',
+        views.notify_feedback_avr_contractor,
+        name='notify_feedback_avr_contractor'
+    ),
 ]

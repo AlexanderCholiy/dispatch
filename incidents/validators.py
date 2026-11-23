@@ -318,13 +318,13 @@ def validate_notify_avr(
     if not incident.pole:
         return (
             f'Перед передачей инцидента {incident} '
-            f'на РВР необходимо указать шифр опоры.'
+            f'на АВР необходимо указать шифр опоры.'
         )
 
     if AVR_CATEGORY not in category_names:
         return (
             f'Перед передачей инцидента {incident} '
-            f'на РВР необходимо добавить категорию «{AVR_CATEGORY}».'
+            f'на АВР необходимо добавить категорию «{AVR_CATEGORY}».'
         )
 
     if not incident.incident_type:
@@ -461,5 +461,58 @@ def validate_notify_vols(
     )
     if transition_error:
         return transition_error
+
+    return None
+
+
+def validate_notify_plr(
+    incident: Incident,
+    last_status: Optional[IncidentStatus],
+) -> Optional[str]:
+    err_msg = validate_actual_email_incident(incident, last_status)
+    if err_msg:
+        return err_msg
+
+    if not incident.pole:
+        return (
+            'Для отправки уведомления о ПЛ/АВ работах '
+            'необходимо указать шифр опоры.'
+        )
+
+    return None
+
+
+def validate_notify_feedback_avr(
+    incident: Incident,
+    last_status: Optional[IncidentStatus],
+    category_names: set[str],
+) -> Optional[str]:
+    err_msg = validate_actual_email_incident(incident, last_status)
+    if err_msg:
+        return err_msg
+
+    if not incident.pole:
+        return (
+            'Не указан шифр опоры. Заполните его в карточке инцидента, '
+            'чтобы отправить запрос на АВР.'
+        )
+
+    if AVR_CATEGORY not in category_names:
+        return (
+            f'Для передачи заявки на АВР необходимо добавить '
+            f'категорию «{AVR_CATEGORY}».'
+        )
+
+    if not incident.incident_type:
+        return (
+            'Не выбран тип инцидента. '
+            'Укажите его перед отправкой заявки на АВР.'
+        )
+
+    if not incident.incident_type.sla_deadline:
+        return (
+            'У выбранного типа инцидента не установлен дедлайн SLA. '
+            'Измените тип перед отправкой заявки на АВР.'
+        )
 
     return None

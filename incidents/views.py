@@ -44,6 +44,7 @@ from core.services.get_raw_cookie import get_raw_cookie
 from core.threads import tasks_in_threads
 from core.utils import humanize_datetime
 from core.validators import get_aware_datetime
+from emails.constants import DISPATCHER_SIGNATURE
 from emails.email_parser import email_parser
 from emails.models import (
     EmailAttachment,
@@ -101,6 +102,7 @@ from .constants import (
     NOTIFY_OP_IN_WORK_STATUS_NAME,
     PAGE_SIZE_INCIDENTS_CHOICES,
     RVR_CATEGORY,
+    SUBJECT_WARNING_TEXT,
 )
 from .forms import (
     ConfirmMoveEmailsForm,
@@ -145,8 +147,10 @@ from .utils import IncidentManager
 from .validators import (
     validate_actual_email_incident,
     validate_notify_avr,
+    validate_notify_feedback_avr,
     validate_notify_incident_closed,
     validate_notify_operator,
+    validate_notify_plr,
     validate_notify_rvr,
     validate_notify_vols,
 )
@@ -2065,11 +2069,18 @@ def notify_operator(request: HttpRequest, incident_id: int) -> HttpResponse:
 
         incident_label = f'{incident.code} ' if incident.code else ''
 
-        signature = get_incident_signature(incident)
-
         initial_data['body'] = (
-            f'Заявка {incident_label} принята в работу.'
-            f'{signature}'
+            'Добрый день!\n\n'
+            'Уведомляем вас о принятии инцидента '
+            f'{incident_label} в работу.\n\n'
+            'ДЕТАЛИ ИНЦИДЕНТА:\n'
+            '  • Текущий статус: Первичная диагностика события.\n'
+            '  • Ожидаемое действие: Назначение ответственного исполнителя '
+            'и сбор первичных данных.\n\n'
+            'Информирование о результатах диагностики '
+            'будет направлено отдельным сообщением.\n\n'
+            f'{SUBJECT_WARNING_TEXT}'
+            f'{DISPATCHER_SIGNATURE}'
         )
 
         form = NewEmailForm(initial=initial_data)
@@ -2349,9 +2360,22 @@ def notify_avr_contractor(
             )
             text_parts.append(f'  • SLA дедлайн: {sla_deadline}')
 
-        signature = get_incident_signature(incident, True)
+        text_parts.append(
+            '\nПожалуйста, подтвердите принятие данной заявки в работу '
+            'ответным письмом в течение 30 минут '
+            'с момента получения настоящего уведомления.\n'
+        )
+        text_parts.append(
+            'Кроме того, в ответном письме '
+            'обязательно укажите ориентировочное '
+            'время выезда аварийной бригады на объект — для первичной '
+            'диагностики неисправности и аварийно-восстановительных работ '
+            'в своей зоне ответственности.\n'
+        )
 
-        text_parts.append(signature)
+        text_parts.append(SUBJECT_WARNING_TEXT)
+
+        text_parts.append(f'{DISPATCHER_SIGNATURE}')
 
         if first_email:
             first_email_plain, _ = get_previous_email_body(first_email)
@@ -2636,9 +2660,18 @@ def notify_rvr_contractor(
             )
             text_parts.append(f'  • SLA дедлайн: {sla_deadline}')
 
-        signature = get_incident_signature(incident, True)
+        text_parts.append(
+            '\nПожалуйста, подтвердите принятие заявки в работу '
+            'ответным письмом.\n'
+        )
+        text_parts.append(
+            'В ответном письме обязательно укажите ориентировочное время '
+            'выполнения работ на объекте.\n'
+        )
 
-        text_parts.append(signature)
+        text_parts.append(SUBJECT_WARNING_TEXT)
+
+        text_parts.append(DISPATCHER_SIGNATURE)
 
         if first_email:
             first_email_plain, _ = get_previous_email_body(first_email)
@@ -2914,17 +2947,71 @@ def notify_incident_closed(
 
         incident_label = incident.code or ''
 
-        signature = get_incident_signature(incident)
-
         auto_close_ttl = get_incident_auto_close_ttl(incident)
         auto_close_human_ttl = format_timedelta_readable(auto_close_ttl)
 
+        details_parts = []
+        pole = incident.pole
+
+        # 1. Дата регистрации
+        registration_date = (
+            incident.incident_date.astimezone(CURRENT_TZ)
+            .strftime('%Y-%m-%d %H:%M')
+        )
+        details_parts.append(
+            f'  • Дата регистрации: {registration_date} (МСК)'
+        )
+
+        # 2. Тип и подтип инцидента
+        if incident.incident_type:
+            incident_type = f'  • Тип инцидента: {incident.incident_type.name}'
+            if incident.incident_subtype:
+                incident_type += f' ({incident.incident_subtype.name})'
+            details_parts.append(incident_type)
+
+            if (
+                incident.incident_subtype
+                and incident.incident_subtype.description
+            ):
+                details_parts.append(
+                    f'  • Описание: {incident.incident_subtype.description}'
+                )
+            elif incident.incident_type.description:
+                details_parts.append(
+                    f'  • Описание: {incident.incident_type.description}'
+                )
+
+        if pole:
+            details_parts.append(f'  • Шифр опоры: {pole.pole}')
+            region = pole.region.region_ru or pole.region.region_en
+            if not pole.address:
+                details_parts.append(f'  • Регион: {region}')
+            if pole.address:
+                details_parts.append(f'  • Адрес: {pole.address.strip()}')
+
+        details_text = '\n'.join(details_parts)
+
         initial_data['body'] = (
-            f'Инцидент {incident_label} устранён.'
-            '\n\nПросим проверить и подтвердить. '
-            f'Если в течение {auto_close_human_ttl} '
-            'обратная связь не поступит, заявка будет автоматически закрыта.'
-            f'{signature}'
+            f'Инцидент {incident_label} устранён.\n\n'
+
+            'ДЕТАЛИ ИНЦИДЕНТА:\n'
+            f'{details_text}\n\n'
+
+            'Пожалуйста, проверьте, что проблема больше неактуальна, '
+            'и подтвердите решение ответным письмом.\n\n'
+
+            f'Если в течение {auto_close_human_ttl} с момента получения '
+            'настоящего уведомления обратная связь не будет получена, '
+            'заявка будет закрыта автоматически.\n\n'
+
+            'Если проблема сохраняется или возникли вопросы — '
+            'сообщите об этом, и мы вернём её в работу.\n\n'
+
+            # Добавляем предупреждение о смене темы (наша новая константа)
+            f'{SUBJECT_WARNING_TEXT}'
+
+            # Подпись диспетчера
+            f'{DISPATCHER_SIGNATURE}'
         )
 
         form = NewEmailForm(initial=initial_data)
@@ -3269,6 +3356,497 @@ def notify_vols_contractor(
         'previous_html': previous_html,
         'email_header': (
             'Уведомление подрядчику по ВОЛС о передаче инцидента'
+        ),
+        'active_tab': 'email',
+    }
+
+    return render(request, template_name, context)
+
+
+@login_required
+@role_required(allowed_roles=[Roles.DISPATCH, Roles.INTERN])
+@ratelimit(key='user_or_ip', rate='60/m', block=True)
+def notify_plr_contractor(
+    request: HttpRequest, incident_id: int
+) -> HttpResponse:
+    template_name = 'emails/new_email.html'
+    incident = IncidentSelector.incidents_with_email_history(incident_id)
+
+    user: User = request.user
+    if user.role == Roles.INTERN and incident.responsible_user != user:
+        messages.error(
+            request,
+            'У вас нет прав для отправки сообщения по этому инциденту. '
+            'Доступно только ответственному лицу или диспетчеру.'
+        )
+        return redirect('incidents:incident_detail', incident_id=incident.id)
+
+    last_status: Optional[IncidentStatus] = (
+        incident.prefetched_status_history[0].status
+        if incident.prefetched_status_history
+        else None
+    )
+
+    first_email: Optional[EmailMessage] = (
+        incident.all_incident_emails[0]
+        if incident.all_incident_emails else None
+    )
+
+    error_message = validate_notify_plr(
+        incident,
+        last_status,
+    )
+
+    if error_message:
+        messages.error(request, error_message)
+        return redirect('incidents:incident_detail', incident_id=incident.id)
+
+    if request.method == 'POST':
+        form = NewEmailForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            now = timezone.now()
+            message_id = generate_message_id()
+
+            raw_subject = form.cleaned_data.get('subject') or ''
+
+            subject = normalize_incident_subject(
+                raw_subject,
+                incident.code
+            )
+
+            with transaction.atomic():
+                folder = EmailFolder.objects.get(name='SENT')
+
+                email_msg = EmailMessage.objects.create(
+                    email_msg_id=message_id,
+                    email_subject=subject,
+                    email_from=email_parser.email_login,
+                    email_date=now,
+                    email_body=form.cleaned_data.get('body'),
+                    is_first_email=False,
+                    is_email_from_yandex_tracker=False,
+                    was_added_2_yandex_tracker=False,
+                    need_2_add_in_yandex_tracker=True,
+                    email_incident=incident,
+                    folder=folder,
+                    status=EmailStatus.PENDING,
+                    email_msg_reply_id=None,
+                )
+
+                for email in form.cleaned_data.get('to', []):
+                    EmailTo.objects.create(
+                        email_msg=email_msg,
+                        email_to=email
+                    )
+
+                for email in form.cleaned_data.get('cc', []):
+                    EmailToCC.objects.create(
+                        email_msg=email_msg,
+                        email_to=email
+                    )
+
+                files = form.cleaned_data.get('attachments')
+
+                if files:
+                    for f in files:
+                        EmailAttachment.objects.create(
+                            email_msg=email_msg,
+                            file_url=f
+                        )
+
+                transaction.on_commit(
+                    lambda: send_incident_email_task.delay(email_msg.id)
+                )
+
+                now = timezone.now()
+                incident.save()
+
+                IncidentHistory.objects.create(
+                    incident=incident,
+                    action=(
+                        f'Отправлено письмо (ID: {email_msg.id}) '
+                        'с уведомлением о проведении аварийных/плановых работ.'
+                    ),
+                    performed_by=request.user,
+                )
+
+            messages.success(
+                request,
+                (
+                    f'Письмо (ID: {email_msg.id}) готовится к отправке.'
+                )
+            )
+            return redirect(
+                'incidents:incident_detail', incident_id=incident.id
+            )
+    else:
+        initial_data = {}
+
+        clean_subj = clean_email_subject(
+            first_email.email_subject or '', incident
+        )
+        initial_data['subject'] = clean_subj
+
+        text_parts = []
+
+        # 1. Заголовок
+        text_parts.append(
+            f'Уведомляем вас, что на объекте {incident.pole.pole} '
+            'проводятся плановые/аварийные работы.'
+        )
+
+        # 2. Информация об опоре (оставляем, так как это важно для привязки)
+        pole = incident.pole
+        text_parts.append('\nИНФОРМАЦИЯ ОБ ОПОРЕ:')
+        text_parts.append(f'  • Шифр опоры: {pole.pole}')
+
+        region = pole.region.region_ru or pole.region.region_en
+        if not pole.address:
+            text_parts.append(f'  • Регион: {region}')
+        if pole.address:
+            text_parts.append(f'  • Адрес: {pole.address.strip()}')
+        if pole.pole_latitude and pole.pole_longtitude:
+            text_parts.append(
+                f'  • Координаты: {pole.pole_latitude}, {pole.pole_longtitude}'
+            )
+
+        # 3. Детали инцидента
+        text_parts.append('\nДЕТАЛИ ИНЦИДЕНТА:')
+        incident_date = (
+            incident.incident_date
+            .astimezone(CURRENT_TZ)
+            .strftime('%d.%m.%Y %H:%M (МСК)')
+        )
+        text_parts.append(f'  • Дата регистрации: {incident_date}')
+
+        if incident.incident_type:
+            incident_type = f'  • Тип инцидента: {incident.incident_type.name}'
+            if incident.incident_subtype:
+                incident_type += f' ({incident.incident_subtype.name})'
+            text_parts.append(incident_type)
+
+            if (
+                incident.incident_subtype
+                and incident.incident_subtype.description
+            ):
+                text_parts.append(
+                    f'  • Описание: {incident.incident_subtype.description}'
+                )
+            elif incident.incident_type.description:
+                text_parts.append(
+                    f'  • Описание: {incident.incident_type.description}'
+                )
+
+        now = timezone.now()
+
+        estimated_restore_time = '[ДД.ММ.ГГГГ ЧЧ:ММ]'
+
+        text_parts.append(
+            '\nПричина отсутствия штатного электропитания: '
+            'аварийные/плановые работы, '
+            'проводимые сетевой организацией в зоне своей ответственности.\n'
+        )
+
+        text_parts.append(
+            f'Ориентировочное восстановление штатного питания — '
+            f'{estimated_restore_time}\n'
+        )
+
+        # 5. Предупреждение про тему письма
+        text_parts.append(SUBJECT_WARNING_TEXT)
+
+        text_parts.append(DISPATCHER_SIGNATURE)
+
+        initial_data['body'] = '\n'.join(text_parts)
+
+        form = NewEmailForm(initial=initial_data)
+
+    context = {
+        'incident': incident,
+        'form': form,
+        'first_email': first_email,
+        'email_header': (
+            'Уведомление о проведении плановых/аварийных работ.'
+        ),
+        'active_tab': 'email',
+    }
+
+    return render(request, template_name, context)
+
+
+@login_required
+@role_required(allowed_roles=[Roles.DISPATCH, Roles.INTERN])
+@ratelimit(key='user_or_ip', rate='60/m', block=True)
+def notify_feedback_avr_contractor(
+    request: HttpRequest, incident_id: int
+) -> HttpResponse:
+    template_name = 'emails/new_email.html'
+    incident = IncidentSelector.incidents_with_email_history(incident_id)
+
+    user: User = request.user
+    if user.role == Roles.INTERN and incident.responsible_user != user:
+        messages.error(
+            request,
+            'У вас нет прав для отправки сообщения по этому инциденту. '
+            'Доступно только ответственному лицу или диспетчеру.'
+        )
+        return redirect('incidents:incident_detail', incident_id=incident.id)
+
+    last_status: Optional[IncidentStatus] = (
+        incident.prefetched_status_history[0].status
+        if incident.prefetched_status_history
+        else None
+    )
+
+    category_names = {
+        c.name for c in incident.categories.all()
+    }
+
+    error_message = validate_notify_feedback_avr(
+        incident,
+        last_status,
+        category_names,
+    )
+
+    if error_message:
+        messages.error(request, error_message)
+        return redirect('incidents:incident_detail', incident_id=incident.id)
+
+    first_email: Optional[EmailMessage] = (
+        incident.all_incident_emails[0]
+        if incident.all_incident_emails else None
+    )
+
+    previous_plain = None
+    previous_html = None
+
+    if request.method == 'POST':
+        form = NewEmailForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            now = timezone.now()
+            message_id = generate_message_id()
+
+            raw_subject = form.cleaned_data.get('subject') or ''
+
+            subject = normalize_incident_subject(
+                raw_subject,
+                incident.code
+            )
+
+            with transaction.atomic():
+                folder = EmailFolder.objects.get(name='SENT')
+
+                email_msg = EmailMessage.objects.create(
+                    email_msg_id=message_id,
+                    email_subject=subject,
+                    email_from=email_parser.email_login,
+                    email_date=now,
+                    email_body=form.cleaned_data.get('body'),
+                    is_first_email=not first_email,
+                    is_email_from_yandex_tracker=False,
+                    was_added_2_yandex_tracker=False,
+                    need_2_add_in_yandex_tracker=True,
+                    email_incident=incident,
+                    folder=folder,
+                    status=EmailStatus.PENDING,
+                    email_msg_reply_id=None,
+                )
+
+                for email in form.cleaned_data.get('to', []):
+                    EmailTo.objects.create(
+                        email_msg=email_msg,
+                        email_to=email
+                    )
+
+                for email in form.cleaned_data.get('cc', []):
+                    EmailToCC.objects.create(
+                        email_msg=email_msg,
+                        email_to=email
+                    )
+
+                files = form.cleaned_data.get('attachments')
+
+                if files:
+                    for f in files:
+                        EmailAttachment.objects.create(
+                            email_msg=email_msg,
+                            file_url=f
+                        )
+
+                transaction.on_commit(
+                    lambda: send_incident_email_task.delay(email_msg.id)
+                )
+
+                IncidentHistory.objects.create(
+                    incident=incident,
+                    action=(
+                        f'Отправлено письмо (ID: {email_msg.id}) '
+                        'запроса обратной связи подрядчику '
+                        'по АВР.'
+                    ),
+                    performed_by=request.user,
+                )
+
+            messages.success(
+                request,
+                (
+                    f'Письмо (ID: {email_msg.id}) готовится к отправке и '
+                    'скоро будет доставлено подрядчику по АВР.'
+                )
+            )
+            return redirect(
+                'incidents:incident_detail', incident_id=incident.id
+            )
+    else:
+        initial_data = {}
+
+        if (
+            first_email
+            and first_email.email_subject
+        ):
+            clean_subj = clean_email_subject(
+                first_email.email_subject or '', incident
+            )
+            initial_data['subject'] = clean_subj
+
+        avr_emails = [
+            obj.email.email
+            for obj in incident.pole.prefetched_pole_avr_emails
+        ]
+
+        initial_data['to'] = ', '.join(avr_emails)
+
+        text_parts = []
+
+        incident_label = f'{incident.code} ' if incident.code else ''
+
+        # Дата регистрации для текста (формат ДД.ММ.ГГГГ)
+        incident_date_str = (
+            incident.incident_date
+            .astimezone(CURRENT_TZ)
+            .strftime('%d.%m.%Y')
+        )
+
+        # 1. Заголовок и суть
+        text_parts.append(
+            f'Фиксируем, что по заявке {incident_label.strip()} '
+            f'от {incident_date_str} в течение 24 часов от вас не получена '
+            'обратная связь.\n'
+        )
+
+        # 2. Просьба предоставить информацию
+        text_parts.append(
+            'Просим предоставить информацию по инциденту: '
+            'результат первичной диагностики, плановый срок устранения.\n'
+        )
+
+        # 3. Информация об опоре
+        pole = incident.pole
+        text_parts.append('ИНФОРМАЦИЯ ОБ ОПОРЕ:')
+        text_parts.append(f'  • Шифр опоры: {pole.pole}')
+
+        region = pole.region.region_ru or pole.region.region_en
+        if not pole.address:
+            text_parts.append(f'  • Регион: {region}')
+
+        if pole.address:
+            text_parts.append(f'  • Адрес: {pole.address.strip()}')
+
+        if pole.pole_latitude and pole.pole_longtitude:
+            text_parts.append(
+                f'  • Координаты: {pole.pole_latitude}, {pole.pole_longtitude}'
+            )
+
+        # 4. Информация о БС
+        if incident.base_station:
+            bs = incident.base_station
+            text_parts.append('\nИНФОРМАЦИЯ О БАЗОВОЙ СТАНЦИИ:')
+            text_parts.append(f'  • Номер БС: {bs.bs_name}')
+
+            if hasattr(bs, 'prefetched_operators'):
+                operators = [
+                    op.operator_name for op in bs.prefetched_operators
+                ]
+            else:
+                operators = list(
+                    bs.operator.values_list('operator_name', flat=True)
+                )
+
+            if operators:
+                text_parts.append(f'  • Операторы: {", ".join(operators)}')
+
+        # 5. Детали инцидента
+        text_parts.append('\nДЕТАЛИ ИНЦИДЕНТА:')
+        incident_date_full = (
+            incident.incident_date
+            .astimezone(CURRENT_TZ)
+            .strftime('%d.%m.%Y %H:%M (МСК)')
+        )
+        text_parts.append(f'  • Дата регистрации: {incident_date_full}')
+
+        if incident.incident_type:
+            incident_type = f'  • Тип инцидента: {incident.incident_type.name}'
+            if incident.incident_subtype:
+                incident_type += f' ({incident.incident_subtype.name})'
+            text_parts.append(incident_type)
+
+            if (
+                incident.incident_subtype
+                and incident.incident_subtype.description
+            ):
+                text_parts.append(
+                    f'  • Описание: {incident.incident_subtype.description}'
+                )
+            elif incident.incident_type.description:
+                text_parts.append(
+                    f'  • Описание: {incident.incident_type.description}'
+                )
+
+        if incident.sla_avr_deadline:
+            sla_deadline = (
+                incident.sla_avr_deadline
+                .astimezone(CURRENT_TZ)
+                .strftime('%d.%m.%Y %H:%M (МСК)')
+            )
+            text_parts.append(f'  • SLA дедлайн: {sla_deadline}')
+
+        # 6. Предупреждение о последствиях
+        text_parts.append(
+            '\nОбращаем внимание: дальнейшее отсутствие ответа мы будем '
+            'вынуждены расценить как невозможность обеспечения своевременного '
+            'выполнения обязательств и зафиксировать нарушение сроков (SLA).\n'
+        )
+
+        text_parts.append(
+            'Рассчитываем на оперативное решение вопроса.\n'
+        )
+
+        # 7. Предупреждение о смене темы (константа)
+        text_parts.append(SUBJECT_WARNING_TEXT)
+
+        # 8. Подпись
+        text_parts.append(f'{DISPATCHER_SIGNATURE}')
+
+        # 9. История переписки:
+        # if first_email:
+        #     first_email_plain, _ = get_previous_email_body(first_email)
+        #     if first_email_plain:
+        #         text_parts.append(first_email_plain)
+
+        initial_data['body'] = '\n'.join(text_parts)
+
+        form = NewEmailForm(initial=initial_data)
+
+    context = {
+        'incident': incident,
+        'form': form,
+        'first_email': first_email,
+        'previous_plain': previous_plain,
+        'previous_html': previous_html,
+        'email_header': (
+            'Уведомление подрядчику по АВР о передаче инцидента'
         ),
         'active_tab': 'email',
     }
