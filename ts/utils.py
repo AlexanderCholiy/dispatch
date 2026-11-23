@@ -865,10 +865,14 @@ class TSManager(SocialValidators):
         bs_by_kit_id: dict[int, BaseStation] = {}
         bs_by_legacy_key: dict[tuple[str, int], BaseStation] = {}
 
+        # Словарь для отслеживания занятых ключей (pole_id, bs_name) -> pk
+        occupied_pairs: dict[tuple[int, str], int] = {}
+
         for b in BaseStation.objects.select_related('pole'):
             if b.asset_kit_id is not None:
                 bs_by_kit_id[b.asset_kit_id] = b
             bs_by_legacy_key[(b.bs_name, b.pole_id)] = b
+            occupied_pairs[(b.pole_id, b.bs_name)] = b.pk
 
         bulk_bs_to_create = []
         bulk_bs_to_update = []
@@ -953,19 +957,33 @@ class TSManager(SocialValidators):
             if base_station:
                 # Если запись найдена по asset_kit_id, проверяем, изменились
                 # ли имя или опора
-                is_changed = False
-                if (
-                    base_station.bs_name != bs_name
-                    or base_station.pole_id != pole.id
-                ):
-                    old_legacy_key = (
-                        base_station.bs_name, base_station.pole_id
-                    )
+                new_key = (pole.id, bs_name)
+                current_key = (base_station.pole_id, base_station.bs_name)
+
+                if new_key != current_key:
+                    # ПРОВЕРКА: не занят ли новый ключ ДРУГОЙ записью в БД?
+                    occupied_by = occupied_pairs.get(new_key)
+                    if (
+                        occupied_by is not None
+                        and occupied_by != base_station.pk
+                    ):
+                        ts_logger.debug(
+                            f'Конфликт обновления: pk={base_station.pk} '
+                            f'хочет занять {new_key}, '
+                            f'но он занят pk={occupied_by}. '
+                            f'Пропуск строки.'
+                        )
+                        bad_bs_row_cnt += 1
+                        continue
+
+                    # Освобождаем старый ключ и занимаем новый
+                    occupied_pairs.pop(current_key, None)
+                    occupied_pairs[new_key] = base_station.pk
+
+                    old_legacy_key = current_key
                     base_station.bs_name = bs_name
                     base_station.pole = pole
-                    is_changed = True
 
-                if is_changed:
                     if old_legacy_key:
                         bs_by_legacy_key.pop(old_legacy_key, None)
                     bs_by_legacy_key[legacy_key] = base_station
@@ -986,11 +1004,23 @@ class TSManager(SocialValidators):
 
             # 3. Если вообще нигде не нашли — создаем новую
             else:
+                # Если ключ внезапно занят
+                # (например, из-за ignore_conflicts ранее)
+                if legacy_key in occupied_pairs:
+                    ts_logger.debug(
+                        f'Создание пропущено: пара {legacy_key} '
+                        f'уже занята pk={occupied_pairs[legacy_key]}.'
+                    )
+                    bad_bs_row_cnt += 1
+                    continue
+
                 base_station = BaseStation(
                     asset_kit_id=asset_kit_id,
                     bs_name=bs_name,
                     pole=pole,
                 )
+                # Резервируем ключ под новую запись
+                occupied_pairs[legacy_key] = None
                 bs_by_kit_id[asset_kit_id] = base_station
                 bs_by_legacy_key[legacy_key] = base_station
                 bulk_bs_to_create.append(base_station)

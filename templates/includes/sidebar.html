@@ -56,7 +56,23 @@
               <span class="link-text">Пользователи</span>
             </a>
           </li>
+          {% if user.is_staff or user.is_superuser %}
+            <li>
+              <a href="{% url 'admin:index' %}" class="nav-link" target="_self">
+                <i class="bx bx-shield-quarter"></i>
+                <span class="link-text">Админ-панель</span>
+              </a>
+            </li>
+            <li>
+              <a href="/grafana/" class="nav-link" target="_blank" rel="noopener noreferrer">
+                <i class="bx bx-line-chart"></i>
+                <span class="link-text">Grafana</span>
+              </a>
+            </li>
           {% endif %}
+
+          {% endif %}
+          
         <li>
           <a href="{% url 'pages:about' %}" 
             class="nav-link {% if view_name == 'pages:about' %}active{% endif %}">
