@@ -1,0 +1,56 @@
+.stages-user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.stages-user .user-journal-icon {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  object-fit: cover;
+  font-size: var(--font-xxs);
+  font-weight: 600;
+  color: var(--add-color);
+  background: var(--add-background-color);
+  cursor: default;
+}
+
+.stages-user .user-name {
+  min-width: 0;
+  font-size: var(--font-sm);
+  color: var(--add-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stages-user .system-user {
+  font-size: var(--font-xs);
+  font-style: italic;
+  color: var(--gray-color);
+  white-space: nowrap;
+}
+
+.stages-user a {
+  text-decoration: none;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  transition: var(--transition-value);
+}
+
+.stages-user a:hover .user-name {
+  text-decoration: underline;
+}
+
+.stages-user .user-journal-icon,
+.stages-user .user-name {
+  cursor: pointer;
+}

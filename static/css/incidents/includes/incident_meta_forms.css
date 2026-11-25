@@ -1,7 +1,7 @@
 .incident-meta-row {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-sm);
+  gap: var(--space-md);
   padding-bottom: var(--space-xs);
   border-bottom: 1px dashed var(--extra-color);
 }

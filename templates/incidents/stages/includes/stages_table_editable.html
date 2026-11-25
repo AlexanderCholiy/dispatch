@@ -1,0 +1,99 @@
+{% if formset.non_form_errors %}
+  <div class="stages-global-errors">
+    {% for error in formset.non_form_errors %}
+      <span>{{ error }}</span>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<div class="table-wrapper">
+  <table class="stages-table custom-table">
+    <thead>
+      <tr>
+        <th class="col-stage">Этап</th>
+        <th class="col-start">Начало</th>
+        <th class="col-end">Завершение</th>
+        <th class="col-ttl">TTL</th>
+        <th class="col-author">Автор</th>
+        <th class="col-delete">Удалить</th>
+      </tr>
+    </thead>
+  
+    <tbody class="stages-tbody">
+      {% for form in formset %}
+        <tr class="stages-row {% if form.instance.pk %}is-saved{% else %}is-new{% endif %}">
+          <td class="col-stage" data-label="Этап">
+            {{ form.id }}
+            {{ form.stage }}
+            {% for error in form.stage.errors %}
+              <span class="cell-error">{{ error }}</span>
+            {% endfor %}
+          </td>
+  
+          <td class="col-start" data-label="Начало">
+            {{ form.start_date }}
+            {% for error in form.start_date.errors %}
+              <span class="cell-error">{{ error }}</span>
+            {% endfor %}
+          </td>
+  
+          <td class="col-end" data-label="Завершение">
+            {{ form.end_date }}
+            {% for error in form.end_date.errors %}
+              <span class="cell-error">{{ error }}</span>
+            {% endfor %}
+          </td>
+  
+          <td class="col-ttl" data-label="TTL">
+            {% if form.instance.pk %}
+              {% include "incidents/stages/includes/stages_ttl_badge.html" with instance=form.instance %}
+            {% else %}
+              <span class="ttl-badge is-none">—</span>
+            {% endif %}
+          </td>
+  
+          <td class="col-author" data-label="Автор">
+            {% with author=form.instance.author %}
+              <div class="user-info stages-user">
+                {% if author %}
+                  <a href="{% url 'users:user_detail' user_id=author.pk %}"
+                     class="tooltip" data-title="Профиль пользователя">
+                    {% if author.get_avatar_url %}
+                      <img src="{{ author.get_avatar_url }}" class="user-journal-icon" alt="{{ author.get_full_name }}">
+                    {% else %}
+                      <div class="user-journal-icon">{{ author.username|first|upper }}</div>
+                    {% endif %}
+                    <span class="user-name tooltip"
+                          data-title="Добавлено: {{ form.instance.insert_date|date:'d.m.Y H:i'|default:'—' }}">
+                      {{ author }}
+                    </span>
+                  </a>
+                {% else %}
+                  <div class="tooltip" data-title="Добавлено: {{ form.instance.insert_date|date:'d.m.Y H:i'|default:'—' }}">
+                    <img src="/static/img/default_avatars/1__robot.png" class="user-journal-icon" alt="Система">
+                    <span class="system-user">Система</span>
+                  </div>
+                {% endif %}
+              </div>
+            {% endwith %}
+          </td>
+  
+          <td class="col-delete" data-label="Удалить">
+            <label class="stages-delete tooltip" data-title="Удалить запись">
+              {{ form.DELETE }}
+              <i class="bx bx-x"></i>
+            </label>
+          </td>
+  
+          {% if form.non_field_errors %}
+            <td class="col-error" colspan="6">
+              {% for error in form.non_field_errors %}
+                <span class="cell-error">{{ error }}</span>
+              {% endfor %}
+            </td>
+          {% endif %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

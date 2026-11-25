@@ -1,0 +1,12 @@
+<div class="stages-header">
+  <div class="stages-header-main">
+    <h1 class="stages-title">Этапы {{ category_name }}</h1>
+    <span class="stages-subtitle">
+      Инцидент <a href="{{ back_url }}">{{ incident }}</a>
+    </span>
+  </div>
+
+  <div class="stages-header-meta" style="justify-content: center;">
+    <span class="stages-limit">{{ formset.forms|length }} / {{ max_stages }}</span>
+  </div>
+</div>

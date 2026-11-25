@@ -1,0 +1,59 @@
+<div class="table-wrapper">
+  <table class="stages-table is-readonly custom-table">
+    <thead>
+      <tr>
+        <th class="col-stage">Этап</th>
+        <th class="col-start">Начало</th>
+        <th class="col-end">Завершение</th>
+        <th class="col-ttl">TTL</th>
+        <th class="col-author">Автор</th>
+      </tr>
+    </thead>
+  
+    <tbody>
+      {% for form in formset %}
+        {% if form.instance.pk %}
+          <tr class="stages-row">
+            <td class="col-stage" data-label="Этап">{{ form.instance.stage.name }}</td>
+            <td class="col-start" data-label="Начало">
+              {{ form.instance.start_date|date:'d.m.Y H:i'|default:'—' }}
+            </td>
+            <td class="col-end" data-label="Завершение">
+              {{ form.instance.end_date|date:'d.m.Y H:i'|default:'не завершён' }}
+            </td>
+            <td class="col-ttl" data-label="TTL">
+              {% include "incidents/stages/includes/stages_ttl_badge.html" with instance=form.instance %}
+            </td>
+            <td class="col-author" data-label="Автор">
+              {% with author=form.instance.author %}
+                <div class="user-info stages-user">
+                  {% if author %}
+                    <a href="{% url 'users:user_detail' user_id=author.pk %}"
+                      class="tooltip" data-title="Профиль пользователя">
+                      {% if author.get_avatar_url %}
+                        <img src="{{ author.get_avatar_url }}" class="user-journal-icon" alt="{{ author.get_full_name }}">
+                      {% else %}
+                        <div class="user-journal-icon">{{ author.username|first|upper }}</div>
+                      {% endif %}
+                      <span class="user-name tooltip"
+                            data-title="Добавлено: {{ form.instance.insert_date|date:'d.m.Y H:i'|default:'—' }}">
+                        {{ author }}
+                      </span>
+                    </a>
+                  {% else %}
+                    <div class="tooltip" data-title="Добавлено: {{ form.instance.insert_date|date:'d.m.Y H:i'|default:'—' }}">
+                      <img src="/static/img/default_avatars/1__robot.png" class="user-journal-icon" alt="Система">
+                      <span class="system-user">Система</span>
+                    </div>
+                  {% endif %}
+                </div>
+              {% endwith %}
+            </td>
+          </tr>
+        {% endif %}
+      {% empty %}
+        <tr><td colspan="5" class="stages-empty empty">Этапы ещё не заводились</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

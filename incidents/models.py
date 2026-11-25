@@ -43,6 +43,7 @@ from .constants import (
     MAX_STATUS_COMMENT_LEN,
     RVR_CATEGORY,
 )
+from core.constants import MAX_ST_DESCRIPTION
 
 
 def get_default_status_type():
@@ -1799,3 +1800,227 @@ class RegionRvrEmailAssignment(models.Model):
                 f'Подтип «{self.incident_subtype}» не относится к типу '
                 f'«{self.incident_type}».'
             )
+
+
+class IncidentStage(models.Model):
+    """Справочник этапов обработки инцидента (АВР, РВР, ДГУ, ЭКС...)."""
+
+    category = models.ForeignKey(
+        IncidentCategory,
+        on_delete=models.PROTECT,
+        related_name='stages',
+        verbose_name='Категория инцидента',
+        db_index=True,
+    )
+    name = models.CharField(
+        verbose_name='Название этапа',
+        max_length=MAX_ST_DESCRIPTION,
+    )
+    sla_deadline_minutes = models.PositiveIntegerField(
+        verbose_name='SLA этапа (минут)',
+        null=True,
+        blank=True,
+        help_text=(
+            'Опционально. Если пусто — SLA для этапа не задан.'
+        ),
+    )
+    order = models.PositiveIntegerField(
+        verbose_name='Порядок',
+        default=0,
+        db_index=True,
+        help_text='Используется для сортировки этапов.',
+    )
+    is_active = models.BooleanField(
+        verbose_name='Активен',
+        default=True,
+        db_index=True,
+        help_text=(
+            'Неактивный этап скрыт из выбора, но исторические записи '
+            'сохраняются.'
+        ),
+    )
+
+    class Meta:
+        verbose_name = 'этап обработки'
+        verbose_name_plural = 'Этапы обработки'
+        ordering = ('order', 'name', 'id')
+        constraints = [
+            models.UniqueConstraint(
+                fields=('name', 'category'),
+                name='uniq_incident_stage_name_category',
+            ),
+        ]
+
+    def __str__(self):
+        return self.name
+
+
+class IncidentStageTime(models.Model):
+    """Фактические сроки прохождения конкретного этапа по инциденту."""
+
+    incident = models.ForeignKey(
+        Incident,
+        on_delete=models.CASCADE,
+        related_name='stage_times',
+        verbose_name='Инцидент',
+        db_index=True,
+    )
+    stage = models.ForeignKey(
+        IncidentStage,
+        on_delete=models.PROTECT,
+        related_name='incident_times',
+        verbose_name='Этап',
+        db_index=True,
+    )
+    start_date = models.DateTimeField(
+        verbose_name='Дата и время передачи на этап',
+        null=True,
+        blank=True,
+        db_index=True,
+    )
+    end_date = models.DateTimeField(
+        verbose_name='Дата и время закрытия этапа',
+        null=True,
+        blank=True,
+        db_index=True,
+    )
+    insert_date = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата и время добавления',
+    )
+    update_date = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Дата и время редактирования',
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='incident_stage_times',
+        verbose_name='Автор',
+        help_text='Кто зафиксировал этап. Пусто — если создано автоматически.',
+    )
+
+    class Meta:
+        verbose_name = 'время этапа инцидента'
+        verbose_name_plural = 'Времена этапов инцидентов'
+        # Один инцидент — одна запись на этап:
+        constraints = [
+            models.UniqueConstraint(
+                fields=('incident', 'stage', 'start_date'),
+                name='uniq_incident_stage_start',
+            ),
+            models.UniqueConstraint(
+                fields=('incident', 'stage'),
+                condition=Q(start_date__isnull=True),
+                name='uniq_incident_stage_open',
+            ),
+            CheckConstraint(
+                check=(
+                    Q(end_date__gte=F('start_date'))
+                    | Q(end_date__isnull=True)
+                    | Q(start_date__isnull=True)
+                ),
+                name='stage_end_after_start',
+            ),
+        ]
+        ordering = ('stage__order', 'stage__name', 'id')
+
+    def __str__(self):
+        return f'{self.incident} — {self.stage}'
+
+    def clean(self):
+        if (
+            self.start_date
+            and self.end_date
+            and self.end_date < self.start_date
+        ):
+            raise ValidationError(
+                {
+                    'end_date': (
+                        f'Дата закрытия этапа "{self.stage}" '
+                        'не может быть раньше даты начала.'
+                    )
+                }
+            )
+        # Нельзя закрыть этап, не открыв его:
+        if self.end_date and not self.start_date:
+            raise ValidationError(
+                {
+                    'end_date': (
+                        'Нельзя указать дату закрытия этапа без даты начала.'
+                    )
+                }
+            )
+        if self.start_date is None:
+            open_phase = IncidentStageTime.objects.filter(
+                incident_id=self.incident_id,
+                stage_id=self.stage_id,
+                start_date__isnull=True,
+            ).exclude(pk=self.pk).first()
+            if open_phase:
+                raise ValidationError(
+                    {
+                        'stage': (
+                            'Уже есть незавершённый этап '
+                            f'«{open_phase.stage}».'
+                        )
+                    }
+                )
+
+        super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    @property
+    def duration(self) -> Optional[timedelta]:
+        """
+        Длительность этапа (для незакрытого — от начала до текущего момента).
+        """
+        if not self.start_date:
+            return None
+        end_date = self.end_date or timezone.now()
+        return end_date - self.start_date
+
+    @property
+    def duration_label(self) -> Optional[str]:
+        duration = self.duration
+        if duration is None:
+            return None
+        return timedelta_to_human_time(duration)
+
+    @property
+    def sla_deadline(self) -> Optional[datetime]:
+        if self.start_date and self.stage.sla_deadline_minutes:
+            return self.start_date + timedelta(
+                minutes=self.stage.sla_deadline_minutes
+            )
+        return None
+
+    @property
+    def is_sla_expired(self) -> Optional[bool]:
+        deadline = self.sla_deadline
+        if deadline is None:
+            return None
+        check_date = self.end_date or timezone.now()
+        return deadline < check_date
+
+    @property
+    def ttl_state(self) -> str:
+        """Состояние SLA этапа для отображения: ok / expired / none."""
+        if not self.stage.sla_deadline_minutes or self.is_sla_expired is None:
+            return 'none'
+        return 'expired' if self.is_sla_expired else 'ok'
+
+    @property
+    def ttl_title(self) -> str:
+        if self.ttl_state == 'none':
+            return 'Отсутствует'
+        verdict = 'Просрочен' if self.ttl_state == 'expired' else 'В норме'
+        sla = timedelta_to_human_time(
+            timedelta(minutes=self.stage.sla_deadline_minutes)
+        )
+        return f'SLA {sla} — {verdict}'

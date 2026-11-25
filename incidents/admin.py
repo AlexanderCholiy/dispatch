@@ -34,6 +34,8 @@ from .models import (
     RVRPriority,
     StatusType,
     TypeSubTypeRelation,
+    IncidentStage,
+    IncidentStageTime,
 )
 
 admin.site.empty_value_display = EMPTY_VALUE
@@ -435,3 +437,51 @@ class RegionRvrEmailAssignmentAdmin(admin.ModelAdmin):
                 ),
             )
         )
+
+
+@admin.register(IncidentStage)
+class IncidentStageAdmin(admin.ModelAdmin):
+    list_display = (
+        'name', 'category', 'order',
+        'sla_deadline_minutes', 'is_active',
+    )
+    list_editable = ('order', 'is_active')
+    list_filter = ('is_active', 'category')
+    search_fields = ('name',)
+    ordering = ('order', 'name', 'id')
+
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .select_related('category')
+        )
+
+
+@admin.register(IncidentStageTime)
+class IncidentStageTimeAdmin(admin.ModelAdmin):
+    list_display = (
+        'incident', 'stage', 'start_date',
+        'end_date', 'duration_label',
+    )
+    list_filter = ('stage__category', 'stage',)
+    search_fields = ('incident__code',)
+    autocomplete_fields = ('incident', 'stage', 'author')
+    date_hierarchy = 'start_date'
+    ordering = ('incident', 'stage__order', 'stage__name', 'id')
+
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .select_related(
+                'incident',
+                'stage',
+                'stage__category',
+                'author',
+            )
+        )
+
+    @admin.display(description='Длительность')
+    def duration_label(self, obj):
+        return obj.duration_label

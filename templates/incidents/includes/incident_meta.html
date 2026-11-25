@@ -375,13 +375,13 @@
       {% endfor %}
     </div>
 
-    {% include "incidents/includes/incident_sla_meta.html" with label="SLA АВР" status=incident.sla_avr_status_val start=incident.avr_start_date deadline=incident.sla_avr_deadline start_field=incident_form.avr_start_date end_field=incident_form.avr_end_date %}
+    {% include "incidents/includes/incident_sla_meta.html" with label="SLA АВР" stage_prefix="avr" status=incident.sla_avr_status_val start=incident.avr_start_date deadline=incident.sla_avr_deadline start_field=incident_form.avr_start_date end_field=incident_form.avr_end_date %}
 
-    {% include "incidents/includes/incident_sla_meta.html" with label="SLA РВР" status=incident.sla_rvr_status_val start=incident.rvr_start_date deadline=incident.sla_rvr_deadline start_field=incident_form.rvr_start_date end_field=incident_form.rvr_end_date %}
+    {% include "incidents/includes/incident_sla_meta.html" with label="SLA РВР" stage_prefix="rvr" status=incident.sla_rvr_status_val start=incident.rvr_start_date deadline=incident.sla_rvr_deadline start_field=incident_form.rvr_start_date end_field=incident_form.rvr_end_date %}
 
-    {% include "incidents/includes/incident_sla_meta.html" with label="ВРТ ДГУ" status=incident.sla_dgu_status_val start=incident.dgu_start_date deadline=incident.sla_dgu_deadline start_field=incident_form.dgu_start_date end_field=incident_form.dgu_end_date %}
+    {% include "incidents/includes/incident_sla_meta.html" with label="ВРТ ДГУ" stage_prefix="dgu" status=incident.sla_dgu_status_val start=incident.dgu_start_date deadline=incident.sla_dgu_deadline start_field=incident_form.dgu_start_date end_field=incident_form.dgu_end_date %}
 
-    {% include "incidents/includes/incident_sla_meta.html" with label="ВРТ ЭКС" status=incident.sla_eks_status_val start=incident.eks_start_date deadline=incident.sla_eks_deadline start_field=incident_form.eks_start_date end_field=incident_form.eks_end_date %}
+    {% include "incidents/includes/incident_sla_meta.html" with label="ВРТ ЭКС" stage_prefix="eks" status=incident.sla_eks_status_val start=incident.eks_start_date deadline=incident.sla_eks_deadline start_field=incident_form.eks_start_date end_field=incident_form.eks_end_date %}
 
     {% include "incidents/includes/monitoring_section.html" with monitoring=monitoring %}
 

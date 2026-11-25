@@ -2,6 +2,7 @@ from django.urls import path
 from django.views.generic import RedirectView
 
 from . import views
+from .constants import STAGE_CATEGORY_BY_PREFIX
 
 app_name = 'incidents'
 
@@ -69,4 +70,13 @@ urlpatterns = [
         views.notify_feedback_avr_contractor,
         name='notify_feedback_avr_contractor'
     ),
+]
+
+urlpatterns += [
+    path(
+        'incidents/<int:incident_id>/stages/<slug:prefix>/',
+        views.incident_stage_times,
+        name=f'{prefix}_stage_times',
+    )
+    for prefix in STAGE_CATEGORY_BY_PREFIX
 ]

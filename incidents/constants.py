@@ -285,3 +285,13 @@ SUBJECT_WARNING_TEXT = (
     'классифицировано как новое обращение, что приведет к дублированию заявки '
     'или нарушению SLA обработки.\n\n'
 )
+
+# Префикс поля Incident -> категория этапа
+STAGE_CATEGORY_BY_PREFIX = {
+    'avr': AVR_CATEGORY,
+    'rvr': RVR_CATEGORY,
+    'dgu': DGU_CATEGORY,
+    'eks': EKS_CATEGORY,
+}
+
+MAX_STAGE_TIMES_PER_FORM = 10

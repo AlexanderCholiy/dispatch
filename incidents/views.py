@@ -24,7 +24,7 @@ from django.db.models import (
 )
 from django.forms import modelformset_factory
 from django.http import Http404, HttpRequest, HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -103,6 +103,8 @@ from .constants import (
     PAGE_SIZE_INCIDENTS_CHOICES,
     RVR_CATEGORY,
     SUBJECT_WARNING_TEXT,
+    STAGE_CATEGORY_BY_PREFIX,
+    MAX_STAGE_TIMES_PER_FORM,
 )
 from .forms import (
     ConfirmMoveEmailsForm,
@@ -110,6 +112,7 @@ from .forms import (
     IncidentLinkInlineForm,
     MoveEmailsForm,
     NewEmailForm,
+    STAGE_TIME_FORMSETS,
 )
 from .models import (
     Comment,
@@ -124,6 +127,8 @@ from .models import (
     IncidentStatusHistory,
     SLAStatus,
     TimeStatus,
+    IncidentStageTime,
+    IncidentStage,
 )
 from .selectors.incidents import IncidentSelector
 from .services.get_avr_contractor_map import get_avr_contractor_map
@@ -154,6 +159,7 @@ from .validators import (
     validate_notify_rvr,
     validate_notify_vols,
 )
+from incidents.permissions import can_manage_incident
 
 
 @login_required
@@ -1073,12 +1079,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
 
     user: User = request.user
     allowed_roles = [Roles.DISPATCH]
-    can_manage = (
-        user.role in allowed_roles
-        or user.is_superuser
-        or user.is_staff
-        or (incident.responsible_user == user and user.role == Roles.INTERN)
-    )
+    can_manage = can_manage_incident(user, incident)
 
     incident_form = IncidentForm(
         instance=incident,
@@ -1273,6 +1274,46 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
                 target_incident
             )
 
+            latest_phase_by_prefix = {}
+            for prefix, category_name in STAGE_CATEGORY_BY_PREFIX.items():
+                latest_phase_by_prefix[prefix] = (
+                    IncidentStageTime.objects
+                    .filter(
+                        incident=target_incident,
+                        stage__category__name=category_name,
+                        start_date__isnull=False,
+                    )
+                    .select_related('stage', 'stage__category', 'author')
+                    .order_by('-start_date', '-id')
+                    .first()
+                )
+
+        stage_panel_links = []
+        for prefix, category_name in STAGE_CATEGORY_BY_PREFIX.items():
+            latest_phase = (
+                IncidentStageTime.objects
+                .filter(
+                    incident=incident,
+                    stage__category__name=category_name,
+                    start_date__isnull=False,
+                )
+                .select_related('stage', 'stage__category', 'author')
+                .order_by('-start_date', '-id')
+                .first()
+            )
+            stage_panel_links.append({
+                'prefix': prefix,
+                'category': category_name,
+                'url': reverse(
+                    f'incidents:{prefix}_stage_times',
+                    kwargs={'incident_id': incident.pk, 'prefix': prefix},
+                ),
+                'latest_phase': latest_phase,
+                'latest_phase_title': (
+                    latest_phase.stage.name if latest_phase else 'нет этапов'
+                ),
+            })
+
             context = {
                 'incident': target_incident,
                 'source_incident': incident,
@@ -1287,6 +1328,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
                 'planned_works': planned_works,
                 'planned_works_total': planned_works_total,
                 'incident_similarity': incident_similarity,
+                'stage_panel_links': stage_panel_links,
             }
             return render(request, template_name, context)
 
@@ -1462,6 +1504,45 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
 
     incident_similarity = incident_similarity_service.find_similar(incident)
 
+    latest_phase_by_prefix = {}
+    for prefix, category_name in STAGE_CATEGORY_BY_PREFIX.items():
+        latest_phase_by_prefix[prefix] = (
+            IncidentStageTime.objects
+            .filter(
+                incident=incident,
+                stage__category__name=category_name,
+            )
+            .select_related('stage', 'stage__category', 'author')
+            .order_by('-start_date', '-id')
+            .first()
+        )
+
+    stage_panel_links = []
+    for prefix, category_name in STAGE_CATEGORY_BY_PREFIX.items():
+        latest_phase = (
+            IncidentStageTime.objects
+            .filter(
+                incident=incident,
+                stage__category__name=category_name,
+                start_date__isnull=False,
+            )
+            .select_related('stage', 'stage__category', 'author')
+            .order_by('-start_date', '-id')
+            .first()
+        )
+        stage_panel_links.append({
+            'prefix': prefix,
+            'category': category_name,
+            'url': reverse(
+                f'incidents:{prefix}_stage_times',
+                kwargs={'incident_id': incident.pk, 'prefix': prefix},
+            ),
+            'latest_phase': latest_phase,
+            'latest_phase_title': (
+                latest_phase.stage.name if latest_phase else 'нет этапов'
+            ),
+        })
+
     context = {
         'incident': incident,
         'email_three': email_three,
@@ -1478,6 +1559,7 @@ def incident_detail(request: HttpRequest, incident_id: int) -> HttpResponse:
         'planned_works': planned_works,
         'planned_works_total': planned_works_total,
         'incident_similarity': incident_similarity,
+        'stage_panel_links': stage_panel_links,
     }
 
     return render(request, template_name, context)
@@ -3852,3 +3934,96 @@ def notify_feedback_avr_contractor(
     }
 
     return render(request, template_name, context)
+
+
+@login_required
+@ratelimit(key='user_or_ip', rate='60/m', block=True)
+def incident_stage_times(request: HttpRequest, incident_id: int, prefix: str):
+    """CRUD фаз этапов инцидента одной категории (АВР / РВР / ДГУ / ЭКС)."""
+    if prefix not in STAGE_TIME_FORMSETS:
+        raise Http404('Неизвестная категория этапов.')
+
+    incident = get_object_or_404(Incident, pk=incident_id)
+    FormSet = STAGE_TIME_FORMSETS[prefix]
+    can_manage = can_manage_incident(request.user, incident)
+
+    queryset = IncidentStageTime.objects.filter(
+        incident=incident,
+        stage__category__name=STAGE_CATEGORY_BY_PREFIX[prefix],
+    ).select_related('stage', 'author')
+
+    back_url = reverse(
+        'incidents:incident_detail', kwargs={'incident_id': incident.pk}
+    )
+    current_stage_url = reverse(
+        f'incidents:{prefix}_stage_times',
+        kwargs={'incident_id': incident.pk, 'prefix': prefix},
+    )
+
+    if request.method == 'POST':
+        if not can_manage:
+            messages.error(
+                request, 'Недостаточно прав для изменения этапов.'
+            )
+            return redirect(current_stage_url)
+
+        formset = FormSet(
+            request.POST,
+            instance=incident,
+            author=request.user,
+            can_manage=can_manage,
+        )
+        if formset.is_valid():
+            try:
+                saved = formset.save()
+            except ValidationError as exc:
+                formset = FormSet(
+                    request.POST,
+                    instance=incident,
+                    queryset=queryset,
+                    author=request.user,
+                    can_manage=can_manage,
+                )
+                formset._non_form_errors = [  # noqa: SLF001
+                    *formset.non_form_errors(),
+                    *exc.messages,
+                ]
+            else:
+                messages.success(
+                    request,
+                    f'Этапы {STAGE_CATEGORY_BY_PREFIX[prefix]} сохранены '
+                    f'({len(saved)} шт.).',
+                )
+                return redirect(current_stage_url)
+        else:
+            messages.error(
+                request,
+                f'Проверьте этапы '
+                f'{STAGE_CATEGORY_BY_PREFIX[prefix]}',
+            )
+    else:
+        formset = FormSet(
+            instance=incident,
+            queryset=queryset,
+            author=request.user,
+            can_manage=can_manage,
+        )
+
+    return render(
+        request,
+        'incidents/stages/incident_stage_times.html',
+        {
+            'incident': incident,
+            'formset': formset,
+            'prefix': prefix,
+            'category_name': STAGE_CATEGORY_BY_PREFIX[prefix],
+            'max_stages': MAX_STAGE_TIMES_PER_FORM,
+            'can_manage': can_manage,
+            'current_stage_url': current_stage_url,
+            'back_url': back_url,
+            'available_stages': IncidentStage.objects.filter(
+                is_active=True,
+                category__name=STAGE_CATEGORY_BY_PREFIX[prefix],
+            ).order_by('order', 'name'),
+        },
+    )

@@ -123,4 +123,44 @@
     </div>
   </div>
 
+  <!-- Переход к этапам категории -->
+  {% for panel in stage_panel_links %}
+    {% if panel.prefix == stage_prefix %}
+      <div class="field-group stages-group">
+        <label class="field-label incident-meta-label">
+          <div class="incident-meta-label-left">Этапы {{ panel.category }}</div>
+          <div class="incident-meta-label-right">
+            <span class="tooltip incident-meta-info"
+                  data-title="TTL последнего этапа: {{ panel.latest_phase.duration_label|default:'—' }}">
+              <i class="bx bx-info-circle" style="font-weight: bold"></i>
+            </span>
+          </div>
+        </label>
+
+        <div class="field-control">
+          {% if can_manage %}
+            <a href="{{ panel.url }}"
+               class="btn btn-sm btn-outline-primary stages-link tooltip {% if not panel.latest_phase %}is-empty{% endif %}"
+               data-title="{% if panel.latest_phase.start_date %}{{ panel.latest_phase.start_date|date:'d.m.Y H:i' }} — {% if panel.latest_phase.end_date %}{{ panel.latest_phase.end_date|date:'d.m.Y H:i' }}{% else %}не завершён{% endif %}{% else %}Добавить этапы {{ panel.category }}{% endif %}">
+              {% if panel.latest_phase %}
+                <span class="stages-count">{{ panel.latest_phase.stage.name }}</span>
+              {% else %}
+                Добавить
+              {% endif %}
+            </a>
+          {% elif panel.latest_phase %}
+            <span class="stages-link is-disabled tooltip"
+                  data-title="{{ panel.latest_phase.start_date|date:'d.m.Y H:i' }} — {% if panel.latest_phase.end_date %}{{ panel.latest_phase.end_date|date:'d.m.Y H:i' }}{% else %}не завершён{% endif %}">
+              <span class="stages-count">{{ panel.latest_phase.stage.name }}</span>
+            </span>
+          {% else %}
+            <span class="stages-link is-disabled is-empty">
+              Отсутствует
+            </span>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+  {% endfor %}
+
 </div>

@@ -1,0 +1,120 @@
+.stages-table .is-new td {
+  background: var(--add-background-color);
+}
+
+.stages-table .is-deleted td {
+  opacity: .45;
+  border-color: var(--red-color);
+}
+
+/* ---------- Поля ввода ---------- */
+.stages-table input[type="text"],
+.stages-table input[type="datetime-local"],
+.stages-table select {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: var(--space-xxs) var(--space-xs);
+  font-family: inherit;
+  font-size: var(--font-sm);
+  color: var(--add-color);
+  background: var(--background-color);
+  border: 1px solid var(--extra-color);
+  border-radius: var(--radius-xs);
+  transition: var(--transition-value);
+}
+
+/* ---------- TTL badge ---------- */
+.ttl-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 100px;
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-xs);
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  cursor: default;
+  background-color: var(--gray-color);
+  color: var(--background-color); 
+}
+
+.ttl-badge.is-ok {
+  background-color: var(--green-color);
+}
+
+.ttl-badge.is-expired {
+  background-color: var(--red-color);
+}
+
+/* ---------- Ошибки ---------- */
+.cell-error {
+  display: block;
+  margin-top: var(--space-xs);
+  font-size: var(--font-xs);
+  color: var(--red-color);
+}
+
+.stages-global-errors {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs);
+  margin-bottom: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-sm);
+  color: var(--red-color);
+  background: var(--rgba-red-color);
+  border-radius: var(--radius-sm);
+}
+
+.stages-table .col-error {
+  padding-top: 0;
+  border-top: none;
+}
+
+.stages-muted {
+  color: var(--gray-color);
+  font-size: var(--font-xs);
+}
+
+/* ---------- Удалить ---------- */
+.col-delete {
+  text-align: center;
+}
+
+.stages-delete {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--gray-color);
+  border: 1px solid var(--extra-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition-value);
+}
+
+.stages-delete:hover {
+  color: var(--red-color);
+  border-color: var(--red-color);
+}
+
+.stages-delete input[type="checkbox"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  appearance: none;
+}
+
+.stages-delete:has(input:checked) {
+  background: var(--red-color);
+  border-color: var(--red-color);
+  color: var(--color);
+}

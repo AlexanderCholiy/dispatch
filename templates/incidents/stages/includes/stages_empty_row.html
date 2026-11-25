@@ -1,0 +1,34 @@
+<template id="stages-empty-row">
+  <tr class="stages-row is-new" data-dynamic="1">
+    <td class="col-stage" data-label="Этап">
+      <select name="{{ formset.prefix }}-__prefix__-stage">
+        {% for stage in available_stages %}
+          <option value="{{ stage.pk }}">{{ stage }}</option>
+        {% endfor %}
+      </select>
+    </td>
+    <td class="col-start" data-label="Начало">
+      <input type="datetime-local" name="{{ formset.prefix }}-__prefix__-start_date">
+    </td>
+    <td class="col-end" data-label="Завершение">
+      <input type="datetime-local" name="{{ formset.prefix }}-__prefix__-end_date">
+    </td>
+    <td class="col-ttl" data-label="TTL"><span class="ttl-badge is-none">—</span></td>
+    <td class="col-author" data-label="Автор">
+      <div class="user-info stages-user">
+        {% if user.get_avatar_url %}
+          <img src="{{ user.get_avatar_url }}" class="user-journal-icon" alt="{{ user.get_full_name }}">
+        {% else %}
+          <div class="user-journal-icon">{{ user.username|first|upper }}</div>
+        {% endif %}
+        <span class="user-name">{{ user }}</span>
+      </div>
+    </td>
+    <td class="col-delete" data-label="Удалить">
+      <label class="stages-delete">
+        <input type="checkbox" name="{{ formset.prefix }}-__prefix__-DELETE">
+        <i class="bx bx-x"></i>
+      </label>
+    </td>
+  </tr>
+</template>

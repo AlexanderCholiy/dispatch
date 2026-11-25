@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/incidents_stages/stages_header.css' %}">
+  <link rel="stylesheet" href="{% static 'css/includes/tables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/incidents_stages/stages_table.css' %}">
+  <link rel="stylesheet" href="{% static 'css/incidents_stages/stages_user.css' %}">
+  <link rel="stylesheet" href="{% static 'css/incidents_stages/stages_footer.css' %}">
+{% endblock %}
+
+{% block title %}Этапы {{ category_name }} — {{ incident }}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="card">
+
+    <div class="card-header">
+      {% include "incidents/stages/includes/stages_header.html" %}
+    </div>
+
+    <div class="card-body">
+      <form method="post" action="{{ current_stage_url }}" class="stages-form">
+        {% csrf_token %}
+        {{ formset.management_form }}
+
+        {% if can_manage %}
+          {% include "incidents/stages/includes/stages_table_editable.html" %}
+          {% include "incidents/stages/includes/stages_footer.html" %}
+        {% else %}
+          {% include "incidents/stages/includes/stages_table_readonly.html" %}
+        {% endif %}
+      </form>
+    </div>
+
+  </div>
+
+  {% if can_manage %}
+    {% include "incidents/stages/includes/stages_empty_row.html" %}
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/incidents_stages/stages_form.js' %}" type="module"></script>
+{% endblock %}

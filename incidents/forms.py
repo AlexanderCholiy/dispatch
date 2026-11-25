@@ -43,6 +43,8 @@ from .constants import (
     NOTIFIED_OP_END_STATUS_NAME,
     RVR_CATEGORY,
     STATUSES_FOR_AUTOCLOSE,
+    STAGE_CATEGORY_BY_PREFIX,
+    MAX_STAGE_TIMES_PER_FORM,
 )
 from .models import (
     Incident,
@@ -55,11 +57,14 @@ from .models import (
     IncidentType,
     RVRPriority,
     TypeSubTypeRelation,
+    IncidentStage,
+    IncidentStageTime,
 )
 from .services.notify_responsible_user_on_reassign import (
     notify_responsible_user_on_reassign
 )
 from .utils import EmailNode, IncidentManager
+from django.forms import inlineformset_factory
 
 
 class MultipleFileInput(forms.FileInput):
@@ -1331,3 +1336,209 @@ class IncidentLinkInlineForm(forms.ModelForm):
                     messages.warning(self.request, msg)
 
         return cleaned_data
+
+
+class StageTimeInlineForm(forms.ModelForm):
+    """Одна фаза этапа. Категория и границы дат берутся из инцидента."""
+
+    CATEGORY_NAME = ''
+    PREFIX = ''
+
+    class Meta:
+        model = IncidentStageTime
+        fields = ('stage', 'start_date', 'end_date')
+        widgets = {
+            'start_date': forms.DateTimeInput(
+                attrs={'type': 'datetime-local'},
+                format='%Y-%m-%dT%H:%M',
+            ),
+            'end_date': forms.DateTimeInput(
+                attrs={'type': 'datetime-local'},
+                format='%Y-%m-%dT%H:%M',
+            ),
+        }
+
+    def __init__(self, *args, incident=None, can_manage=True, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.incident = incident
+        self.can_manage = can_manage
+
+        if not self.can_manage:
+            for field in self.fields.values():
+                field.disabled = True
+
+        qs = IncidentStage.objects.filter(is_active=True)
+        if self.category_name:
+            qs = qs.filter(category__name=self.category_name)
+        if incident is not None:
+            own = getattr(self.instance, 'stage_id', None)
+            if own:
+                qs |= IncidentStage.objects.filter(pk=own)
+        self.fields['stage'].queryset = qs.distinct()
+
+        if incident is None:
+            return
+
+        lower = max(
+            incident.incident_date,
+            getattr(incident, f'{self.PREFIX}_start_date', None)
+            or incident.incident_date,
+        )
+        upper = getattr(incident, f'{self.PREFIX}_end_date', None)
+        # datetime-local принимает только 'YYYY-MM-DDTHH:MM' локального времени
+        fmt = '%Y-%m-%dT%H:%M'
+        lower_str = timezone.localtime(lower).strftime(fmt)
+        self.fields['start_date'].widget.attrs['min'] = lower_str
+        self.fields['end_date'].widget.attrs['min'] = lower_str
+        if upper:
+            upper_str = timezone.localtime(upper).strftime(fmt)
+            self.fields['start_date'].widget.attrs['max'] = upper_str
+            self.fields['end_date'].widget.attrs['max'] = upper_str
+
+    @property
+    def category_name(self) -> str:
+        return type(self).CATEGORY_NAME
+
+    def clean(self):
+        cleaned = super().clean()
+        if self.incident is None:
+            return cleaned
+
+        if not self.can_manage and self.has_changed():
+            raise ValidationError(
+                'У вас недостаточно прав для изменения этапов инцидента.'
+            )
+
+        start = cleaned.get('start_date')
+        end = cleaned.get('end_date')
+        errors = {}
+
+        min_start = self.incident.incident_date
+        bound_start = getattr(
+            self.incident, f'{self.PREFIX}_start_date', None
+        )
+        if bound_start and bound_start > min_start:
+            min_start = bound_start
+
+        if start and start < min_start:
+            errors['start_date'] = (
+                'Дата начала не может быть раньше даты начала '
+                f'{self.category_name} инцидента: {min_start:%d.%m.%Y %H:%M}.'
+            )
+
+        if end:
+            if not start:
+                errors['end_date'] = (
+                    'Нельзя указать дату закрытия без даты начала.'
+                )
+            elif end < start:
+                errors['end_date'] = (
+                    'Дата закрытия не может быть раньше даты начала.'
+                )
+            bound_end = getattr(
+                self.incident, f'{self.PREFIX}_end_date', None
+            )
+            if bound_end and end > bound_end:
+                errors['end_date'] = (
+                    f'Дата закрытия не может быть позже даты завершения '
+                    f'{self.category_name} инцидента: '
+                    f'{bound_end:%d.%m.%Y %H:%M}.'
+                )
+
+        if errors:
+            raise ValidationError(errors)
+        return cleaned
+
+
+def _make_stage_form(prefix: str, category_name: str):
+    """Подкласс формы с зашитыми префиксом полей и категорией этапа."""
+    return type(
+        f'{prefix.upper()}StageTimeForm',
+        (StageTimeInlineForm,),
+        {'PREFIX': prefix, 'CATEGORY_NAME': category_name},
+    )
+
+
+class StageTimeFormSet(forms.BaseInlineFormSet):
+    """
+    Инлайн-формсет этапов: лимит строк, автор, права, передача инцидента.
+    """
+
+    max_num = MAX_STAGE_TIMES_PER_FORM
+
+    def __init__(self, *args, author=None, can_manage=True, **kwargs):
+        self.author = author
+        self.can_manage = can_manage
+        super().__init__(*args, **kwargs)
+
+        if author is not None:
+            for form in self.forms:
+                if (
+                    form.instance.pk is None
+                    and form.instance.author_id is None
+                ):
+                    form.instance.author = author
+
+    def _construct_form(self, i, **kwargs):
+        kwargs['incident'] = self.instance
+        kwargs['can_manage'] = self.can_manage
+        return super()._construct_form(i, **kwargs)
+
+    @property
+    def empty_form(self):
+        form = self.form(
+            auto_id=self.auto_id,
+            prefix=self.prefix,
+            initial=self.get_initial_for_object(None, None),
+            incident=self.instance,
+            can_manage=self.can_manage,
+        )
+        form.label_suffix = ''
+        if self.author is not None:
+            form.instance.author = self.author
+        return form
+
+    def clean(self):
+        super().clean()
+        if any(form.errors for form in self.forms):
+            return
+        if not self.can_manage and any(
+            form.has_changed() for form in self.forms
+        ):
+            raise ValidationError(
+                'У вас недостаточно прав для изменения этапов инцидента.'
+            )
+
+    def save_new(self, form, commit=True):
+        obj = super().save_new(form, commit=False)
+        obj.author = self.author
+        if commit:
+            obj.save()
+        return obj
+
+
+def make_stage_time_formset(prefix: str):
+    return inlineformset_factory(
+        parent_model=Incident,
+        model=IncidentStageTime,
+        form=_make_stage_form(prefix, STAGE_CATEGORY_BY_PREFIX[prefix]),
+        formset=StageTimeFormSet,
+        fk_name='incident',
+        fields=('stage', 'start_date', 'end_date'),
+        extra=0,
+        min_num=0,
+        can_delete=True,
+    )
+
+
+AVRStageTimeFormSet = make_stage_time_formset('avr')
+RVRStageTimeFormSet = make_stage_time_formset('rvr')
+DGUStageTimeFormSet = make_stage_time_formset('dgu')
+EKSStageTimeFormSet = make_stage_time_formset('eks')
+
+STAGE_TIME_FORMSETS = {
+    'avr': AVRStageTimeFormSet,
+    'rvr': RVRStageTimeFormSet,
+    'dgu': DGUStageTimeFormSet,
+    'eks': EKSStageTimeFormSet,
+}
