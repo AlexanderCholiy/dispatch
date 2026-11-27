@@ -26,10 +26,10 @@
 
         {% if can_manage %}
           {% include "incidents/stages/includes/stages_table_editable.html" %}
-          {% include "incidents/stages/includes/stages_footer.html" %}
         {% else %}
           {% include "incidents/stages/includes/stages_table_readonly.html" %}
         {% endif %}
+        {% include "incidents/stages/includes/stages_footer.html" %}
       </form>
     </div>
 

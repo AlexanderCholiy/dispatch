@@ -43,7 +43,6 @@ from .constants import (
     MAX_STATUS_COMMENT_LEN,
     RVR_CATEGORY,
 )
-from core.constants import MAX_ST_DESCRIPTION
 
 
 def get_default_status_type():
@@ -1949,7 +1948,7 @@ class IncidentStageTime(models.Model):
             raise ValidationError(
                 {
                     'end_date': (
-                        'Нельзя указать дату закрытия этапа без даты начала.'
+                        'Нельзя указать дату закрытия без даты начала.'
                     )
                 }
             )

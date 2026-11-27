@@ -24,7 +24,7 @@ from django.db.models import (
 )
 from django.forms import modelformset_factory
 from django.http import Http404, HttpRequest, HttpResponse
-from django.shortcuts import redirect, render, get_object_or_404
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -60,6 +60,7 @@ from emails.services.generate_email_msg_id import generate_message_id
 from emails.services.get_previous_email_body import get_previous_email_body
 from emails.tasks import send_incident_email_task
 from incidents.constants import VOLS_DEFAULT_PARTICIPANTS
+from incidents.permissions import can_manage_incident
 from incidents.services.get_incident_auto_close_ttl import (
     get_incident_auto_close_ttl,
 )
@@ -94,6 +95,7 @@ from .constants import (
     INCIDENTS_PER_PAGE,
     MAX_INCIDENT_LINKS,
     MAX_INCIDENTS_INFO_CACHE_SEC,
+    MAX_STAGE_TIMES_PER_FORM,
     NOTIFIED_CONTRACTOR_STATUS_NAME,
     NOTIFIED_OP_END_STATUS_NAME,
     NOTIFIED_OP_IN_WORK_STATUS_NAME,
@@ -102,17 +104,16 @@ from .constants import (
     NOTIFY_OP_IN_WORK_STATUS_NAME,
     PAGE_SIZE_INCIDENTS_CHOICES,
     RVR_CATEGORY,
-    SUBJECT_WARNING_TEXT,
     STAGE_CATEGORY_BY_PREFIX,
-    MAX_STAGE_TIMES_PER_FORM,
+    SUBJECT_WARNING_TEXT,
 )
 from .forms import (
+    STAGE_TIME_FORMSETS,
     ConfirmMoveEmailsForm,
     IncidentForm,
     IncidentLinkInlineForm,
     MoveEmailsForm,
     NewEmailForm,
-    STAGE_TIME_FORMSETS,
 )
 from .models import (
     Comment,
@@ -123,12 +124,12 @@ from .models import (
     IncidentHistory,
     IncidentLink,
     IncidentLinkType,
+    IncidentStage,
+    IncidentStageTime,
     IncidentStatus,
     IncidentStatusHistory,
     SLAStatus,
     TimeStatus,
-    IncidentStageTime,
-    IncidentStage,
 )
 from .selectors.incidents import IncidentSelector
 from .services.get_avr_contractor_map import get_avr_contractor_map
@@ -159,7 +160,6 @@ from .validators import (
     validate_notify_rvr,
     validate_notify_vols,
 )
-from incidents.permissions import can_manage_incident
 
 
 @login_required

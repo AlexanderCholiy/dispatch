@@ -31,8 +31,8 @@
   justify-content: center;
   min-width: 100px;
   padding: var(--space-xs) var(--space-sm);
-  font-size: var(--font-xs);
-  font-weight: 500;
+  font-size: var(--font-sm);
+  font-weight: 500 !important;
   border-radius: var(--radius-sm);
   white-space: nowrap;
   cursor: default;

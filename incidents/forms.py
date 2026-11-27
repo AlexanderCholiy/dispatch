@@ -9,6 +9,7 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db.models import F, Prefetch, Q, QuerySet
+from django.forms import inlineformset_factory
 from django.utils import timezone
 
 from core.services.formatters import format_timedelta_readable
@@ -28,6 +29,7 @@ from incidents.services.get_incident_type import get_incident_type_map
 from incidents.services.get_rvr_priority import get_rvr_priority_map
 from incidents.services.log_incident_changes import log_incident_changes
 from incidents.services.normalize_datetime_to_minute import is_data_changed
+from incidents.validators import validate_stage_dates_against_incident_dates
 from ts.models import VolsContractor
 from users.models import Roles, User
 
@@ -39,32 +41,31 @@ from .constants import (
     FINISHED_STATUS_NAMES,
     MAX_CODE_LEN,
     MAX_FUTURE_END_DELTA,
+    MAX_STAGE_TIMES_PER_FORM,
     NOTIFIED_CONTRACTOR_STATUS_NAME,
     NOTIFIED_OP_END_STATUS_NAME,
     RVR_CATEGORY,
-    STATUSES_FOR_AUTOCLOSE,
     STAGE_CATEGORY_BY_PREFIX,
-    MAX_STAGE_TIMES_PER_FORM,
+    STATUSES_FOR_AUTOCLOSE,
 )
 from .models import (
     Incident,
     IncidentCategory,
     IncidentLink,
     IncidentLinkType,
+    IncidentStage,
+    IncidentStageTime,
     IncidentStatus,
     IncidentStatusHistory,
     IncidentSubType,
     IncidentType,
     RVRPriority,
     TypeSubTypeRelation,
-    IncidentStage,
-    IncidentStageTime,
 )
 from .services.notify_responsible_user_on_reassign import (
     notify_responsible_user_on_reassign
 )
 from .utils import EmailNode, IncidentManager
-from django.forms import inlineformset_factory
 
 
 class MultipleFileInput(forms.FileInput):
@@ -931,6 +932,10 @@ class IncidentForm(forms.ModelForm):
                     )
                     messages.warning(self.request, msg)
 
+        validate_stage_dates_against_incident_dates(
+            self.instance, cleaned_data
+        )
+
         return cleaned_data
 
     def clean_categories(self):
@@ -1427,14 +1432,6 @@ class StageTimeInlineForm(forms.ModelForm):
             )
 
         if end:
-            if not start:
-                errors['end_date'] = (
-                    'Нельзя указать дату закрытия без даты начала.'
-                )
-            elif end < start:
-                errors['end_date'] = (
-                    'Дата закрытия не может быть раньше даты начала.'
-                )
             bound_end = getattr(
                 self.incident, f'{self.PREFIX}_end_date', None
             )

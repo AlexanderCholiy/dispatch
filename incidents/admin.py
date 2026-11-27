@@ -26,6 +26,8 @@ from .models import (
     IncidentHistory,
     IncidentLink,
     IncidentSourceType,
+    IncidentStage,
+    IncidentStageTime,
     IncidentStatus,
     IncidentStatusHistory,
     IncidentSubType,
@@ -34,8 +36,6 @@ from .models import (
     RVRPriority,
     StatusType,
     TypeSubTypeRelation,
-    IncidentStage,
-    IncidentStageTime,
 )
 
 admin.site.empty_value_display = EMPTY_VALUE

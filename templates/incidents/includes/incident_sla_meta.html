@@ -126,7 +126,37 @@
   <!-- Переход к этапам категории -->
   {% for panel in stage_panel_links %}
     {% if panel.prefix == stage_prefix %}
-      <div class="field-group stages-group">
+      <div class="field-group sla-group">
+        <label class="field-label incident-meta-label">
+          <div class="incident-meta-label-left">Этапы {{ panel.category }}</div>
+          <div class="incident-meta-label-right">
+            <span class="tooltip incident-meta-info" 
+                  data-title="TTL последнего этапа: {{ panel.latest_phase.duration_label|default:'—' }}">
+              <i class="bx bx-info-circle" style="font-weight: bold"></i>
+            </span>
+          </div>
+        </label>
+
+        <div class="sla-wrapper">
+          <a
+            href="{{ panel.url }}"
+            class="status-tag btn ttl-badge is-{{ panel.latest_phase.ttl_state|default:'unknown' }} {% if panel.latest_phase.start_date %}tooltip{% endif %}"
+            {% if not can_manage and not panel.latest_phase.stage.name %}disabled{% endif %}
+            {% if panel.latest_phase.start_date %}data-title="{{ panel.latest_phase.start_date|date:'d.m.Y H:i' }} — {% if panel.latest_phase.end_date %}{{ panel.latest_phase.end_date|date:'d.m.Y H:i' }}{% else %}не завершён{% endif %}"{% endif %}
+          >
+            {% if panel.latest_phase.stage.name %}
+              {{ panel.latest_phase.stage.name }}
+            {% else %}
+              {% if not can_manage %}Отсутствует{% else %}Добавить{% endif %}
+            {% endif %}
+        </a>
+        </div>
+      </div>
+    {% endif %}
+
+
+    <!-- {% if panel.prefix == stage_prefix %} -->
+      <!-- <div class="field-group stages-group">
         <label class="field-label incident-meta-label">
           <div class="incident-meta-label-left">Этапы {{ panel.category }}</div>
           <div class="incident-meta-label-right">
@@ -137,7 +167,7 @@
           </div>
         </label>
 
-        <div class="field-control">
+        <div class="field-control ttl-badge {% if panel.latest_phase %}is-{{ panel.latest_phase.ttl_state }}{% endif %}">
           {% if can_manage %}
             <a href="{{ panel.url }}"
                class="btn btn-sm btn-outline-primary stages-link tooltip {% if not panel.latest_phase %}is-empty{% endif %}"
@@ -149,7 +179,7 @@
               {% endif %}
             </a>
           {% elif panel.latest_phase %}
-            <span class="stages-link is-disabled tooltip"
+            <span class="stages-link tooltip"
                   data-title="{{ panel.latest_phase.start_date|date:'d.m.Y H:i' }} — {% if panel.latest_phase.end_date %}{{ panel.latest_phase.end_date|date:'d.m.Y H:i' }}{% else %}не завершён{% endif %}">
               <span class="stages-count">{{ panel.latest_phase.stage.name }}</span>
             </span>
@@ -159,8 +189,8 @@
             </span>
           {% endif %}
         </div>
-      </div>
-    {% endif %}
+      </div> -->
+    <!-- {% endif %} -->
   {% endfor %}
 
 </div>

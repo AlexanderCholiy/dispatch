@@ -1,5 +1,5 @@
 from incidents.models import Incident
-from users.models import User, Roles
+from users.models import Roles, User
 
 
 def can_manage_incident(user: User, incident: Incident) -> bool:

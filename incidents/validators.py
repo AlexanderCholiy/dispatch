@@ -1,8 +1,10 @@
 import re
 from typing import Optional
 
-from django.db.models import QuerySet
+from django.core.exceptions import ValidationError
+from django.db.models import Max, Min, QuerySet
 from django.db.models.functions import Length
+from django.utils import timezone
 
 from emails.models import EmailMessage
 
@@ -16,9 +18,16 @@ from .constants import (
     NOTIFY_OP_END_STATUS_NAME,
     NOTIFY_OP_IN_WORK_STATUS_NAME,
     RVR_CATEGORY,
+    STAGE_CATEGORY_BY_PREFIX,
     STATUS_TRANSITIONS,
 )
-from .models import BaseStation, Incident, IncidentStatus, Pole
+from .models import (
+    BaseStation,
+    Incident,
+    IncidentStageTime,
+    IncidentStatus,
+    Pole,
+)
 
 
 class IncidentValidator:
@@ -516,3 +525,66 @@ def validate_notify_feedback_avr(
         )
 
     return None
+
+
+def validate_stage_dates_against_incident_dates(
+    incident: Incident,
+    cleaned_data: dict,
+) -> None:
+    """
+    Сверяет даты начала/завершения AVR/RVR/ДГУ/ЭКС с датами этапов инцидента.
+
+    Правила (для каждого префикса, чья категория выбрана):
+      * {prefix}_start_date <= min(start_date этапов)
+      * {prefix}_end_date   >= max(end_date этапов)
+
+    Один запрос к IncidentStageTime на все префиксы.
+
+    :param incident: инцидента формы
+    :param cleaned_data: cleaned_data формы инцидента
+    :raises ValidationError: с dict-ошибками по полям
+    """
+    per_category_qs = (
+        IncidentStageTime.objects
+        .filter(
+            incident=incident,
+        )
+        .values('stage__category__name')
+        .annotate(
+            min_start=Min('start_date'),
+            max_end=Max('end_date'),
+        )
+    )
+    bounds_by_category: dict[str, tuple] = {
+        row['stage__category__name']: (row['min_start'], row['max_end'])
+        for row in per_category_qs
+    }
+
+    errors: dict[str, list[str]] = {}
+
+    for prefix, category in STAGE_CATEGORY_BY_PREFIX.items():
+        bounds = bounds_by_category.get(category)
+
+        if not bounds:
+            continue
+
+        min_stage_start, max_stage_end = bounds
+        start = cleaned_data.get(f'{prefix}_start_date')
+        end = cleaned_data.get(f'{prefix}_end_date')
+
+        if start and min_stage_start and start > min_stage_start:
+            errors.setdefault(f'{prefix}_start_date', []).append(
+                f'Дата начала не может быть позже минимальной даты '
+                f'начала этапа {category} '
+                f'({timezone.localtime(min_stage_start):%d.%m.%Y %H:%M}).'
+            )
+
+        if end and max_stage_end and end < max_stage_end:
+            errors.setdefault(f'{prefix}_end_date', []).append(
+                f'Дата завершения не может быть раньше максимальной даты '
+                f'завершения этапа {category} '
+                f'({timezone.localtime(max_stage_end):%d.%m.%Y %H:%M}).'
+            )
+
+    if errors:
+        raise ValidationError(errors)
