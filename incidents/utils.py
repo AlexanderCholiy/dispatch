@@ -16,6 +16,11 @@ from django.db.models import (
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
+from assets.constants import (
+    INCIDENT_SOURCE_EMAILS,
+    INCIDENT_SOURCE_TYPE,
+)
+from assets.services import build_zabbix_comment
 from core.loggers import incident_logger
 from emails.constants import EMAIL_SUBJECT_NOT_FOR_YT_CONTROLLED
 from emails.models import (
@@ -27,6 +32,7 @@ from emails.models import (
 )
 from incidents.services.get_rvr_email import resolve_rvr_emails
 from ts.models import BaseStationOperator, ContractorEmail
+from users.constants import BOT_USERNAME
 from users.models import Roles, User
 from yandex_tracker.utils import YandexTrackerManager
 
@@ -65,11 +71,13 @@ from .constants import (
     WAIT_ACCEPTANCE_STATUS_NAME,
 )
 from .models import (
+    Comment,
     Incident,
     IncidentCategory,
     IncidentChangeLog,
     IncidentFavorite,
     IncidentHistory,
+    IncidentSourceType,
     IncidentStatus,
     IncidentStatusHistory,
 )
@@ -864,6 +872,26 @@ class IncidentManager(IncidentValidator):
         # Выставляем у нового инцидента изначальный статус:
         if new_incident:
             IncidentManager.add_default_status(actual_email_incident)
+
+        if actual_email_incident and email_msg.email_from in (
+            INCIDENT_SOURCE_EMAILS
+        ):
+            source_type, _ = IncidentSourceType.objects.get_or_create(
+                name=INCIDENT_SOURCE_TYPE
+            )
+            actual_email_incident.source_type = source_type
+            actual_email_incident.save(
+                update_fields=['source_type']
+            )
+            incident_comment_msg = build_zabbix_comment(
+                email_msg.email_subject, email_msg.email_body
+            )
+            bot_user = User.objects.filter(username=BOT_USERNAME).first()
+            Comment.objects.get_or_create(
+                incident=actual_email_incident,
+                author=bot_user,
+                content=incident_comment_msg,
+            )
 
         return actual_email_incident, new_incident
 

@@ -17,3 +17,4 @@ INCIDENT_SOURCE_TYPE = 'Активное оборудование'
 INCIDENT_SOURCE_TYPE_DEFAULT_DESC = (
     'Регистрация по данным телеметрии активного оборудования'
 )
+INCIDENT_SOURCE_EMAILS = ['techbox@newtowers.ru', 'notification@newtowers.ru']
